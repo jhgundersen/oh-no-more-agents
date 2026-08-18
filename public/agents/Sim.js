@@ -3000,6 +3000,7 @@ function spawn(w) {
     heightFromY: 0,
     heightToX: 0,
     heightToY: 0,
+    heightUp: false,
     specialX: 0,
     specialY: 0,
     modelGen: 0,
@@ -4051,6 +4052,7 @@ function startSpecialHeight(w, ag, nx, depth, far) {
   ag.heightFromY = ag.y
   ag.heightToX = target.x
   ag.heightToY = target.y
+  ag.heightUp = false
   ag.heightTick = 0
   var dx = Math.abs(target.x - ag.x)
   var dy = Math.abs(target.y - ag.y)
@@ -4062,6 +4064,54 @@ function startSpecialHeight(w, ag, nx, depth, far) {
   ag.x = nx
   ag.timer = 0
   w.lastEvent = spec.height === "cushion" ? "copies, cushion!" : spec.height
+  return true
+}
+
+// Powered, buoyant and anchored devices work both ways. Find a real ledge
+// above before launching: this keeps a jetpack from solving solid ceilings and
+// gives chains and tractor beams something visible to attach to. Hal Lucination
+// alone may phase through the obstruction on the way there.
+function startSpecialAscent(w, ag) {
+  var mode = specOf(ag).height
+  var upward = ["recoil", "balloon", "helicopter", "ghost", "gunwing",
+    "tractor", "chain", "jetpack"]
+  if (upward.indexOf(mode) < 0) return false
+
+  var fx = Math.floor(ag.x)
+  var fy = Math.floor(ag.y)
+  var target = null
+  for (var rise = 4; rise <= 30 && !target; rise++) {
+    var ty = fy - rise
+    for (var side = 0; side <= 12 && !target; side++) {
+      for (var turn = 0; turn < 2; turn++) {
+        if (side === 0 && turn === 1) continue
+        var sign = turn === 0 ? ag.dir : -ag.dir
+        var tx = fx + side * sign
+        if (!solid(w, tx, ty + 1) || solid(w, tx, ty) || !headroom(w, tx, ty)) continue
+        if (mode !== "ghost" && !lineClear(w, fx, fy - 2, tx, ty - 2)) continue
+        target = { x: tx + 0.5, y: ty }
+        break
+      }
+    }
+  }
+  if (!target) return false
+
+  ag.state = "height"
+  ag.heightMode = mode
+  ag.heightFromX = ag.x
+  ag.heightFromY = ag.y
+  ag.heightToX = target.x
+  ag.heightToY = target.y
+  ag.heightUp = true
+  ag.heightTick = 0
+  ag.heightTicks = Math.max(30, Math.ceil(Math.max(
+    Math.abs(target.x - ag.x) / 0.22, Math.abs(target.y - ag.y) / 0.22)))
+  if (mode === "helicopter") ag.heightTicks += 45
+  if (mode === "balloon") ag.heightTicks += 20
+  ag.dir = target.x >= ag.x ? 1 : -1
+  ag.timer = 0
+  ag.still = 0
+  w.lastEvent = mode + " up"
   return true
 }
 
@@ -4207,6 +4257,7 @@ function specialEscape(w, ag) {
   var fy = Math.floor(ag.y)
   var floor = Math.floor((fy + 1) / (w.corrGap || CORR_GAP))
   if (specOf(ag).act === "ceiling" && startWebEscape(w, ag)) return
+  if (exitAbove(w, ag) && startSpecialAscent(w, ag)) return
   if (exitBelow(w, ag) && solid(w, fx, fy + 1)
       && at(w, fx, fy + 1) !== STEEL && !ag.escapeFloors[floor]) {
     ag.escapeFloors[floor] = true

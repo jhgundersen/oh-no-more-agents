@@ -243,7 +243,28 @@ function cmdHeights(S) {
   }
   console.log(`  ${passed}/${S.SPECIALS.length} specials reached safe ground`)
   console.log(`  ${modes.size}/${S.SPECIALS.length} distinct height devices`)
-  if (passed !== S.SPECIALS.length || modes.size !== S.SPECIALS.length) process.exitCode = 1
+
+  const upward = new Set(["recoil", "balloon", "helicopter", "ghost",
+    "gunwing", "tractor", "chain", "jetpack"])
+  let ascended = 0
+  for (const spec of S.SPECIALS) {
+    if (!upward.has(spec.height)) continue
+    const w = S.generate(1, 0, colonySeed(1, 0))
+    for (let y = 5; y < 46; y++)
+      for (let x = 5; x < 36; x++) w.terrain[y * S.COLS + x] = S.EMPTY
+    for (let x = 5; x < 36; x++) w.terrain[43 * S.COLS + x] = S.DIRT
+    for (let x = 26; x < 31; x++) w.terrain[26 * S.COLS + x] = S.DIRT
+    const ag = { special: spec.id, x: 20.5, y: 42, dir: 1, state: "walk",
+      anim: 0, timer: 0, still: 0, turns: 0 }
+    const started = S.startSpecialAscent(w, ag)
+    let ticks = 0
+    while (ag.state === "height" && ticks++ < 500) S.stepSpecialHeight(w, ag)
+    if (started && ag.state === "walk" && ag.y === 25) ascended++
+    else console.log(`  ${spec.name}: upward move failed`)
+  }
+  console.log(`  ${ascended}/${upward.size} powered devices reached the upper ledge`)
+  if (passed !== S.SPECIALS.length || modes.size !== S.SPECIALS.length
+      || ascended !== upward.size) process.exitCode = 1
 }
 
 // How much does the colony matter? Play each level with several different

@@ -1972,8 +1972,8 @@ function drawAgent(ctx, w, pal, ag, opts) {
       }
       case "web":
       case "chain": {
-        var anchorX = Math.round(ag.heightFromX * C)
-        var anchorY = Math.round((ag.heightFromY - 2) * C)
+        var anchorX = Math.round((ag.heightUp ? ag.heightToX : ag.heightFromX) * C)
+        var anchorY = Math.round(((ag.heightUp ? ag.heightToY : ag.heightFromY) - 2) * C)
         ctx.fillStyle = hm === "web" ? "#e8e8f4" : hc
         var lineSteps = Math.max(1, Math.round(Math.abs(anchorY - (oy + 7)) / 3))
         for (var ls = 0; ls <= lineSteps; ls++)
