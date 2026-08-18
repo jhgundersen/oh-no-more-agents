@@ -1,0 +1,384 @@
+<!doctype html>
+
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Oh No! More Agents</title>
+	<meta name="description" content="Autonomous agents with no supervisor, no plan, and one umbrella each, working out a Lemmings level for themselves.">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+	<style>
+		:root {
+			/* Overwritten by web.js from the selected theme, so the page and the
+			   board always agree. These are the tokyo-night defaults, present so
+			   nothing flashes white before the first paint. */
+			--bg: #1a1b26;
+			--fg: #a9b1d6;
+			--accent: #7aa2f7;
+			--muted: #414868;
+			--urgent: #f7768e;
+
+			/* The board only ever scales by a whole number, so its width is one
+			   of four or five values rather than the viewport width. web.js sets
+			   this to whichever it picked and everything else lines up with the
+			   board instead of drifting a few pixels off it. */
+			--board-w: 800px;
+		}
+
+		body,
+		html,
+		p {
+			margin: 0;
+			padding: 0;
+			font-family: 'Orbitron', monospace;
+		}
+
+		body {
+			background-color: var(--bg);
+			color: var(--fg);
+			min-height: 100vh;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 18px;
+			padding: 24px 16px;
+			box-sizing: border-box;
+			transition: background-color 200ms, color 200ms;
+		}
+
+		h1 {
+			margin: 0;
+			font-size: 22px;
+			font-weight: 900;
+			letter-spacing: 0.06em;
+			text-align: center;
+		}
+
+		.sub {
+			font-size: 12px;
+			color: var(--muted);
+			text-align: center;
+			max-width: 52ch;
+			line-height: 1.6;
+			text-wrap: balance;
+		}
+
+		.sub a {
+			color: var(--accent);
+		}
+
+		/* --- the board ---------------------------------------------------- */
+
+		#board {
+			position: relative;
+			border: 1px solid var(--muted);
+			border-radius: 4px;
+			overflow: hidden;
+			cursor: pointer;
+			line-height: 0;
+		}
+
+		#board canvas {
+			position: absolute;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+			/* The board is pixel art scaled by a whole number. Without this the
+			   browser smooths it and every 1px eye turns to porridge. */
+			image-rendering: pixelated;
+		}
+
+		#overlay {
+			position: absolute;
+			inset: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: rgba(0, 0, 0, 0.55);
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: 0.2em;
+			line-height: 1;
+			z-index: 2;
+			transition: opacity 160ms;
+		}
+
+		/* --- readouts ----------------------------------------------------- */
+
+		.hud {
+			display: flex;
+			align-items: center;
+			gap: 14px;
+			font-size: 12px;
+			font-weight: 700;
+			width: var(--board-w);
+			flex-wrap: wrap;
+			justify-content: center;
+		}
+
+		#biome {
+			color: var(--muted);
+			text-transform: lowercase;
+		}
+
+		#attempt {
+			color: var(--muted);
+		}
+
+		.clock {
+			min-width: 3.5em;
+		}
+
+		.clock.urgent {
+			color: var(--urgent);
+		}
+
+		.track {
+			flex: 1;
+			min-width: 120px;
+			height: 4px;
+			border-radius: 2px;
+			background: var(--muted);
+			overflow: hidden;
+		}
+
+		#bar {
+			height: 100%;
+			width: 0;
+			background: var(--accent);
+			transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+		}
+
+		#line {
+			font-size: 12px;
+			color: var(--muted);
+			height: 1.2em;
+			text-align: center;
+			transition: opacity 300ms;
+		}
+
+		/* --- toolbar ------------------------------------------------------ */
+
+		#toolbar {
+			display: grid;
+			grid-template-columns: repeat(8, 1fr);
+			gap: 6px;
+			width: var(--board-w);
+		}
+
+		.skill {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 1px;
+			padding: 6px 2px;
+			border-radius: 3px;
+			background: color-mix(in srgb, var(--fg) 8%, transparent);
+			transition: background-color 140ms, opacity 140ms;
+		}
+
+		.skill.spent {
+			opacity: 0.35;
+		}
+
+		.skill.recent {
+			background: color-mix(in srgb, var(--accent) 28%, transparent);
+		}
+
+		.skill-name {
+			font-size: 9px;
+			letter-spacing: 0.05em;
+			color: color-mix(in srgb, var(--fg) 65%, transparent);
+		}
+
+		.skill.recent .skill-name {
+			color: var(--accent);
+		}
+
+		.skill-count {
+			font-size: 13px;
+			font-weight: 700;
+		}
+
+		/* --- controls ----------------------------------------------------- */
+
+		.controls {
+			display: flex;
+			gap: 16px;
+			font-size: 11px;
+			color: var(--muted);
+			flex-wrap: wrap;
+			justify-content: center;
+		}
+
+		.controls b {
+			color: color-mix(in srgb, var(--fg) 80%, transparent);
+			font-weight: 700;
+		}
+
+		/* The hints are buttons. They were a row of text describing keys, which
+		   is no use at all on a touchscreen — and the keys still work, so this
+		   costs nothing and makes the page usable with a thumb. Sized to the
+		   44px touch target everybody settled on. */
+		.ctl {
+			font-family: inherit;
+			font-size: 11px;
+			color: var(--muted);
+			background: transparent;
+			border: 1px solid transparent;
+			border-radius: 4px;
+			padding: 6px 10px;
+			min-height: 32px;
+			cursor: pointer;
+			transition: color 140ms, border-color 140ms, background-color 140ms;
+		}
+
+		.ctl:hover {
+			color: var(--fg);
+			border-color: var(--muted);
+		}
+
+		.ctl:active {
+			background: color-mix(in srgb, var(--accent) 20%, transparent);
+		}
+
+		@media (pointer: coarse) {
+			/* No hover on a touchscreen, so the affordance has to be permanent. */
+			.ctl {
+				border-color: var(--muted);
+				min-height: 44px;
+				padding: 10px 14px;
+				font-size: 12px;
+			}
+		}
+
+		#themes {
+			display: flex;
+			gap: 6px;
+			flex-wrap: wrap;
+			justify-content: center;
+			width: var(--board-w);
+		}
+
+		.theme {
+			font-family: inherit;
+			font-size: 10px;
+			letter-spacing: 0.04em;
+			padding: 4px 8px;
+			border-radius: 3px;
+			border: 1px solid var(--muted);
+			background: transparent;
+			color: var(--muted);
+			cursor: pointer;
+			transition: color 140ms, border-color 140ms;
+		}
+
+		.theme:hover {
+			color: var(--fg);
+		}
+
+		.theme.on {
+			color: var(--accent);
+			border-color: var(--accent);
+		}
+
+		/* --- soundtrack --------------------------------------------------- */
+
+		.audio {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			flex-wrap: wrap;
+			justify-content: center;
+		}
+
+		#tracks {
+			display: flex;
+			gap: 6px;
+		}
+
+		/* The native <audio> player is the one thing on the page that won't take
+		   the theme — it renders as a slab of browser grey next to a board mixed
+		   from five colors. So it's hidden and driven by a button in the same
+		   style as everything else here. */
+		#player {
+			display: none;
+		}
+
+		#playpause {
+			min-width: 2.6em;
+		}
+
+		#global {
+			color: var(--accent);
+		}
+	</style>
+</head>
+
+<body>
+
+	<h1>Oh No! More Agents</h1>
+
+	<p class="sub">
+		Autonomous agents with no supervisor, no plan beyond the next two
+		body-lengths, and one umbrella each. Nobody is playing &mdash; there is no
+		cursor and no way to help. They work it out, or they don't.
+	</p>
+
+	<div class="hud">
+		<span id="level">Level 1</span>
+		<span id="biome"></span>
+		<span id="attempt"></span>
+		<span>Home <span id="home">0/0</span></span>
+		<div class="track"><div id="bar"></div></div>
+		<span id="clock" class="clock"></span>
+	</div>
+
+	<div id="board">
+		<canvas id="terrain"></canvas>
+		<canvas id="actors"></canvas>
+		<div id="overlay" style="display: none">PAUSED</div>
+	</div>
+
+	<p id="line"></p>
+
+	<div id="toolbar"></div>
+
+	<div class="controls">
+		<button class="ctl" id="c-pause"><b>space</b> <span id="pauseWord">pause</span></button>
+		<button class="ctl" id="c-prev"><b>&larr;</b></button>
+		<button class="ctl" id="c-next"><b>&rarr;</b> level</button>
+		<button class="ctl" id="c-restart"><b>r</b> restart</button>
+		<button class="ctl" id="speed">speed(s)</button>
+		<button class="ctl" id="who">who(w)</button>
+		<span id="lifetime"></span>
+		<span id="global" title="Saved by everyone playing worldwide">worldwide: connecting&hellip;</span>
+	</div>
+
+	<div id="themes"></div>
+
+	<div class="audio">
+		<button id="playpause" class="theme" title="Play or pause the soundtrack">&#9654;</button>
+		<div id="tracks"></div>
+		<audio id="player"></audio>
+	</div>
+
+	<p class="sub">
+		The same simulation runs in the Omarchy top bar &mdash;
+		<a href="https://github.com/jhgundersen/omarchy-oh-no-more-agents-plugin">source and plugin</a>.
+		The theme buttons are the real Omarchy themes; the board mixes its colours
+		from them exactly as the bar widget does.
+	</p>
+
+	<script src="agents/Sim.js"></script>
+	<script src="agents/Draw.js"></script>
+	<script src="agents/Palette.js"></script>
+	<script src="agents/web.js"></script>
+
+</body>
+
+</html>
