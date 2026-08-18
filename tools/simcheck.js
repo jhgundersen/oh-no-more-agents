@@ -161,6 +161,27 @@ function cmdGravity(S) {
     // removes.
     console.log(`  ${kind.padEnd(6)} ${fell}/${tested} came down when the floor went`)
   }
+
+  // The same rule for the one thing on the board that is not held up by the
+  // floor. A ladder leans on a wall face, and a wall face is exactly the sort
+  // of thing a basher, a digger or a charge takes away — leaving, if nothing
+  // caught it, a ladder standing in mid air that the whole colony would queue
+  // up to climb.
+  let hung = 0, gone = 0
+  for (let lv = 1; lv <= 200 && hung < 10; lv++) {
+    const w = S.generate(lv, 0, colonySeed(lv, 0))
+    w.special = "ladder"; w.specialSpec = S.specialSpec("ladder"); w.specialAt = 1
+    let t = 0
+    while (!w.done && t < 4000 && w.ladders.length === 0) { S.step(w); t++ }
+    if (!w.ladders.length) continue
+    hung++
+    const lad = w.ladders[0]
+    for (let y = lad.top + 1; y <= lad.bottom; y++) w.terrain[y * S.COLS + lad.x] = S.EMPTY
+    S.step(w)
+    if (!w.ladders.includes(lad)) gone++
+  }
+  console.log(`  ladder ${gone}/${hung} came down when the wall went`)
+  if (hung && gone < hung) process.exitCode = 1
 }
 
 // How much does the colony matter? Play each level with several different
