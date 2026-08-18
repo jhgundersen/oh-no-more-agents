@@ -71,6 +71,41 @@
 			color: var(--accent);
 		}
 
+		/* --- the stage ---------------------------------------------------- */
+
+		/* Stacked exactly as these elements were stacked directly on the body,
+		   so the page looks identical until somebody asks for fullscreen. */
+		#stage {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 18px;
+			width: 100%;
+		}
+
+		/* The fullscreen element gets a transparent backdrop by default, which
+		   in practice means black — a shade nothing else on the page is using.
+		   Painting it in the theme background keeps the board in the frame it
+		   was mixed for. */
+		#stage:fullscreen,
+		#stage.faux {
+			background-color: var(--bg);
+			padding: 16px;
+			box-sizing: border-box;
+		}
+
+		/* iOS Safari has no Element.requestFullscreen at all, so on a phone the
+		   button covers the viewport by hand instead of leaving the one control
+		   that does nothing when pressed. Same result, minus the OS. */
+		#stage.faux {
+			position: fixed;
+			inset: 0;
+			z-index: 50;
+			width: auto;
+			overflow: auto;
+		}
+
 		/* --- the board ---------------------------------------------------- */
 
 		#board {
@@ -206,13 +241,25 @@
 
 		/* --- controls ----------------------------------------------------- */
 
+		/* Board-width and left-aligned, so this row starts where the readouts
+		   and the toolbar start instead of being centred on the viewport and
+		   agreeing with neither. The running totals go to the far end, which is
+		   where the clock sits in the readouts above. */
 		.controls {
 			display: flex;
-			gap: 16px;
+			align-items: center;
+			gap: 10px;
 			font-size: 11px;
 			color: var(--muted);
 			flex-wrap: wrap;
-			justify-content: center;
+			width: var(--board-w);
+		}
+
+		.counts {
+			display: flex;
+			align-items: center;
+			gap: 14px;
+			margin-left: auto;
 		}
 
 		.controls b {
@@ -329,34 +376,52 @@
 		cursor and no way to help. They work it out, or they don't.
 	</p>
 
-	<div class="hud">
-		<span id="level">Level 1</span>
-		<span id="biome"></span>
-		<span id="attempt"></span>
-		<span>Home <span id="home">0/0</span></span>
-		<div class="track"><div id="bar"></div></div>
-		<span id="clock" class="clock"></span>
-	</div>
+	<!-- Everything inside #stage is the game; everything outside it is the page
+	     around the game. That is the whole of the fullscreen feature: the
+	     browser renders only the fullscreen element's subtree, so the title,
+	     the blurb, the theme picker and the soundtrack are gone without a
+	     single rule hiding them. -->
+	<div id="stage">
 
-	<div id="board">
-		<canvas id="terrain"></canvas>
-		<canvas id="actors"></canvas>
-		<div id="overlay" style="display: none">PAUSED</div>
-	</div>
+		<div class="hud">
+			<span id="level">Level 1</span>
+			<span id="biome"></span>
+			<span id="attempt"></span>
+			<span>Home <span id="home">0/0</span></span>
+			<div class="track"><div id="bar"></div></div>
+			<span id="clock" class="clock"></span>
+		</div>
 
-	<p id="line"></p>
+		<div id="board">
+			<canvas id="terrain"></canvas>
+			<canvas id="actors"></canvas>
+			<div id="overlay" style="display: none">PAUSED</div>
+		</div>
 
-	<div id="toolbar"></div>
+		<p id="line"></p>
 
-	<div class="controls">
-		<button class="ctl" id="c-pause"><b>space</b> <span id="pauseWord">pause</span></button>
-		<button class="ctl" id="c-prev"><b>&larr;</b></button>
-		<button class="ctl" id="c-next"><b>&rarr;</b> level</button>
-		<button class="ctl" id="c-restart"><b>r</b> restart</button>
-		<button class="ctl" id="speed">speed(s)</button>
-		<button class="ctl" id="who">who(w)</button>
-		<span id="lifetime"></span>
-		<span id="global" title="Saved by everyone playing worldwide">worldwide: connecting&hellip;</span>
+		<div id="toolbar"></div>
+
+		<!-- The key is the letter it is, inside the word it belongs to: "restart"
+		     with a lit r, not "r restart". Pause is the exception, because the
+		     key is the space bar and there is no letter to light. Every one of
+		     these is also a button, so the arrow keys still work but no longer
+		     need a control of their own — the two that had one read as "level"
+		     and an arrow pointing nowhere in particular. -->
+		<div class="controls">
+			<button class="ctl" id="c-pause"><b>space</b> <span id="pauseWord">pause</span></button>
+			<button class="ctl" id="c-prev"><b>p</b>rev level</button>
+			<button class="ctl" id="c-next"><b>n</b>ext level</button>
+			<button class="ctl" id="c-restart"><b>r</b>estart</button>
+			<button class="ctl" id="speed"><b>s</b>peed: <span id="speedWord">Steady</span></button>
+			<button class="ctl" id="who"><b>w</b>ho: <span id="whoWord">off</span></button>
+			<button class="ctl" id="c-full"><b>f</b>ullscreen: <span id="fullWord">off</span></button>
+			<span class="counts">
+				<span id="lifetime"></span>
+				<span id="global" title="Saved by everyone playing worldwide">worldwide: connecting&hellip;</span>
+			</span>
+		</div>
+
 	</div>
 
 	<div id="themes"></div>
@@ -377,7 +442,7 @@
 	<script src="agents/Sim.js?v=43b53f70"></script>
 	<script src="agents/Draw.js?v=bb7c764c"></script>
 	<script src="agents/Palette.js?v=0b6811a4"></script>
-	<script src="agents/web.js?v=c6cdc188"></script>
+	<script src="agents/web.js?v=918b3152"></script>
 
 </body>
 

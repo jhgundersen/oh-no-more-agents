@@ -224,13 +224,87 @@
   // image-rendering: pixelated.
   function fitBoard() {
     var wrap = el.boardWrap
+    var full = isFullscreen()
     var avail = wrap.parentElement.clientWidth
-    var availH = window.innerHeight - 260
-    var scale = Math.max(1, Math.min(Math.floor(avail / WIDTH), Math.floor(availH / HEIGHT), 4))
+    // Fullscreen puts the title, the blurb, the theme picker and the soundtrack
+    // off the screen, so the board is allowed the height they were using and
+    // one more step of scale than the page gives it — filling the screen is the
+    // whole point of asking for it. What is still around the board is measured
+    // rather than guessed at, because it is the row of controls, and that wraps
+    // to two lines on a narrow screen and to three on a phone.
+    var availH = window.innerHeight - (full ? stageAroundBoard() : 260)
+    var scale = Math.max(1, Math.min(Math.floor(avail / WIDTH), Math.floor(availH / HEIGHT), full ? 6 : 4))
     wrap.style.width = (WIDTH * scale) + "px"
     wrap.style.height = (HEIGHT * scale) + "px"
     // The readouts line up with the board rather than with the viewport.
     document.documentElement.style.setProperty("--board-w", (WIDTH * scale) + "px")
+  }
+
+  // -------------------------------------------------------------------------
+  // Fullscreen
+  //
+  // #stage holds the game and nothing else, so handing that one element to the
+  // browser hides everything around it: a fullscreen element's siblings are not
+  // rendered at all, which is a stronger guarantee than any rule this file
+  // could write, and it cannot fall out of step with the page.
+  // -------------------------------------------------------------------------
+
+  function fullscreenEl() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null
+  }
+
+  function isFullscreen() {
+    return fullscreenEl() === el.stage || el.stage.classList.contains("faux")
+  }
+
+  // The fallback is not a nicety: iOS Safari has no Element.requestFullscreen
+  // at all, and a request can be refused outright by policy or because the page
+  // is in a frame. Rather than leave the one control that visibly does nothing,
+  // the stage covers the viewport itself — same result, minus the operating
+  // system, and Escape still gets out of it.
+  function setFaux(on) {
+    el.stage.classList.toggle("faux", on)
+    afterFullscreen()
+  }
+
+  function toggleFullscreen() {
+    if (isFullscreen()) {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen
+      if (fullscreenEl() && exit) exit.call(document)
+      else setFaux(false)
+      return
+    }
+    var req = el.stage.requestFullscreen || el.stage.webkitRequestFullscreen
+    if (!req) return setFaux(true)
+    var asked
+    try { asked = req.call(el.stage) } catch (e) { return setFaux(true) }
+    if (asked && asked.catch) asked.catch(function () { setFaux(true) })
+  }
+
+  // How much of the stage is not the board: the readouts, the caption, the
+  // toolbar and the controls, plus the gaps between them and the padding.
+  //
+  // Measured child by child rather than taken off the stage's own height,
+  // because in fullscreen the stage IS the screen — scrollHeight then reports
+  // the screen's height, the subtraction comes out about 120px too big, and the
+  // board fits itself into what is left. Which is how asking for fullscreen
+  // ended up making the board smaller.
+  function stageAroundBoard() {
+    var st = getComputedStyle(el.stage)
+    var total = (parseFloat(st.paddingTop) || 0) + (parseFloat(st.paddingBottom) || 0)
+    var gap = parseFloat(st.rowGap) || 0
+    var kids = el.stage.children
+    for (var i = 0; i < kids.length; i++) {
+      if (kids[i] !== el.boardWrap) total += kids[i].offsetHeight
+      if (i) total += gap
+    }
+    return total
+  }
+
+  function afterFullscreen() {
+    el.fullWord.textContent = isFullscreen() ? "on" : "off"
+    fitBoard()
+    render()
   }
 
   // -------------------------------------------------------------------------
@@ -355,8 +429,8 @@
       node.cell.classList.toggle("spent", count === 0 && !recent)
     })
 
-    el.speed.textContent = "speed(s): " + SPEED_NAMES[speedIndex]
-    el.who.textContent = "who(w): " + (showLabels ? "on" : "off")
+    el.speedWord.textContent = SPEED_NAMES[speedIndex]
+    el.whoWord.textContent = showLabels ? "on" : "off"
     el.pauseWord.textContent = running ? "pause" : "resume"
     el.overlay.style.display = running ? "none" : ""
     el.lifetime.textContent = lifetimeSaved.toLocaleString() + " home, " + levelsCleared + " levels"
@@ -466,12 +540,16 @@
     el.toolbar = document.getElementById("toolbar")
     el.speed = document.getElementById("speed")
     el.who = document.getElementById("who")
+    el.speedWord = document.getElementById("speedWord")
+    el.whoWord = document.getElementById("whoWord")
     el.overlay = document.getElementById("overlay")
     el.lifetime = document.getElementById("lifetime")
     el.global = document.getElementById("global")
     el.themes = document.getElementById("themes")
     el.pauseWord = document.getElementById("pauseWord")
     el.boardWrap = document.getElementById("board")
+    el.stage = document.getElementById("stage")
+    el.fullWord = document.getElementById("fullWord")
     el.player = document.getElementById("player")
     el.tracks = document.getElementById("tracks")
     el.playpause = document.getElementById("playpause")
@@ -529,6 +607,8 @@
     loadGlobalStats()
 
     window.addEventListener("resize", fitBoard)
+    document.addEventListener("fullscreenchange", afterFullscreen)
+    document.addEventListener("webkitfullscreenchange", afterFullscreen)
     el.boardWrap.addEventListener("click", togglePause)
 
     // Every hint is also a button. The keys still work; this is so the page can
@@ -540,7 +620,8 @@
       "c-next": function () { advance(1) },
       "c-restart": function () { newLevel(level, 0) },
       "speed": cycleSpeed,
-      "who": toggleLabels
+      "who": toggleLabels,
+      "c-full": toggleFullscreen
     }
     Object.keys(buttons).forEach(function (id) {
       var b = document.getElementById(id)
@@ -562,6 +643,10 @@
       else if (k === "r") newLevel(level, 0)
       else if (k === "s") cycleSpeed()
       else if (k === "w") toggleLabels()
+      else if (k === "f") toggleFullscreen()
+      // Real fullscreen hands Escape to the browser, which never reaches here.
+      // The fallback has to answer for itself.
+      else if (k === "escape" && el.stage.classList.contains("faux")) setFaux(false)
       else return
       render()
     })
