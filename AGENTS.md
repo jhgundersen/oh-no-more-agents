@@ -63,6 +63,17 @@ npm run db:local
 npm run dev
 ```
 
+An agent working in this repo should **not** use that one. `npm run dev` is the
+human's server on port 8787, and taking it over — or killing it to free the port
+— interrupts whatever is being watched in a browser window. Use
+
+```bash
+npm run dev:agent     # the same server, port 8788
+```
+
+and leave 8787 alone. Two `wrangler dev --local` instances coexist happily; the
+local D1 file is shared, which the rescue counter does not mind.
+
 Use `npm run deploy` only when a production deployment is explicitly requested.
 Apply new production migrations with `npm run db:remote` before deploying code
 that depends on them.
@@ -143,6 +154,44 @@ Looks are checked by rendering, not by reading code. The most efficient way is a
 contact sheet: a throwaway page that draws every hazard in all three phases, or
 every special, side by side. That is how eight dangers were found sharing one
 graphic, and how the snake was found to look like a mounted gun.
+
+## Checking the page itself, headlessly
+
+Gameplay is checked by `npm run sim`, but layout, controls and anything
+involving the browser's own APIs have to be checked in a browser. There may not
+be one to drive: no display, no Chrome extension connected. Chromium's remote
+debugging protocol needs neither, and no dependencies either — Node has a global
+`WebSocket`, so a throwaway script is enough:
+
+```bash
+chromium --headless=new --remote-debugging-port=9222 \
+         --window-size=1920,1200 --screen-info='{1920x1200}' \
+         --user-data-dir=/tmp/probe-$$ --hide-scrollbars http://127.0.0.1:8788/
+```
+
+Then `GET http://127.0.0.1:9222/json` for the page target, open its
+`webSocketDebuggerUrl`, and send CDP commands: `Runtime.evaluate` to read the
+DOM back as JSON, `Input.dispatchKeyEvent` and `Input.dispatchMouseEvent` to
+drive it, `Page.captureScreenshot` to look at it. `clip` with `scale: 2` on a
+screenshot crops to one element and doubles it, which is how to read an 11px
+label instead of squinting at a full page.
+
+Four things that wasted time and will again:
+
+- **`--screen-info` is not optional when fullscreen is involved.** Headless
+  reports a 600px-tall screen regardless of `--window-size`, so a fullscreen
+  element gets a 600px viewport and every scale calculation comes out wrong.
+  The fullscreen board looked broken for exactly this reason, and was not.
+- **A fullscreen request needs a user gesture.** A dispatched key or mouse event
+  is one; `Runtime.evaluate` is not, unless called with `userGesture: true`.
+- **A fresh `--user-data-dir` per run.** A reused profile can leave the target
+  list empty and the script waiting for a page that never appears.
+- **Measure, don't eyeball.** Compare bounding boxes — a screenshot will not
+  tell you that two rows are eight pixels out of alignment, and
+  `getBoundingClientRect()` will.
+
+Kill the browser when finished. It is headless, so nothing on screen says it is
+still running.
 
 ## Sibling copies, and one real hazard
 

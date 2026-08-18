@@ -6,6 +6,7 @@
   "description": "Autonomous agents attempting Lemmings-like levels, with a global rescue counter.",
   "scripts": {
     "dev": "wrangler dev --local",
+    "dev:agent": "wrangler dev --local --port 8788",
     "deploy": "wrangler deploy",
     "db:local": "wrangler d1 migrations apply oh-no-more-agents --local",
     "db:remote": "wrangler d1 migrations apply oh-no-more-agents --remote",
