@@ -46,6 +46,9 @@ committing:
 npm run check
 ```
 
+That covers syntax, the core-file self-containment guard, and the unit tests.
+It does **not** cover gameplay — see below.
+
 For gameplay work, also run the game locally with:
 
 ```bash
@@ -69,7 +72,9 @@ need synchronization and update them only when the task includes that scope.
 These are the failures that have actually happened here. None of them produced
 an error message at the time.
 
-- **The three core files must never call each other.** `Sim.js`, `Draw.js` and
+- **The three core files must never call each other.** `npm run check` enforces
+  this now via `tools/check-core-refs.js`, which also catches the mirror-image
+  failure of the same name being declared in two of them. `Sim.js`, `Draw.js` and
   `Palette.js` carry no imports, which is what lets the identical files run both
   in a browser and inside the Omarchy plugin's QML engine. In a browser they
   land in one global scope, so a call across files resolves and looks correct;
@@ -110,10 +115,10 @@ an error message at the time.
 ## Checking gameplay changes
 
 ```bash
-node tools/simcheck.js play      # 200 levels, the way the page plays them
-node tools/simcheck.js biomes    # the same, broken down per biome
-node tools/simcheck.js inert     # materials must not affect behaviour
-node tools/simcheck.js gravity   # planted things must fall when their floor goes
+npm run sim play      # 200 levels, the way the page plays them
+npm run sim biomes    # the same, broken down per biome
+npm run sim inert     # materials must not affect behaviour
+npm run sim gravity   # planted things must fall when their floor goes
 ```
 
 `play` is the one to watch. A change that improves the look should leave it
@@ -132,7 +137,19 @@ graphic, and how the snake was found to look like a mounted gun.
 
 ## Sibling copies, and one real hazard
 
-The Omarchy plugin copy lives in `~/.config/omarchy/plugins/jhgundersen.oh-no-more-agents/`.
+This repo is the source of truth. `Sim.js`, `Draw.js` and `Palette.js` are meant
+to be byte-identical in the Omarchy plugin copy at
+`~/.config/omarchy/plugins/jhgundersen.oh-no-more-agents/` and in the `jonh.no`
+site copy:
+
+```bash
+npm run sync:check    # report drift, change nothing
+npm run sync          # push the three core files out to whichever exist
+```
+
+`web.js` is deliberately **not** synced. Each copy has its own host integration
+— this one reports to the rescue counter, the plugin has `Panel.qml` instead —
+and that is the seam where they are allowed to differ.
 
 **Do not write into that directory while the screen is locked.** The Omarchy
 lock screen is not a separate program — it is a quickshell plugin, so quickshell

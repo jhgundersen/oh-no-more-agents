@@ -10,7 +10,10 @@
     "db:local": "wrangler d1 migrations apply oh-no-more-agents --local",
     "db:remote": "wrangler d1 migrations apply oh-no-more-agents --remote",
     "test": "node --test",
-    "check": "node --check src/worker.js && node --check src/counter.js && node --check public/agents/Sim.js && node --check public/agents/Draw.js && node --check public/agents/Palette.js && node --check public/agents/web.js && npm test"
+    "check": "node --check src/worker.js && node --check src/counter.js && node --check public/agents/Sim.js && node --check public/agents/Draw.js && node --check public/agents/Palette.js && node --check public/agents/web.js && node tools/check-core-refs.js && npm test",
+    "sim": "node tools/simcheck.js",
+    "sync": "node tools/sync-copies.js",
+    "sync:check": "node tools/sync-copies.js --check"
   },
   "devDependencies": {
     "wrangler": "^4.124.0"
