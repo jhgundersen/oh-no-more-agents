@@ -69,10 +69,12 @@ that depends on them.
 
 ## Related copies
 
-This game originated in the `jonh.no` website and also exists in the
-`oh-no-more-agents` Omarchy plugin. Do not silently edit those sibling projects
-from this repository. If a gameplay fix should be shared, call out which copies
-need synchronization and update them only when the task includes that scope.
+This game originated in the `jonh.no` website, which no longer carries a copy:
+this repository is the game's home, and the one remaining sibling is the
+`oh-no-more-agents` Omarchy plugin. Do not silently edit that sibling project
+from this repository. If a gameplay fix should be shared, call out that the
+plugin needs synchronization and update it only when the task includes that
+scope.
 
 ## What breaks quietly
 

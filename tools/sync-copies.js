@@ -25,8 +25,7 @@ const CORE = ["Sim.js", "Draw.js", "Palette.js"]
 // Each destination is optional: whoever runs this may not have all of them
 // checked out, and a missing sibling is not an error.
 const DESTS = [
-  { name: "omarchy plugin", dir: path.join(os.homedir(), ".config/omarchy/plugins/jhgundersen.oh-no-more-agents"), plugin: true },
-  { name: "jonh.no site", dir: path.join(os.homedir(), "jonh.no/jonh.no/agents"), plugin: false }
+  { name: "omarchy plugin", dir: path.join(os.homedir(), ".config/omarchy/plugins/jhgundersen.oh-no-more-agents"), plugin: true }
 ]
 
 const mode = process.argv[2] || ""
