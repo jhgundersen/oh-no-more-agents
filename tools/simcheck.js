@@ -12,6 +12,7 @@
 //                                          affect behaviour
 //   node tools/simcheck.js gravity         prove planted things fall when the
 //                                          ground under them is removed
+//   node tools/simcheck.js heights         every special survives a lethal drop
 //   node tools/simcheck.js biomes [levels] outcome broken down per biome
 //
 // It loads Sim.js the way a browser does — as text, with the top-level
@@ -210,6 +211,41 @@ function cmdGravity(S) {
   if (!descended) process.exitCode = 1
 }
 
+// Every special is barred from the floater budget, so every one carries a
+// signature answer to a lethal height. Exercise the same bare shaft with the
+// whole catalogue: this catches a missing mapping, a shared device, and a move
+// that starts theatrically but never reaches its landing.
+function cmdHeights(S) {
+  const modes = new Set()
+  let passed = 0
+  for (const spec of S.SPECIALS) {
+    const w = S.generate(1, 0, colonySeed(1, 0))
+    const x = 20, top = 20, bottom = 42
+    for (let y = top - 10; y <= bottom; y++)
+      for (let xx = x - 2; xx <= x + 3; xx++) w.terrain[y * S.COLS + xx] = S.EMPTY
+    for (let xx = x - 2; xx <= x + 3; xx++) w.terrain[(bottom + 1) * S.COLS + xx] = S.DIRT
+
+    const ag = { special: spec.id, x: x + 0.5, y: top, dir: 1, state: "walk",
+      anim: 0, turns: 0, floater: false, fall: 0, timer: 0 }
+    S.specialAtEdge(w, ag, ag.x + S.WALK_SPEED, bottom - top, -1)
+    const held = spec.height !== "cushion" || ag.state !== "height"
+      ? true
+      : (S.stepSpecialHeight(w, ag), ag.y === top)
+    let ticks = 0
+    while ((ag.state === "height" || ag.state === "rappel") && ticks++ < 500) {
+      if (ag.state === "height") S.stepSpecialHeight(w, ag)
+      else S.stepRappel(w, ag)
+    }
+    const safe = ag.state === "walk" && ag.y === bottom && held
+    modes.add(spec.height)
+    if (safe) passed++
+    else console.log(`  ${spec.name}: ${ag.state} at ${ag.x.toFixed(1)},${ag.y.toFixed(1)}`)
+  }
+  console.log(`  ${passed}/${S.SPECIALS.length} specials reached safe ground`)
+  console.log(`  ${modes.size}/${S.SPECIALS.length} distinct height devices`)
+  if (passed !== S.SPECIALS.length || modes.size !== S.SPECIALS.length) process.exitCode = 1
+}
+
 // How much does the colony matter? Play each level with several different
 // colonies on the same ground and report how far apart they land. Before the
 // colony was seeded per playthrough this command could only have printed zeros.
@@ -244,5 +280,6 @@ if (cmd === "play") cmdPlay(S, arg || 200)
 else if (cmd === "biomes") cmdBiomes(S, arg || 210)
 else if (cmd === "inert") cmdInert(S)
 else if (cmd === "gravity") cmdGravity(S)
+else if (cmd === "heights") cmdHeights(S)
 else if (cmd === "spread") cmdSpread(S, arg || 60, Number(process.argv[4]) || 8)
-else { console.error("usage: simcheck.js play|biomes|inert|gravity|spread [levels] [colonies]"); process.exit(2) }
+else { console.error("usage: simcheck.js play|biomes|inert|gravity|heights|spread [levels] [colonies]"); process.exit(2) }
