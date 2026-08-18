@@ -32,6 +32,11 @@ The production site is `https://oh-no-more-agents.com`.
   track gets a new number instead of overwriting an existing file.
 - Preserve deterministic seeded level generation. A level number should produce
   the same playable layout on every run unless a change intentionally updates it.
+- The colony is the other half of that, and it is **not** deterministic: traits
+  and the individual whims inside them are drawn from `w.colonySeed`, which is
+  random per playthrough. Same ground, different fifteen. Anything that needs a
+  repeatable run passes the seed back in — `generate(level, attempt, seed)` — and
+  `w.colonySeed` is kept on the world so a run worth seeing again can be.
 - Keep simulation behavior in `Sim.js` and rendering-only behavior in `Draw.js`.
 - Match the existing pixel-art look, biome palettes, humor, and agent puns.
 - Test gameplay changes on the reported level and on nearby/random levels. Watch
@@ -139,14 +144,28 @@ npm run sim play      # 200 levels, the way the page plays them
 npm run sim biomes    # the same, broken down per biome
 npm run sim inert     # materials must not affect behaviour
 npm run sim gravity   # planted things must fall when their floor goes
+npm run sim spread    # the same level played by several different colonies
 ```
+
+Every one of these pins the colony seed, using the formula the colony was
+derived from before it became per-playthrough — so these numbers are repeatable
+and still comparable with the baselines below. A run that varies between
+invocations means something else has picked up entropy.
 
 `play` is the one to watch. A change that improves the look should leave it
 roughly alone; a change that moves it several points has done something to the
 gameplay, intended or not. `hangs` must stay at zero.
 
 Baseline at the time of writing, 200 levels: **89% of levels reach target, 71%
-of agents home, 48s per attempt, no hangs.** Per biome, Cavern is currently the
+of agents home, 48s per attempt, no hangs.** Played the way the page now plays
+it — a fresh random colony on every attempt — the same sweep lands at 89–91%
+cleared and 69–70% home across repeats, so the colony being random costs the
+game nothing and the retry gets a genuinely different try.
+
+`spread` is the one that watches the personalities rather than the levels: over
+40 levels with 8 colonies each, the number who get home varies by about 4 on
+average, and on a quarter of levels the colony is the difference between
+clearing and not. Per biome, Cavern is currently the
 outlier at 60% cleared and 52% home against 85–100% everywhere else — worth
 looking at, and a good example of what `biomes` is for.
 

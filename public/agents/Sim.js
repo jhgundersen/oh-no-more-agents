@@ -372,9 +372,23 @@ var K = {
 // deterministic, so replaying a failed level unchanged fails it again, tick for
 // tick. Same problem, different agents, and a little more to work with each
 // time round.
-function generate(level, attempt) {
+function generate(level, attempt, colonySeed) {
   attempt = attempt || 0
   var rng = makeRng(level)
+
+  // The layout is the level's, the colony is this playthrough's.
+  //
+  // Everything below used to be a pure function of (level, attempt), the
+  // personalities included, so watching level 12 twice was watching the same
+  // recording twice: the same agent hesitated at the same ledge on the same
+  // tick. The ground should be the same — that is what makes a level a place
+  // you can come back to — but the fifteen who walk into it should not be.
+  //
+  // Callers that need a repeatable run pass the seed in; simcheck does, or its
+  // paired-run checks would compare two different colonies and blame the
+  // terrain for the difference.
+  if (colonySeed === undefined || colonySeed === null)
+    colonySeed = Math.floor(Math.random() * 2147483647)
   var w = {
     level: level,
     attempt: attempt,
@@ -426,7 +440,10 @@ function generate(level, attempt) {
 
     // Personalities are drawn from their own stream, kept separate from the
     // generator's so that changing level layout doesn't reshuffle who is who.
-    traitRng: makeRng(level * 7919 + 13 + attempt * 104729),
+    // The seed is kept so a run that did something worth seeing again can be
+    // replayed exactly: generate(level, attempt, w.colonySeed).
+    colonySeed: colonySeed,
+    traitRng: makeRng(colonySeed),
     traitCounts: {},
 
     // Stall detection: the director watches these three numbers and steps in
@@ -2792,9 +2809,10 @@ function canStartBuild(w, ag) {
 }
 
 function spawn(w) {
-  // Drawn from the world's own stream so a given level always sends the same
-  // agents out in the same order — level 42 has the same stubborn one at the
-  // same point in the queue every time you come back to it.
+  // Drawn from the world's own stream, which is seeded per playthrough: level
+  // 42 is the same level every time and never the same colony twice. Which one
+  // is the stubborn one, and how far down the queue it is, is the difference
+  // between watching a level again and watching a recording of it.
   var trait = TRAIT_POOL[Math.floor(w.traitRng() * TRAIT_POOL.length) % TRAIT_POOL.length]
   var whim = w.traitRng()
   return {

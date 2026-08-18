@@ -34,19 +34,28 @@ function loadSim() {
   return mod.exports
 }
 
+// The colony is random per playthrough in the game, which is the point of it —
+// but a harness that reports a different number every run reports nothing. Every
+// command below pins the seed, and this is the formula the colony used back when
+// it was derived from the level, so the published baselines still mean what they
+// said. `salt` samples a different colony without giving up repeatability.
+function colonySeed(level, attempt, salt) {
+  return level * 7919 + 13 + attempt * 104729 + (salt || 0) * 15485863
+}
+
 // One attempt, played to completion or to a hard tick cap that would expose a
 // hang.
-function play(S, level, attempt) {
-  const w = S.generate(level, attempt)
+function play(S, level, attempt, salt) {
+  const w = S.generate(level, attempt, colonySeed(level, attempt, salt))
   let t = 0
   while (!w.done && t < 6000) { S.step(w); t++ }
   return { w, ticks: t, hung: !w.done }
 }
 
 // The page's own rule: up to three attempts at a level before moving on.
-function playLevel(S, level, onAttempt) {
+function playLevel(S, level, onAttempt, salt) {
   for (let a = 0; a < 3; a++) {
-    const r = play(S, level, a)
+    const r = play(S, level, a, salt)
     if (onAttempt) onAttempt(r)
     if (r.w.saved >= r.w.target) return { cleared: true, last: r }
     if (a === 2) return { cleared: false, last: r }
@@ -94,7 +103,7 @@ function cmdInert(S) {
   for (let lv = 1; lv <= 150; lv++) {
     for (let a = 0; a < 2; a++) {
       const run = flatten => {
-        const w = S.generate(lv, a)
+        const w = S.generate(lv, a, colonySeed(lv, a))
         if (flatten) for (let i = 0; i < w.terrain.length; i++) {
           const t = w.terrain[i]
           if (t === S.ROCK || t === S.ORE) w.terrain[i] = S.DIRT
@@ -130,7 +139,7 @@ function cmdGravity(S) {
   for (const kind of ["block", "camp", "bomb", "mine"]) {
     let tested = 0, fell = 0
     for (let lv = 1; lv <= 400 && tested < 12; lv++) {
-      const w = S.generate(lv, 0)
+      const w = S.generate(lv, 0, colonySeed(lv, 0))
       let t = 0, subject = null
       while (!w.done && t < 4000) {
         S.step(w); t++
@@ -154,6 +163,33 @@ function cmdGravity(S) {
   }
 }
 
+// How much does the colony matter? Play each level with several different
+// colonies on the same ground and report how far apart they land. Before the
+// colony was seeded per playthrough this command could only have printed zeros.
+function cmdSpread(S, levels, colonies) {
+  let widthSum = 0, flips = 0, counted = 0
+  for (let lv = 1; lv <= levels; lv++) {
+    const runs = []
+    for (let c = 0; c < colonies; c++) {
+      const r = play(S, lv, 0, c)
+      runs.push({ saved: r.w.saved, target: r.w.target, ticks: r.ticks })
+    }
+    const saved = runs.map(r => r.saved)
+    const lo = Math.min(...saved), hi = Math.max(...saved)
+    const cleared = runs.filter(r => r.saved >= r.target).length
+    const secs = runs.map(r => Math.round(r.ticks / 30))
+    widthSum += hi - lo
+    counted++
+    if (cleared > 0 && cleared < colonies) flips++
+    if (lv <= 12) console.log(
+      `level ${String(lv).padStart(3)}  home ${String(lo).padStart(2)}-${String(hi).padEnd(2)} of ${runs[0].target}` +
+      `   ${Math.min(...secs)}-${Math.max(...secs)}s   cleared by ${cleared}/${colonies}`)
+  }
+  console.log(`\n${counted} levels x ${colonies} colonies`)
+  console.log(`average spread in agents home: ${(widthSum / counted).toFixed(1)}`)
+  console.log(`levels where the colony decided it: ${flips} (${Math.round(100 * flips / counted)}%)`)
+}
+
 const cmd = process.argv[2] || "play"
 const arg = Number(process.argv[3])
 const S = loadSim()
@@ -161,4 +197,5 @@ if (cmd === "play") cmdPlay(S, arg || 200)
 else if (cmd === "biomes") cmdBiomes(S, arg || 210)
 else if (cmd === "inert") cmdInert(S)
 else if (cmd === "gravity") cmdGravity(S)
-else { console.error("usage: simcheck.js play|biomes|inert|gravity [levels]"); process.exit(2) }
+else if (cmd === "spread") cmdSpread(S, arg || 60, Number(process.argv[4]) || 8)
+else { console.error("usage: simcheck.js play|biomes|inert|gravity|spread [levels] [colonies]"); process.exit(2) }
