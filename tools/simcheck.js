@@ -182,6 +182,32 @@ function cmdGravity(S) {
   }
   console.log(`  ladder ${gone}/${hung} came down when the wall went`)
   if (hung && gone < hung) process.exitCode = 1
+
+  // A ladder can be posted up a wall whose approach is tucked beneath an
+  // overhang. Ordinary climbers correctly bump their heads there; the ladder's
+  // route must carry the whole colony through it or the visible rungs promise
+  // a path the simulation refuses to use.
+  const w = S.generate(1, 0, colonySeed(1, 0))
+  const x = 20, bottom = 30, top = 19
+  for (let y = top - 4; y <= bottom + 1; y++)
+    for (let xx = x - 2; xx <= x + 2; xx++) w.terrain[y * S.COLS + xx] = S.EMPTY
+  for (let y = top + 1; y <= bottom; y++) w.terrain[y * S.COLS + x + 1] = S.DIRT
+  w.terrain[(bottom - S.AGENT_H) * S.COLS + x] = S.DIRT
+  w.ladders = [{ x: x + 1, side: 1, bottom, top, t: 14 }]
+  const climber = { x: x + 0.5, y: bottom, dir: 1, state: "climb", anim: 0 }
+  S.stepClimb(w, climber)
+  const through = climber.state === "climb" && climber.y < bottom
+  console.log(`  ladder overhang ${through ? "climb continued" : "blocked the climb"}`)
+  if (!through) process.exitCode = 1
+
+  const descender = { x: x + 1.5, y: top, dir: -1, state: "walk", anim: 0 }
+  S.edgeAhead(w, descender, descender.x - S.WALK_SPEED)
+  let downTicks = 0
+  while (descender.state === "climb" && downTicks++ < 100) S.stepClimb(w, descender)
+  const descended = descender.state === "walk" && descender.y === bottom
+    && descender.x === x + 0.5 && descender.dir === -1
+  console.log(`  ladder descent ${descended ? "reached the bottom" : "failed"}`)
+  if (!descended) process.exitCode = 1
 }
 
 // How much does the colony matter? Play each level with several different

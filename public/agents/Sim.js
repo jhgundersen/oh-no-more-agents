@@ -2713,6 +2713,12 @@ function edgeAhead(w, ag, nx) {
   var depth = dropDepth(w, ax, footY)
   var far = landingAhead(w, ag.x, footY, ag.dir)
 
+  // The top of a ladder is approached from the wall it rests on, facing out
+  // over its drop. It is a route for everybody in both directions, so take it
+  // before personality, special moves or the usual judgement about the fall.
+  var ladder = ladderDownAt(w, Math.floor(ag.x), ag.dir, footY)
+  if (ladder) { startLadderDown(ag, ladder); return }
+
   // Nothing down there at all. This case has to come first: an umbrella is no
   // help over a shaft with no floor, and checking the floater branch ahead of
   // it is exactly how a floater ends up drifting serenely out of the world.
@@ -2888,6 +2894,18 @@ function beginUncontrolledFall(w, ag) {
 
 function startClimb(w, ag) {
   ag.state = "climb"
+  ag.climbDown = false
+  ag.timer = 0
+}
+
+function startLadderDown(ag, ladder) {
+  ag.state = "climb"
+  ag.climbDown = true
+  ag.dir = ladder.side
+  ag.x = ladder.x - ladder.side + 0.5
+  // Get the feet just below the top surface so ladderAt can identify the face
+  // on the first descending tick without a visible jump.
+  ag.y = ladder.top + CLIMB_SPEED
   ag.timer = 0
 }
 
@@ -3147,11 +3165,34 @@ function stepFall(w, ag) {
 function stepClimb(w, ag) {
   var wallX = Math.floor(ag.x) + ag.dir
   var footY = Math.floor(ag.y)
+  var ladder = ag.climbDown
+    ? ladderRideAt(w, wallX, ag.dir, footY)
+    : ladderAt(w, wallX, ag.dir, footY)
+
+  if (ag.climbDown) {
+    // If somebody removes the supporting wall, stepLadders will take the
+    // ladder down too. Let go rather than descending an object that is no
+    // longer there.
+    if (!ladder) { ag.climbDown = false; beginUncontrolledFall(w, ag); return }
+    ag.y += CLIMB_SPEED
+    ag.anim++
+    if (ag.y >= ladder.bottom) {
+      ag.y = ladder.bottom
+      ag.state = "walk"
+      ag.climbDown = false
+      ag.dir = -ladder.side
+      ag.turns = 0
+    }
+    return
+  }
 
   // Head into a ceiling: nothing above to climb onto, so let go. Counts as a
   // failed attempt — an agent that keeps trying the same wall should end up
-  // concluding the way on is somewhere else.
-  if (solid(w, Math.floor(ag.x), footY - AGENT_H)) {
+  // concluding the way on is somewhere else. A ladder is the exception: its
+  // whole promise is a route up this face, including through an overhang on
+  // the approach side. The top still needs headroom before the agent can haul
+  // over, so this only permits the climb itself through the obstruction.
+  if (!ladder && solid(w, Math.floor(ag.x), footY - AGENT_H)) {
     ag.dir = -ag.dir
     ag.turns++
     beginUncontrolledFall(w, ag)
@@ -3333,6 +3374,22 @@ function ladderAt(w, x, side, footY) {
   for (var i = 0; i < w.ladders.length; i++) {
     var l = w.ladders[i]
     if (l.x === x && l.side === side && footY <= l.bottom && footY > l.top) return l
+  }
+  return null
+}
+
+function ladderRideAt(w, x, side, footY) {
+  for (var i = 0; i < w.ladders.length; i++) {
+    var l = w.ladders[i]
+    if (l.x === x && l.side === side && footY >= l.top && footY <= l.bottom) return l
+  }
+  return null
+}
+
+function ladderDownAt(w, x, dir, footY) {
+  for (var i = 0; i < w.ladders.length; i++) {
+    var l = w.ladders[i]
+    if (l.x === x && dir === -l.side && footY === l.top) return l
   }
   return null
 }
