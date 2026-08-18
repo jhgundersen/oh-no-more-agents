@@ -1935,9 +1935,22 @@ function drawAgent(ctx, w, pal, ag, opts) {
         ctx.fillStyle = (ag.anim >> 1) % 2 ? "#ffe68a" : "#ff8a35"
         ctx.fillRect(ox - dir * 2, oy + 15, 2, 4 + ((ag.anim >> 1) % 2)); break
       case "helicopter":
-        ctx.fillRect(ox + 3, oy - 6, 2, 7)
-        ctx.fillRect(ox - 10 - ((ag.anim >> 1) % 2) * 3, oy - 7,
-                     28 + ((ag.anim >> 1) % 2) * 6, 2); break
+        // Context Window does not merely wear a rotor: it becomes the whole
+        // tiny aircraft, tail, cockpit and skids included.
+        ctx.fillStyle = robe
+        ctx.fillRect(ox - 3, oy + 4, 15, 8)                 // cabin
+        ctx.fillRect(ox - 11, oy + 6, 9, 3)                // tail boom
+        ctx.fillRect(ox - 13, oy + 2, 2, 9)                // tail rotor
+        ctx.fillStyle = "#91d7e8"
+        ctx.fillRect(ox + 5, oy + 5, 6, 4)                 // cockpit
+        ctx.fillStyle = hc
+        ctx.fillRect(ox + 3, oy - 2, 2, 7)                 // mast
+        ctx.fillRect(ox - 10 - ((ag.anim >> 1) % 2) * 3, oy - 3,
+                     28 + ((ag.anim >> 1) % 2) * 6, 2)     // main rotor
+        ctx.fillRect(ox - 1, oy + 13, 14, 1)               // skids
+        ctx.fillRect(ox + 1, oy + 11, 1, 3)
+        ctx.fillRect(ox + 10, oy + 11, 1, 3)
+        break
       case "cushion": {
         var py = Math.round((ag.heightToY + 1) * C) - 3
         var px = Math.round(ag.heightToX * C)
@@ -2011,6 +2024,23 @@ function drawAgent(ctx, w, pal, ag, opts) {
         ctx.globalAlpha = 0.28 + Math.sin(hp * Math.PI) * 0.35; break
       case "piledrive":
         ctx.fillRect(ox - 3, oy + 14, 14, 3); break
+    }
+  }
+
+  // Model Collapse commits to the stunt: one full salto between the ledge and
+  // its pile of cheaper selves. Keep the pad and the label upright; rotate the
+  // original agent alone around the middle of its sprite.
+  var heightBodySaved = st === "height" && (ag.heightMode === "cushion" || ag.heightMode === "helicopter")
+  if (heightBodySaved) {
+    ctx.save()
+    if (ag.heightMode === "cushion") {
+      var salto = ag.heightTicks ? Math.max(0, (ag.heightTick / ag.heightTicks - 0.18) / 0.82) : 0
+      ctx.translate(ox + SPRITE_W / 2, oy + SPRITE_PX / 2)
+      ctx.rotate(Math.min(1, salto) * Math.PI * 2)
+      ctx.translate(-ox - SPRITE_W / 2, -oy - SPRITE_PX / 2)
+    } else {
+      // The cabin drawn above replaces the ordinary body completely.
+      ctx.globalAlpha = 0
     }
   }
 
@@ -2119,6 +2149,8 @@ function drawAgent(ctx, w, pal, ag, opts) {
     ctx.fillStyle = pal.blood
     blit(ctx, ox, oy, dir, 5, 8, 2, 3)
   }
+
+  if (heightBodySaved) ctx.restore()
 
   // --- optional label ----------------------------------------------------
   // What it's doing when it's doing something, and who it is the rest of the

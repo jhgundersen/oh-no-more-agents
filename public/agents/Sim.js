@@ -4004,6 +4004,30 @@ function specialHeightLanding(w, ag, far) {
   return null
 }
 
+// Find a safe spot on the floor below, offset according to the machine. A
+// lethal drop used to send nineteen different props down the same plumb line;
+// this is what lets a glider actually glide, a recoil kick backwards and the
+// helicopter go somewhere before it lands. Work back toward the guaranteed
+// vertical landing if the preferred patch is obstructed.
+function specialDropLanding(w, ag, nx, depth, mode) {
+  var drift = {
+    recoil: -3, cyclone: 4, web: 0, logchute: 3, balloon: -4,
+    promptchute: 2, piledrive: 0, helicopter: 7, glasswing: 5,
+    ghost: -3, gunwing: 4, tractor: 1, steps: 3, chain: 5,
+    jetpack: 7, cushion: 2, elevator: 0, extender: 0, shieldglider: 5
+  }[mode] || 0
+  var footY = Math.floor(ag.y) + depth
+  var baseX = Math.floor(nx)
+  var sign = drift < 0 ? -ag.dir : ag.dir
+  for (var n = Math.abs(drift); n >= 0; n--) {
+    var x = baseX + sign * n
+    if (x <= 1 || x >= COLS - 2) continue
+    if (solid(w, x, footY + 1) && !solid(w, x, footY) && headroom(w, x, footY))
+      return { x: x + 0.5, y: footY }
+  }
+  return { x: nx, y: footY }
+}
+
 // Every special has its own answer to a lethal height. These are personal,
 // temporary pieces of theatre rather than toolbar skills: none leave a generic
 // umbrella behind, and only Stack Overflow's ordinary wall move makes a route
@@ -4018,7 +4042,7 @@ function startSpecialHeight(w, ag, nx, depth, far) {
   var target = landing && cross.indexOf(spec.height) >= 0 ? landing : null
   if (!target) {
     if (depth === Infinity) return false
-    target = { x: nx, y: Math.floor(ag.y) + depth }
+    target = specialDropLanding(w, ag, nx, depth, spec.height)
   }
 
   ag.state = "height"
@@ -4033,6 +4057,8 @@ function startSpecialHeight(w, ag, nx, depth, far) {
   ag.heightTicks = Math.max(24, Math.ceil(Math.max(dx / 0.24, dy / 0.25)))
   // Model Collapse spends the opening beat visibly assembling the stunt pad.
   if (spec.height === "cushion") ag.heightTicks += 18
+  if (spec.height === "helicopter") ag.heightTicks += 60
+  if (spec.height === "balloon") ag.heightTicks += 25
   ag.x = nx
   ag.timer = 0
   w.lastEvent = spec.height === "cushion" ? "copies, cushion!" : spec.height
@@ -4050,6 +4076,22 @@ function stepSpecialHeight(w, ag) {
 
   ag.x = ag.heightFromX + (ag.heightToX - ag.heightFromX) * moveP
   ag.y = ag.heightFromY + (ag.heightToY - ag.heightFromY) * moveP
+
+  // Even when the only safe landing is directly below, these devices travel
+  // through the air instead of wearing nineteen costumes for the same fall.
+  var sway = {
+    recoil: -2, cyclone: 3, web: 0.4, logchute: 2, balloon: -3,
+    promptchute: 1.5, piledrive: 0, helicopter: 5, glasswing: 3,
+    ghost: -2, gunwing: 2.5, tractor: 0.8, steps: 1.5, chain: 3,
+    jetpack: 4, cushion: 1.5, elevator: 0, extender: 0, shieldglider: 3
+  }[ag.heightMode] || 0
+  ag.x += ag.dir * sway * Math.sin(moveP * Math.PI)
+  if (ag.heightMode === "helicopter") {
+    // A lazy circuit rather than a rotor-assisted fall: out, back across its
+    // own line, then around to the selected landing.
+    ag.x += ag.dir * 2.5 * Math.sin(moveP * Math.PI * 2)
+    ag.y -= 2 * Math.sin(moveP * Math.PI) + 1.2 * Math.sin(moveP * Math.PI * 2)
+  }
 
   // Crossing devices describe different silhouettes even though all arrive at
   // the same deterministic safe landing. The rotor and jet climb, the chain
