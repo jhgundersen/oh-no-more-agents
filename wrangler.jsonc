@@ -3,7 +3,17 @@
   "name": "oh-no-more-agents",
   "main": "src/worker.js",
   "compatibility_date": "2026-08-18",
-  "workers_dev": true,
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "oh-no-more-agents.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.oh-no-more-agents.com",
+      "custom_domain": true
+    }
+  ],
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
@@ -13,7 +23,7 @@
     {
       "binding": "DB",
       "database_name": "oh-no-more-agents",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "e87e6ae5-35c6-4bc4-b318-3728bbd881ff",
       "migrations_dir": "migrations"
     }
   ]
