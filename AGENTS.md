@@ -19,11 +19,17 @@ The production site is `https://oh-no-more-agents.com`.
 - `src/counter.js` — validation, JSON responses, and counter rate-limit helpers.
 - `migrations/` — ordered production database migrations; never rewrite a migration
   that may already have been applied.
+- `public/_headers` — cache lifetimes for the assets Workers serves.
 - `wrangler.jsonc` — Worker bindings and production custom-domain routes.
 
 ## Working conventions
 
 - Keep the game dependency-free and runnable as plain browser JavaScript.
+- Script URLs in `index.html` carry a `?v=<content hash>` so the JS can be cached
+  forever. After editing a file under `public/agents/`, run `npm run stamp` and
+  commit the re-stamped page with the code; `npm run check` fails on a stale
+  stamp. The soundtrack has no stamp and is cached just as hard, so a replacement
+  track gets a new number instead of overwriting an existing file.
 - Preserve deterministic seeded level generation. A level number should produce
   the same playable layout on every run unless a change intentionally updates it.
 - Keep simulation behavior in `Sim.js` and rendering-only behavior in `Draw.js`.
@@ -46,7 +52,8 @@ committing:
 npm run check
 ```
 
-That covers syntax, the core-file self-containment guard, and the unit tests.
+That covers syntax, the core-file self-containment guard, the cache-busting
+stamps, and the unit tests.
 It does **not** cover gameplay — see below.
 
 For gameplay work, also run the game locally with:

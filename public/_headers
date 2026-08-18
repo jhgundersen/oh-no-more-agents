@@ -1,0 +1,15 @@
+# Workers Assets reads this file instead of serving it. Its only job is to undo
+# the default `cache-control: public, max-age=0, must-revalidate` for the two
+# kinds of file that are safe to keep forever.
+
+# Safe only because tools/stamp-assets.js puts a content hash in the URL:
+# change the code and index.html asks for a different ?v=, so nothing here is
+# ever the wrong answer. index.html itself is deliberately left on the default
+# — it is the file that hands out the new stamps.
+/agents/*.js
+  cache-control: public, max-age=31536000, immutable
+
+# 24 MB of soundtrack that has no stamp, so this one is a promise we keep by
+# hand: a replacement track gets a new number, it does not overwrite an old one.
+/agents/*.mp3
+  cache-control: public, max-age=31536000, immutable
