@@ -529,12 +529,16 @@
 
   var TRACKS = ["agents/soundtrack_1.mp3", "agents/soundtrack_2.mp3",
                "agents/soundtrack_3.mp3", "agents/soundtrack_4.mp3",
-               "agents/soundtrack_5.mp3"]
+               "agents/soundtrack_5.mp3", "agents/soundtrack_6.mp3",
+               "agents/soundtrack_7.mp3"]
   var trackIndex = 0
 
   function setTrack(i, keepPlaying) {
+    // Read this before assigning src: changing the source makes the element
+    // paused immediately. At the natural end of a track `ended` is true, which
+    // still means audio is enabled and the wrapped playlist should continue.
+    var wasPlaying = keepPlaying && (!el.player.paused || el.player.ended)
     trackIndex = i
-    var wasPlaying = keepPlaying && !el.player.paused && !el.player.ended
     el.player.src = TRACKS[i]
     if (wasPlaying) playAudio()
     Array.prototype.forEach.call(el.tracks.children, function (b, n) {
