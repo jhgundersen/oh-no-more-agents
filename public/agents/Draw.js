@@ -1017,17 +1017,17 @@ var SPECIAL_FACTS = {
     "is exploring. It has been exploring for a while.",
     "has never once been where the exit is."
   ],
-  pyro: [
-    "converges on the answer at 900 degrees.",
-    "cools slowly. The level does not.",
-    "calls this an optimisation.",
-    "escapes local minima the honest way.",
-    "runs hot and calls it exploration.",
-    "has a temperature setting of exactly one: yes.",
-    "found a smoother solution surface.",
-    "does not iterate. It anneals.",
-    "was told to reduce the search space.",
-    "melts through the problem rather than around it."
+  forcepush: [
+    "resolved the conflict by removing the branch.",
+    "does not pull. It has never pulled.",
+    "considered a smaller change and rejected it.",
+    "rewrote history from forty feet away.",
+    "was asked to review the wall and deleted it instead.",
+    "believes the remote should match its local copy.",
+    "has no merge strategy and does not need one.",
+    "solves problems it cannot personally reach.",
+    "left no conflict markers, or wall.",
+    "reports the change as non-breaking."
   ],
   sapper: [
     "ignores everything above and does what the wall says.",
@@ -2291,13 +2291,47 @@ function drawAgentTrick(ctx, w, pal, ag, ox, oy, dir, robe, hair) {
         ctx.fillRect(tx + dir * 4 - 1, oy - Math.round(26 * reach), 3, Math.round(30 * reach))
         ctx.fillRect(tx + dir * 4, oy + 14, Math.round(24 * reach), 2)
         break
-      case "melt":                              // a growing disc
-        var rr = Math.round(9 * reach)
-        for (var my = -rr; my <= rr; my++) {
-          var mw = Math.round(Math.sqrt(Math.max(0, rr * rr - my * my)))
-          ctx.fillRect(tx + dir * 14 - mw, mid + my, mw * 2, 1)
+      case "rocket": {                          // launched, not swung
+        // The tube on the shoulder, and the round already on its way. reach
+        // runs 0..1 over the move, so the rocket crosses the gap in the time
+        // the agent spends braced against the recoil.
+        ctx.fillStyle = pal.rigDark
+        ctx.fillRect(dir > 0 ? tx - 4 : tx - 8, mid - 4, 12, 5)
+        ctx.fillStyle = pal.rig
+        ctx.fillRect(dir > 0 ? tx + 6 : tx - 8, mid - 3, 3, 3)
+
+        // How far it actually goes. The first version flew a fixed forty
+        // pixels while the simulation reached twenty-six cells, so the round
+        // stopped in mid-air and the hole opened somewhere behind it. Scan the
+        // same way the shot does and fly the whole distance.
+        var C2 = w.k.CELL
+        var rkCell = Math.floor(ag.x)
+        var rkFoot = Math.floor(ag.y)
+        var rkTo = rkCell
+        for (var rr2 = 2; rr2 <= w.k.ROCKET_RANGE; rr2++) {
+          var rcx = rkCell + dir * rr2
+          if (rcx < 0 || rcx >= w.k.COLS) break
+          rkTo = rcx
+          if (w.terrain[(rkFoot - 2) * w.k.COLS + rcx] !== w.k.EMPTY
+              || w.terrain[(rkFoot - 1) * w.k.COLS + rcx] !== w.k.EMPTY) break
         }
+        var flight = Math.min(1, reach)
+        var rkFrom = ox + SPRITE_W / 2 + dir * 6
+        var rkX = Math.round(rkFrom + (rkTo * C2 - rkFrom) * flight)
+        var rkY = mid - 2
+        ctx.fillStyle = "#d8dde5"
+        ctx.fillRect(rkX, rkY, 5, 3)                       // the round
+        ctx.fillStyle = "#ffb648"
+        hzTri(ctx, rkX - dir * 3, rkY + 1, 3, 5, dir > 0 ? -1 : 1)
+        // Exhaust, thinning behind it.
+        for (var ex2 = 1; ex2 <= 5; ex2++) {
+          ctx.globalAlpha = 0.5 / ex2
+          ctx.fillStyle = ex2 < 3 ? "#ffe68a" : "#8a8f9c"
+          ctx.fillRect(rkX - dir * (4 + ex2 * 4), rkY, 4, 3 - (ex2 > 3 ? 1 : 0))
+        }
+        ctx.globalAlpha = 1
         break
+      }
       case "sap":                               // instructions injected into rock
         for (var pr = 0; pr < 4; pr++) {
           var promptX = tx + dir * (5 + pr * 5)

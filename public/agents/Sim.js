@@ -59,6 +59,9 @@ var ENEMY_JET_SINK = 0.10
 // Longer limits delayed stuck runs without rescuing additional agents in sweeps.
 var LEVEL_LIMIT = 30 * 110
 var NUKE_STAGGER = 5     // ticks between arming one agent and the next
+var ROCKET_RANGE = 26    // how far Force Push's rocket will travel
+var ROCKET_BLAST = 4     // and the radius of the hole it leaves
+var ROCKET_FLIGHT = 16   // ticks the rocket is visibly in the air
 var GUN_BACKOFF = 3      // retreats a gunner gets before it has to stand and fire
 var BLOCK_PATIENCE = 600 // ticks a blocker will hold having stopped nobody
 var BLOCK_MAX = 900      // and the longest it will hold whatever happens
@@ -335,6 +338,10 @@ var K = {
   AGENT_H: AGENT_H,
   // Draw.js needs this one to know how much of an incubation is left to show.
   INCUBATION_TELL: INCUBATION_TELL,
+  // Force Push's reach, so Draw.js can fly the rocket exactly as far as the
+  // simulation throws it. Drawn short of the hole it makes, it read as a dud.
+  ROCKET_RANGE: ROCKET_RANGE,
+
   // RAMbo's burst pattern: twelve rounds, none going quite where the last one
   // did. Draw.js drew the tracers from its own copy of these numbers, which
   // is a duplicate that only stays correct by luck. Both of his moves fan by
@@ -1232,7 +1239,10 @@ var SPECIALS = [
   // roof runs out from under it.
   { id: "spider",    name: "Web Crawler",     act: "ceiling",height: "web", cool: 90,  robe: "#8f2bbf", hair: "#e04a8a" },
 
-  { id: "pyro",      name: "Sim Anneal",       act: "melt",   height: "balloon", cool: 160, robe: "#c4341c", hair: "#f0a03c" },
+  // The only one that acts at a distance. Everybody else on this roster solves
+  // the wall it is standing in front of; this one solves a wall on the far side
+  // of the room, and whatever was living in front of it.
+  { id: "forcepush", name: "Force Push",       act: "rocket", height: "balloon", cool: 175, robe: "#7a2b18", hair: "#ffb648" },
   { id: "sapper",    name: "Prompt Injection",     act: "sap",    height: "promptchute", cool: 200, robe: "#6b6b28", hair: "#c8c8b0" },
   { id: "piledriver",name: "Gradient Descent", act: "stomp",  height: "piledrive", cool: 140, robe: "#4a4f59", hair: "#d8dde5" },
   { id: "quarryman", name: "Context Window",  act: "quarry", height: "helicopter", cool: 220, robe: "#a8843c", hair: "#5a4426" },
@@ -1430,13 +1440,52 @@ function specialShapeCut(w, ag, act, dry) {
   var fx = Math.floor(ag.x), fy = Math.floor(ag.y), d = ag.dir
   var moved = false
   var i, j, x, y
-  if (act === "melt") {
-    for (i = -5; i <= 5; i++) for (j = -5; j <= 5; j++) {
-      if (i * i + j * j > 26) continue
-      x = fx + d * 4 + i; y = fy - 2 + j
-      if (y > fy) continue
-      if (dry ? workable(w, x, y) : clearCell(w, x, y)) { if (dry) return true; moved = true }
+  if (act === "rocket") {
+    // Fired, not swung. It travels until it meets something and takes out a
+    // room-sized bite where it lands, which is the whole point of it: every
+    // other move on this roster answers the wall the agent is touching, and
+    // this one answers a wall on the other side of the level.
+    var hitX = fx, hitY = fy - 2, flew = 0
+    for (i = 2; i <= ROCKET_RANGE; i++) {
+      var rx2 = fx + d * i
+      if (at(w, rx2, fy - 2) === STEEL || at(w, rx2, fy - 1) === STEEL) break
+      flew = i
+      if (solid(w, rx2, fy - 2) || solid(w, rx2, fy - 1)) break
     }
+    hitX = fx + d * Math.max(2, flew)
+
+    // A hazard in the flight path is what it hits, and a hazard it hits is
+    // wrecked. Nothing else in the game can reach out and do that.
+    for (var rh = 0; rh < w.hazards.length; rh++) {
+      var rhz = w.hazards[rh]
+      if (rhz.wrecked) continue
+      var rmid = hazardMid(rhz)
+      if (Math.abs(rmid.y - fy) > CORR_H + 2) continue
+      var along = (rmid.x - fx) * d
+      if (along < 1 || along > Math.abs(hitX - fx) + 3) continue
+      if (dry) return true
+      hitX = Math.round(rmid.x)
+      wreckHazard(w, rhz)
+      break
+    }
+
+    for (i = -ROCKET_BLAST; i <= ROCKET_BLAST; i++)
+      for (j = -ROCKET_BLAST; j <= ROCKET_BLAST; j++) {
+        if (i * i + j * j > ROCKET_BLAST * ROCKET_BLAST + 1) continue
+        x = hitX + i; y = hitY + j
+        if (dry ? workable(w, x, y) : clearCell(w, x, y)) { if (dry) return true; moved = true }
+      }
+
+    if (!dry) {
+      // Where it went, for the flight Draw.js has to put on the board.
+      ag.specialX = hitX
+      ag.specialY = hitY
+      ag.shotFor = ROCKET_FLIGHT
+      addDust(w, hitX, hitY, 22)
+      w.lastEvent = "force pushed"
+      moved = true
+    }
+
   } else if (act === "stomp") {
     for (i = -1; i <= 1; i++) for (j = 1; j <= 6; j++)
       if (dry ? workable(w, fx + i, fy + j) : clearCell(w, fx + i, fy + j)) {
@@ -1570,7 +1619,7 @@ function specialCut(w, ag, act, dry) {
     setCell(w, fx, fy, ROCK)
     setCell(w, fx + d * (1 + thick), fy, ROCK)
 
-  } else if (act === "melt" || act === "stomp" || act === "quarry" || act === "slab") {
+  } else if (act === "rocket" || act === "stomp" || act === "quarry" || act === "slab") {
     return specialShapeCut(w, ag, act, dry)
 
   } else if (act === "sap") {
@@ -1707,7 +1756,6 @@ var HAZARDS = [
 var HAZARD_NOT = {
   brazier: ["Ice Cave"],
   flame: ["Ice Cave"],
-  pyro: ["Ice Cave"],
   geyser: ["Ice Cave", "Spaceship"],
   grinder: ["Jungle"],
   piston: ["Jungle"],
@@ -3891,13 +3939,13 @@ function specialCountersHazard(w, ag, act) {
     var hm = hazardMid(h)
     if (Math.abs(hm.y - ag.y) > CORR_H + 2 || Math.abs(hm.x - ag.x) > 7) continue
     var counters = (act === "sap" && electronic.indexOf(h.kind) >= 0)
-      || (act === "melt" && frozen.indexOf(h.kind) >= 0)
+      || (act === "rocket" && frozen.indexOf(h.kind) >= 0)
       || (act === "slab" && hazardSpec(h.kind).mech === "field")
     if (!counters) continue
     ag.dir = hm.x >= ag.x ? 1 : -1
     wreckHazard(w, h)
     ag.cool = specOf(ag).cool
-    w.lastEvent = act === "sap" ? "prompt accepted" : (act === "melt" ? "thawed" : "contained")
+    w.lastEvent = act === "sap" ? "prompt accepted" : (act === "rocket" ? "force pushed" : "contained")
     return true
   }
   return false
