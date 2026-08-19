@@ -66,7 +66,11 @@ var SKILL_LABELS = {
   builder: "Build", basher: "Bash", miner: "Mine", digger: "Dig"
 }
 
-var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship"]
+// Appended rather than inserted: the biome is picked by level number, so
+// putting a new one anywhere but the end would re-skin every level above it.
+// Palette.js derives the same index with the same rule and must be kept in
+// step — see the note over poolTint there.
+var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory"]
 
 var TRAITS = {
   steady:   { label: "steady",   turnLimit: 3, fallMargin: 0, bridgeAt: 8,  bashFirst: false, blockBias: 0, buildCap: 2, noFloat: false, standDown: 0, digBias: 0, pace: 1 },
@@ -383,6 +387,19 @@ function generate(level, attempt, colonySeed) {
     colonySeed: colonySeed,
     traitRng: makeRng(colonySeed),
     traitCounts: {},
+
+    // Events: what may happen to this level while it is being played, and the
+    // modifiers a live one has switched on. See the block above stepEvents.
+    events: [],
+    eventLog: [],
+    eventMechs: {},
+    eventWarn: "",
+    eventWarnFor: 0,
+    eventFlash: 0,
+    eventDrift: 0,
+    driftWhat: "",
+    eventBoost: 0,
+    eventMult: 1,
 
     progressMark: 0,
     stallTicks: 0,
@@ -740,6 +757,10 @@ function fillEarth(w, rng) {
     }
   }
   biomeSkin(w, rng)
+
+  // Last, because an event needs the corridors, the pits, the exit and the
+  // hatch all settled before it can be told where it is not allowed to go.
+  rollEvents(w, rng, w.traitRng)
 }
 
 function biomeSkin(w, rng) {
@@ -799,6 +820,57 @@ function biomeSkin(w, rng) {
       for (x = 3; x < COLS - 3; x++)
         if (at(w, x, y) === DIRT && rng() < 0.35) setCell(w, x, y, ROCK)
 
+  } else if (w.biome === "Factory") {
+    // Machinery bolted into concrete. The Spaceship is a uniform grid because
+    // a hull is manufactured all at once; a factory is not. Here the concrete
+    // is the ground and the machines are lumps set into it at a spacing that
+    // was decided by what fits, so the regularity is in the shapes and the
+    // mezzanine decks rather than in where anything sits.
+    // DIRT is the one material Palette tints; ROCK is derived from the theme
+    // foreground and comes out the same cold grey in every biome. So the room
+    // is DIRT and the machinery in it is ROCK, which is also the right way
+    // round to look at: warm concrete with cold metal set into it.
+    for (y = SKY; y < ROWS - 2; y++)
+      for (x = 3; x < COLS - 3; x++)
+        if (at(w, x, y) !== STEEL) setCell(w, x, y, DIRT)
+
+    // Housings: rectangles, never blobs. Nothing in here grew.
+    var housings = irand(rng, 16, 24)
+    for (var hs2 = 0; hs2 < housings; hs2++) {
+      var hx = irand(rng, 4, COLS - 12), hy = irand(rng, SKY + 1, ROWS - 9)
+      var hw2 = irand(rng, 4, 9), hh2 = irand(rng, 3, 6)
+      for (y = hy; y < hy + hh2; y++)
+        for (x = hx; x < hx + hw2; x++) {
+          if (at(w, x, y) === STEEL) continue
+          // Hollow-ish: a shell of ORE with DIRT innards, so a bash through a
+          // machine looks like it opened something rather than chipped a rock.
+          var shell = y === hy || y === hy + hh2 - 1 || x === hx || x === hx + hw2 - 1
+          setCell(w, x, y, shell ? ORE : ROCK)
+        }
+    }
+
+    // Mezzanine decks: thin horizontal plate at a regular pitch, the one thing
+    // in the room that was surveyed.
+    for (y = SKY + irand(rng, 3, 7); y < ROWS - 4; y += irand(rng, 9, 13)) {
+      for (x = 3; x < COLS - 3; x++) {
+        if (at(w, x, y) === STEEL) continue
+        if (rng() < 0.08) continue          // a missing plate here and there
+        setCell(w, x, y, ORE)
+      }
+    }
+
+    // Pipe runs dropping between the decks.
+    var pipes = irand(rng, 7, 12)
+    for (var pi2 = 0; pi2 < pipes; pi2++) {
+      var px2 = irand(rng, 5, COLS - 6), py2 = SKY + irand(rng, 0, 5)
+      var plen = irand(rng, 8, 26)
+      for (var ps2 = 0; ps2 < plen; ps2++) {
+        py2++
+        if (py2 >= ROWS - 3) break
+        if (at(w, px2, py2) !== STEEL) setCell(w, px2, py2, ORE)
+      }
+    }
+
   } else if (w.biome === "Jungle") {
     for (var bl = 0; bl < 26; bl++) {
       var mx = irand(rng, 5, COLS - 6), my = irand(rng, SKY + 1, ROWS - 5)
@@ -837,6 +909,9 @@ function placeDecor(w, rng, corridors) {
   } else if (w.biome === "Spaceship") {
     floorRate = 0.18; ceilRate = 0.16; gap = 5
     floorKinds = ["spire", "clump", "clump", "tuft"]
+  } else if (w.biome === "Factory") {
+    floorRate = 0.22; ceilRate = 0.20; gap = 4
+    floorKinds = ["spire", "spire", "clump", "tuft"]
   }
 
   if (w.biome === "Spaceship") {
@@ -859,6 +934,30 @@ function placeDecor(w, rng, corridors) {
       for (var gx2 = sc.x0 + 2; gx2 < sc.x1 - 3; gx2 += 6) {
         if (solid(w, gx2, sc.floorY) && !solid(w, gx2, sc.floorY - 1))
           w.decor.push({ x: gx2, y: sc.floorY - 1, kind: "grate", size: 1, seed: gx2 })
+      }
+    }
+  }
+
+  if (w.biome === "Factory") {
+    for (var fi = 0; fi < corridors.length; fi++) {
+      var fc = corridors[fi]
+      // Cogs on the back wall, turning whether or not anybody is watching.
+      // They are scenery, not hazards: the room has to look like it is running
+      // even where nothing is trying to kill anybody.
+      for (var cgx = fc.x0 + 5; cgx < fc.x1 - 5; cgx += irand(rng, 17, 27)) {
+        var cgy = fc.floorY - CORR_H - 3
+        if (solid(w, cgx, cgy) && solid(w, cgx + 2, cgy))
+          w.decor.push({ x: cgx, y: cgy, kind: "cog", size: irand(rng, 2, 3), seed: Math.floor(rng() * 1000) })
+      }
+      // Vents in the floor, breathing smoke up into the corridor.
+      for (var vx = fc.x0 + 4; vx < fc.x1 - 4; vx += irand(rng, 13, 22)) {
+        if (solid(w, vx, fc.floorY) && !solid(w, vx, fc.floorY - 1))
+          w.decor.push({ x: vx, y: fc.floorY - 1, kind: "vent", size: 2, seed: Math.floor(rng() * 1000) })
+      }
+      // Roller beds along the floor: the flat stretch an agent walks over.
+      for (var bx = fc.x0 + 3; bx < fc.x1 - 4; bx += 7) {
+        if (solid(w, bx, fc.floorY) && !solid(w, bx, fc.floorY - 1))
+          w.decor.push({ x: bx, y: fc.floorY - 1, kind: "belt", size: 1, seed: bx })
       }
     }
   }
@@ -1558,7 +1657,13 @@ var HAZARDS = [
   { id: "blackice", name: "Frozen State", mech: "plate", mount: "floor", reach: 3, charge: 12, fire: 22, rest: 48, w: 6, h: 2, only: ["Ice Cave"] },
   { id: "airlock",  name: "Forced Logout", mech: "cycle", mount: "floor", reach: 0, charge: 34, fire: 24, rest: 66, w: 6, h: 6, only: ["Spaceship"] },
   { id: "servo",    name: "ARM64", mech: "watch", mount: "ceiling", reach: 14, charge: 18, fire: 18, rest: 62, w: 4, h: 5, only: ["Spaceship"] },
-  { id: "packetloss", name: "Packet Loss", mech: "beam", mount: "ceiling", reach: 8, charge: 24, fire: 26, rest: 58, w: 7, h: 6, only: ["Spaceship"] }
+  { id: "packetloss", name: "Packet Loss", mech: "beam", mount: "ceiling", reach: 8, charge: 24, fire: 26, rest: 58, w: 7, h: 6, only: ["Spaceship"] },
+
+  // Factory. One of each of the three mechanisms that suit a machine room: a
+  // press that never stops, a wheel that reacts, and a vent that vents.
+  { id: "stamper",  name: "Batch Process", mech: "cycle", mount: "ceiling", reach: 0, charge: 30, fire: 22, rest: 54, w: 5, h: 7, only: ["Factory"] },
+  { id: "flywheel", name: "Spin Up", mech: "watch", mount: "wall", reach: 11, charge: 26, fire: 22, rest: 60, w: 4, h: 5, only: ["Factory"] },
+  { id: "steamvent",name: "Memory Dump", mech: "cycle", mount: "floor", reach: 0, charge: 26, fire: 28, rest: 58, w: 4, h: 6, only: ["Factory"] }
 ]
 
 // Open flame and steam have no business in an ice cave, and the industrial
@@ -1844,7 +1949,13 @@ function stepOneHazard(w, h) {
 }
 
 function stepHazard(w) {
-  for (var hi = 0; hi < w.hazards.length; hi++) stepOneHazard(w, w.hazards[hi])
+  // A live blackout event stops every fixture where it stands; an overclock
+  // runs them all twice as often. Both are the same dial, and both are the
+  // reason a corridor the colony had learned to time stops behaving.
+  var mult = w.eventBoost > 0 ? w.eventMult : 1
+  if (mult === 0) return
+  for (var pass = 0; pass < mult; pass++)
+    for (var hi = 0; hi < w.hazards.length; hi++) stepOneHazard(w, w.hazards[hi])
 }
 
 function stepSniper(w, h, spec) {
@@ -1990,7 +2101,11 @@ function exitInSight(w, ag) {
   if (Math.abs(footY - exitFloor(w)) > 1) return 0
   var ex = e.x + e.w / 2
   var gap = ex - ag.x
-  if (Math.abs(gap) > EXIT_SIGHT || Math.abs(gap) < 1) return 0
+  // A sight drift — a swarm, a whiteout, a storm — shortens how far the door
+  // can be seen from. It is the only modifier that makes the wary traits worth
+  // having, because everybody else is now navigating by what is underfoot.
+  var sight = w.driftWhat === "sight" && w.eventDrift > 0 ? EXIT_SIGHT * 0.35 : EXIT_SIGHT
+  if (Math.abs(gap) > sight || Math.abs(gap) < 1) return 0
   if (!lineClear(w, Math.floor(ag.x), footY - 1, Math.floor(ex), footY - 1)) return 0
   return gap > 0 ? 1 : -1
 }
@@ -2045,6 +2160,7 @@ function pitLiquid(biome) {
   if (biome === "Jungle" || biome === "Ruins") return "water"
   if (biome === "Foundry") return "lava"
   if (biome === "Spaceship") return "coolant"
+  if (biome === "Factory") return "oil"
   return null
 }
 
@@ -2204,7 +2320,7 @@ function sink(w, ag, pool) {
   w.lost++
   pool.ripple = w.ticks
   addDust(w, ag.x, pool.surfaceY, 12)
-  w.lastEvent = pool.liquid === "lava" ? "slag" : "splash"
+  w.lastEvent = pool.liquid === "lava" ? "slag" : (pool.liquid === "oil" ? "sump" : "splash")
 }
 
 
@@ -2742,6 +2858,228 @@ function spawn(w) {
 }
 
 // ---------------------------------------------------------------------------
+// Events
+// ---------------------------------------------------------------------------
+// A hazard is decided at generation and then runs on a timer. An event changes
+// the level's premise while it is being played: the colony agreed on a route,
+// and now the route is somewhere else. That re-decision is the thing worth
+// watching, and it is why every event here moves terrain, water or the rules
+// rather than simply dealing damage — damage is what the hazards are for.
+//
+// Each event is a row in a table over five mechanisms, in the same way every
+// hazard is a row over six. Twenty-four bespoke events would be twenty-four
+// sets of bugs; twenty-four rows over five mechanisms are five.
+//
+// Which events a level may see comes from the level seed, so level 42 is still
+// recognisably level 42 — it is always the one that can flood. Whether and
+// when they actually fire comes from the colony stream, so a retry is not a
+// recording of the last attempt.
+
+var EVENT_TELEGRAPH = 75    // ticks of warning before one lands
+var EVENT_EARLIEST = 300    // nothing in the first ten seconds: let them commit
+var EVENT_GAP = 450         // ticks between the two on a level that gets two
+
+var EVENTS = [
+  // --- Cavern ---
+  { id: "cavein",   name: "Cache Eviction",   biome: "Cavern", mech: "collapse", at: "ceiling", span: 9, deep: 4 },
+  { id: "spring",   name: "Data Leak",        biome: "Cavern", mech: "spill",    rise: 2 },
+  { id: "bats",     name: "Swarm Intelligence",biome: "Cavern", mech: "drift",   what: "sight", ticks: 420 },
+
+  // --- Ruins ---
+  { id: "givesway", name: "Legacy Collapse",  biome: "Ruins",  mech: "collapse", at: "floor",   span: 7, deep: 2 },
+  { id: "sandfall", name: "Backfill",         biome: "Ruins",  mech: "growth",   span: 12, high: 2 },
+  { id: "waking",   name: "Daemon Restart",   biome: "Ruins",  mech: "blackout", mult: 2, ticks: 420 },
+
+  // --- Frost ---
+  { id: "whiteout", name: "Signal Loss",      biome: "Frost",  mech: "drift",    what: "sight", ticks: 480 },
+  { id: "thaw",     name: "Thermal Throttle", biome: "Frost",  mech: "collapse", at: "floor",   span: 6, deep: 2 },
+  { id: "avalanche",name: "Snowball Effect",  biome: "Frost",  mech: "growth",   span: 16, high: 2 },
+
+  // --- Foundry ---
+  { id: "pour",     name: "Hot Deploy",       biome: "Foundry",mech: "spill",    rise: 3 },
+  { id: "surge",    name: "Overclock",        biome: "Foundry",mech: "blackout", mult: 2, ticks: 360 },
+  { id: "cooling",  name: "Cold Storage",     biome: "Foundry",mech: "growth",   span: 10, high: 1 },
+
+  // --- Jungle ---
+  { id: "overgrow", name: "Dependency Hell",  biome: "Jungle", mech: "growth",   span: 14, high: 2 },
+  { id: "downpour", name: "Cloud Burst",      biome: "Jungle", mech: "spill",    rise: 2 },
+  { id: "forkbomb", name: "Fork Bomb",        biome: "Jungle", mech: "spawn",    kind: "gun", count: 2 },
+
+  // --- Ice Cave ---
+  { id: "freezeover",name: "Frozen Snapshot", biome: "Ice Cave", mech: "growth", span: 12, high: 1 },
+  { id: "thecrack", name: "Breaking Change",  biome: "Ice Cave", mech: "collapse", at: "floor", span: 8, deep: 3 },
+  { id: "blizzard", name: "Packet Storm",     biome: "Ice Cave", mech: "drift",  what: "sight", ticks: 450 },
+
+  // --- Spaceship ---
+  { id: "breach",   name: "Buffer Overflow",  biome: "Spaceship", mech: "collapse", at: "ceiling", span: 8, deep: 5 },
+  { id: "nullgrav", name: "Null Gravity",     biome: "Spaceship", mech: "drift",  what: "fall",  ticks: 400 },
+  { id: "xeno",     name: "Adversarial Input",biome: "Spaceship", mech: "spawn",  kind: "sniper", count: 1 },
+
+  // --- Factory ---
+  { id: "scaleup",  name: "Scale Up",         biome: "Factory", mech: "blackout", mult: 2, ticks: 380 },
+  { id: "oilspill", name: "Technical Debt",   biome: "Factory", mech: "spill",   rise: 3 },
+  { id: "hardfault",name: "Hard Fault",       biome: "Factory", mech: "collapse", at: "ceiling", span: 7, deep: 4 }
+]
+
+function eventsFor(biome) {
+  var out = []
+  for (var i = 0; i < EVENTS.length; i++) if (EVENTS[i].biome === biome) out.push(EVENTS[i])
+  return out
+}
+
+// Rolled at generation. `rng` is the level's stream and picks which of the
+// biome's three are on the card; `trng` is the colony's and decides whether
+// either of them actually happens, and when.
+function rollEvents(w, rng, trng) {
+  w.events = []
+  w.eventLog = []
+  w.eventMechs = {}
+  var card = eventsFor(w.biome)
+  if (!card.length) return
+  card = shuffleWith(rng, card.slice())
+
+  // A third of levels get one, and a twelfth of those get a second. Rare
+  // enough to stay an event, often enough that you meet the whole table.
+  var roll = trng()
+  var count = roll < 0.08 ? 2 : (roll < 0.35 ? 1 : 0)
+  if (count === 0) return
+
+  var last = EVENT_EARLIEST
+  for (var n = 0; n < count && n < card.length; n++) {
+    var at = last + Math.floor(trng() * 420)
+    if (at > LEVEL_LIMIT - 240) break
+    w.events.push({ spec: card[n], at: at, fired: false })
+    last = at + EVENT_GAP
+  }
+}
+
+// Everything an event may not touch. The way home and the way in are the two
+// places where a change of premise stops being drama and starts being a level
+// that cannot be finished.
+function eventSafeX(w, x) {
+  if (w.exit && x >= w.exit.x - 6 && x <= w.exit.x + w.exit.w + 6) return false
+  if (w.hatch && x >= w.hatch.x - 5 && x <= w.hatch.x + 5) return false
+  return x > 3 && x < COLS - 4
+}
+
+function stepEvents(w) {
+  if (!w.events || w.nuking || w.done) return
+  w.eventDrift = Math.max(0, (w.eventDrift || 0) - 1)
+  w.eventBoost = Math.max(0, (w.eventBoost || 0) - 1)
+  if (w.eventDrift === 0) w.driftWhat = ""
+
+  for (var i = 0; i < w.events.length; i++) {
+    var e = w.events[i]
+    if (e.fired) continue
+    // The telegraph: named on the board before anything moves, so a level that
+    // changes under the colony is never a level that changed without warning.
+    if (w.ticks === e.at - EVENT_TELEGRAPH) {
+      w.eventWarn = e.spec.name
+      w.eventWarnFor = EVENT_TELEGRAPH
+      w.lastEvent = e.spec.name
+    }
+    if (w.ticks >= e.at) { e.fired = true; fireEvent(w, e.spec) }
+  }
+  if (w.eventWarnFor > 0) w.eventWarnFor--
+  if (w.eventFlash > 0) w.eventFlash--
+  stepSpill(w)
+}
+
+function fireEvent(w, ev) {
+  w.lastEvent = ev.name
+  w.eventLog.push(ev.id)
+  // The mechanism travels on the world, because Outcome.js needs it and the
+  // core files cannot call each other. See the note in check-core-refs.
+  w.eventMechs[ev.mech] = true
+  w.eventFlash = 40
+  if (ev.mech === "collapse") eventCollapse(w, ev)
+  else if (ev.mech === "growth") eventGrowth(w, ev)
+  else if (ev.mech === "spill") eventSpill(w, ev)
+  else if (ev.mech === "blackout") { w.eventBoost = ev.ticks; w.eventMult = ev.mult }
+  else if (ev.mech === "drift") { w.eventDrift = ev.ticks; w.driftWhat = ev.what }
+  else if (ev.mech === "spawn") eventSpawn(w, ev)
+}
+
+// Pick a corridor stretch the event is allowed to work on.
+function eventSite(w, span) {
+  if (!w.corridors || !w.corridors.length) return null
+  for (var tries = 0; tries < 24; tries++) {
+    var c = w.corridors[Math.floor(w.traitRng() * w.corridors.length) % w.corridors.length]
+    var x = c.x0 + 3 + Math.floor(w.traitRng() * Math.max(1, (c.x1 - c.x0) - span - 6))
+    if (!eventSafeX(w, x) || !eventSafeX(w, x + span)) continue
+    return { c: c, x: x }
+  }
+  return null
+}
+
+function eventCollapse(w, ev) {
+  var site = eventSite(w, ev.span)
+  if (!site) return
+  var top = ev.at === "ceiling" ? site.c.floorY - CORR_H - 1 - ev.deep : site.c.floorY
+  for (var x = site.x; x < site.x + ev.span; x++)
+    for (var y = top; y < top + ev.deep; y++) clearCell(w, x, y)
+  addDust(w, site.x + ev.span / 2, top + ev.deep, 26)
+}
+
+function eventGrowth(w, ev) {
+  var site = eventSite(w, ev.span)
+  if (!site) return
+  for (var x = site.x; x < site.x + ev.span; x++) {
+    if (!solid(w, x, site.c.floorY)) continue
+    for (var h = 0; h < ev.high; h++) {
+      var y = site.c.floorY - 1 - h
+      if (agentAt(w, x, y)) continue      // never close terrain over somebody
+      setCell(w, x, y, DIRT)
+    }
+  }
+  addDust(w, site.x + ev.span / 2, site.c.floorY - 1, 18)
+}
+
+// Is anybody standing in this cell? Growth that ignores this buries an agent
+// in the ground it is walking on, which reads as the sim eating people.
+function agentAt(w, x, y) {
+  for (var i = 0; i < w.agents.length; i++) {
+    var a = w.agents[i]
+    if (a.gone || a.state === "saved") continue
+    if (Math.floor(a.x) === x && (Math.floor(a.y) === y || Math.floor(a.y) - 1 === y)) return true
+  }
+  return false
+}
+
+function eventSpill(w, ev) {
+  if (!w.pits || !w.pits.length) return
+  for (var i = 0; i < w.pits.length; i++) {
+    var p = w.pits[i]
+    if (!p.liquid) continue
+    // Never above the lip: a pool that climbs into the corridor is a level
+    // that drowns everybody standing still, which is not a re-decision.
+    p.rising = (p.rising || 0) + ev.rise
+    p.floor2 = p.floorY + 2
+    p.ripple = w.ticks
+  }
+}
+
+function stepSpill(w) {
+  if (!w.pits) return
+  for (var i = 0; i < w.pits.length; i++) {
+    var p = w.pits[i]
+    if (!p.rising || p.rising <= 0) continue
+    if (w.ticks % 26 !== 0) continue
+    var to = Math.max(p.floor2 || p.floorY + 2, p.surfaceY - 1)
+    if (to === p.surfaceY) { p.rising = 0; continue }
+    p.surfaceY = to
+    p.rising--
+    p.ripple = w.ticks
+    w.liquidVersion = -1     // the flood map is cached on terrainVersion
+  }
+}
+
+function eventSpawn(w, ev) {
+  if (!w.enemyHatch) return
+  for (var n = 0; n < ev.count; n++) w.enemies.push(spawnEnemy(w, ev.kind))
+}
+
+// ---------------------------------------------------------------------------
 // Per-state updates
 // ---------------------------------------------------------------------------
 
@@ -2894,6 +3232,10 @@ function herdSteer(w, ag) {
 
 function stepFall(w, ag) {
   var speed = ag.floater && ag.fall > 2 ? FLOAT_SPEED : FALL_SPEED
+  // Null gravity. Everything falls at umbrella speed for the duration, which
+  // does not change what is survivable — SAFE_FALL is a distance, not a speed
+  // — but does change how long everybody spends in the air deciding.
+  if (w.driftWhat === "fall" && w.eventDrift > 0) speed = Math.min(speed, FLOAT_SPEED)
   var cx = Math.floor(ag.x)
   var ny = ag.y + speed
 
@@ -5056,6 +5398,7 @@ function finishWorldStep(w, active, blockers, moving) {
     }
   }
 
+  stepEvents(w)
   stepHazard(w)
   stepMines(w)
   stepLadders(w)

@@ -60,6 +60,26 @@ The production site is `https://oh-no-more-agents.com`.
 - The whims in `spawn()` take **one `traitRng()` draw each**. They were once
   derived from a single number, which tied them together: `contrary` forced
   `bridgeBias` negative, so half the combinations could not occur.
+- Biomes are picked by level number, so a new one goes on the **end** of
+  `BIOMES` — inserting re-skins every level above it. `Palette.js` derives the
+  same index with its own copy of the rule (`(level - 1) % 8` in `poolTint` and
+  `biomeTint`) and has to be changed in the same commit; the two files cannot
+  call each other. Note that `rock` is mixed from the theme foreground and is
+  **not** tinted — a biome skin built mostly out of `ROCK` comes out the same
+  grey everywhere, which is what happened to the Factory on the first attempt.
+- Animated scenery cannot live in `drawDecor`. That runs inside `drawTerrain`,
+  which only repaints on `terrainVersion`, so a cog painted there never turns.
+  `drawMachines` is called from `drawActors` instead — the per-tick pass every
+  host already calls, so no host needs a new entry point.
+- **Events** are the other half of what a level does: see the block above
+  `stepEvents`. A hazard is placed at generation and runs on a timer; an event
+  changes the level's premise while it is being played. They are a table over
+  five mechanisms, and a new one should be a row, not a function. Two rules
+  they must keep: eligibility comes from the level seed and firing from the
+  colony stream, so a level stays itself while a retry stays fresh; and nothing
+  may touch the ground near the exit or the hatch (`eventSafeX`), because past
+  that line a change of premise stops being drama and starts being a level that
+  cannot be finished.
 - Keep simulation behavior in `Sim.js` and rendering-only behavior in `Draw.js`.
 - Match the existing pixel-art look, biome palettes, humor, and agent puns.
 - Test gameplay changes on the reported level and on nearby/random levels. Watch
@@ -203,9 +223,14 @@ the colony defined in `simcheck.js`. It sits at the average of the per-level
 goal that used to live on the world, so older baselines stay comparable, and
 being fixed it keeps its own noise out of the comparison.
 
-Baseline at the time of writing, 200 levels: **95% of levels cleared, 82% of
-agents home, 43s per attempt, no hangs**. The colony rework moved this up from
-94% / 80% / 45s on the same sweep. Played the way the page plays it — a fresh
+Baseline at the time of writing, 200 levels: **94% of levels cleared, 78% of
+agents home, 45s per attempt, no hangs**. Two things moved it since the colony
+rework's 95% / 82% / 43s, and only one of them is a gameplay change: adding the
+Factory re-assigns which level number is which biome, so a fixed sweep now
+covers a different mix. Events themselves are close to free — measured on the
+same 240 levels with `stepEvents` stubbed out, overall home was 84% either way.
+Measure a change against a sweep with events both on and off before concluding
+one of them did something. Played the way the page plays it — a fresh
 random colony on every attempt — the same sweep lands within a point or two of
 that across repeats, so the colony being random costs the game nothing and the
 retry gets a genuinely different try.

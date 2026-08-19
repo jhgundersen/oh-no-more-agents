@@ -71,7 +71,17 @@ var EVENT_LINES = {
   rescue: ["The director autoscaled the skill budget during the incident.", "An emergency tool arrived from the management plane.", "The rescue system achieved artificial helpfulness."],
   pit: ["The floor returned 404. Several agents followed the link.", "That pit had more depth than the plot.", "They stared into the abyss. The abyss had pixel graphics."],
   drone: ["The drone delivered same-day disruption.", "Air support arrived with a very hostile privacy policy.", "The operator chose remote work. The drone chose violence."],
-  sniper: ["Long Context found a very short argument.", "The sniper established a position and declined all pull requests.", "Phasers were set to extremely inconvenient."]
+  sniper: ["Long Context found a very short argument.", "The sniper established a position and declined all pull requests.", "Phasers were set to extremely inconvenient."],
+
+  // Something happened to the level partway through. These only enter the pool
+  // when it actually did, so the end-of-level line can be about the run rather
+  // than about the game in general.
+  collapse: ["The floor was deprecated without a migration path.", "Structural integrity was marked as out of scope.", "It turns out the ceiling was load-bearing after all.", "The level shipped a breaking change mid-sprint."],
+  spill: ["The level filled up faster than the backlog.", "Somebody left the tap running in production.", "The water line rose. So did everyone's concerns.", "Liquidity event: entirely the wrong kind."],
+  growth: ["New ground appeared, unrequested and unreviewed.", "The level grew a feature nobody asked for.", "Scope creep, but geological.", "Additional terrain was helpfully generated."],
+  blackout: ["Every machine in the room changed its mind at once.", "The schedule was rewritten by something with no calendar.", "Somebody turned the clock rate up and left.", "The fixtures received an unscheduled config push."],
+  drift: ["The rules quietly changed and nobody sent a changelog.", "Physics was updated to a version with known issues.", "Conditions degraded in a way the docs called 'expected'.", "The environment drifted. The agents did too."],
+  spawn: ["Something arrived that was not on the manifest.", "An unscheduled participant joined the level.", "The guest list was not enforced.", "It came from outside the training distribution."]
 }
 
 function outcomeLine(w) {
@@ -89,6 +99,10 @@ function outcomeLine(w) {
   add("pit", w.pits && w.pits.length > 0 && w.lost > 0)
   add("drone", w.enemyRoster && w.enemyRoster.indexOf("operator") >= 0)
   add("sniper", w.enemyRoster && w.enemyRoster.indexOf("sniper") >= 0)
+  // Whatever happened to the level itself, by mechanism rather than by name.
+  // Sim.js puts the mechanisms on the world for exactly this: reaching into
+  // its EVENTS table from here resolves in a browser and throws in QML.
+  for (var m in (w.eventMechs || {})) add(m, true)
   var pool = facts.length && Math.random() < 0.78 ? facts : outcome
   return pool[Math.floor(Math.random() * pool.length)]
 }
