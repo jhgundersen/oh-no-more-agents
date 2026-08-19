@@ -5045,6 +5045,16 @@ function killEnemy(w, en) {
   w.lastEvent = "red team down"
 }
 
+function sinkEnemy(w, en, pool) {
+  en.y = pool.surfaceY
+  en.gone = true
+  en.state = "dead"
+  w.enemiesKilled++
+  pool.ripple = w.ticks
+  addDust(w, en.x, pool.surfaceY, 12)
+  w.lastEvent = pool.liquid === "lava" ? "red team slag" : "red team splash"
+}
+
 function stepEnemyFall(w, en) {
   var ny = en.y + FALL_SPEED
   if (ny >= ROWS) {
@@ -5056,16 +5066,7 @@ function stepEnemyFall(w, en) {
   }
   var cx = Math.floor(en.x)
   var pool = liquidAt(w, cx, ny)
-  if (pool && ny >= pool.surfaceY) {
-    en.y = pool.surfaceY
-    en.gone = true
-    en.state = "dead"
-    w.enemiesKilled++
-    pool.ripple = w.ticks
-    addDust(w, en.x, pool.surfaceY, 12)
-    w.lastEvent = pool.liquid === "lava" ? "red team slag" : "red team splash"
-    return
-  }
+  if (pool && ny >= pool.surfaceY) { sinkEnemy(w, en, pool); return }
   var shaft = pitAt(w, cx)
   for (var yy = Math.floor(en.y) + 1; yy <= Math.floor(ny) + 1; yy++) {
     // A pit stays bottomless for hostiles too. They previously landed on the
@@ -5226,6 +5227,16 @@ function fireEnemyGun(w, en) {
 
 function stepEnemy(w, en) {
   if (en.gone) return
+
+  // Water is water however it was arrived at. Only stepEnemyFall drowned
+  // anything, so a hostile that jetted across a flooded pit and found footing
+  // below the surface simply carried on: level 282 had one patrolling the
+  // bottom of its cistern and taking aim from inside the water. Nothing that
+  // moves an enemy — jet, walk, the shove off a peer — was checking, and a
+  // check on each of them is a check somebody adds a sixth mover without.
+  var wet = liquidAt(w, Math.floor(en.x), en.y)
+  if (wet && en.y >= wet.surfaceY) { sinkEnemy(w, en, wet); return }
+
   if (en.shotFor > 0) en.shotFor--
   if (en.kind === "drone") { stepDrone(w, en); return }
   if (en.kind === "sniper" && en.state === "seekpost") { seekSniperPost(w, en); return }
