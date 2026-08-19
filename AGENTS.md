@@ -15,6 +15,9 @@ The production site is `https://oh-no-more-agents.com`.
 - `public/agents/Draw.js` — Canvas rendering and animation.
 - `public/agents/Palette.js` — biome and visual palettes.
 - `public/agents/web.js` — browser integration, controls, audio, and rescue reporting.
+- `public/agents/Outcome.js` — end-of-level copy, shared with the Omarchy panel.
+- `tools/render.js` — draws the game to a PNG from Node, no browser; `tools/shoot.js`
+  is the command that uses it (`npm run shot`).
 - `src/worker.js` — Worker routes and D1 access.
 - `src/counter.js` — validation, JSON responses, and counter rate-limit helpers.
 - `migrations/` — ordered production database migrations; never rewrite a migration
@@ -251,10 +254,31 @@ about 87% home, ones with a shaft at 81%, ones with a crossing at 80%. A change
 that opens a gap between those three has changed how the colony handles a hole
 in the floor, whatever else it was meant to do.
 
-Looks are checked by rendering, not by reading code. The most efficient way is a
-contact sheet: a throwaway page that draws every hazard in all three phases, or
-every special, side by side. That is how eight dangers were found sharing one
-graphic, and how the snake was found to look like a mounted gun.
+Looks are checked by rendering, not by reading code — and from a terminal the
+browser is the wrong place to do it from. Use:
+
+```bash
+npm run shot level 8          # one level, as the page draws it
+npm run shot crop 8           # a close crop, for texture rather than layout
+npm run shot biomes           # one of each biome, stacked
+npm run shot themes 8         # one level in every theme
+```
+
+`tools/render.js` rasterises `Draw.js` straight to a PNG with no browser and no
+dependencies: the core files only call `fillRect` and a few no-ops, so a
+recording canvas plus zlib is the whole of it. It runs the same code the page
+runs. Shots land in `shots/`, which is not committed, and every command pins
+the colony seed — so two runs produce identical files and a diff between them
+is a real change. Text is skipped and gradients collapse to their middle stop.
+
+The Factory is the worked example of why this matters. It shipped noisy —
+seventeen identical cogs at random heights, a dashed roller line on every
+floor, blank surfaces underneath — and none of that was visible from the code,
+where each piece looked reasonable on its own. One render made the cause
+obvious. Contact sheets are still the way to check a set of things against each
+other: every hazard in all three phases, or every special, side by side. That
+is how eight dangers were found sharing one graphic, and how the snake was
+found to look like a mounted gun.
 
 ## Checking the page itself, headlessly
 
