@@ -1168,13 +1168,20 @@ var SPECIAL_FACTS = {
 function drawBust(ctx, x, y, sp, pal) {
   var P = 2
   function px(bx, by, bw, bh, fill) { ctx.fillStyle = fill; ctx.fillRect(x + bx * P, y + by * P, bw * P, bh * P) }
+  // Dressed like the colony it came out of. This was still wearing the old
+  // face — one eye pixel, no collar — while every agent on the board below it
+  // had shades and a shirt, and a portrait that does not match the sprite it
+  // is captioning is worse than no portrait.
   px(1, 0, 6, 3, sp.hair)          // hair
-  px(0, 1, 1, 2, sp.hair)
+  px(0, 1, 1, 2, sp.hair)          // and the back of the head
   px(2, 3, 4, 3, pal.skin)         // face
-  px(3, 4, 1, 1, pal.eye)          // eye
+  px(6, 4, 1, 1, pal.skin)         // nose, on the side it is facing
+  px(2, 4, 5, 1, pal.eye)          // shades, out over it
+  px(5, 4, 1, 1, pal.lens)         // the lit lens
   px(1, 6, 6, 5, sp.robe)          // shoulders
   px(0, 7, 1, 4, sp.robe)
   px(7, 7, 1, 4, sp.robe)
+  px(3, 6, 2, 2, pal.shirt)        // collar and shirt front
   px(1, 8, 2, 2, sp.hair)          // the shoulder pip, same as on the board
 }
 
