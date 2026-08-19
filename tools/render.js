@@ -86,9 +86,20 @@ export function canvas(W, H, background) {
   const base = parseColor(background || "#1a1b26")
   for (let i = 0; i < W * H; i++) { buf[i * 3] = base[0]; buf[i * 3 + 1] = base[1]; buf[i * 3 + 2] = base[2] }
 
-  const state = { fillStyle: "#888888", globalAlpha: 1 }
+  // Transform, because Draw.js rotates sprites for its stunts — Model Collapse
+  // throws a full salto — and with translate/rotate as no-ops those frames
+  // render upright and the animation cannot be reviewed at all.
+  const state = { fillStyle: "#888888", globalAlpha: 1, m: [1, 0, 0, 1, 0, 0] }
   const stack = []
   const gradient = () => { const g = { __stops: [] }; g.addColorStop = (o, c) => g.__stops.push(c); return g }
+
+  // [a b c d e f]: x' = a·x + c·y + e, y' = b·x + d·y + f
+  const mul = (m, n) => [
+    m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1],
+    m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3],
+    m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]
+  ]
+  const isIdentity = m => m[0] === 1 && m[1] === 0 && m[2] === 0 && m[3] === 1 && m[4] === 0 && m[5] === 0
 
   const ctx = {
     get fillStyle() { return state.fillStyle },
@@ -102,26 +113,57 @@ export function canvas(W, H, background) {
       const col = parseColor(state.fillStyle)
       const a = Math.max(0, Math.min(1, state.globalAlpha * col[3]))
       if (a <= 0) return
-      x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h)
       if (w < 0) { x += w; w = -w }
       if (h < 0) { y += h; h = -h }
-      const x1 = Math.min(W, x + w), y1 = Math.min(H, y + h)
-      for (let yy = Math.max(0, y); yy < y1; yy++) {
-        for (let xx = Math.max(0, x); xx < x1; xx++) {
-          const i = (yy * W + xx) * 3
-          buf[i] = buf[i] * (1 - a) + col[0] * a
-          buf[i + 1] = buf[i + 1] * (1 - a) + col[1] * a
-          buf[i + 2] = buf[i + 2] * (1 - a) + col[2] * a
+      const blend = (xx, yy) => {
+        if (xx < 0 || yy < 0 || xx >= W || yy >= H) return
+        const i = (yy * W + xx) * 3
+        buf[i] = buf[i] * (1 - a) + col[0] * a
+        buf[i + 1] = buf[i + 1] * (1 - a) + col[1] * a
+        buf[i + 2] = buf[i + 2] * (1 - a) + col[2] * a
+      }
+
+      const m = state.m
+      if (isIdentity(m)) {
+        const rx = Math.round(x), ry = Math.round(y)
+        const x1 = Math.min(W, rx + Math.round(w)), y1 = Math.min(H, ry + Math.round(h))
+        for (let yy = Math.max(0, ry); yy < y1; yy++)
+          for (let xx = Math.max(0, rx); xx < x1; xx++) blend(xx, yy)
+        return
+      }
+
+      // Transformed: walk the destination bounding box and inverse-map each
+      // pixel back into the rectangle. Slower than the fast path and exact,
+      // which is what a rotated pixel sprite needs.
+      const px = (cx, cy) => [m[0] * cx + m[2] * cy + m[4], m[1] * cx + m[3] * cy + m[5]]
+      const corners = [px(x, y), px(x + w, y), px(x, y + h), px(x + w, y + h)]
+      const det = m[0] * m[3] - m[1] * m[2]
+      if (!det) return
+      const inv = [m[3] / det, -m[1] / det, -m[2] / det, m[0] / det,
+                   (m[2] * m[5] - m[3] * m[4]) / det, (m[1] * m[4] - m[0] * m[5]) / det]
+      const x0 = Math.max(0, Math.floor(Math.min(...corners.map(c => c[0]))))
+      const y0 = Math.max(0, Math.floor(Math.min(...corners.map(c => c[1]))))
+      const xe = Math.min(W, Math.ceil(Math.max(...corners.map(c => c[0]))))
+      const ye = Math.min(H, Math.ceil(Math.max(...corners.map(c => c[1]))))
+      for (let yy = y0; yy < ye; yy++) {
+        for (let xx = x0; xx < xe; xx++) {
+          const sx = inv[0] * (xx + 0.5) + inv[2] * (yy + 0.5) + inv[4]
+          const sy = inv[1] * (xx + 0.5) + inv[3] * (yy + 0.5) + inv[5]
+          if (sx >= x && sx < x + w && sy >= y && sy < y + h) blend(xx, yy)
         }
       }
     },
 
     fillText() { },
     clearRect() { },
-    save() { stack.push({ fillStyle: state.fillStyle, globalAlpha: state.globalAlpha }) },
-    restore() { const s = stack.pop(); if (s) { state.fillStyle = s.fillStyle; state.globalAlpha = s.globalAlpha } },
+    save() { stack.push({ fillStyle: state.fillStyle, globalAlpha: state.globalAlpha, m: state.m.slice() }) },
+    restore() { const s = stack.pop(); if (s) { state.fillStyle = s.fillStyle; state.globalAlpha = s.globalAlpha; state.m = s.m } },
     beginPath() { }, closePath() { }, moveTo() { }, lineTo() { }, arc() { }, fill() { }, stroke() { },
-    translate() { }, scale() { }, rotate() { }, setTransform() { }, drawImage() { }, strokeRect() { },
+    translate(tx, ty) { state.m = mul(state.m, [1, 0, 0, 1, tx, ty]) },
+    scale(sx, sy) { state.m = mul(state.m, [sx, 0, 0, sy, 0, 0]) },
+    rotate(r) { const c = Math.cos(r), s2 = Math.sin(r); state.m = mul(state.m, [c, s2, -s2, c, 0, 0]) },
+    setTransform(a2, b2, c2, d2, e2, f2) { state.m = [a2, b2, c2, d2, e2, f2] },
+    drawImage() { }, strokeRect() { },
     quadraticCurveTo() { }, clip() { }, rect() { },
     measureText() { return { width: 6 } },
     createLinearGradient: gradient,

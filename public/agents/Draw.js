@@ -2805,8 +2805,15 @@ function drawAgent(ctx, w, pal, ag, opts) {
     ctx.save()
     if (ag.heightMode === "cushion") {
       var salto = ag.heightTicks ? Math.max(0, (ag.heightTick / ag.heightTicks - 0.18) / 0.82) : 0
+      salto = Math.min(1, salto)
+      // Eased, not linear. Turning at a constant rate the whole way down is
+      // what made this read as a plank being rotated rather than somebody
+      // throwing a salto: a flip is slow off the lip, quick through the
+      // middle and slow again into the landing, and it is the two slow ends
+      // that sell the push-off and the spotting of the ground.
+      var spin = salto * salto * salto * (salto * (salto * 6 - 15) + 10)
       ctx.translate(ox + SPRITE_W / 2, oy + SPRITE_PX / 2)
-      ctx.rotate(Math.min(1, salto) * Math.PI * 2)
+      ctx.rotate(spin * Math.PI * 2)
       ctx.translate(-ox - SPRITE_W / 2, -oy - SPRITE_PX / 2)
     } else {
       // The cabin drawn above replaces the ordinary body completely.
@@ -2867,6 +2874,16 @@ function drawAgent(ctx, w, pal, ag, opts) {
     blit(ctx, ox, oy, dir, 2, 7, 4, 6)
     blit(ctx, ox, oy, dir, 5, 3 + (ag.anim >> 3) % 2, 2, 4)   // hand over hand
     blit(ctx, ox, oy, dir, 3, 13, 3, 3)
+
+  } else if (st === "height" && ag.heightMode === "cushion") {
+    // Tucked. The spread-eagle fall pose was being rotated a full turn, and a
+    // spread figure spinning is a diagram of a rotation; a tucked one is a
+    // salto. Arms in, knees up, nothing sticking out to catch the eye on the
+    // way round.
+    blit(ctx, ox, oy, dir, 1, 7, 6, 5)              // torso, folded
+    blit(ctx, ox, oy, dir, 0, 8, 2, 3)              // arms wrapped in
+    blit(ctx, ox, oy, dir, 6, 8, 2, 3)
+    blit(ctx, ox, oy, dir, 2, 11, 5, 4)             // knees drawn up
 
   } else if (st === "fall" || st === "height") {
     blit(ctx, ox, oy, dir, 1, 7, 6, 6)
