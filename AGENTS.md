@@ -32,6 +32,14 @@ The production site is `https://oh-no-more-agents.com`.
   track gets a new number instead of overwriting an existing file.
 - Preserve deterministic seeded level generation. A level number should produce
   the same playable layout on every run unless a change intentionally updates it.
+- Every level ends over a hole: `placeBottomPit` rolls none, a shaft on the dead
+  ground behind the colony, or a crossing on the route between the landing and
+  the exit — and a crossing level may get both. Four of the seven biomes flood
+  theirs (`pitLiquid`), and `Palette.poolTint` picks the matching colours from
+  the same level number, which is how two files that cannot call each other stay
+  in step. A crossing is only survivable because of the rule in `edgeAhead` that
+  goes with it: a bottomless drop with ground on the far side gets bricks, and
+  the blocker is kept for the drop that has no far side at all.
 - The colony is the other half of that, and it is **not** deterministic: traits
   and the individual whims inside them are drawn from `w.colonySeed`, which is
   random per playthrough. Same ground, different fifteen. Anything that needs a
@@ -120,7 +128,25 @@ an error message at the time.
   `biomeSkin` runs last in `fillEarth` (before the grit pass, the grit frays
   every hull panel back into rock); the bottomless drop goes on the **last**
   corridor only (from any higher one its shaft punches through the floors below
-  and can make a level unwinnable); decor is placed after everything.
+  and can make a level unwinnable); the pit is cut after the exit and its seal
+  wall are placed, because a crossing is positioned relative to both; decor is
+  placed after everything.
+
+- **The last corridor's floor is the bottom of every chasm above it.** Chasms,
+  gaps and cliffs on the corridor above are cut down to exactly that floor, and
+  that floor is what makes them survivable — an agent that walks into one is
+  taking a shortcut. `placeBottomPit` cuts through it, so a crossing may only go
+  where the roof over it is intact (`solid(w, x, floorY - CORR_H - 1)`), or it
+  turns an ordinary drop three floors up into a fall out of the world. Level 1
+  demonstrated this by losing its entire colony to a chasm it had walked into
+  happily for two hundred levels; across the catalogue it was 32 points of home.
+
+- **A fractional `x` reads as solid.** `at()` indexes a `Uint8Array`, and a
+  non-integer index returns `undefined`, which is not `EMPTY`, so it is solid.
+  `landingAhead()` was called with `ag.x` — a position, almost never a whole
+  number — and therefore answered "nothing on the far side" essentially always,
+  which silently switched off three separate build rules. Anything taking a
+  coordinate from an agent rather than from a loop should floor it at the door.
 
 - **Dirt, rock and ore are one material to everything that decides.** Solidity
   asks only whether a cell is empty; every skill asks only whether it is steel.
@@ -156,18 +182,24 @@ invocations means something else has picked up entropy.
 roughly alone; a change that moves it several points has done something to the
 gameplay, intended or not. `hangs` must stay at zero.
 
-Baseline at the time of writing, 200 levels: **94% of levels reach target, 80%
-of agents home, 46s per attempt, no hangs.** Played the way the page now plays
-it — a fresh random colony on every attempt — the same sweep lands within a
-point or two of that across repeats, so the colony being random costs the game
-nothing and the retry gets a genuinely different try.
+Baseline at the time of writing, 200 levels: **95% of levels reach target, 78%
+of agents home, 48s per attempt, no hangs**; over 400 levels, 96% / 80% / 47s.
+Played the way the page now plays it — a fresh random colony on every attempt —
+the same sweep lands within a point or two of that across repeats, so the colony
+being random costs the game nothing and the retry gets a genuinely different try.
 
 `spread` is the one that watches the personalities rather than the levels: over
-40 levels with 8 colonies each, the number who get home varies by about 4 on
-average, and on a quarter of levels the colony is the difference between
-clearing and not. Per biome, Cavern is still the
-outlier at 87% cleared and 73% home against 90–100% everywhere else — worth
-looking at, and a good example of what `biomes` is for.
+60 levels with 8 colonies each, the number who get home varies by about 4 on
+average, and on half of levels the colony is the difference between clearing and
+not. Per biome nothing is now an outlier — 93–100% cleared and 75–85% home
+across all seven, where Cavern used to sit at 87/73.
+
+The bottom pit is the one thing worth breaking those numbers down by, and
+`tools/` has no command for it: generate a level, look at `w.pits`, and bucket
+the result by whether anything in it is `crossing`. Levels with no pit run at
+about 87% home, ones with a shaft at 81%, ones with a crossing at 80%. A change
+that opens a gap between those three has changed how the colony handles a hole
+in the floor, whatever else it was meant to do.
 
 Looks are checked by rendering, not by reading code. The most efficient way is a
 contact sheet: a throwaway page that draws every hazard in all three phases, or
