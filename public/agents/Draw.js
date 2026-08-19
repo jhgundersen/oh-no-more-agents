@@ -2661,12 +2661,37 @@ function drawAgent(ctx, w, pal, ag, opts) {
 
   // --- umbrella, drawn behind nothing and above everything --------------
   if (ag.floater && st === "fall" && ag.fall > 2) {
-    ctx.fillStyle = pal.umbrella
-    blit(ctx, ox, oy, 1, -3, -9, 14, 2)
-    blit(ctx, ox, oy, 1, -4, -7, 3, 2)
-    blit(ctx, ox, oy, 1, 9, -7, 3, 2)
+    // It breathes. A canopy that holds one shape all the way down reads as a
+    // prop being carried; one that flexes against the air reads as the thing
+    // actually holding somebody up. The centre lifts as the tips drop and back
+    // again, which is what a canopy taking a load does, and the phase is off
+    // the agent's own id so a sky full of them is not one animation repeated.
+    var puff = Math.sin(w.ticks * 0.13 + ag.id * 1.7)
+    var flex = puff > 0.3 ? 1 : (puff < -0.3 ? -1 : 0)
+
+    // Whose umbrella it is. Keyed off the agent's id so it never changes hand
+    // to hand mid-descent, and offset by the colony seed so the same id is not
+    // handed the same umbrella every playthrough — the same trick the colony
+    // itself uses, and it costs no draw from the trait stream to do it here.
+    var brolly = pal.umbrellas
+      ? pal.umbrellas[(ag.id + (w.colonySeed || 0)) % pal.umbrellas.length]
+      : pal.umbrella
+
     ctx.fillStyle = pal.umbrellaStem
-    blit(ctx, ox, oy, 1, 3, -7, 2, 8)
+    blit(ctx, ox, oy, 1, 4, -6, 1, 7)                    // one-pixel shaft
+    blit(ctx, ox, oy, 1, 3, -7 - flex, 3, 1)             // the spreader under it
+
+    // Only the centre flexes. Moving the tips the other way as well pulled
+    // them clean off the canopy and left three separate marks in the air.
+    ctx.fillStyle = brolly
+    blit(ctx, ox, oy, 1, -1, -9 - flex, 11, 2)           // canopy
+    blit(ctx, ox, oy, 1, -2, -7, 2, 2)                   // tips, staying put
+    blit(ctx, ox, oy, 1, 9, -7, 2, 2)
+
+    ctx.fillStyle = pal.umbrellaRim
+    blit(ctx, ox, oy, 1, -1, -10 - flex, 11, 1)          // the lit edge
+    blit(ctx, ox, oy, 1, -2, -8, 2, 1)
+    blit(ctx, ox, oy, 1, 9, -8, 2, 1)
   }
 
   // Ada Blocker's plate. Drawn in front of the body on the side it is facing,
@@ -2762,17 +2787,47 @@ function drawAgent(ctx, w, pal, ag, opts) {
   var bodyDrop = st === "slide" ? 4 : ((st === "dig" || st === "camp") ? 2 : 0)
 
   // --- hair + head -------------------------------------------------------
+  // Which way it is looking has to survive the shades. The old sprite said it
+  // with one eye pixel sitting on the leading side; a band across the whole
+  // face is symmetrical and says nothing at all. So the head gets a front and
+  // a back instead: hair bulging behind, and brow, lens and nose stepping out
+  // in front. Three pixels, but they are the three that make a colony walking
+  // left look different from a colony walking right.
   ctx.fillStyle = hair
   blit(ctx, ox, oy, dir, 2, 0 + bodyDrop, 4, 3)
-  if (st === "walk" || st === "climb") blit(ctx, ox, oy, dir, 1, 1 + bodyDrop, 1, 2)
+  blit(ctx, ox, oy, dir, 0, 1 + bodyDrop, 2, 3)        // the back of the head
 
   ctx.fillStyle = skin
   blit(ctx, ox, oy, dir, 2, 3 + bodyDrop, 4, 4)
+  blit(ctx, ox, oy, dir, 6, 5 + bodyDrop, 1, 1)        // the nose
+
+  // Shades, not an eye. A band reads as somebody wearing something, which is
+  // the difference between a little person and an agent. It runs one pixel out
+  // over the nose, so the glasses lead the face the way glasses do.
   ctx.fillStyle = pal.eye
-  blit(ctx, ox, oy, dir, 5, 4 + bodyDrop, 1, 1)
+  blit(ctx, ox, oy, dir, 2, 4 + bodyDrop, 5, 1)
+  ctx.fillStyle = pal.lens
+  blit(ctx, ox, oy, dir, 5, 4 + bodyDrop, 1, 1)        // the lit lens, in front
+
+  // --- collar ------------------------------------------------------------
+  // Drawn before the body so each pose's own torso closes over it, leaving a
+  // white notch at the throat. One mark, and it works in every pose, which a
+  // shirt front painted per-pose would not: there are a dozen torsos below.
+  if (st !== "saved") {
+    ctx.fillStyle = pal.shirt
+    blit(ctx, ox, oy, dir, 3, 6 + bodyDrop, 2, 4)
+  }
+
+  // Shoulder line. A dark suit has to sit on a dark board: too light and it is
+  // not a suit, too dark and the agent is a face floating in a corridor. What
+  // makes it read either way is one lighter pixel row along the top of the
+  // torso — the sprite carries its own edge instead of borrowing contrast from
+  // whatever happens to be behind it.
+  var lapel = ag.special ? hair : pal.lapel
 
   // --- body + limbs ------------------------------------------------------
   ctx.fillStyle = robe
+  // (the shoulder line is laid over the torso once it is drawn, below)
 
   if (st === "climb") {
     blit(ctx, ox, oy, dir, 2, 7, 4, 6)
@@ -2853,6 +2908,17 @@ function drawAgent(ctx, w, pal, ag, opts) {
     ctx.font = "bold 9px monospace"
     ctx.textAlign = "center"
     ctx.fillText(String(Math.ceil(ag.fuse / 30)), ox + SPRITE_W / 2, oy - 3)
+  }
+
+  // The shoulder tips, laid over whichever torso the pose drew. A full lighter
+  // row across the chest was the first attempt and it read as a bib: with the
+  // white shirt directly under it the whole front of the agent went pale. Two
+  // pixels at the corners give the same edge and leave the middle to the shirt.
+  // Upright poses only — on a slide or a sprawl the shoulders are not up there.
+  if (st !== "saved" && st !== "slide" && st !== "stunned" && st !== "webup") {
+    ctx.fillStyle = lapel
+    blit(ctx, ox, oy, dir, 1, 7 + bodyDrop, 1, 1)
+    blit(ctx, ox, oy, dir, 6, 7 + bodyDrop, 1, 1)
   }
 
   // A pip on the shoulder in the special's second colour. The robe alone is a
