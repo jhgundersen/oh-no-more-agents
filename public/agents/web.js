@@ -222,22 +222,68 @@
   // 1px eye across two screen pixels and turns the whole colony to mush. The
   // canvas backing store stays at 400x248 and CSS does the enlarging with
   // image-rendering: pixelated.
-  function fitBoard() {
-    var wrap = el.boardWrap
-    var full = isFullscreen()
-    var avail = wrap.parentElement.clientWidth
-    // Fullscreen puts the title, the blurb, the theme picker and the soundtrack
-    // off the screen, so the board is allowed the height they were using and
-    // one more step of scale than the page gives it — filling the screen is the
-    // whole point of asking for it. What is still around the board is measured
-    // rather than guessed at, because it is the row of controls, and that wraps
-    // to two lines on a narrow screen and to three on a phone.
-    var availH = window.innerHeight - (full ? stageAroundBoard() : 260)
-    var scale = Math.max(1, Math.min(Math.floor(avail / WIDTH), Math.floor(availH / HEIGHT), full ? 6 : 4))
-    wrap.style.width = (WIDTH * scale) + "px"
-    wrap.style.height = (HEIGHT * scale) + "px"
+  // How tall the window is going to be, rather than how tall it is this second.
+  //
+  // iOS reports innerHeight as the *visible* height, which is short while
+  // Safari's toolbars are on screen and grows the moment a scroll collapses
+  // them. The board is scaled by a whole number, so that difference is a whole
+  // step of scale: the page opened at half size, and the way to get the big one
+  // was to scroll a bit and let it re-fit — which is not an instruction anybody
+  // should have to be given.
+  //
+  // documentElement.clientHeight is the layout viewport, which on iOS is the
+  // toolbar-collapsed height and does not move when the toolbars come and go.
+  // Taking the larger of the two sizes the board for the window the reader is
+  // about to have. In fullscreen there are no toolbars and innerHeight is the
+  // screen, so that one is used as it stands.
+  function viewportHeight(full) {
+    if (full) return window.innerHeight
+    var doc = document.documentElement
+    return Math.max(window.innerHeight || 0, (doc && doc.clientHeight) || 0)
+  }
+
+  function applyScale(scale) {
+    el.boardWrap.style.width = (WIDTH * scale) + "px"
+    el.boardWrap.style.height = (HEIGHT * scale) + "px"
     // The readouts line up with the board rather than with the viewport.
     document.documentElement.style.setProperty("--board-w", (WIDTH * scale) + "px")
+  }
+
+  // Does everything that has to be on screen fit, at whatever size the board is
+  // right now? On the page that is the whole page; in fullscreen it is the
+  // stage, because there is nothing else.
+  function boardFits(full) {
+    if (full) return stageAroundBoard() + el.boardWrap.clientHeight <= viewportHeight(true)
+    // On the page, what has to be on screen is the board and everything above
+    // it: you cannot watch a board you have to scroll down to find. The
+    // toolbar, the controls, the themes and the soundtrack sit below it and may
+    // fall past the fold — which is what the old fixed 260 was really saying,
+    // in a number that happened to be right on one screen and wrong on the
+    // rest. Measured, it holds on every screen, including the ones where the
+    // blurb wraps to five lines.
+    var top = el.boardWrap.getBoundingClientRect().top + (window.scrollY || 0)
+    return top + el.boardWrap.clientHeight <= viewportHeight(false)
+  }
+
+  // Try the sizes, biggest first, and keep the first one that fits.
+  //
+  // This used to subtract a fixed 260px for "the rest of the page" and take
+  // whatever scale was left. That number is wrong on almost every screen —
+  // measured, the page furniture is 593px on an iPad in landscape — and worse,
+  // it cannot be right, because the chrome depends on the board: the controls
+  // row is board-width, so a small board wraps it onto three lines, which eats
+  // the room the board needed to be bigger. Asking "does this size fit" with
+  // the board actually at that size is the only version of the question that
+  // has an answer, and it costs three reflows on a resize.
+  function fitBoard() {
+    var full = isFullscreen()
+    var avail = el.boardWrap.parentElement.clientWidth
+    var top = Math.max(1, Math.min(Math.floor(avail / WIDTH), full ? 6 : 4))
+    for (var scale = top; scale > 1; scale--) {
+      applyScale(scale)
+      if (boardFits(full)) return
+    }
+    applyScale(1)
   }
 
   // -------------------------------------------------------------------------
@@ -561,15 +607,6 @@
     terrainCtx = terrain.getContext("2d")
     actorCtx = actors.getContext("2d")
 
-    // Draw.js calls ctx.reset() at the top of the terrain pass. It is standard
-    // on a canvas 2D context and QML has it, but it is recent enough in
-    // browsers to be worth not assuming — without this, an older browser
-    // throws on the very first paint and the page is simply blank.
-    if (typeof terrainCtx.reset !== "function") {
-      terrainCtx.reset = function () { this.clearRect(0, 0, WIDTH, HEIGHT) }
-      actorCtx.reset = function () { this.clearRect(0, 0, WIDTH, HEIGHT) }
-    }
-
     loadState()
     loadPendingReports()
     buildToolbar()
@@ -607,6 +644,14 @@
     loadGlobalStats()
 
     window.addEventListener("resize", fitBoard)
+    // Rotating an iPad, pinch-zooming, or the toolbars sliding away are all
+    // things that change the picture without necessarily firing a window
+    // resize. The visual viewport reports all three.
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", fitBoard)
+      window.visualViewport.addEventListener("scroll", fitBoard)
+    }
+    window.addEventListener("orientationchange", fitBoard)
     document.addEventListener("fullscreenchange", afterFullscreen)
     document.addEventListener("webkitfullscreenchange", afterFullscreen)
     el.boardWrap.addEventListener("click", togglePause)

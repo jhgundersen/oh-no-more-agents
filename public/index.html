@@ -50,6 +50,18 @@
 			transition: background-color 200ms, color 200ms;
 		}
 
+		/* The board only ever scales by whole numbers, so sixteen pixels of
+		   padding on each side is not a margin — it is the difference between a
+		   400px board and an 800px one on any screen a shade under 832px wide,
+		   which is an iPad held upright. Give the room back where it is worth a
+		   whole step, and keep it everywhere there is space to spare. */
+		@media (max-width: 900px) {
+			body {
+				padding-left: 4px;
+				padding-right: 4px;
+			}
+		}
+
 		h1 {
 			margin: 0;
 			font-size: 22px;
@@ -440,9 +452,9 @@
 	</p>
 
 	<script src="agents/Sim.js?v=4ee84e7b"></script>
-	<script src="agents/Draw.js?v=bd3f279e"></script>
+	<script src="agents/Draw.js?v=de9c134b"></script>
 	<script src="agents/Palette.js?v=0b6811a4"></script>
-	<script src="agents/web.js?v=918b3152"></script>
+	<script src="agents/web.js?v=7a3622be"></script>
 
 </body>
 

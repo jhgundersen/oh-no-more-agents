@@ -46,13 +46,31 @@ function materialShade(k, pal, m) {
   return pal.steelShade
 }
 
+// Wipe a layer back to nothing.
+//
+// This used to be ctx.reset(), which is the tidy way to say it and the way that
+// is least reliably implemented. It is recent (Safari only got it in 16.4), it
+// throws outright where it is missing — the reason web.js carried a polyfill —
+// and on iOS it has been seen to return without the displayed surface actually
+// being cleared, which shows up as a few pixels of an agent left behind on the
+// ground it walked over, sometimes, on one device and not the next.
+//
+// clearRect is as old as canvas itself and is the path every engine keeps
+// working. The state reset/ that reset() gave for free is done by hand: the two
+// draw passes both leave globalAlpha at 1 already, and this makes sure of it.
+function clearLayer(ctx, w) {
+  if (typeof ctx.setTransform === "function") ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.globalAlpha = 1
+  ctx.clearRect(0, 0, w.k.COLS * w.k.CELL, w.k.ROWS * w.k.CELL)
+}
+
 function drawTerrain(ctx, w, pal) {
   var k = w.k
   var C = k.CELL
   var cols = k.COLS
   var rows = k.ROWS
 
-  ctx.reset()
+  clearLayer(ctx, w)
 
   // Sky: a shallow gradient so the open air above the earth has some depth
   // rather than reading as a flat panel background.
@@ -420,7 +438,7 @@ function drawExitBack(ctx, w, pal) {
 
 function drawActors(ctx, w, pal, opts) {
   var k = w.k
-  ctx.reset()
+  clearLayer(ctx, w)
   drawSpecialCard(ctx, w, pal)
   drawHatch(ctx, w, pal)
   drawEnemyHatch(ctx, w, pal, opts)
