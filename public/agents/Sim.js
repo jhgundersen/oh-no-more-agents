@@ -2354,36 +2354,130 @@ function hazardStrike(w, h) {
 // would be backing off forever, and since the response is a blocker and a
 // blocker never stands down, that would wall off the route for good. Winding
 // up or firing is a reason to be elsewhere; resting is not.
+// The ground one danger can reach. Geometry only — no phase, no memory — so
+// that the two questions the colony actually asks can share it.
+function hazardCovers(w, h, ax, footY) {
+  var hspec = hazardSpec(h.kind)
+  // The sniper's dangerous ground is its current sight line.
+  if (h.kind === "sniper") {
+    if (h.lineTo === undefined || h.lineTo < 0 || Math.abs(footY - h.zy1) > CORR_H) return false
+    var a = Math.min(h.zx0, h.lineTo)
+    var b = Math.max(h.zx1, h.lineTo)
+    return ax >= a - 1 && ax <= b + 1
+  }
+  if (h.kind === "sentry" || h.kind === "darts" || h.kind === "frostjet"
+      || h.kind === "scarab" || h.kind === "snake") {
+    var along = (ax - hazardMid(h).x) * h.dir
+    return Math.abs(footY - h.floorY) <= CORR_H && along >= -1 && along <= hspec.reach + 1
+  }
+  if (h.kind === "echobat")
+    return Math.abs(footY - h.floorY) <= CORR_H
+        && Math.abs(ax - hazardMid(h).x) <= hspec.reach + 1
+  if (footY < h.zy0 - 2 || footY > h.zy1 + 2) return false
+  return ax >= h.zx0 - 2 && ax <= h.zx1 + 2
+}
+
+// How many ticks this agent would spend inside the reach if it kept walking
+// the way it is facing, measured to the far lip rather than to the fixture.
+function hazardExposure(w, h, ag) {
+  var spec = hazardSpec(h.kind)
+  var mid = hazardMid(h).x
+  var near = h.dir > 0 ? mid - 1 : mid - spec.reach - 1
+  var far = h.dir > 0 ? mid + spec.reach + 1 : mid + 1
+  var edge = ag.dir > 0 ? far : near
+  return Math.abs(edge - ag.x) / WALK_SPEED
+}
+
+// Crossing a `watch` danger is a timing problem rather than a wall, and this is
+// the piece of judgement the colony did not have.
+//
+// One of these sleeps until somebody is inside its reach, takes about a second
+// to wind up, fires, and then reloads for two or three. Its reach is eleven to
+// sixteen cells and crossing that takes forty to sixty ticks — longer than the
+// wind-up and shorter than the reload. So walking in while it sleeps is death
+// on a delay, and walking in the moment it has fired is free. Every level with
+// one of these across the only corridor was being solved by the colony walking
+// in one at a time forever; the answer was always to wait for the shot and then
+// leg it, which is what a person does at the same fixture without being told.
+var HAZARD_WAIT = 260    // ticks of waiting before somebody tries it regardless
+
+function canCrossHazard(w, h, ag) {
+  var spec = hazardSpec(h.kind)
+  var need = hazardExposure(w, h, ag) * 1.15
+  // Reloading: the window is what is left of the reload.
+  if (h.phase === "rest") return (spec.rest - h.t) > need
+  // Asleep: only worth it where the whole crossing fits inside a wind-up,
+  // which is true of the short-reach fixtures and never of the long ones.
+  if (h.phase === "idle") return spec.charge > need
+  return false
+}
+
+// Home, seen rather than known.
+//
+// The agents carry no map and no compass: the one non-local thing they have is
+// whether the exit is on this floor, above or below, and that is deliberate —
+// most of what makes them fun to watch is that they are working it out. But it
+// produced one genuinely silly thing. An agent that drops onto the last
+// corridor three cells from the exit, facing away, walks eighty cells to the
+// dead end, turns, and walks eighty cells back, and on level 4 that is most of
+// the clock: the colony lands next to the door and goes for a walk.
+//
+// A lit doorway at the end of an open corridor is not a map. It is the same
+// kind of local sense as "there is a wall two body-lengths ahead", so this is
+// eyesight, with the range and the clear line to prove it, and it only ever
+// applies on the floor the exit is actually on.
+var EXIT_SIGHT = 30
+
+function exitInSight(w, ag) {
+  var e = w.exit
+  var footY = Math.floor(ag.y)
+  if (Math.abs(footY - exitFloor(w)) > 1) return 0
+  var ex = e.x + e.w / 2
+  var gap = ex - ag.x
+  if (Math.abs(gap) > EXIT_SIGHT || Math.abs(gap) < 1) return 0
+  if (!lineClear(w, Math.floor(ag.x), footY - 1, Math.floor(ex), footY - 1)) return 0
+  return gap > 0 ? 1 : -1
+}
+
+function hazardPerceptive(ag) {
+  return ag.trait === "cautious" || ag.trait === "tinkerer"
+}
+
+// Is the next step into somewhere lethal RIGHT NOW: known about, and winding
+// up or firing. This is the question for a decision an agent can take back on
+// the following tick, which is what a step is.
 function hazardAhead(w, ag, nx) {
   var ax = Math.floor(nx)
   var footY = Math.floor(ag.y)
   for (var hi = 0; hi < w.hazards.length; hi++) {
     var h = w.hazards[hi]
-    var perceptive = ag.trait === "cautious" || ag.trait === "tinkerer"
-    if (h.wrecked || (!h.known && !perceptive)
+    if (h.wrecked || (!h.known && !hazardPerceptive(ag))
         || (h.phase !== "charge" && h.phase !== "fire")) continue
-    var hspec = hazardSpec(h.kind)
-    // The sniper's dangerous ground is its current sight line.
-    if (h.kind === "sniper") {
-      if (h.lineTo === undefined || h.lineTo < 0 || Math.abs(footY - h.zy1) > CORR_H) continue
-      var a = Math.min(h.zx0, h.lineTo)
-      var b = Math.max(h.zx1, h.lineTo)
-      if (ax >= a - 1 && ax <= b + 1) return true
-      continue
-    }
-    if (h.kind === "sentry" || h.kind === "darts" || h.kind === "frostjet"
-        || h.kind === "scarab" || h.kind === "snake") {
-      var hmid = (h.zx0 + h.zx1) / 2
-      var along = (ax - hmid) * h.dir
-      if (Math.abs(footY - h.floorY) <= CORR_H && along >= -1 && along <= hspec.reach + 1) return true
-      continue
-    }
-    if (h.kind === "echobat" && Math.abs(footY - h.floorY) <= CORR_H
-        && Math.abs(ax - (h.zx0 + h.zx1) / 2) <= hspec.reach + 1) return true
-    if (footY < h.zy0 - 2 || footY > h.zy1 + 2) continue
-    if (ax >= h.zx0 - 2 && ax <= h.zx1 + 2) return true
+    if (hazardCovers(w, h, ax, footY)) return true
   }
   return false
+}
+
+// Is this spot inside the reach of something the colony has watched kill
+// somebody — resting or not.
+//
+// This is the question nothing was asking, and levels 15 and 19 are what that
+// costs. A `watch` danger sleeps until somebody is inside its reach and then
+// takes about a second to wind up, and its reach is eleven to sixteen cells —
+// wider than an agent can walk out of in that second. So every decision that
+// leaves an agent standing inside one is fatal on a delay: a blocker posted at
+// the mouth of the zone, a shaft sunk in the middle of it, a drop taken into
+// it from the corridor above. The colony was reading the danger correctly and
+// then walking round it into the same ground from a different direction, over
+// and over, because "is it firing this instant" is the wrong question to ask
+// about a place you intend to stay.
+function hazardZoneAt(w, x, y, perceptive) {
+  for (var i = 0; i < w.hazards.length; i++) {
+    var h = w.hazards[i]
+    if (h.wrecked || (!h.known && !perceptive)) continue
+    if (hazardCovers(w, h, x, y)) return h
+  }
+  return null
 }
 
 // The link down to the next corridor, always carved open — either as a plain
@@ -2726,6 +2820,16 @@ function edgeAhead(w, ag, nx) {
 
   if (ag.special) { specialAtEdge(w, ag, nx, depth, far); return }
 
+  // Do not drop into something that shoots. A step can be taken back on the
+  // next tick and a fall cannot: an agent that goes over the lip lands inside
+  // the reach with no say in where, and on levels 15 and 19 that was the
+  // single biggest way the colony fed the hazard — the ones that had learned
+  // to walk round it at floor level came down into it from the corridor above
+  // instead, one after another, all afternoon.
+  if (depth !== Infinity
+      && hazardZoneAt(w, ax, footY + depth, hazardPerceptive(ag))) { turnAround(w, ag); return }
+
+
   if (depth === Infinity) {
     // Someone should stand here. Worth a blocker while there are still others
     // on their way to walk into it — which is the whole job of the skill.
@@ -3020,6 +3124,7 @@ function spawn(w) {
     rescueCool: 0,     // do not reconsider the same escape every simulation tick
     markD: Infinity,   // closest it has ever been; see goalDist()
     fuse: 0,
+    waitFor: 0,       // holding at a danger for its reload, rather than pacing
     mineCool: 0,      // one charge at a time, and not again until it has gone off
     shieldFor: 0,     // ticks left on the plate; renewed while a threat is in front
     shieldHeld: 0,    // how long it has been up for, which is what tires it out
@@ -3041,7 +3146,44 @@ function stepWalk(w, ag) {
   var cx = Math.floor(nx)
   var footY = Math.floor(ag.y)
 
+  // Turn toward a door it can see. Only when it is walking away from one, so
+  // this steers rather than drives: everything else about the crossing — walls,
+  // drops, dangers, personality — is decided exactly as before.
+  var seen = exitInSight(w, ag)
+  if (seen && seen !== ag.dir) {
+    ag.dir = seen
+    ag.turns = 0
+    nx = ag.x + ag.dir * WALK_SPEED * (ag.chilledFor > 0 ? 0.48 : 1)
+    cx = Math.floor(nx)
+  }
+
   if (anyBlockerNear(w, ag, nx)) { turnAround(w, ag); return }
+
+  // About to step from clear ground into something it has watched kill
+  // somebody. This is not the same question as hazardAhead's — the fixture is
+  // resting, so nothing is firing — it is whether the crossing can be finished
+  // before it wakes up. Wait at the lip if it cannot, and take the window when
+  // it comes.
+  //
+  // Somebody still has to find out, and a sleeping fixture never reloads on its
+  // own: after HAZARD_WAIT of nobody getting anywhere, the one at the front
+  // walks in regardless. It usually dies, the rest cross in the reload it just
+  // bought them, and that is as close to a plan as this colony gets.
+  var crossPerceptive = hazardPerceptive(ag)
+  var stepInto = hazardZoneAt(w, cx, footY, crossPerceptive)
+  if (stepInto && !ag.special && ag.idle < HAZARD_WAIT
+      && !hazardZoneAt(w, Math.floor(ag.x), footY, crossPerceptive)
+      && !shieldCovering(w, ag, nx)
+      && !canCrossHazard(w, stepInto, ag)) {
+    // Waiting is not pacing. Both look like an agent walking back and forth in
+    // one place, and the loop detector cannot tell them apart — so on level 15
+    // the colony stopped dying to the sentry and started being written off as
+    // stuck instead, bombed one at a time at the lip of the zone it was
+    // correctly refusing to enter. This says: it knows why it is here.
+    ag.waitFor = 12
+    turnAround(w, ag)
+    return
+  }
 
   // Somewhere it has learned is lethal. Treated exactly like a drop with no
   // bottom, because to an agent it is the same problem: a place ahead that
@@ -3068,12 +3210,41 @@ function stepWalk(w, ag) {
     if (cover && cover.shieldHeld < SHIELD_MAX - SHIELD_MARGIN) return advanceWalk(w, ag, nx, cx, footY)
 
     var htrait = traitOf(ag)
+    var perceptive = hazardPerceptive(ag)
+
+    // Already inside its reach. Turning round is the answer at a wall, and
+    // here it is a coin toss between walking out of the zone and walking
+    // further into it — and since the reach is wider than the wind-up is long,
+    // walking further in is fatal. Head away from the fixture, whichever way
+    // that is, and keep going until the ground is clear.
+    var inside = hazardZoneAt(w, Math.floor(ag.x), footY, perceptive)
+    if (inside) {
+      // Out by the nearer lip, which is not always the way it came in: an
+      // agent four fifths of the way across a sixteen-cell reach should finish
+      // the crossing, not turn round and re-run the whole thing.
+      var hspec = hazardSpec(inside.kind)
+      var hmid = hazardMid(inside).x
+      var lipBack = inside.dir > 0 ? hmid - 1 : hmid + 1
+      var lipOn = inside.dir > 0 ? hmid + hspec.reach + 1 : hmid - hspec.reach - 1
+      var out = Math.abs(lipOn - ag.x) < Math.abs(lipBack - ag.x) ? lipOn : lipBack
+      var away = out > ag.x ? 1 : -1
+      if (ag.dir !== away) { ag.dir = away; ag.turns++ }
+      var outX = ag.x + ag.dir * WALK_SPEED
+      return advanceWalk(w, ag, outX, Math.floor(outX), footY)
+    }
+
     // A timed hazard may consume several blockers as each sacrifice is
     // eventually killed. Keep the final one for a true bottomless edge, where
     // a single permanent blocker protects everyone who follows. Level 92's
     // bear trap used to empty the toolbar just before its last-floor void.
+    //
+    // And never inside the reach itself. A blocker cannot move, so one posted
+    // in the zone is a body on a timer: it turns the queue back for a few
+    // seconds, gets shot, and the level pays another blocker for the same few
+    // seconds. Standing one step outside does the same job and survives it.
     if ((w.skills.blocker || 0) > 1
         && countComing(w, ag) >= 2 - htrait.blockBias
+        && !hazardZoneAt(w, Math.floor(ag.x), footY, perceptive)
         && take(w, "blocker")) { ag.state = "block"; return }
     turnAround(w, ag)
     return
@@ -5100,6 +5271,8 @@ function countPass(w, ag) {
   // same bucket repeatedly while doing useful work; condemning it here turns
   // the rescue itself into a bomb and leaves everyone behind in its crater.
   if (ag.state !== "walk") return
+  // Nor is holding at the lip of a danger for its reload. That is the plan.
+  if (ag.waitFor > 0) return
   var key = Math.floor(ag.x / LOOP_BUCKET) + "@" + Math.floor((ag.y + 1) / (w.corrGap || CORR_GAP))
   if (key === ag.bucket) return
   ag.bucket = key
@@ -5126,6 +5299,7 @@ function condemn(w, ag) {
   // budget is empty the agent goes on pacing, and PATIENCE handles it with a
   // shovel instead.
   if (ag.state === "bomb" || ag.state === "block" || ag.state === "camp" || ag.state === "saved") return
+  if (ag.waitFor > 0) return
 
   // A special gets the shovel before it gets written off. Pacing trips the
   // bucket count in about two hundred ticks, where the forced escape does not
@@ -5209,6 +5383,7 @@ function step(w) {
     if (ag.blockFor > 0) ag.blockFor--
     if (ag.coveredFor > 0) ag.coveredFor--
     if (ag.mineCool > 0) ag.mineCool--
+    if (ag.waitFor > 0) ag.waitFor--
     if (ag.shieldFor > 0) {
       ag.shieldHeld++
       if (--ag.shieldFor === 0) {

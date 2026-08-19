@@ -156,8 +156,8 @@ invocations means something else has picked up entropy.
 roughly alone; a change that moves it several points has done something to the
 gameplay, intended or not. `hangs` must stay at zero.
 
-Baseline at the time of writing, 200 levels: **89% of levels reach target, 72%
-of agents home, 45s per attempt, no hangs.** Played the way the page now plays
+Baseline at the time of writing, 200 levels: **94% of levels reach target, 80%
+of agents home, 46s per attempt, no hangs.** Played the way the page now plays
 it — a fresh random colony on every attempt — the same sweep lands within a
 point or two of that across repeats, so the colony being random costs the game
 nothing and the retry gets a genuinely different try.
@@ -166,7 +166,7 @@ nothing and the retry gets a genuinely different try.
 40 levels with 8 colonies each, the number who get home varies by about 4 on
 average, and on a quarter of levels the colony is the difference between
 clearing and not. Per biome, Cavern is still the
-outlier at 73% cleared and 59% home against 83–100% everywhere else — worth
+outlier at 87% cleared and 73% home against 90–100% everywhere else — worth
 looking at, and a good example of what `biomes` is for.
 
 Looks are checked by rendering, not by reading code. The most efficient way is a
