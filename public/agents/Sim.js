@@ -59,6 +59,8 @@ var ENEMY_JET_SINK = 0.10
 // Longer limits delayed stuck runs without rescuing additional agents in sweeps.
 var LEVEL_LIMIT = 30 * 110
 var NUKE_STAGGER = 5     // ticks between arming one agent and the next
+var BLOCK_PATIENCE = 600 // ticks a blocker will hold having stopped nobody
+var BLOCK_MAX = 900      // and the longest it will hold whatever happens
 
 // Infection. The incubation is long on purpose: the whole point is that an
 // infected agent is indistinguishable from the rest of the colony for most of
@@ -2429,7 +2431,10 @@ function anyBlockerNear(w, ag, nx) {
     // That agent may move only outward until it has separated. The old
     // absolute-distance test rejected both directions and made it alternate
     // left/right forever in the same pixel.
-    if (next < 1.8 && next < now) return true
+    if (next < 1.8 && next < now) {
+      B.blockIdle = 0        // it just did its job, so it keeps standing
+      return true
+    }
   }
   return false
 }
@@ -2628,7 +2633,16 @@ function edgeAhead(w, ag, nx) {
 
   if (depth === Infinity) {
     if (far > 2 && crossingHelps(w, ag) && canStartBuild(w, ag, true) && spend(w, ag, "builder")) { startBuild(w, ag, true); return }
-    if (far <= 2 && countComing(w, ag) >= 2 - trait.blockBias && spend(w, ag, "blocker")) { ag.state = "block"; return }
+    // Not when the way home is above: a blocker's job is to stop the colony
+    // walking into a hole on its route, and a hole below an agent that is
+    // already under the exit is not on anybody's route. Level 509 drops a
+    // third of its colony into a pocket at the bottom, and the ones that met
+    // the shaft down there planted their hands for a colony that could never
+    // arrive — x50,y55 held seven times as many blocker-ticks as the whole of
+    // the rest of that level. Turning round leaves them to the climb and dig
+    // rules, which are at least trying to get them out.
+    if (far <= 2 && !exitAbove(w, ag) && comingHere(w, ag) >= 2 - trait.blockBias
+        && spend(w, ag, "blocker")) { ag.state = "block"; return }
     turnAround(w, ag)
     return
   }
@@ -2654,6 +2668,30 @@ function edgeAhead(w, ag, nx) {
   if (depth <= SAFE_FALL) { ag.x = nx; startFall(w, ag); return }
 
   turnAround(w, ag)
+}
+
+// How many others could actually walk into this spot. countComing below counts
+// everybody still alive anywhere on the board, which is the right question for
+// "is the level finished" and the wrong one for "is a blocker here worth an
+// agent". An agent that has wandered into a pocket at the bottom of level 509,
+// or out to the left board edge on 519, sees a dozen colleagues coming and
+// plants its hands for them — and they were never going to arrive, so it
+// stands there until the clock nukes it. Blocking is the only decision in the
+// game an agent cannot undo, so it is worth asking the narrower question.
+//
+// Unreleased agents count only near the hatch, which is the one place they are
+// genuinely on their way to.
+function comingHere(w, ag) {
+  var n = 0
+  if (w.released < w.toRelease && w.hatch && Math.abs(w.hatch.x - ag.x) < 34)
+    n += w.toRelease - w.released
+  for (var i = 0; i < w.agents.length; i++) {
+    var O = w.agents[i]
+    if (O === ag || O.gone || O.state === "saved" || O.state === "block") continue
+    if (Math.abs(O.y - ag.y) > 6 || Math.abs(O.x - ag.x) > 30) continue
+    n++
+  }
+  return n
 }
 
 // How many others are still unaccounted for and might yet arrive here. Used
@@ -3688,10 +3726,38 @@ function unsupported(w, ag) {
   return !solid(w, Math.floor(ag.x), Math.floor(ag.y) + 1)
 }
 
+// A blocker is the only thing on the board that chooses never to move again,
+// and until now nothing ever released one. That is fine where the queue keeps
+// arriving, and a disaster where it does not: on level 509 a third of the
+// colony drops into a pocket at the bottom of the level, and the ones that
+// meet the shaft lip down there plant their hands to protect a colony that
+// cannot reach them, then stand in a dead end until the clock nukes them.
+// x50,y55 accounted for seven times as many blocker-ticks as everywhere else
+// on that level put together.
+//
+// So a blocker that has stopped nobody for BLOCK_PATIENCE gives up and walks.
+// A blocker on a route anybody is actually using gets its counter reset long
+// before that and stands as long as it is needed. Nothing is refunded: the
+// skill was spent, and standing down only gets the agent its legs back.
 function stepBlock(w, ag) {
   if (unsupported(w, ag)) { beginUncontrolledFall(w, ag); return }
   ag.anim++
+  ag.blockIdle = (ag.blockIdle || 0) + 1
+  ag.blockHeld = (ag.blockHeld || 0) + 1
 
+  // The ceiling is not redundant with the patience above it. A blocker that
+  // has trapped a handful of agents against itself gets its patience reset by
+  // every one of them bouncing off it, so the pocket keeps the blocker
+  // standing and the blocker keeps the pocket full — the counter that was
+  // meant to release it is fed by the very thing it is causing.
+  if (ag.blockIdle > BLOCK_PATIENCE || ag.blockHeld > BLOCK_MAX) {
+    ag.blockIdle = 0
+    ag.blockHeld = 0
+    ag.state = "walk"
+    ag.turns = 0
+    ag.idle = 0
+    w.lastEvent = "stood down"
+  }
 }
 
 function stepBomb(w, ag) {
@@ -4478,8 +4544,23 @@ function stepSlide(w, ag) {
       || !crouchroom(w, cx, footY)) {
     ag.dir = -ag.dir
     ag.turns++
+    // Reversing is only an answer if the other way is open. Wedged in a crouch
+    // pocket with both ends shut, this flipped the agent's direction every
+    // tick on the same spot for the rest of the level — and nothing came for
+    // it, because the stuck detector only ever considers agents in `walk`.
+    // Level 509 drops about a third of its colony into a pocket at the bottom
+    // and that is where they stayed. Hand it back to walking after both ends
+    // have been tried: a wall is something bashers and diggers have answers to,
+    // and forceEscape can see it again.
+    ag.slideStuck = (ag.slideStuck || 0) + 1
+    if (ag.slideStuck >= 3) {
+      ag.slideStuck = 0
+      ag.state = "walk"
+      ag.timer = 0
+    }
     return
   }
+  ag.slideStuck = 0
 
   ag.x = nx
   ag.anim++
