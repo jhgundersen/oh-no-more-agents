@@ -1,26 +1,9 @@
-// The web version's driver: the browser's answer to Panel.qml.
-//
-// Everything below is web-only. Sim.js, Draw.js, Palette.js and Outcome.js are shared
-// verbatim with the Omarchy bar plugin and are not allowed to know which of the
-// two is running them — so this file does exactly what Panel.qml does, in the
-// same order, with the same numbers, and nothing more. If you find yourself
-// wanting to change one of the shared files to make the web version
-// behave, that is the signal that the change belongs in this file instead.
-//
-// The one thing here the plugin has no equivalent of is the theme picker: the
-// plugin takes its five colors from whatever Omarchy theme is live, and this
-// page has to pick for itself. That turns out to be the most useful thing
-// about the web version — it renders the board under any theme in a second,
-// where checking the same thing in the bar means restarting the whole shell.
+// Browser host integration. Shared game files stay host-agnostic.
 
 (function () {
   "use strict"
 
-  // The five foundational colors Omarchy themes define, lifted from
-  // /usr/share/omarchy/themes/<name>/colors.toml. `urgent` is not a key those
-  // files carry — the shell falls back to its own default, or a theme's
-  // generated shell.toml maps it onto the theme's red — so that is what these
-  // use, and it is the one value that may sit a shade off the real bar.
+  // Omarchy's five foundational theme colors; urgent maps to each theme's red.
   var THEMES = {
     "tokyo-night":  { background: "#1a1b26", foreground: "#a9b1d6", accent: "#7aa2f7", urgent: "#f7768e", muted: "#414868" },
     "catppuccin":   { background: "#1e1e2e", foreground: "#cdd6f4", accent: "#89b4fa", urgent: "#f38ba8", muted: "#585b70" },
@@ -33,19 +16,12 @@
     "hackerman":    { background: "#0b0c16", foreground: "#ddf7ff", accent: "#82fb9c", urgent: "#ff5555", muted: "#2d3450" }
   }
   var THEME_ORDER = Object.keys(THEMES)
-  // Dark only, deliberately. Every material is mixed out of the theme
-  // background, so on a light theme dirt, rock and steel all land within a few
-  // percent of each other and the board loses the tiers that tell you how deep
-  // you're looking. The bar plugin has the same weakness; there it at least
-  // matches the desktop around it.
+  // Light themes collapse the contrast between terrain tiers, so use dark ones.
 
   // Panel.qml's numbers, not new ones.
   var SPEED_NAMES = ["Calm", "Steady", "Brisk"]
   var SPEED_INTERVALS = [45, 33, 22]
   var DONE_HOLD = 110      // ticks to sit on a finished level before moving on
-
-  // State
-  // -------------------------------------------------------------------------
 
   var world = null
   var level = 1
@@ -66,10 +42,8 @@
   var terrainCtx = null
   var actorCtx = null
 
-  // -------------------------------------------------------------------------
   // Persistence — localStorage standing in for the plugin's state.json, same
   // fields, so a level you left off on comes back.
-  // -------------------------------------------------------------------------
 
   var STORE_KEY = "oh-no-more-agents"
   var REPORT_STORE_KEY = "oh-no-more-agents-pending-reports"
@@ -159,10 +133,6 @@
     }).catch(function () { render() })
   }
 
-  // -------------------------------------------------------------------------
-  // Palette and scaling
-  // -------------------------------------------------------------------------
-
   function rebuildPalette() {
     var t = THEMES[themeName]
     palette = build({
@@ -170,8 +140,6 @@
       accent: hex(t.accent), urgent: hex(t.urgent), muted: hex(t.muted)
     }, level)
 
-    // The page dresses itself in the same theme, so the board doesn't sit in a
-    // frame that argues with it.
     var root = document.documentElement
     root.style.setProperty("--bg", t.background)
     root.style.setProperty("--fg", t.foreground)
@@ -180,25 +148,8 @@
     root.style.setProperty("--urgent", t.urgent)
   }
 
-  // The board is 400x248 real pixels. Everything on it is pixel art, so it is
-  // only ever scaled by a whole number — a fractional scale puts a sprite's
-  // 1px eye across two screen pixels and turns the whole colony to mush. The
-  // canvas backing store stays at 400x248 and CSS does the enlarging with
-  // image-rendering: pixelated.
-  // How tall the window is going to be, rather than how tall it is this second.
-  //
-  // iOS reports innerHeight as the *visible* height, which is short while
-  // Safari's toolbars are on screen and grows the moment a scroll collapses
-  // them. The board is scaled by a whole number, so that difference is a whole
-  // step of scale: the page opened at half size, and the way to get the big one
-  // was to scroll a bit and let it re-fit — which is not an instruction anybody
-  // should have to be given.
-  //
-  // documentElement.clientHeight is the layout viewport, which on iOS is the
-  // toolbar-collapsed height and does not move when the toolbars come and go.
-  // Taking the larger of the two sizes the board for the window the reader is
-  // about to have. In fullscreen there are no toolbars and innerHeight is the
-  // screen, so that one is used as it stands.
+  // iOS innerHeight changes with its toolbars; clientHeight is the stable layout
+  // viewport. Fullscreen has no toolbars and should use innerHeight directly.
   function viewportHeight(full) {
     if (full) return window.innerHeight
     var doc = document.documentElement
@@ -208,7 +159,6 @@
   function applyScale(scale) {
     el.boardWrap.style.width = (WIDTH * scale) + "px"
     el.boardWrap.style.height = (HEIGHT * scale) + "px"
-    // The readouts line up with the board rather than with the viewport.
     document.documentElement.style.setProperty("--board-w", (WIDTH * scale) + "px")
   }
 
@@ -217,27 +167,12 @@
   // stage, because there is nothing else.
   function boardFits(full) {
     if (full) return stageAroundBoard() + el.boardWrap.clientHeight <= viewportHeight(true)
-    // On the page, what has to be on screen is the board and everything above
-    // it: you cannot watch a board you have to scroll down to find. The
-    // toolbar, the controls, the themes and the soundtrack sit below it and may
-    // fall past the fold — which is what the old fixed 260 was really saying,
-    // in a number that happened to be right on one screen and wrong on the
-    // rest. Measured, it holds on every screen, including the ones where the
-    // blurb wraps to five lines.
+    // Only the board and content above it must fit before the fold.
     var top = el.boardWrap.getBoundingClientRect().top + (window.scrollY || 0)
     return top + el.boardWrap.clientHeight <= viewportHeight(false)
   }
 
-  // Try the sizes, biggest first, and keep the first one that fits.
-  //
-  // This used to subtract a fixed 260px for "the rest of the page" and take
-  // whatever scale was left. That number is wrong on almost every screen —
-  // measured, the page furniture is 593px on an iPad in landscape — and worse,
-  // it cannot be right, because the chrome depends on the board: the controls
-  // row is board-width, so a small board wraps it onto three lines, which eats
-  // the room the board needed to be bigger. Asking "does this size fit" with
-  // the board actually at that size is the only version of the question that
-  // has an answer, and it costs three reflows on a resize.
+  // Test integer scales because board-width controls can reflow at each size.
   function fitBoard() {
     var full = isFullscreen()
     var avail = el.boardWrap.parentElement.clientWidth
@@ -249,14 +184,7 @@
     applyScale(1)
   }
 
-  // -------------------------------------------------------------------------
-  // Fullscreen
-  //
-  // #stage holds the game and nothing else, so handing that one element to the
-  // browser hides everything around it: a fullscreen element's siblings are not
-  // rendered at all, which is a stronger guarantee than any rule this file
-  // could write, and it cannot fall out of step with the page.
-  // -------------------------------------------------------------------------
+  // Fullscreening #stage lets the browser hide its siblings.
 
   function fullscreenEl() {
     return document.fullscreenElement || document.webkitFullscreenElement || null
@@ -266,11 +194,7 @@
     return fullscreenEl() === el.stage || el.stage.classList.contains("faux")
   }
 
-  // The fallback is not a nicety: iOS Safari has no Element.requestFullscreen
-  // at all, and a request can be refused outright by policy or because the page
-  // is in a frame. Rather than leave the one control that visibly does nothing,
-  // the stage covers the viewport itself — same result, minus the operating
-  // system, and Escape still gets out of it.
+  // iOS and framed pages may lack/refuse fullscreen, so retain the CSS fallback.
   function setFaux(on) {
     el.stage.classList.toggle("faux", on)
     afterFullscreen()
@@ -290,14 +214,7 @@
     if (asked && asked.catch) asked.catch(function () { setFaux(true) })
   }
 
-  // How much of the stage is not the board: the readouts, the caption, the
-  // toolbar and the controls, plus the gaps between them and the padding.
-  //
-  // Measured child by child rather than taken off the stage's own height,
-  // because in fullscreen the stage IS the screen — scrollHeight then reports
-  // the screen's height, the subtraction comes out about 120px too big, and the
-  // board fits itself into what is left. Which is how asking for fullscreen
-  // ended up making the board smaller.
+  // Sum children: in fullscreen stage.scrollHeight is the screen, not its content.
   function stageAroundBoard() {
     var st = getComputedStyle(el.stage)
     var total = (parseFloat(st.paddingTop) || 0) + (parseFloat(st.paddingBottom) || 0)
@@ -436,10 +353,6 @@
       : "worldwide: " + globalSaved.toLocaleString() + " saved"
   }
 
-  // -------------------------------------------------------------------------
-  // Clock
-  // -------------------------------------------------------------------------
-
   var timer = null
   function restartClock() {
     if (timer !== null) clearInterval(timer)
@@ -465,18 +378,8 @@
     })
   }
 
-  // -------------------------------------------------------------------------
   // Soundtrack
-  //
-  // One player, and it is silent until somebody presses play. Not because
-  // browsers block autoplay — they do — but because a page that starts making
-  // noise on its own is a page you close. Switching track while something is
-  // already playing keeps playing; switching while it is silent stays silent.
-  //
-  // The player itself does not loop. A track that ends hands over to the next
-  // one and wraps at the end of the list, so leaving this open gets you the
-  // whole soundtrack rather than the same three minutes until you notice.
-  // -------------------------------------------------------------------------
+  // Playback starts only on user request; an ended track advances and wraps.
 
   var TRACKS = ["agents/soundtrack_1.mp3", "agents/soundtrack_2.mp3",
                "agents/soundtrack_3.mp3", "agents/soundtrack_4.mp3",
@@ -485,9 +388,7 @@
   var trackIndex = 0
 
   function setTrack(i, keepPlaying) {
-    // Read this before assigning src: changing the source makes the element
-    // paused immediately. At the natural end of a track `ended` is true, which
-    // still means audio is enabled and the wrapped playlist should continue.
+    // Read before assigning src, which immediately changes paused state.
     var wasPlaying = keepPlaying && (!el.player.paused || el.player.ended)
     trackIndex = i
     el.player.src = TRACKS[i]
@@ -501,14 +402,11 @@
 
   function playAudio() {
     var p = el.player.play()
-    // Rejects when the browser has not seen a gesture it accepts. Nothing to
-    // do about it and nothing to report — the button stays showing play.
+    // A rejected autoplay request leaves the button showing play.
     if (p && p.catch) p.catch(function () { renderAudio() })
     if (p && p.then) p.then(renderAudio, function () {})
   }
 
-  // Straight through the list, wrapping. In order rather than shuffled: these
-  // were written as a set, and a set has an order.
   function advanceTrack() {
     setTrack((trackIndex + 1) % TRACKS.length, true)
   }
@@ -518,17 +416,11 @@
     else { el.player.pause(); renderAudio() }
   }
 
-  // Play and pause glyphs rather than a fixed one, so the button says which of
-  // the two it will do next.
   function renderAudio() {
     var playing = !el.player.paused && !el.player.ended
     el.playpause.innerHTML = playing ? "&#10073;&#10073;" : "&#9654;"
     el.playpause.classList.toggle("on", playing)
   }
-
-  // -------------------------------------------------------------------------
-  // Boot
-  // -------------------------------------------------------------------------
 
   function boot() {
     el.level = document.getElementById("level")
@@ -585,9 +477,7 @@
     })
     setTrack(trackIndex, false)
     el.playpause.addEventListener("click", toggleAudio)
-    // The element is the source of truth for whether sound is coming out, so
-    // the button follows it however it got there — including the track ending
-    // or the browser stopping it.
+    // Follow media events so browser-initiated pauses update the button.
     ;["play", "pause", "ended"].forEach(function (ev) {
       el.player.addEventListener(ev, renderAudio)
     })
@@ -599,9 +489,7 @@
     loadGlobalStats()
 
     window.addEventListener("resize", fitBoard)
-    // Rotating an iPad, pinch-zooming, or the toolbars sliding away are all
-    // things that change the picture without necessarily firing a window
-    // resize. The visual viewport reports all three.
+    // visualViewport catches toolbar and pinch-zoom changes missed by resize.
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", fitBoard)
       window.visualViewport.addEventListener("scroll", fitBoard)
@@ -611,9 +499,7 @@
     document.addEventListener("webkitfullscreenchange", afterFullscreen)
     el.boardWrap.addEventListener("click", togglePause)
 
-    // Every hint is also a button. The keys still work; this is so the page can
-    // be used with a thumb, which it could not be before — a row of text saying
-    // which keys to press is no use at all on a touchscreen.
+    // Keyboard hints double as touch controls.
     var buttons = {
       "c-pause": togglePause,
       "c-prev": function () { advance(-1) },
@@ -644,16 +530,13 @@
       else if (k === "s") cycleSpeed()
       else if (k === "w") toggleLabels()
       else if (k === "f") toggleFullscreen()
-      // Real fullscreen hands Escape to the browser, which never reaches here.
-      // The fallback has to answer for itself.
+      // Only faux fullscreen receives Escape here.
       else if (k === "escape" && el.stage.classList.contains("faux")) setFaux(false)
       else return
       render()
     })
 
-    // A tab in the background is a tab nobody is watching, and browsers
-    // throttle its timers to roughly once a second anyway — which would make
-    // the sim crawl rather than pause, and quietly eat a level's clock.
+    // Pause the clock while hidden; throttled timers would consume game time.
     document.addEventListener("visibilitychange", function () {
       if (document.hidden) { if (timer !== null) { clearInterval(timer); timer = null } }
       else restartClock()
