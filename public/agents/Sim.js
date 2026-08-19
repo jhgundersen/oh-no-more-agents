@@ -4664,6 +4664,17 @@ function droneTarget(w, drone) {
     if (ag.gone || ag.state === "saved" || ag.state === "bomb") continue
     var dx = ag.x - drone.x, dy = (ag.y - 2) - drone.y
     var d = dx * dx + dy * dy
+    // Nearest as the crow flies was the whole of it, which is how a drone came
+    // to lock onto somebody through a wall and grind against that wall for ten
+    // seconds while a perfectly reachable agent stood a few cells away. Every
+    // other hostile on the board already insists on a clear line — see
+    // enemyTarget — and the one that actually has to fly there did not.
+    //
+    // Unreachable targets are pushed to the back rather than dropped, so a
+    // drone with nobody in sight still drifts toward the colony instead of
+    // hanging in the air waiting to be given something to do.
+    if (!lineClear(w, Math.floor(drone.x), Math.floor(drone.y),
+                   Math.floor(ag.x), Math.floor(ag.y) - 2)) d += 100000
     if (d < score) { best = ag; score = d }
   }
   return best
@@ -4711,15 +4722,64 @@ function stepDrone(w, drone) {
   var speed = 0.16
   var nx = drone.x + dx / Math.max(1, dist) * speed
   var ny = drone.y + dy / Math.max(1, dist) * speed
-  var openBoth = !solid(w, Math.floor(nx), Math.floor(ny))
-    && !solid(w, Math.floor(nx), Math.floor(ny) - 1)
-  if (openBoth) { drone.x = nx; drone.y = ny }
-  else if (!solid(w, Math.floor(drone.x), Math.floor(ny))
-           && !solid(w, Math.floor(drone.x), Math.floor(ny) - 1)) drone.y = ny
-  else if (!solid(w, Math.floor(nx), Math.floor(drone.y))
-           && !solid(w, Math.floor(nx), Math.floor(drone.y) - 1)) drone.x = nx
+
+  var moved = false
+  if (droneRoom(w, nx, ny)) { drone.x = nx; drone.y = ny; moved = true }
+  else if (droneRoom(w, drone.x, ny)) { drone.y = ny; moved = true }
+  else if (droneRoom(w, nx, drone.y)) { drone.x = nx; moved = true }
+
+  // Straight at it, then one axis, then the other — and if all three are shut,
+  // the old code simply hovered. On level 533 that was most of them: nearly
+  // two thirds of every drone launched spent about ten seconds motionless in
+  // front of an obstacle with a target it could see and not reach. Greedy
+  // pursuit cannot round a corner, because rounding one means moving away
+  // from the target first, which greedy pursuit will never choose.
+  //
+  // So when it is properly stuck it picks a way round and commits to it for a
+  // while. Committing is the point: reconsidering every tick puts it straight
+  // back into the corner it just backed out of.
+  if (moved) {
+    if (drone.detourFor > 0) drone.detourFor--
+  } else {
+    if (drone.detourFor <= 0) {
+      drone.detour = droneWayRound(w, drone, dy)
+      drone.detourFor = 45
+    }
+    var d = drone.detour
+    if (d && droneRoom(w, drone.x + d.x * speed, drone.y + d.y * speed)) {
+      drone.x += d.x * speed
+      drone.y += d.y * speed
+      drone.detourFor--
+    } else {
+      // That way is shut too. Take the next one on the next tick rather than
+      // burning the whole detour against the same wall.
+      drone.detourFor = 0
+      drone.detour = null
+    }
+  }
+
   drone.dir = dx >= 0 ? 1 : -1
   drone.anim++
+}
+
+function droneRoom(w, x, y) {
+  return !solid(w, Math.floor(x), Math.floor(y))
+    && !solid(w, Math.floor(x), Math.floor(y) - 1)
+}
+
+// Which way to peel off. It is a flying machine, so up is tried first and the
+// side it is already leaning is preferred over doubling back.
+function droneWayRound(w, drone, dy) {
+  var tries = dy < 0
+    ? [{ x: 0, y: -1 }, { x: drone.dir, y: 0 }, { x: -drone.dir, y: 0 }, { x: 0, y: 1 }]
+    : [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: drone.dir, y: 0 }, { x: -drone.dir, y: 0 }]
+  for (var i = 0; i < tries.length; i++) {
+    var t = tries[i]
+    // Look a couple of cells along, not one: a gap the drone cannot actually
+    // fit through is not a way round, it is the same corner one tick later.
+    if (droneRoom(w, drone.x + t.x * 2, drone.y + t.y * 2)) return t
+  }
+  return null
 }
 
 function enemyTarget(w, en, reach) {
