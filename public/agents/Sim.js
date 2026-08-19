@@ -1114,7 +1114,13 @@ function roughFloor(w, c, rng, biome) {
     }
     // Only where there is still floor to build on. Everything the obstacles
     // took away stays taken away.
-    if (!solid(w, x, c.floorY)) { h = 0; continue }
+    // Keep the current height while crossing a missing stretch. Resetting it
+    // here made the two lips of a gap drift to different levels, even though
+    // the same rough-floor run visually continues on both sides. A builder
+    // approaching from the high lip then laid a flat bridge that the colony
+    // could not step onto from the low lip (level 13's Ice Cave crossing).
+    // The run counter still advances above, preserving the generation RNG.
+    if (!solid(w, x, c.floorY)) continue
     for (var d = 0; d < h; d++) setCell(w, x, c.floorY - 1 - d, DIRT)
   }
 }
@@ -2735,6 +2741,19 @@ function liquidAt(w, x) {
   return null
 }
 
+// The shaft occupying this column, whether flooded or dry. Terrain inside a
+// recorded pit is not a landing: builders can reach the board's solid lower
+// boundary and pile bricks on it, but that must not turn a bottomless hole
+// into a room. Bridges remain valid because their walking surface is above the
+// original floorY lip.
+function pitAt(w, x) {
+  for (var i = 0; i < w.pits.length; i++) {
+    var p = w.pits[i]
+    if (x >= p.x0 && x <= p.x1) return p
+  }
+  return null
+}
+
 function sink(w, ag, pool) {
   ag.y = pool.surfaceY
   ag.gone = true
@@ -3547,6 +3566,8 @@ function stepFall(w, ag) {
   var pool = liquidAt(w, cx)
   if (pool && ny >= pool.surfaceY) { sink(w, ag, pool); return }
 
+  var shaft = pitAt(w, cx)
+
   // Out through the bottom of the world. Has to be caught before the landing
   // scan below, which would otherwise find the out-of-bounds STEEL that at()
   // reports and land them on nothing.
@@ -3574,6 +3595,10 @@ function stepFall(w, ag) {
   }
 
   for (var yy = Math.floor(ag.y) + 1; yy <= Math.floor(ny) + 1; yy++) {
+    // Bricks or moved terrain below a pit's lip are debris in a bottomless
+    // shaft, not a floor. Without this, level 13's agents built off the board
+    // boundary, landed on row 61, and paced around inside the pit.
+    if (shaft && yy >= shaft.floorY) continue
     if (solid(w, cx, yy)) {
       ag.y = yy - 1
       if (ag.fall > SAFE_FALL && !ag.floater) { splat(w, ag); return }
@@ -5250,7 +5275,15 @@ function stepEnemy(w, en) {
       var retreatPeer = w.enemies[ri]
       if (retreatPeer !== en && !retreatPeer.gone
           && Math.abs(retreatPeer.y - en.y) < 1.5
-          && Math.abs(retreatPeer.x - retreatX) < 1) { peerBlocked = true; break }
+          && Math.abs(retreatPeer.x - retreatX) < 1
+          // Two overlapping guards are deliberately sent in opposite
+          // directions above. Let that separating step happen even while
+          // their sprites still overlap; treating the peer as a wall until
+          // they were already apart left both waiting forever.
+          && Math.abs(retreatPeer.x - retreatX) <= Math.abs(retreatPeer.x - en.x)) {
+        peerBlocked = true
+        break
+      }
     }
     if (!peerBlocked && !solid(w, retreatCell, retreatY)
         && solid(w, retreatCell, retreatY + 1) && headroom(w, retreatCell, retreatY)) en.x = retreatX
@@ -5639,6 +5672,15 @@ function step(w) {
       ag.fade++
       if (ag.fade > 14) ag.gone = true
       continue
+    }
+
+    // A skill may have built a false floor inside a pit before another agent
+    // arrived. Anyone already standing below the recorded lip resumes falling
+    // instead of treating that debris as ordinary corridor ground.
+    var insidePit = pitAt(w, Math.floor(ag.x))
+    if (insidePit && ag.y >= insidePit.floorY && ag.state !== "fall") {
+      ag.floater = false
+      startFall(w, ag)
     }
 
     // Closer to home than this agent has ever been? Then whatever it's
