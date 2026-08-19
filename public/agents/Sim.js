@@ -2636,7 +2636,7 @@ function edgeAhead(w, ag, nx) {
 
 
   if (depth === Infinity) {
-    if (far > 2 && canStartBuild(w, ag, true) && spend(w, ag, "builder")) { startBuild(w, ag, true); return }
+    if (far > 2 && crossingHelps(w, ag) && canStartBuild(w, ag, true) && spend(w, ag, "builder")) { startBuild(w, ag, true); return }
     if (far <= 2 && countComing(w, ag) >= 2 - trait.blockBias && spend(w, ag, "blocker")) { ag.state = "block"; return }
     turnAround(w, ag)
     return
@@ -2755,7 +2755,39 @@ function startLadderDown(ag, ladder) {
   ag.timer = 0
 }
 
+// Is crossing this bottomless gap worth a builder, or is turning round the
+// better answer? Bricks over a shaft are for a crossing that is on the way
+// somewhere — the bottom pit between the landing and the exit is the case the
+// rule was written for. An agent that has wandered past the exit and met a
+// hole on the far side is not crossing toward anything, and the bridge it
+// builds leads further from home than the ground it is standing on.
+function crossingHelps(w, ag) {
+  // Vertical business overrides horizontal: if the door is above or below,
+  // which side of the shaft it is on tells you nothing useful.
+  if (exitBelow(w, ag) || exitAbove(w, ag)) return true
+  var exitMid = w.exit.x + w.exit.w / 2
+  if (Math.abs(exitMid - ag.x) <= 2) return true
+  return (exitMid > ag.x ? 1 : -1) === ag.dir
+}
+
 function buildDirection(w, ag) {
+  // A bridge that answers a hole goes across that hole. The exit steer below
+  // is for builds that are a free choice — a stalled agent, a director grant,
+  // a wall met on open ground — and it must never turn a crossing round.
+  //
+  // Level 359 is the worked example: its pit sits to the left of the exit, so
+  // an agent that walked left, met the lip and correctly decided to bridge a
+  // bottomless gap had its direction flipped to face the exit, and laid the
+  // bricks rightward along the floor it was already standing on. Seven agents
+  // spent a builder each on that floor. It looked like a build in the wrong
+  // place because it was one: the decision and the direction were being made
+  // by two rules that never consulted each other.
+  //
+  // canStartBuild cannot catch this on its own — it tests the cells at foot
+  // height, which are the open air above any floor, so building along solid
+  // ground always looks possible.
+  if (!solid(w, Math.floor(ag.x) + ag.dir, Math.floor(ag.y) + 1)) return ag.dir
+
   if (!exitBelow(w, ag)) {
     var exitMid = w.exit.x + w.exit.w / 2
     if (Math.abs(exitMid - ag.x) > 1) return exitMid > ag.x ? 1 : -1
