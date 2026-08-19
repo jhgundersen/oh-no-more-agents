@@ -1160,18 +1160,6 @@ var SPECIAL_FACTS = {
     "creates synthetic agents from organic mistakes.",
     "the third copy is mostly robe and conviction.",
     "collapsed the distribution into a small crowd."
-  ],
-  ratelimit: [
-    "received five agents and returned 429.",
-    "allows one thought per billing interval.",
-    "fixed congestion by making it stationary.",
-    "has asked the colony to retry later.",
-    "protects capacity from anything getting done.",
-    "releases tokens one deeply considered pixel at a time.",
-    "calls the queue a successful backpressure strategy.",
-    "throttles first and measures never.",
-    "the request was valid. The timing was personal.",
-    "has plenty of bandwidth and a strict principle."
   ]
 }
 
@@ -2404,13 +2392,6 @@ function drawAgentTrick(ctx, w, pal, ag, ox, oy, dir, robe, hair) {
         ctx.globalAlpha = 0.35
         ctx.fillRect(tx + dir * 2 - (dir < 0 ? 5 : 0), oy + SPRITE_PX - 9 - rungs * 5, 6, 2)
         break
-
-      case "limit":                             // a gate closes on the queue
-        var gate = Math.round(12 * reach)
-        ctx.fillRect(ox - gate, oy + 2, 2, 14)
-        ctx.fillRect(ox + SPRITE_W + gate, oy + 2, 2, 14)
-        ctx.fillRect(ox - gate, oy + 2, SPRITE_W + gate * 2, 2)
-        break
     }
     ctx.globalAlpha = 1
   }
@@ -2486,10 +2467,6 @@ function drawAgentHeightGear(ctx, w, pal, ag, ox, oy, dir, robe, hair) {
         ctx.fillRect(ox - 6, oy - 10, 20, 6)
         ctx.fillStyle = pal.eye; ctx.font = "bold 6px monospace"; ctx.textAlign = "center"
         ctx.fillText("LAND", ox + 4, oy - 5); break
-      case "elevator":
-        ctx.fillRect(ox - 4, oy + 16, 16, 2)
-        ctx.fillRect(ox - 4, oy - 4, 2, 22); ctx.fillRect(ox + 10, oy - 4, 2, 22)
-        for (var eb = -2; eb < 16; eb += 4) ctx.fillRect(ox - 5, oy + eb, 18, 1); break
       case "extender":
         ctx.fillRect(ox - 3, oy - 3, 2, 22); ctx.fillRect(ox + 9, oy - 3, 2, 22)
         for (var er = 0; er < 22; er += 5) ctx.fillRect(ox - 3, oy + er, 14, 1); break
@@ -2642,17 +2619,6 @@ function drawAgent(ctx, w, pal, ag, opts) {
     ctx.fillStyle = hair
     for (var mg = 0; mg < ag.modelGen + 1; mg++)
       ctx.fillRect(ox - 2 + ((ag.id + mg * 5) % 13), oy + ((ag.anim + mg * 7) % 16), 1, 1)
-  }
-
-  if (st === "limited") {
-    // Two hard bars and a shrinking quota pip: unmistakably stopped, without
-    // making the held agent look dead or blocked forever.
-    ctx.fillStyle = pal.warn
-    ctx.fillRect(ox - 2, oy + 3, 2, 11)
-    ctx.fillRect(ox + SPRITE_W, oy + 3, 2, 11)
-    ctx.fillRect(ox - 2, oy + 3, SPRITE_W + 4, 1)
-    ctx.fillStyle = pal.label
-    ctx.fillRect(ox - 1, oy, Math.max(1, Math.min(10, Math.ceil(ag.limitedFor / 8))), 2)
   }
 
   if (st === "stunned") {
@@ -2957,7 +2923,6 @@ function actionLabel(st) {
   if (st === "height") return "height move"
   if (st === "webup") return "web climb"
   if (st === "stunned") return "wounded"
-  if (st === "limited") return "rate limited"
   if (st === "trick") return "!"
   if (st === "camp") return "camped"
   return ""

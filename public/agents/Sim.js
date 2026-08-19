@@ -1263,9 +1263,6 @@ var SPECIALS = [
   // the confidence and progressively less of the sprite.
   ,{ id: "collapse", name: "Model Collapse", act: "collapse", height: "cushion", cool: 190, robe: "#7a3154", hair: "#f19ac2" }
 
-  // Stops a crowd, then grudgingly returns one token at a time. It is the only
-  // special whose signature move is making everybody else do less.
-  ,{ id: "ratelimit", name: "Rate Limiter", act: "limit", height: "elevator", cool: 145, robe: "#315b8a", hair: "#f0c75e" }
 
   // Leaves the wall exactly where it is and makes it free. Everything else on
   // this roster solves a wall for itself; a ladder is still there twenty
@@ -1304,22 +1301,6 @@ function specialLanding(w, ag, reach) {
       return { x: tx + 0.5, y: fy }
   }
   return null
-}
-
-function freezeNearby(w, ag, count) {
-  var held = 0
-  for (var i = 0; i < w.agents.length && held < count; i++) {
-    var other = w.agents[i]
-    if (other === ag || other.gone || other.state === "saved"
-        || other.state === "bomb" || other.state === "block"
-        || other.state === "camp" || other.state === "limited") continue
-    if (Math.abs(other.x - ag.x) > 12 || Math.abs(other.y - ag.y) > 3) continue
-    other.state = "limited"
-    other.limitedFor = 35 + held * 24
-    other.limitedBy = ag.id
-    held++
-  }
-  return held
 }
 
 function collapseCopy(w, ag) {
@@ -1431,7 +1412,6 @@ function specialTraverse(w, ag, act, dry) {
       linked[i].fall = 0
     }
   } else if (act === "collapse") collapseCopy(w, ag)
-  else if (act === "limit") freezeNearby(w, ag, 5)
 
   ag.x = land.x
   ag.y = land.y
@@ -1520,7 +1500,7 @@ function specialCut(w, ag, act, dry) {
       ag.shotFor = 12
     }
 
-  } else if (act === "chain" || act === "speculate" || act === "collapse" || act === "limit") {
+  } else if (act === "chain" || act === "speculate" || act === "collapse") {
     return specialTraverse(w, ag, act, dry)
 
   } else if (act === "kick") {
@@ -2917,8 +2897,6 @@ function spawn(w) {
     specialX: 0,
     specialY: 0,
     modelGen: 0,
-    limitedFor: 0,
-    limitedBy: 0,
     flipTicks: 0,
     wounds: 0,
     stunFor: 0,
@@ -4174,7 +4152,7 @@ function specialDropLanding(w, ag, nx, depth, mode) {
     recoil: -3, cyclone: 4, web: 0, logchute: 3, balloon: -4,
     promptchute: 2, piledrive: 0, helicopter: 7, glasswing: 5,
     ghost: -3, gunwing: 4, tractor: 1, steps: 3, chain: 5,
-    jetpack: 7, cushion: 2, elevator: 0, extender: 0, shieldglider: 5
+    jetpack: 7, cushion: 2, extender: 0, shieldglider: 5
   }[mode] || 0
   var footY = Math.floor(ag.y) + depth
   var baseX = Math.floor(nx)
@@ -4288,7 +4266,7 @@ function stepSpecialHeight(w, ag) {
     recoil: -2, cyclone: 3, web: 0.4, logchute: 2, balloon: -3,
     promptchute: 1.5, piledrive: 0, helicopter: 5, glasswing: 3,
     ghost: -2, gunwing: 2.5, tractor: 0.8, steps: 1.5, chain: 3,
-    jetpack: 4, cushion: 1.5, elevator: 0, extender: 0, shieldglider: 3
+    jetpack: 4, cushion: 1.5, extender: 0, shieldglider: 3
   }[ag.heightMode] || 0
   ag.x += ag.dir * sway * Math.sin(moveP * Math.PI)
   if (ag.heightMode === "helicopter") {
@@ -4364,7 +4342,7 @@ function specialAtEdge(w, ag, nx, depth, far) {
   }
 
   if ((spec.act === "chain" || spec.act === "speculate"
-       || spec.act === "collapse" || spec.act === "limit")
+       || spec.act === "collapse")
       && ag.cool <= 0 && far > 1 && specialLanding(w, ag, 14)) {
     ag.state = "trick"
     ag.timer = 0
@@ -4541,15 +4519,6 @@ function stepTrick(w, ag) {
   // Nothing shifted, so whatever is in the way is steel and always will be.
   // Turning is the only honest answer.
   if (!cut) turnAround(w, ag)
-}
-
-function stepLimited(w, ag) {
-  ag.limitedFor--
-  if (ag.limitedFor > 0) return
-  ag.limitedFor = 0
-  ag.limitedBy = 0
-  if (unsupported(w, ag)) beginUncontrolledFall(w, ag)
-  else ag.state = "walk"
 }
 
 function stepStunned(w, ag) {
@@ -5444,18 +5413,6 @@ function stepAgents(w) {
     }
     if (ag.rescueCool > 0) ag.rescueCool--
 
-    // Rate Limiter does not wait for terrain. A sufficiently dense queue is
-    // already an incident: stop the nearest requests and let them resume one
-    // by one. The stagger is stored on each victim, so removing the limiter
-    // does not release the whole thundering herd at once.
-    if (ag.special && ag.state === "walk" && specOf(ag).act === "limit" && ag.cool <= 0) {
-      var rateHeld = freezeNearby(w, ag, 5)
-      if (rateHeld >= 2) {
-        ag.cool = specOf(ag).cool
-        ag.timer = 10
-      }
-    }
-
     // Stuck inside one cell. Not "getting nowhere" in the goalDist sense — the
     // literal same cell, tick after tick, which is what pacing in a pocket
     // looks like and what the bucket counter can never see.
@@ -5514,7 +5471,6 @@ function stepAgents(w) {
       case "rappel": stepRappel(w, ag); break
       case "height": stepSpecialHeight(w, ag); break
       case "webup": stepWebEscape(w, ag); break
-      case "limited": stepLimited(w, ag); break
       case "stunned": stepStunned(w, ag); break
       case "jump":  stepJump(w, ag); break
       case "slide": stepSlide(w, ag); break
