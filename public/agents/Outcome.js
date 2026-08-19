@@ -81,7 +81,25 @@ var EVENT_LINES = {
   growth: ["New ground appeared, unrequested and unreviewed.", "The level grew a feature nobody asked for.", "Scope creep, but geological.", "Additional terrain was helpfully generated."],
   blackout: ["Every machine in the room changed its mind at once.", "The schedule was rewritten by something with no calendar.", "Somebody turned the clock rate up and left.", "The fixtures received an unscheduled config push."],
   drift: ["The rules quietly changed and nobody sent a changelog.", "Physics was updated to a version with known issues.", "Conditions degraded in a way the docs called 'expected'.", "The environment drifted. The agents did too."],
-  spawn: ["Something arrived that was not on the manifest.", "An unscheduled participant joined the level.", "The guest list was not enforced.", "It came from outside the training distribution."]
+  spawn: ["Something arrived that was not on the manifest.", "An unscheduled participant joined the level.", "The guest list was not enforced.", "It came from outside the training distribution."],
+
+  infect: [
+    "One of them was not itself for the last stretch of that.",
+    "The call was coming from inside the colony.",
+    "Something got in through an input nobody thought to sanitise.",
+    "It passed every check right up until it didn't.",
+    "The threat model did not include the threat.",
+    "An agent was compromised and kept working normally, which is worse."
+  ],
+
+  // Only when a carrier actually reached the door still carrying it.
+  carrier: [
+    "One of them took it home with it. Nobody noticed.",
+    "The rescue count includes something it should not.",
+    "It made it to the exit. So did what it was carrying.",
+    "Successfully exfiltrated: one agent, one passenger.",
+    "That one goes in the next level's colony, presumably."
+  ]
 }
 
 function outcomeLine(w) {
@@ -103,6 +121,7 @@ function outcomeLine(w) {
   // Sim.js puts the mechanisms on the world for exactly this: reaching into
   // its EVENTS table from here resolves in a browser and throws in QML.
   for (var m in (w.eventMechs || {})) add(m, true)
+  add("carrier", w.carrierHome === true)
   var pool = facts.length && Math.random() < 0.78 ? facts : outcome
   return pool[Math.floor(Math.random() * pool.length)]
 }

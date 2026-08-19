@@ -59,6 +59,21 @@ var ENEMY_JET_SINK = 0.10
 var LEVEL_LIMIT = 30 * 110
 var NUKE_STAGGER = 5     // ticks between arming one agent and the next
 
+// Infection. The incubation is long on purpose: the whole point is that an
+// infected agent is indistinguishable from the rest of the colony for most of
+// it — same trait, same label, same decisions, and the followers still take
+// their cue from it. The tell arrives late and small.
+//
+// The length is what splits the event's two outcomes, and it was tuned for
+// that rather than for realism: at 300 ticks about two in five carriers turn
+// and the rest reach the door still carrying it. Longer and the event mostly
+// evaporates; shorter and it stops being a story and becomes a casualty.
+var INCUBATION = 300     // ~10s from the touch to the turn
+var INCUBATION_TELL = 90 // ticks of visible wrongness before it happens
+var XENO_CAP = 3         // agents that may turn on one level, ever
+var XENO_REACH = 1.3     // how close it has to get to pass it on
+var XENO_COOL = 120      // and how long before it can do so again
+
 
 var SKILL_ORDER = ["climber", "floater", "bomber", "blocker", "builder", "basher", "miner", "digger"]
 var SKILL_LABELS = {
@@ -313,7 +328,9 @@ function corridorPlan(rng) {
 var K = {
   COLS: COLS, ROWS: ROWS, CELL: CELL, SKY: SKY,
   EMPTY: EMPTY, DIRT: DIRT, ROCK: ROCK, STEEL: STEEL, ORE: ORE,
-  AGENT_H: AGENT_H
+  AGENT_H: AGENT_H,
+  // Draw.js needs this one to know how much of an incubation is left to show.
+  INCUBATION_TELL: INCUBATION_TELL
 }
 
 // `attempt` remains for deterministic tools and compatibility; hosts pass zero.
@@ -386,6 +403,13 @@ function generate(level, attempt, colonySeed) {
     // replayed exactly: generate(level, attempt, w.colonySeed).
     colonySeed: colonySeed,
     traitRng: makeRng(colonySeed),
+    // Events draw from their own stream, off the same seed. Sharing traitRng
+    // did two things wrong: the cast and the event schedule came out of the
+    // same run of draws and so were correlated — the same mistake the whims
+    // used to make — and eventSite consuming mid-level shifted the whims of
+    // every agent still waiting at the hatch, so an event that fired changed
+    // the personality of agents it had not met yet.
+    eventRng: makeRng(colonySeed + 7919),
     traitCounts: {},
 
     // Events: what may happen to this level while it is being played, and the
@@ -393,6 +417,8 @@ function generate(level, attempt, colonySeed) {
     events: [],
     eventLog: [],
     eventMechs: {},
+    infections: 0,
+    carrierHome: false,
     eventWarn: "",
     eventWarnFor: 0,
     eventFlash: 0,
@@ -760,7 +786,7 @@ function fillEarth(w, rng) {
 
   // Last, because an event needs the corridors, the pits, the exit and the
   // hatch all settled before it can be told where it is not allowed to go.
-  rollEvents(w, rng, w.traitRng)
+  rollEvents(w, rng, w.eventRng)
 }
 
 function biomeSkin(w, rng) {
@@ -2798,6 +2824,10 @@ function spawn(w) {
     // fall" and is folded away on landing; there is no climber flag at all,
     // because every climb is paid for when it happens.
     floater: false,
+    // Ticks until it turns, or 0. Deliberately affects nothing else: an
+    // infected agent walks, builds, blocks and reads to the rest of the
+    // colony exactly as it did before, which is the entire joke.
+    infected: 0,
     fall: 0,
     timer: 0,
     bricks: 0,
@@ -2913,7 +2943,7 @@ var EVENTS = [
   // --- Spaceship ---
   { id: "breach",   name: "Buffer Overflow",  biome: "Spaceship", mech: "collapse", at: "ceiling", span: 8, deep: 5 },
   { id: "nullgrav", name: "Null Gravity",     biome: "Spaceship", mech: "drift",  what: "fall",  ticks: 400 },
-  { id: "xeno",     name: "Adversarial Input",biome: "Spaceship", mech: "spawn",  kind: "sniper", count: 1 },
+  { id: "xeno",     name: "Adversarial Input",biome: "Spaceship", mech: "infect" },
 
   // --- Factory ---
   { id: "scaleup",  name: "Scale Up",         biome: "Factory", mech: "blackout", mult: 2, ticks: 380 },
@@ -2998,14 +3028,15 @@ function fireEvent(w, ev) {
   else if (ev.mech === "blackout") { w.eventBoost = ev.ticks; w.eventMult = ev.mult }
   else if (ev.mech === "drift") { w.eventDrift = ev.ticks; w.driftWhat = ev.what }
   else if (ev.mech === "spawn") eventSpawn(w, ev)
+  else if (ev.mech === "infect") eventInfect(w)
 }
 
 // Pick a corridor stretch the event is allowed to work on.
 function eventSite(w, span) {
   if (!w.corridors || !w.corridors.length) return null
   for (var tries = 0; tries < 24; tries++) {
-    var c = w.corridors[Math.floor(w.traitRng() * w.corridors.length) % w.corridors.length]
-    var x = c.x0 + 3 + Math.floor(w.traitRng() * Math.max(1, (c.x1 - c.x0) - span - 6))
+    var c = w.corridors[Math.floor(w.eventRng() * w.corridors.length) % w.corridors.length]
+    var x = c.x0 + 3 + Math.floor(w.eventRng() * Math.max(1, (c.x1 - c.x0) - span - 6))
     if (!eventSafeX(w, x) || !eventSafeX(w, x + span)) continue
     return { c: c, x: x }
   }
@@ -3071,6 +3102,58 @@ function stepSpill(w) {
     p.rising--
     p.ripple = w.ticks
     w.liquidVersion = -1     // the flood map is cached on terrainVersion
+  }
+}
+
+// Something came aboard. There is nothing to see when it lands: the event
+// names itself, one agent is quietly carrying it, and the level goes on
+// looking exactly as it did.
+function eventInfect(w) {
+  var pool = []
+  for (var i = 0; i < w.agents.length; i++) {
+    var a = w.agents[i]
+    if (a.gone || a.state === "saved" || a.infected > 0) continue
+    pool.push(a)
+  }
+  if (!pool.length) return
+  // Somewhere in the middle of the queue. The one out in front is too easy to
+  // watch and the one at the back turns after everybody else is already home.
+  infectAgent(w, pool[Math.floor(w.eventRng() * pool.length) % pool.length])
+}
+
+function infectAgent(w, ag) {
+  if (!ag || ag.gone || ag.state === "saved" || ag.infected > 0) return false
+  if (w.infections >= XENO_CAP) return false
+  ag.infected = INCUBATION
+  w.infections++
+  w.lastEvent = "carrier"
+  return true
+}
+
+// The turn. The agent is lost to the colony and something else is standing
+// where it was — which is the one threat in this game that arrives from
+// inside the fifteen rather than out of the guard house.
+function turnAgent(w, ag) {
+  ag.gone = true
+  ag.state = "dead"
+  w.lost++
+  w.lastEvent = "turned"
+  addBlood(w, ag.x, ag.y - 1.5, 18)
+  w.enemies.push(makeXeno(w, ag.x, ag.y, ag.dir))
+}
+
+// Built here rather than by spawnEnemy, which always starts things at the
+// enemy hatch. This one starts wherever the colony was standing, and a level
+// with no guard house at all can still have one.
+function makeXeno(w, x, y, dir) {
+  return {
+    id: w.nextEnemyId++, kind: "xeno",
+    x: x, y: y, dir: dir || 1,
+    state: "walk", deployLeft: 0,
+    timer: 0, fall: 0, anim: 0, shoves: 0,
+    targetId: 0, lineTo: 0, lineY: 0, shotFor: 0,
+    touchCool: 0,
+    gone: false
   }
 }
 
@@ -4787,7 +4870,25 @@ function stepEnemyWalk(w, en) {
     return
   }
 
-  var target = enemyTarget(w, en, 24)
+  // A xeno does not shoot, so it never enters the aim-and-retreat branch
+  // below. It closes, and what it does on contact is not damage.
+  if (en.kind === "xeno") {
+    if (en.touchCool > 0) en.touchCool--
+    var prey = enemyTarget(w, en, 26)
+    if (prey) {
+      en.targetId = prey.id
+      en.dir = prey.x >= en.x ? 1 : -1
+      if (Math.abs(prey.x - en.x) < XENO_REACH && Math.abs(prey.y - en.y) < 2.2) {
+        // Past the cap it stops passing it on and is simply hostile, so a bad
+        // roll cannot turn the whole colony into the thing hunting it.
+        if (en.touchCool === 0 && infectAgent(w, prey)) en.touchCool = XENO_COOL
+        else woundFriendly(w, prey, en.x, false)
+        return
+      }
+    } else en.targetId = 0
+  }
+
+  var target = en.kind === "xeno" ? null : enemyTarget(w, en, 24)
   if (target) {
     en.targetId = target.id
     var delta = target.x - en.x
@@ -5229,6 +5330,7 @@ function stepAgents(w) {
     // doing is working: clear both counters and let it get on with it.
     w.acting = ag
     if (ag.cool > 0) ag.cool--
+    if (ag.infected > 0 && --ag.infected === 0) { turnAgent(w, ag); continue }
     if (ag.blockFor > 0) ag.blockFor--
     if (ag.coveredFor > 0) ag.coveredFor--
     if (ag.mineCool > 0) ag.mineCool--
@@ -5372,7 +5474,11 @@ function stepAgents(w) {
       ag.state = "saved"
       ag.fade = 0
       w.saved++
-      w.lastEvent = "saved"
+      // A carrier that beats its own incubation to the door goes home with it
+      // and counts, like everybody else, as a rescue. It is the best outcome
+      // this event has and the colony has no idea it happened.
+      if (ag.infected > 0) { w.carrierHome = true; w.lastEvent = "carrier home" }
+      else w.lastEvent = "saved"
       continue
     }
 

@@ -2055,6 +2055,53 @@ function drawEnemy(ctx, w, pal, en, opts) {
     return
   }
 
+  // The xenomorph. It has to read as not-an-agent at a glance and from a
+  // silhouette alone, because the whole event turns on noticing that one of
+  // the blue rectangles is now a low, long, wrong-coloured thing. Nothing
+  // about it is square: it crouches, it is longer than it is tall, and the
+  // head is out in front of the body rather than on top of it.
+  if (en.kind === "xeno") {
+    var xg = "#3f7d4a"
+    var xgLit = "#7de37a"
+    var lope = Math.floor(en.anim / 5) % 4
+    var bob = lope === 1 || lope === 3 ? 1 : 0
+
+    ctx.fillStyle = xg
+    blit(ctx, ox, oy, dir, 1, 11 + bob, 8, 4)        // the long body
+    blit(ctx, ox, oy, dir, 7, 8 + bob, 4, 4)         // shoulders, forward
+    ctx.fillStyle = xgLit
+    blit(ctx, ox, oy, dir, 9, 7 + bob, 5, 3)         // the head, out in front
+    ctx.fillStyle = "#0f1a12"
+    blit(ctx, ox, oy, dir, 11, 8 + bob, 2, 1)        // no eyes, just the socket
+
+    // The tail: a counterweight that swings against the legs, which is most
+    // of what makes it read as moving rather than sliding.
+    ctx.fillStyle = xg
+    var sway = Math.round(Math.sin(en.anim * 0.22) * 2)
+    blit(ctx, ox, oy, dir, -3, 10 + sway, 4, 2)
+    blit(ctx, ox, oy, dir, -6, 9 + sway * 2, 3, 2)
+
+    // Legs, out of phase with each other.
+    ctx.fillStyle = "#2c5a35"
+    blit(ctx, ox, oy, dir, 2, 15 + bob, 2, 3 - bob)
+    blit(ctx, ox, oy, dir, 6, 15 + (1 - bob), 2, 3 - (1 - bob))
+
+    if (en.touchCool > 0) {
+      // Sated, briefly. The one moment it is not a threat, and it says so.
+      ctx.globalAlpha = 0.5
+      ctx.fillStyle = xgLit
+      blit(ctx, ox, oy, dir, 9, 5 + bob, 2, 1)
+      ctx.globalAlpha = 1
+    }
+    if (opts && opts.labels) {
+      ctx.fillStyle = xgLit
+      ctx.font = "7px monospace"
+      ctx.textAlign = "center"
+      ctx.fillText("Adversarial Input", ox + 4, oy - 4)
+    }
+    return
+  }
+
   // Trigger Warning announces the shot before it happens. The thin blinking
   // sight is an instruction to flee; the bright tracer is the consequence.
   if ((en.kind === "gun" || en.kind === "sniper") && en.state === "aim") {
@@ -2733,6 +2780,20 @@ function drawAgent(ctx, w, pal, ag, opts) {
   if (ag.wounds > 0 && st !== "saved") {
     ctx.fillStyle = pal.blood
     blit(ctx, ox, oy, dir, 5, 8, 2, 3)
+  }
+
+  // Nothing at all for the first two thirds of an incubation — that is the
+  // point of it. Then something under the skin starts keeping its own time,
+  // and it is deliberately small: the reward for watching one agent closely
+  // rather than a klaxon that plays the ending early.
+  if (ag.infected > 0 && ag.infected < w.k.INCUBATION_TELL && st !== "saved") {
+    var pulse = 0.35 + 0.45 * Math.sin(w.ticks * 0.32)
+    if (pulse > 0.45) {
+      ctx.globalAlpha = Math.min(1, (w.k.INCUBATION_TELL - ag.infected) / 60) * pulse
+      ctx.fillStyle = "#7de37a"
+      blit(ctx, ox, oy, dir, 3, 9, 2, 2)
+      ctx.globalAlpha = 1
+    }
   }
 
   if (heightBodySaved) ctx.restore()
