@@ -3276,18 +3276,36 @@ function willBuild(ag, wantUp) {
 // below is what stops a queue spending a dozen builders on the same few cells.
 // At a bottomless gap there is nothing to walk round — the agent that arrives
 // eight seconds too early to be allowed to add the last two bricks turns away,
-// paces, and gets written off with the gap still open in front of it. A hundred
-// and thirty-one refusals in eighty-four levels, every one of them standing on
-// the unfinished bridge it was refused permission to finish.
+// paces, and gets written off with the gap still open in front of it.
+//
+// So the lip gets a shorter rule rather than no rule. The eight-second memory
+// is what has to go; "somebody is laying bricks here RIGHT NOW" does not, and
+// dropping that too was visible on level 5, where two agents arriving together
+// started the same bridge four ticks apart and one of the two builders was
+// simply thrown away. A queue at a lip should watch the first one work and then
+// pick up wherever it stopped.
 function canStartBuild(w, ag, urgent) {
   if (!willBuild(ag, exitAbove(w, ag))) return false
-  if (urgent) return true
+  if (urgent) return !someoneBuildingNear(w, ag)
   for (var i = w.buildSites.length - 1; i >= 0; i--) {
     var site = w.buildSites[i]
     if (w.ticks - site.tick > 240) break
     if (Math.abs(site.y - ag.y) < 4 && Math.abs(site.x - ag.x) < 8) return false
   }
   return true
+}
+
+// Is one of the others putting bricks down within sight of here, this tick?
+// Unlike the site list this forgets the moment they stop, which is the whole
+// point of it: the ledge is evidence while it is being worked on and nothing at
+// all afterwards.
+function someoneBuildingNear(w, ag) {
+  for (var i = 0; i < w.agents.length; i++) {
+    var O = w.agents[i]
+    if (O === ag || O.gone || O.state !== "build") continue
+    if (Math.abs(O.y - ag.y) < 5 && Math.abs(O.x - ag.x) < 12) return true
+  }
+  return false
 }
 
 function spawn(w) {
