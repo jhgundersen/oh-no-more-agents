@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 //
-// Push the three core simulation files from this repo, which is the source of
+// Push the shared game files from this repo, which is the source of
 // truth, out to the sibling copies that also run them.
 //
 //   node tools/sync-copies.js          copy out, after checking
 //   node tools/sync-copies.js --check  report drift and change nothing
 //   node tools/sync-copies.js --force  copy out even if the screen is locked
 //
-// Sim.js, Draw.js and Palette.js are meant to be byte-identical everywhere.
+// Sim.js, Draw.js, Palette.js and Outcome.js are byte-identical everywhere.
 // web.js is NOT synced: each copy has its own host integration (this one
 // reports to the rescue counter, the plugin has Panel.qml instead), and that is
 // the seam where they are allowed to differ.
@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url"
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const SRC = path.join(HERE, "..", "public", "agents")
-const CORE = ["Sim.js", "Draw.js", "Palette.js"]
+const CORE = ["Sim.js", "Draw.js", "Palette.js", "Outcome.js"]
 
 // Each destination is optional: whoever runs this may not have all of them
 // checked out, and a missing sibling is not an error.
