@@ -48,6 +48,7 @@ var MINE_RADIUS = 6      // just wider than the carried bomb
 var SPRAY_BURST = 12
 var SPRAY_SHOT_TICKS = 2
 var SPRAY_SLOPES = [-0.16, 0.10, -0.06, 0.14, 0, -0.12, 0.06, -0.18, 0.12, -0.03, 0.17, -0.09]
+var GUNWING_SHOTS = 12    // rounds RAMbo puts into the floor on the way past
 var ENEMY_WALK_SPEED = 0.24
 var GUN_AIM = 8           // regular shooter: a short visible tell, about a quarter-second
 var SNIPER_AIM = 36       // the planted sniper keeps its deliberate long sight picture
@@ -330,7 +331,17 @@ var K = {
   EMPTY: EMPTY, DIRT: DIRT, ROCK: ROCK, STEEL: STEEL, ORE: ORE,
   AGENT_H: AGENT_H,
   // Draw.js needs this one to know how much of an incubation is left to show.
-  INCUBATION_TELL: INCUBATION_TELL
+  INCUBATION_TELL: INCUBATION_TELL,
+  // RAMbo's burst pattern: twelve rounds, none going quite where the last one
+  // did. Draw.js drew the tracers from its own copy of these numbers, which
+  // is a duplicate that only stays correct by luck. Both of his moves fan by
+  // it now — the wall he lays into an obstacle and the fan he rides down on —
+  // because they are the same gun.
+  SPRAY_SLOPES: SPRAY_SLOPES,
+  // Rounds in RAMbo's flight. Draw.js paces the sweep by it and the recoil
+  // kicks below are paced by the same number, so the shove always lands on
+  // the frame the shot leaves the barrel.
+  GUNWING_SHOTS: GUNWING_SHOTS
 }
 
 // `attempt` remains for deterministic tools and compatibility; hosts pass zero.
@@ -4293,8 +4304,18 @@ function stepSpecialHeight(w, ag) {
   var horizontal = Math.abs(ag.heightToX - ag.heightFromX) > 1
   if (horizontal && moveP > 0 && moveP < 1) {
     var lift = (ag.heightMode === "helicopter" || ag.heightMode === "jetpack") ? 4
-      : (ag.heightMode === "chain" ? 3 : 1.5)
+      : (ag.heightMode === "chain" || ag.heightMode === "gunwing" ? 3 : 1.5)
     ag.y -= Math.sin(moveP * Math.PI) * lift
+  }
+
+  // RAMbo is not carrying the gun across, he is being pushed by it: he fires
+  // at the floor and rides the recoil. So his climb arrives in kicks rather
+  // than as one smooth arc — five shots, each a shove upward that sags before
+  // the next one. The sine envelope is what keeps the trick honest: it goes to
+  // zero at both ends, so the landing is still exactly where it was computed.
+  if (ag.heightMode === "gunwing") {
+    var kick = 1 - ((moveP * GUNWING_SHOTS) % 1)
+    ag.y -= Math.sin(moveP * Math.PI) * kick * 0.55
   }
   ag.anim++
   if (p < 1) return

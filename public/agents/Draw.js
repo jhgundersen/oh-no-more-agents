@@ -2338,7 +2338,7 @@ function drawAgentTrick(ctx, w, pal, ag, ox, oy, dir, robe, hair) {
         ctx.fillStyle = pal.rigDark
         ctx.fillRect(gunX, mid - 1, 9, 3)          // receiver and long barrel
         ctx.fillRect(dir > 0 ? gunX - 3 : gunX + 8, mid + 2, 4, 4)
-        var spraySlopes = [-0.16, 0.10, -0.06, 0.14, 0, -0.12, 0.06, -0.18, 0.12, -0.03, 0.17, -0.09]
+        var spraySlopes = w.k.SPRAY_SLOPES
         var shotIndex = Math.min(11, Math.floor(Math.max(0, ag.timer - 1) / 2))
         var muzzleCellY = Math.floor(ag.y) - 2
         var shotSlope = spraySlopes[shotIndex]
@@ -2511,9 +2511,76 @@ function drawAgentHeightGear(ctx, w, pal, ag, ox, oy, dir, robe, hair) {
         ctx.fillStyle = "#8a4b22"; ctx.fillRect(ox - 7, oy + 15, 22, 4)
         ctx.fillStyle = "#c8843f"; ctx.fillRect(ox - 6, oy + 16, 20, 1); break
       case "recoil":
-      case "gunwing":
         ctx.fillRect(ox - dir * 8, oy + 8, 9, 3)
         ctx.fillStyle = "#ffe68a"; ctx.fillRect(ox - dir * 11, oy + 8, 4, 3); break
+
+      // RAMbo rides his own recoil: the gun points at the floor and each shot
+      // kicks him higher. It used to share Max Tokens' sideways barrel, which
+      // read as a man carrying a gun through the air rather than a man being
+      // pushed up by one — and the two specials were indistinguishable in
+      // flight. The beat here is the same five shots the climb is built from
+      // in stepSpecialHeight, so the flash lands on the kick.
+      case "gunwing": {
+        // One round at a time, each at the next angle in the burst, with the
+        // gun swinging to follow it — the same thing his spray move does at a
+        // wall, pointed at the floor instead. Not a fan: the weapon fires one
+        // tracer per shot and sweeps between them.
+        //
+        // Two things this drawing has to stay away from. The gun is small and
+        // held out to the side, because a long barrel hanging from the middle
+        // of an eight-pixel sprite does not read as a gun at all. And there is
+        // exactly one stream of anything: ejected brass was drawn here once
+        // and read as a second burst being fired sideways.
+        var slopes = w.k.SPRAY_SLOPES
+        var shots = w.k.GUNWING_SHOTS
+        var shotIx = Math.min(shots - 1, Math.floor(hp * shots))
+        var beat = (hp * shots) % 1
+        var slope = slopes[shotIx % slopes.length]
+
+        // The slopes are gentle because the spray move throws them down a long
+        // corridor, where a shallow angle is a wide deviation by the far end.
+        // Here the throw is a few body-lengths, so they open right out.
+        var aimX = slope * 8
+        var len = Math.sqrt(aimX * aimX + 1)
+        var ux = aimX / len, uy = 1 / len
+
+        // Rounds stop at the ground: this layer paints over the terrain, so
+        // an unclamped tracer carries on through the floor it is fired at.
+        var gcx = Math.floor(ag.x)
+        var toFloor = 0
+        while (toFloor < 34
+               && w.terrain[(Math.floor(ag.y) + 1 + toFloor) * w.k.COLS + gcx] === w.k.EMPTY) toFloor++
+        var floorPx = Math.max(5, toFloor * w.k.CELL - 2)
+
+        // Held out on whichever side it is aiming, not on the side he happens
+        // to be facing: gripped on the leading side it swung back across his
+        // own body every other round and spent half the burst hidden behind
+        // him. Moving the grip with the aim is also what the swing looks like.
+        var gripX = ox + 3 + (ux < -0.05 ? -3 : (ux > 0.05 ? 3 : 0))
+        var gripY = oy + 9
+        var muzX = gripX + ux * 6
+        var muzY = gripY + uy * 6
+
+        ctx.fillStyle = "#6f7180"
+        for (var gb = 1; gb <= 6; gb += 2)
+          ctx.fillRect(Math.round(gripX + ux * gb), Math.round(gripY + uy * gb), 2, 2)
+        ctx.fillStyle = hc
+        ctx.fillRect(Math.round(gripX), gripY - 1, 2, 3)         // the hand on it
+
+        // The round, out along the line the barrel is pointing.
+        var travel = 3 + beat * (floorPx - 3)
+        ctx.fillStyle = "#ffe68a"
+        ctx.fillRect(Math.round(muzX + ux * travel), Math.round(muzY + uy * travel), 2, 3)
+        ctx.globalAlpha = 0.35
+        ctx.fillRect(Math.round(muzX + ux * (travel - 5)), Math.round(muzY + uy * (travel - 5)), 1, 2)
+        ctx.globalAlpha = 1
+
+        if (beat < 0.3) {
+          ctx.fillStyle = "#ffe68a"
+          ctx.fillRect(Math.round(muzX), Math.round(muzY), 2, 2)
+        }
+        break
+      }
       case "cyclone":
         ctx.globalAlpha = 0.35
         ctx.fillRect(ox - 8, oy + 5, 24, 2); ctx.fillRect(ox - 4, oy + 12, 16, 2)
