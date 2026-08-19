@@ -102,6 +102,32 @@ function drawTerrain(ctx, w, pal) {
     }
   }
 
+  // Factory only. ORE is this biome's machinery and mezzanine plate, so it
+  // gets riveted and seamed. The room's character has to come from detail on
+  // the structures that are already there — the first version tried to get it
+  // from objects floating in front of them, and seventeen free cogs read as
+  // noise while the surfaces underneath stayed blank.
+  if (w.biome === "Factory") {
+    for (var ry = k.SKY; ry < rows; ry++) {
+      var rbase = ry * cols
+      for (var rx = 1; rx < cols - 1; rx++) {
+        if (w.terrain[rbase + rx] !== k.ORE) continue
+        // Rivets on a two-cell checker: dense enough to read as a fixing
+        // pattern, sparse enough not to become a texture of its own.
+        if ((rx + ry) % 2 === 0) {
+          ctx.fillStyle = pal.oreEdge
+          ctx.fillRect(rx * C + 1, ry * C + 1, 1, 1)
+        }
+        // A plate seam every fourth column, so the decks read as bolted
+        // sections rather than one extruded girder.
+        if (rx % 4 === 0) {
+          ctx.fillStyle = pal.oreShade
+          ctx.fillRect(rx * C, ry * C, 1, C)
+        }
+      }
+    }
+  }
+
   var wash = ctx.createLinearGradient(0, k.SKY * C, 0, rows * C)
   wash.addColorStop(0, pal.washTop)
   wash.addColorStop(1, pal.washLow)
@@ -410,7 +436,7 @@ function drawMachines(ctx, w, pal) {
   var C = k.CELL
   for (var i = 0; i < w.decor.length; i++) {
     var d = w.decor[i]
-    if (d.kind !== "cog" && d.kind !== "vent" && d.kind !== "belt") continue
+    if (d.kind !== "cog" && d.kind !== "vent" && d.kind !== "gauge") continue
     var px = d.x * C
     var py = d.y * C
 
@@ -419,33 +445,72 @@ function drawMachines(ctx, w, pal) {
     // is running even on the stretches where nothing is trying to kill anybody.
     if (d.kind === "cog") {
       if (w.terrain[d.y * k.COLS + d.x] === k.EMPTY) continue
-      var cr = 4 + d.size * 2
+      var cr = 3 + d.size
       var ccx = px + cr, ccy = py + cr
-      var spin = (w.ticks * 0.03 + d.seed) % (Math.PI * 2)
-      // A disc built from horizontal runs. The first attempt drew a square
-      // plate with the teeth sitting on its edge, and the teeth vanished into
-      // the outline: it read as a bolted panel. The round body has to be
-      // there first for anything stuck to its rim to read as a tooth.
-      ctx.fillStyle = pal.decorDim
-      for (var dy3 = -cr; dy3 <= cr; dy3++) {
-        var halfw = Math.floor(Math.sqrt(cr * cr - dy3 * dy3))
-        ctx.fillRect(ccx - halfw, ccy + dy3, halfw * 2 + 1, 1)
-      }
-      // Teeth clear of the rim, so the rotation is what the eye catches.
-      ctx.fillStyle = pal.rig
-      for (var tk = 0; tk < 8; tk++) {
-        var a2 = spin + tk * Math.PI / 4
-        ctx.fillRect(Math.round(ccx + Math.cos(a2) * (cr + 1)) - 1,
-                     Math.round(ccy + Math.sin(a2) * (cr + 1)) - 1, 3, 3)
-      }
-      // Spokes, so a smooth disc cannot read as stationary.
+      // Slow. A big wheel that whips round reads as a fan; the whole point of
+      // a flywheel is mass, and mass is legible as unhurried.
+      var spin = (w.ticks * 0.012 + d.seed) % (Math.PI * 2)
+
+      // The bracket it hangs on, so the wheel belongs to the wall behind it
+      // rather than floating in front of the level.
       ctx.fillStyle = pal.rigDark
+      ctx.fillRect(ccx - 2, ccy - cr - 4, 4, cr + 4)
+      ctx.fillRect(ccx - cr - 3, ccy - 2, 4, 4)
+      ctx.fillRect(ccx + cr - 1, ccy - 2, 4, 4)
+
+      // A thin bright rim with nothing inside it. The first version filled the
+      // disc in a dim colour and it read as a mud ball: the wheel only works
+      // if the background shows through between the spokes.
+      ctx.fillStyle = pal.oreEdge
+      for (var a3 = 0; a3 < 72; a3++) {
+        var th3 = (a3 / 72) * Math.PI * 2
+        ctx.fillRect(Math.round(ccx + Math.cos(th3) * cr), Math.round(ccy + Math.sin(th3) * cr), 2, 2)
+      }
+      // Teeth, clear of the rim and few enough to count as they go past.
+      ctx.fillStyle = pal.ore
+      for (var tk = 0; tk < 10; tk++) {
+        var a2 = spin + tk * Math.PI / 5
+        ctx.fillRect(Math.round(ccx + Math.cos(a2) * (cr + 3)) - 1,
+                     Math.round(ccy + Math.sin(a2) * (cr + 3)) - 1, 3, 3)
+      }
+      // Four spokes, a rivet where each meets the rim, and a heavy hub.
       for (var spk = 0; spk < 4; spk++) {
         var sa2 = spin + spk * Math.PI / 2
-        ctx.fillRect(Math.round(ccx + Math.cos(sa2) * cr * 0.55) - 1,
-                     Math.round(ccy + Math.sin(sa2) * cr * 0.55) - 1, 2, 2)
+        ctx.fillStyle = pal.ore
+        for (var rr = 3; rr < cr; rr++)
+          ctx.fillRect(Math.round(ccx + Math.cos(sa2) * rr), Math.round(ccy + Math.sin(sa2) * rr), 2, 2)
+        ctx.fillStyle = pal.oreEdge
+        ctx.fillRect(Math.round(ccx + Math.cos(sa2) * (cr - 1)) - 1,
+                     Math.round(ccy + Math.sin(sa2) * (cr - 1)) - 1, 2, 2)
       }
-      ctx.fillRect(ccx - 2, ccy - 2, 4, 4)                  // the hub
+      ctx.fillStyle = pal.rigDark
+      ctx.fillRect(ccx - 3, ccy - 3, 6, 6)
+      ctx.fillStyle = pal.oreEdge
+      ctx.fillRect(ccx - 1, ccy - 1, 2, 2)
+      continue
+    }
+
+    // A pressure gauge: a brass case, a pale face and a needle that wanders.
+    // Ornament rather than repetition, and the one fitting in here that
+    // implies somebody is supposed to be reading it.
+    if (d.kind === "gauge") {
+      if (w.terrain[d.y * k.COLS + d.x] === k.EMPTY) continue
+      var gr = 4
+      var gcx = px + gr, gcy = py + gr
+      ctx.fillStyle = pal.rigDark
+      ctx.fillRect(gcx - gr - 1, gcy - gr - 1, gr * 2 + 2, gr * 2 + 2)
+      ctx.fillStyle = pal.decorLit
+      ctx.fillRect(gcx - gr + 1, gcy - gr + 1, gr * 2 - 2, gr * 2 - 2)
+      ctx.fillStyle = pal.rigDark
+      ctx.fillRect(gcx - gr - 1, gcy - gr - 1, 2, 2)
+      ctx.fillRect(gcx + gr - 1, gcy - gr - 1, 2, 2)
+      ctx.fillRect(gcx - gr - 1, gcy + gr - 1, 2, 2)
+      ctx.fillRect(gcx + gr - 1, gcy + gr - 1, 2, 2)
+      // Mostly in the safe half, drifting toward the red now and then.
+      var swing = Math.sin(w.ticks * 0.01 + d.seed) * 0.9 - 2.2
+      ctx.fillStyle = pal.warn
+      for (var nl = 1; nl <= gr - 1; nl++)
+        ctx.fillRect(Math.round(gcx + Math.cos(swing) * nl), Math.round(gcy + Math.sin(swing) * nl), 1, 1)
       continue
     }
 
@@ -480,18 +545,6 @@ function drawMachines(ctx, w, pal) {
       continue
     }
 
-    if (d.kind === "belt") {
-      if (w.terrain[(d.y + 1) * k.COLS + d.x] === k.EMPTY) continue
-      ctx.fillStyle = pal.rigDark
-      ctx.fillRect(px, py + C - 2, C * 2, 2)                // the bed
-      ctx.fillStyle = pal.decorDim
-      // Rollers, offset along the run so the bed reads as moving.
-      for (var rl = 0; rl < 4; rl++) {
-        var off = (w.ticks * 0.4 + rl * 6 + d.seed) % 24
-        ctx.fillRect(px + Math.round(off), py + C - 4, 3, 2)
-      }
-      continue
-    }
   }
 }
 

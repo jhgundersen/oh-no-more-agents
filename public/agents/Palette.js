@@ -60,7 +60,10 @@ var JUNGLE = { r: 0.24, g: 0.52, b: 0.20 }
 var GLACIER = { r: 0.55, g: 0.78, b: 0.92 }
 var HULL = { r: 0.46, g: 0.52, b: 0.60 }
 
-var BRASS = { r: 0.72, g: 0.52, b: 0.20 }
+// Copper rather than the yellower brass it started as: redder, and further
+// from the Ruins' urgent red only because that biome is pink-red where this
+// one is orange-brown. Steampunk lives in the warm half of the wheel.
+var BRASS = { r: 0.80, g: 0.46, b: 0.14 }
 
 var WATER = { r: 0.13, g: 0.42, b: 0.52 }
 var LAVA = { r: 0.88, g: 0.26, b: 0.06 }
@@ -97,7 +100,7 @@ function biomeTint(theme, level) {
     // Factory has to sit apart from both of the other industrial biomes: the
     // Foundry is the theme's own muted grey and the Spaceship is pulled toward
     // hull, so this one goes warm. Brass and old machine paint, not heat.
-    default: return toward(theme.accent, BRASS, 0.80)        // Factory
+    default: return toward(theme.accent, BRASS, 0.88)        // Factory
   }
 }
 

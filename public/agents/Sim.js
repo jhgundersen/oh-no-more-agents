@@ -860,11 +860,15 @@ function biomeSkin(w, rng) {
       for (x = 3; x < COLS - 3; x++)
         if (at(w, x, y) !== STEEL) setCell(w, x, y, DIRT)
 
-    // Housings: rectangles, never blobs. Nothing in here grew.
-    var housings = irand(rng, 16, 24)
+    // Housings: rectangles, never blobs. Nothing in here grew. A handful of
+    // big ones rather than a scatter of small ones — the first version had
+    // twenty-odd and they stopped reading as machines and started reading as
+    // texture, which is the failure this whole biome had to be pulled back
+    // from. A machine room is a few large things you walk around.
+    var housings = irand(rng, 5, 8)
     for (var hs2 = 0; hs2 < housings; hs2++) {
-      var hx = irand(rng, 4, COLS - 12), hy = irand(rng, SKY + 1, ROWS - 9)
-      var hw2 = irand(rng, 4, 9), hh2 = irand(rng, 3, 6)
+      var hx = irand(rng, 4, COLS - 16), hy = irand(rng, SKY + 1, ROWS - 12)
+      var hw2 = irand(rng, 8, 14), hh2 = irand(rng, 5, 9)
       for (y = hy; y < hy + hh2; y++)
         for (x = hx; x < hx + hw2; x++) {
           if (at(w, x, y) === STEEL) continue
@@ -877,7 +881,7 @@ function biomeSkin(w, rng) {
 
     // Mezzanine decks: thin horizontal plate at a regular pitch, the one thing
     // in the room that was surveyed.
-    for (y = SKY + irand(rng, 3, 7); y < ROWS - 4; y += irand(rng, 9, 13)) {
+    for (y = SKY + irand(rng, 4, 8); y < ROWS - 4; y += irand(rng, 13, 19)) {
       for (x = 3; x < COLS - 3; x++) {
         if (at(w, x, y) === STEEL) continue
         if (rng() < 0.08) continue          // a missing plate here and there
@@ -886,7 +890,7 @@ function biomeSkin(w, rng) {
     }
 
     // Pipe runs dropping between the decks.
-    var pipes = irand(rng, 7, 12)
+    var pipes = irand(rng, 3, 5)
     for (var pi2 = 0; pi2 < pipes; pi2++) {
       var px2 = irand(rng, 5, COLS - 6), py2 = SKY + irand(rng, 0, 5)
       var plen = irand(rng, 8, 26)
@@ -936,8 +940,10 @@ function placeDecor(w, rng, corridors) {
     floorRate = 0.18; ceilRate = 0.16; gap = 5
     floorKinds = ["spire", "clump", "clump", "tuft"]
   } else if (w.biome === "Factory") {
-    floorRate = 0.22; ceilRate = 0.20; gap = 4
-    floorKinds = ["spire", "spire", "clump", "tuft"]
+    // The lowest rates of any biome. The fittings below carry this room's
+    // character on their own, and the general scatter was competing with them.
+    floorRate = 0.07; ceilRate = 0.05; gap = 7
+    floorKinds = ["spire", "spire", "clump"]
   }
 
   if (w.biome === "Spaceship") {
@@ -967,23 +973,33 @@ function placeDecor(w, rng, corridors) {
   if (w.biome === "Factory") {
     for (var fi = 0; fi < corridors.length; fi++) {
       var fc = corridors[fi]
-      // Cogs on the back wall, turning whether or not anybody is watching.
-      // They are scenery, not hazards: the room has to look like it is running
-      // even where nothing is trying to kill anybody.
-      for (var cgx = fc.x0 + 5; cgx < fc.x1 - 5; cgx += irand(rng, 17, 27)) {
-        var cgy = fc.floorY - CORR_H - 3
-        if (solid(w, cgx, cgy) && solid(w, cgx + 2, cgy))
-          w.decor.push({ x: cgx, y: cgy, kind: "cog", size: irand(rng, 2, 3), seed: Math.floor(rng() * 1000) })
+      // One flywheel per corridor at most, and a big one. Seventeen small
+      // cogs at random heights read as stickers on the level rather than as
+      // machinery in it; one large wheel on a bracket reads as a machine room.
+      var cgy = fc.floorY - CORR_H - 4
+      for (var cgTry = 0; cgTry < 8; cgTry++) {
+        var cgx = fc.x0 + 6 + irand(rng, 0, Math.max(1, (fc.x1 - fc.x0) - 16))
+        if (!solid(w, cgx, cgy) || !solid(w, cgx + 4, cgy)) continue
+        w.decor.push({ x: cgx, y: cgy, kind: "cog", size: irand(rng, 4, 6), seed: Math.floor(rng() * 1000) })
+        break
       }
+
       // Vents in the floor, breathing smoke up into the corridor.
-      for (var vx = fc.x0 + 4; vx < fc.x1 - 4; vx += irand(rng, 13, 22)) {
+      for (var vx = fc.x0 + 6; vx < fc.x1 - 5; vx += irand(rng, 26, 42)) {
         if (solid(w, vx, fc.floorY) && !solid(w, vx, fc.floorY - 1))
           w.decor.push({ x: vx, y: fc.floorY - 1, kind: "vent", size: 2, seed: Math.floor(rng() * 1000) })
       }
-      // Roller beds along the floor: the flat stretch an agent walks over.
-      for (var bx = fc.x0 + 3; bx < fc.x1 - 4; bx += 7) {
-        if (solid(w, bx, fc.floorY) && !solid(w, bx, fc.floorY - 1))
-          w.decor.push({ x: bx, y: fc.floorY - 1, kind: "belt", size: 1, seed: bx })
+
+      // A pressure gauge or two, set into the wall over the walkway. Ornament
+      // rather than repetition: this is the detail that says the place runs on
+      // steam and somebody is supposed to be reading it.
+      for (var gx3 = fc.x0 + 14; gx3 < fc.x1 - 8; gx3 += irand(rng, 46, 74)) {
+        var gy3 = fc.floorY - CORR_H - 2
+        // Two cells of backing, not one: a gauge is drawn wider than the cell
+        // it is anchored to, and on a single solid cell it hangs out over the
+        // dark and goes back to looking like a sticker on the level.
+        if (solid(w, gx3, gy3) && solid(w, gx3 + 1, gy3) && solid(w, gx3, gy3 - 1))
+          w.decor.push({ x: gx3, y: gy3, kind: "gauge", size: 2, seed: Math.floor(rng() * 1000) })
       }
     }
   }
