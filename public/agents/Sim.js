@@ -59,6 +59,7 @@ var ENEMY_JET_SINK = 0.10
 // Longer limits delayed stuck runs without rescuing additional agents in sweeps.
 var LEVEL_LIMIT = 30 * 110
 var NUKE_STAGGER = 5     // ticks between arming one agent and the next
+var GUN_BACKOFF = 3      // retreats a gunner gets before it has to stand and fire
 var BLOCK_PATIENCE = 600 // ticks a blocker will hold having stopped nobody
 var BLOCK_MAX = 900      // and the longest it will hold whatever happens
 
@@ -5086,9 +5087,28 @@ function stepEnemyWalk(w, en) {
       // A gunner retreats for a beat when rushed. Simply reversing its walk
       // direction let two moving bodies cross every frame and made it twitch
       // left/right on exactly the same patch of floor.
-      en.dir = delta >= 0 ? -1 : 1
-      en.state = "recover"
-      en.timer = 40
+      //
+      // But it must not be able to do that for ever. The retreat was written
+      // for one agent walking up to it, and against a colony there is always
+      // somebody inside six cells, so it backed away from the crowd for the
+      // whole level: on 507 the gunner spent 53% of its life recovering and
+      // 2% aiming. After GUN_BACKOFF retreats without a shot it stands its
+      // ground: being useless is worse than the twitch this was guarding
+      // against. Three is where the behaviour is fixed without the gunner
+      // turning into a different enemy — gun levels sit at 73% agents home
+      // against 74% when it never stood at all, where standing after two
+      // costs a further three points.
+      if ((en.backedOff || 0) < GUN_BACKOFF) {
+        en.backedOff = (en.backedOff || 0) + 1
+        en.dir = delta >= 0 ? -1 : 1
+        en.state = "recover"
+        en.timer = 40
+        return
+      }
+      en.state = "aim"
+      en.timer = 0
+      en.lineTo = target.x
+      en.lineY = target.y - 2
       return
     }
   } else {
@@ -5125,6 +5145,7 @@ function stepEnemyWalk(w, en) {
 }
 
 function fireEnemyGun(w, en) {
+  en.backedOff = 0        // it got a shot away, so the retreat is earned again
   var fy = Math.floor(en.y) - 2
   var gunReach = en.kind === "sniper" ? 55 : 28
   for (var step = 1; step <= gunReach; step++) {
