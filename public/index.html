@@ -145,13 +145,27 @@
 			display: flex;
 			align-items: center;
 			justify-content: center;
+			flex-direction: column;
+			gap: 10px;
+			padding: 24px;
 			background: rgba(0, 0, 0, 0.55);
-			font-size: 13px;
-			font-weight: 700;
-			letter-spacing: 0.2em;
-			line-height: 1;
+			text-align: center;
 			z-index: 2;
 			transition: opacity 160ms;
+		}
+
+		#overlay-title {
+			font-size: 16px;
+			font-weight: 700;
+			letter-spacing: 0.08em;
+		}
+
+		#overlay-line {
+			max-width: 560px;
+			font-size: 12px;
+			line-height: 1.45;
+			color: #fff;
+			opacity: 0.78;
 		}
 
 		/* --- readouts ----------------------------------------------------- */
@@ -198,14 +212,6 @@
 			width: 0;
 			background: var(--accent);
 			transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
-		}
-
-		#line {
-			font-size: 12px;
-			color: var(--muted);
-			height: 1.2em;
-			text-align: center;
-			transition: opacity 300ms;
 		}
 
 		/* --- toolbar ------------------------------------------------------ */
@@ -407,10 +413,11 @@
 		<div id="board">
 			<canvas id="terrain"></canvas>
 			<canvas id="actors"></canvas>
-			<div id="overlay" style="display: none">PAUSED</div>
+			<div id="overlay" style="display: none">
+				<div id="overlay-title">PAUSED</div>
+				<div id="overlay-line">Space or click to resume</div>
+			</div>
 		</div>
-
-		<p id="line"></p>
 
 		<div id="toolbar"></div>
 
@@ -451,10 +458,10 @@
 		from them exactly as the bar widget does.
 	</p>
 
-	<script src="agents/Sim.js?v=91f725ed"></script>
-	<script src="agents/Draw.js?v=753efce8"></script>
+	<script src="agents/Sim.js?v=2fee0182"></script>
+	<script src="agents/Draw.js?v=41800c46"></script>
 	<script src="agents/Palette.js?v=ff524d19"></script>
-	<script src="agents/web.js?v=d8f37956"></script>
+	<script src="agents/web.js?v=df3a08fa"></script>
 
 </body>
 
