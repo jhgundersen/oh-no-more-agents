@@ -24,7 +24,7 @@ import { fileURLToPath } from "node:url"
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const AGENTS = path.join(HERE, "..", "public", "agents")
-const CORE = ["Sim.js", "Draw.js", "Palette.js"]
+const CORE = ["Sim.js", "Draw.js", "Palette.js", "Outcome.js"]
 
 // Remove comments and string bodies so they cannot look like code.
 function strip(text) {

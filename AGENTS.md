@@ -45,6 +45,21 @@ The production site is `https://oh-no-more-agents.com`.
   random per playthrough. Same ground, different fifteen. Anything that needs a
   repeatable run passes the seed back in — `generate(level, attempt, seed)` — and
   `w.colonySeed` is kept on the world so a run worth seeing again can be.
+- A colony is a **cast**, not a uniform draw. `traitBag` picks `CAST_SIZE` of
+  `TRAIT_DISTINCT`, fills `COMMON_SHARE` of the ranks from `TRAIT_COMMON`, and
+  deals the result one per release. Two or three agents therefore share each
+  oddity, which is what makes it read as a personality rather than a one-off —
+  and adding a trait widens the range of colonies instead of making every
+  existing trait rarer, which is what the old flat pool did.
+- A new trait earns its place with a **rule**, not a new set of numbers. The
+  numeric dials are nearly saturated; another row that only permutes
+  `turnLimit`/`bridgeAt`/`digBias` is a relabelling of a trait that exists.
+  `reserve`, `herd` and `wary` are what the last three brought with them, and
+  `pace` is the one dial that shows while an agent is merely walking — every
+  other one is invisible until it meets an obstacle.
+- The whims in `spawn()` take **one `traitRng()` draw each**. They were once
+  derived from a single number, which tied them together: `contrary` forced
+  `bridgeBias` negative, so half the combinations could not occur.
 - Keep simulation behavior in `Sim.js` and rendering-only behavior in `Draw.js`.
 - Match the existing pixel-art look, biome palettes, humor, and agent puns.
 - Test gameplay changes on the reported level and on nearby/random levels. Watch
@@ -182,16 +197,26 @@ invocations means something else has picked up entropy.
 roughly alone; a change that moves it several points has done something to the
 gameplay, intended or not. `hangs` must stay at zero.
 
-Baseline at the time of writing, 200 levels: **95% of levels reach target, 78%
-of agents home, 48s per attempt, no hangs**; over 400 levels, 96% / 80% / 47s.
-Played the way the page now plays it — a fresh random colony on every attempt —
-the same sweep lands within a point or two of that across repeats, so the colony
-being random costs the game nothing and the retry gets a genuinely different try.
+The game itself has no pass mark — every agent counts and the page moves on
+either way — so `cleared` is measured against `CLEAR_SHARE`, a fixed fraction of
+the colony defined in `simcheck.js`. It sits at the average of the per-level
+goal that used to live on the world, so older baselines stay comparable, and
+being fixed it keeps its own noise out of the comparison.
+
+Baseline at the time of writing, 200 levels: **95% of levels cleared, 82% of
+agents home, 43s per attempt, no hangs**. The colony rework moved this up from
+94% / 80% / 45s on the same sweep. Played the way the page plays it — a fresh
+random colony on every attempt — the same sweep lands within a point or two of
+that across repeats, so the colony being random costs the game nothing and the
+retry gets a genuinely different try.
 
 `spread` is the one that watches the personalities rather than the levels: over
 60 levels with 8 colonies each, the number who get home varies by about 4 on
-average, and on half of levels the colony is the difference between clearing and
-not. Per biome nothing is now an outlier — 93–100% cleared and 75–85% home
+average, and on about a third of levels the colony is the difference between
+clearing and not. That last figure was half when `cleared` was measured against
+a goal the level rolled for itself; a fixed bar removed that roll's variance,
+and the spread in agents home — the figure that actually measures the colony —
+is unchanged at 4. Per biome nothing is now an outlier — 93–100% cleared and 75–85% home
 across all seven, where Cavern used to sit at 87/73.
 
 The bottom pit is the one thing worth breaking those numbers down by, and

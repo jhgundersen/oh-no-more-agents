@@ -75,8 +75,10 @@ var EVENT_LINES = {
 }
 
 function outcomeLine(w) {
-  var target = w.target || w.toRelease
-  var outcome = w.saved >= target ? COMPLETION_LINES : (w.nuking ? NUKED_LINES : PARTIAL_LINES)
+  // The completion lines all claim nobody was lost, so they are earned by
+  // exactly that. With the per-level goal gone there is no longer a result
+  // that counts as a win while somebody is still down a shaft.
+  var outcome = w.saved >= w.toRelease ? COMPLETION_LINES : (w.nuking ? NUKED_LINES : PARTIAL_LINES)
   var facts = EVENT_LINES.ai.slice()
   function used(name) { return Object.prototype.hasOwnProperty.call(w.lastUsed, name) }
   function add(name, yes) { if (yes) facts = facts.concat(EVENT_LINES[name]) }

@@ -307,12 +307,16 @@
 
   function render() {
     if (!world) return
-    var target = world.target || world.toRelease
+    // The bar is the whole colony. There is no second, smaller number to
+    // reach: the run goes on to the next level either way, so a goal of two
+    // thirds only ever told you which of the fifteen you were allowed to stop
+    // caring about.
+    var total = world.toRelease
 
     el.level.textContent = "Level " + world.level
     el.biome.textContent = world.biome
-    el.home.textContent = world.saved + "/" + target
-    el.bar.style.width = (target > 0 ? Math.min(1, world.saved / target) * 100 : 0) + "%"
+    el.home.textContent = world.saved + "/" + total
+    el.bar.style.width = (total > 0 ? Math.min(1, world.saved / total) * 100 : 0) + "%"
 
     var left = Math.max(0, Math.ceil((world.timeLimit - world.ticks) / 30))
     if (world.nuking) {

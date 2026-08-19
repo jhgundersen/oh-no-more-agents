@@ -53,12 +53,21 @@ function play(S, level, attempt, salt) {
   return { w, ticks: t, hung: !w.done }
 }
 
+// The game itself has no pass mark any more — every agent counts and the page
+// moves on either way. Tuning still needs a line to measure against, so the
+// line lives here: a fixed share of the colony, the same on every level. That
+// is a better yardstick than the number the world used to roll, which varied
+// 65-80% per level and put its own noise into every comparison. It sits at the
+// old average, so the baselines in AGENTS.md remain comparable.
+const CLEAR_SHARE = 0.7
+function clearBar(w) { return Math.max(1, Math.ceil(w.toRelease * CLEAR_SHARE)) }
+
 // The page's own rule: up to three attempts at a level before moving on.
 function playLevel(S, level, onAttempt, salt) {
   for (let a = 0; a < 3; a++) {
     const r = play(S, level, a, salt)
     if (onAttempt) onAttempt(r)
-    if (r.w.saved >= r.w.target) return { cleared: true, last: r }
+    if (r.w.saved >= clearBar(r.w)) return { cleared: true, last: r }
     if (a === 2) return { cleared: false, last: r }
   }
 }
@@ -116,7 +125,7 @@ function cmdInert(S) {
           const t = w.terrain[i]
           sum = (sum * 31 + (t === S.ROCK || t === S.ORE ? S.DIRT : t)) >>> 0
         }
-        return [w.saved, w.lost, w.released, w.target, n, sum].join(" ")
+        return [w.saved, w.lost, w.released, n, sum].join(" ")
       }
       checked++
       if (run(false) !== run(true)) { bad++; if (bad < 4) console.log(`  differs on level ${lv}.${a}`) }
@@ -276,17 +285,17 @@ function cmdSpread(S, levels, colonies) {
     const runs = []
     for (let c = 0; c < colonies; c++) {
       const r = play(S, lv, 0, c)
-      runs.push({ saved: r.w.saved, target: r.w.target, ticks: r.ticks })
+      runs.push({ saved: r.w.saved, bar: clearBar(r.w), total: r.w.toRelease, ticks: r.ticks })
     }
     const saved = runs.map(r => r.saved)
     const lo = Math.min(...saved), hi = Math.max(...saved)
-    const cleared = runs.filter(r => r.saved >= r.target).length
+    const cleared = runs.filter(r => r.saved >= r.bar).length
     const secs = runs.map(r => Math.round(r.ticks / 30))
     widthSum += hi - lo
     counted++
     if (cleared > 0 && cleared < colonies) flips++
     if (lv <= 12) console.log(
-      `level ${String(lv).padStart(3)}  home ${String(lo).padStart(2)}-${String(hi).padEnd(2)} of ${runs[0].target}` +
+      `level ${String(lv).padStart(3)}  home ${String(lo).padStart(2)}-${String(hi).padEnd(2)} of ${runs[0].total}` +
       `   ${Math.min(...secs)}-${Math.max(...secs)}s   cleared by ${cleared}/${colonies}`)
   }
   console.log(`\n${counted} levels x ${colonies} colonies`)

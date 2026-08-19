@@ -69,39 +69,106 @@ var SKILL_LABELS = {
 var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship"]
 
 var TRAITS = {
-  steady:   { label: "steady",   turnLimit: 3, fallMargin: 0, bridgeAt: 8,  bashFirst: false, blockBias: 0, buildCap: 2, noFloat: false, standDown: 0, digBias: 0 },
-  brave:    { label: "brave",    turnLimit: 5, fallMargin: 0, bridgeAt: 15, bashFirst: true,  blockBias: -1, buildCap: 1, noFloat: false, standDown: 0, digBias: 0 },
-  cautious: { label: "cautious", turnLimit: 2, fallMargin: 3, bridgeAt: 3,  bashFirst: false, blockBias: 2, buildCap: 2, noFloat: false, standDown: 0, digBias: 0 },
-  curious:  { label: "curious",  turnLimit: 2, fallMargin: 1, bridgeAt: 9,  bashFirst: false, blockBias: 0, buildCap: 2, noFloat: false, standDown: 0, digBias: 220 },
-  stubborn: { label: "stubborn", turnLimit: 8, fallMargin: 0, bridgeAt: 9,  bashFirst: true,  blockBias: -1, buildCap: 2, noFloat: false, standDown: 0, digBias: -160 },
-  tinkerer: { label: "tinkerer", turnLimit: 3, fallMargin: 2, bridgeAt: 7,  bashFirst: false, blockBias: 1, buildCap: 2, noFloat: false, standDown: 0, digBias: 150, mineFirst: true },
+  steady:   { label: "steady",   turnLimit: 3, fallMargin: 0, bridgeAt: 8,  bashFirst: false, blockBias: 0, buildCap: 2, noFloat: false, standDown: 0, digBias: 0, pace: 1 },
+  brave:    { label: "brave",    turnLimit: 5, fallMargin: 0, bridgeAt: 15, bashFirst: true,  blockBias: -1, buildCap: 1, noFloat: false, standDown: 0, digBias: 0, pace: 1.08 },
+  cautious: { label: "cautious", turnLimit: 2, fallMargin: 3, bridgeAt: 3,  bashFirst: false, blockBias: 2, buildCap: 2, noFloat: false, standDown: 0, digBias: 0, pace: 0.9, wary: true },
+  curious:  { label: "curious",  turnLimit: 2, fallMargin: 1, bridgeAt: 9,  bashFirst: false, blockBias: 0, buildCap: 2, noFloat: false, standDown: 0, digBias: 220, pace: 0.94 },
+  stubborn: { label: "stubborn", turnLimit: 8, fallMargin: 0, bridgeAt: 9,  bashFirst: true,  blockBias: -1, buildCap: 2, noFloat: false, standDown: 0, digBias: -160, pace: 1.05 },
+  tinkerer: { label: "tinkerer", turnLimit: 3, fallMargin: 2, bridgeAt: 7,  bashFirst: false, blockBias: 1, buildCap: 2, noFloat: false, standDown: 0, digBias: 150, pace: 0.92, wary: true, mineFirst: true },
 
-  engineer: { label: "engineer", turnLimit: 3, fallMargin: 1, bridgeAt: 1,  bashFirst: false, blockBias: 0, buildCap: 5, noFloat: true,  standDown: 0, digBias: 0 },
+  engineer: { label: "engineer", turnLimit: 3, fallMargin: 1, bridgeAt: 1,  bashFirst: false, blockBias: 0, buildCap: 5, noFloat: true,  standDown: 0, digBias: 0, pace: 0.96 },
 
   // standDown has to come in UNDER turnLimit: considerEscape zeroes `turns`
   // the moment it hits the limit, so a stand-down count above it can never be
   // reached and the sentinel blocked no more often than anybody else.
-  sentinel: { label: "sentinel", turnLimit: 4, fallMargin: 1, bridgeAt: 7,  bashFirst: false, blockBias: 3, buildCap: 1, noFloat: false, standDown: 3, digBias: 0 },
+  sentinel: { label: "sentinel", turnLimit: 4, fallMargin: 1, bridgeAt: 7,  bashFirst: false, blockBias: 3, buildCap: 1, noFloat: false, standDown: 3, digBias: 0, pace: 1 },
 
-  burrower: { label: "burrower", turnLimit: 2, fallMargin: 1, bridgeAt: 11, bashFirst: false, blockBias: 0, buildCap: 1, noFloat: false, standDown: 0, digBias: 340 }
+  burrower: { label: "burrower", turnLimit: 2, fallMargin: 1, bridgeAt: 11, bashFirst: false, blockBias: 0, buildCap: 1, noFloat: false, standDown: 0, digBias: 340, pace: 0.9 },
+
+  // The three below are the ones that reason about something other than the
+  // ground in front of them, which is what `reserve`, `herd` and `wary` are
+  // for. A trait built only out of the numeric dials is a relabelling of a
+  // trait that already exists; these each needed a rule of their own.
+
+  // Will not spend the last of a skill while anybody behind it might still
+  // need it. Every other trait treats the toolbar as infinite until the moment
+  // it isn't, which is how a colony arrives at the last wall with nothing left.
+  hoarder:  { label: "hoarder",  turnLimit: 4, fallMargin: 1, bridgeAt: 10, bashFirst: false, blockBias: 1, buildCap: 1, noFloat: false, standDown: 0, digBias: 0, pace: 0.95, reserve: 3 },
+
+  // Lands facing whichever way the nearest of its own is already walking. The
+  // sim dropped its horizontal beacon on purpose (see exitFloor) because it
+  // overrode what an agent could see; this is the one that still wants one,
+  // and it asks a neighbour rather than the level.
+  follower: { label: "follower", turnLimit: 3, fallMargin: 1, bridgeAt: 8,  bashFirst: false, blockBias: 0, buildCap: 2, noFloat: false, standDown: 0, digBias: 0, pace: 1.02, herd: 14 },
+
+  // Sees a hazard's reach from outside it, like cautious, reaches for the
+  // umbrella four cells before anybody else does, bridges rather than drops,
+  // and never volunteers to stand in the way. The fast walk is the tell: it is
+  // the one that is always somewhere else already.
+  skittish: { label: "skittish", turnLimit: 2, fallMargin: 4, bridgeAt: 4,  bashFirst: false, blockBias: -2, buildCap: 2, noFloat: false, standDown: 0, digBias: 60, pace: 1.14, wary: true }
 }
 
-// Keep steady common so distinctive traits remain legible.
-var TRAIT_POOL = [
-  "steady", "steady", "steady", "steady", "steady",
-  "brave", "brave", "brave",
-  "cautious", "cautious", "cautious",
-  "curious", "curious",
-  "stubborn", "stubborn",
-  "tinkerer", "tinkerer",
-  "engineer", "engineer",
-  "sentinel",
-  "burrower"
+// Who turns up is a cast, not a uniform draw. A colony picks CAST_SIZE of the
+// distinctive traits and fills the rest of its ranks with the ordinary three,
+// so two or three agents share each oddity and it reads as character; fifteen
+// different oddities read as noise. It also means a new trait widens the range
+// of colonies you can meet instead of thinning every one of them — under the
+// old flat pool, every trait added made all the others rarer.
+var TRAIT_COMMON = ["steady", "steady", "steady", "brave", "cautious"]
+
+// Only traits that are worth building a colony around. brave and cautious are
+// deliberately absent: they are already in the common fill, so casting one
+// would spend a slot on a personality that was turning up anyway.
+var TRAIT_DISTINCT = [
+  "curious", "stubborn", "tinkerer", "engineer", "sentinel",
+  "burrower", "hoarder", "follower", "skittish"
 ]
 
-var TRAIT_ORDER = ["steady", "brave", "cautious", "curious", "stubborn", "tinkerer", "engineer", "sentinel", "burrower"]
+var CAST_SIZE = 3
+
+// Share of a colony drawn from the ordinary three. The rest is the cast.
+var COMMON_SHARE = 0.55
+
+var TRAIT_ORDER = [
+  "steady", "brave", "cautious", "curious", "stubborn", "tinkerer",
+  "engineer", "sentinel", "burrower", "hoarder", "follower", "skittish"
+]
+
+// Fisher-Yates on the world's own stream, so a pinned colonySeed still
+// reproduces the colony exactly.
+function shuffleWith(rng, list) {
+  for (var i = list.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1))
+    var t = list[i]; list[i] = list[j]; list[j] = t
+  }
+  return list
+}
+
+// The whole colony's traits, decided up front and dealt out one per release.
+// Dealing from a bag rather than rolling per agent is what makes the cast a
+// promise: pick sentinel for this colony and sentinels actually turn up.
+function traitBag(w, n) {
+  var cast = shuffleWith(w.traitRng, TRAIT_DISTINCT.slice()).slice(0, CAST_SIZE)
+  var bag = []
+  var commons = Math.round(n * COMMON_SHARE)
+  for (var i = 0; i < commons && bag.length < n; i++)
+    bag.push(TRAIT_COMMON[Math.floor(w.traitRng() * TRAIT_COMMON.length) % TRAIT_COMMON.length])
+  for (var j = 0; bag.length < n; j++) bag.push(cast[j % cast.length])
+  return shuffleWith(w.traitRng, bag)
+}
 
 function traitOf(ag) { return TRAITS[ag.trait] || TRAITS.steady }
+
+// How fast this one walks. The only dial that is on show the whole time an
+// agent is on its feet rather than only at the moment it meets an obstacle,
+// which is what makes the rest of a personality readable: you can tell the
+// dawdler from the strider before either of them reaches the ledge they are
+// going to disagree about. It is not decoration — hazardExposure asks the
+// same question, so a quick walker really can take a crossing a slow one
+// correctly refuses.
+function walkStep(ag) {
+  return WALK_SPEED * (traitOf(ag).pace || 1) * (ag.chilledFor > 0 ? 0.48 : 1)
+}
 
 // Out of bounds reads as STEEL to the sides and below, EMPTY above. That way
 // every "can I walk/dig here" test gets a sane answer at the edges without
@@ -453,7 +520,10 @@ function generate(level, attempt, colonySeed) {
   w.toRelease = irand(rng, 12, 18)
   w.releaseInterval = irand(rng, 24, 34)
 
-  w.target = Math.max(1, Math.round(w.toRelease * (0.65 + rng() * 0.15)))
+  // Every agent counts and the run continues either way, so there is no
+  // second, smaller number to reach: the bar is the whole colony. Anything
+  // that needs a pass/fail line for tuning sets its own — see tools/simcheck.
+  w.traitBag = traitBag(w, w.toRelease)
 
   w.skills = {
     climber: irand(rng, 12, 18) + attempt * 2,
@@ -1896,7 +1966,7 @@ function hazardExposure(w, h, ag) {
   var near = h.dir > 0 ? mid - 1 : mid - spec.reach - 1
   var far = h.dir > 0 ? mid + spec.reach + 1 : mid + 1
   var edge = ag.dir > 0 ? far : near
-  return Math.abs(edge - ag.x) / WALK_SPEED
+  return Math.abs(edge - ag.x) / walkStep(ag)
 }
 
 var HAZARD_WAIT = 260    // ticks of waiting before somebody tries it regardless
@@ -1925,8 +1995,12 @@ function exitInSight(w, ag) {
   return gap > 0 ? 1 : -1
 }
 
+// Sees a hazard's reach from outside it instead of discovering it by walking
+// in. Was a hardcoded pair of trait names; it is a dial now because it is the
+// most consequential thing a personality can differ about, and a new trait
+// should be able to have it without editing this function.
 function hazardPerceptive(ag) {
-  return ag.trait === "cautious" || ag.trait === "tinkerer"
+  return traitOf(ag).wary === true
 }
 
 function hazardAhead(w, ag, nx) {
@@ -2223,6 +2297,31 @@ function take(w, skill) {
   return true
 }
 
+// take(), but the agent gets an opinion about whether it should be the one
+// spending this. Only a hoarder has one: it will not draw a skill down to its
+// last unit while anybody behind it might still need that unit, and gives way
+// the moment it is the last one walking. Everybody else treats the toolbar as
+// infinite until the moment it isn't, which is how a colony reaches the final
+// wall having spent its climbers on a ledge it could have walked around.
+//
+// Used only where a trait is already making the choice — the wall and the
+// edge. A rescue, a director top-up or a special's move is not somewhere an
+// agent's thrift gets a say.
+function spend(w, ag, skill) {
+  var reserve = traitOf(ag).reserve || 0
+  if (reserve > 0) {
+    // How many agents one unit of this skill has to serve. A flat "don't take
+    // the last one" almost never fired: the toolbar starts with a dozen of
+    // most things, so the stock only reaches one on levels that were already
+    // lost. Measured against the queue instead, the thrift shows up when
+    // supplies get tight, which is the only time it is worth anything.
+    var coming = countComing(w, ag)
+    var want = Math.ceil(coming / reserve)
+    if (coming > 0 && (w.skills[skill] || 0) - 1 < want) return false
+  }
+  return take(w, skill)
+}
+
 
 // What an agent knows that isn't in front of its face: which way home is,
 // vertically. That's it — there is no horizontal beacon any more. There used
@@ -2258,26 +2357,26 @@ function canDescendHere(w, ag, requireWorkable) {
 // Every ordinary downward rescue uses this gate. Keeping the corridor, steel,
 // preference and fallback rules together prevents one caller from rediscovering
 // the level-255 bug where an agent dug repeatedly outside the corridor.
-function startDescent(w, ag, spend, allowMine, traitPreference, fallback, requireWorkable) {
+function startDescent(w, ag, pay, allowMine, traitPreference, fallback, requireWorkable) {
   if (!canDescendHere(w, ag, requireWorkable)) return false
   var preferMine = allowMine && ((traitPreference && traitOf(ag).mineFirst === true) || ag.id % 2 === 0)
   if (!fallback) {
     var mine = preferMine && canPlantMine(w, ag)
-    if (!spend(w, mine ? "miner" : "digger")) return false
+    if (!pay(w, mine ? "miner" : "digger")) return false
     if (mine) plantMine(w, ag)
     else { ag.state = "dig"; ag.timer = 0 }
     return true
   }
-  if (preferMine && canPlantMine(w, ag) && spend(w, "miner")) {
+  if (preferMine && canPlantMine(w, ag) && pay(w, "miner")) {
     plantMine(w, ag)
     return true
   }
-  if (spend(w, "digger")) {
+  if (pay(w, "digger")) {
     ag.state = "dig"
     ag.timer = 0
     return true
   }
-  if (allowMine && canPlantMine(w, ag) && spend(w, "miner")) {
+  if (allowMine && canPlantMine(w, ag) && pay(w, "miner")) {
     plantMine(w, ag)
     return true
   }
@@ -2317,25 +2416,25 @@ function hitWall(w, ag) {
 
   if (wantUp) bashFirst = false
 
-  if (trait.bridgeAt <= 3 && h <= 6 && canStartBuild(w, ag) && take(w, "builder")) { startBuild(w, ag); return }
+  if (trait.bridgeAt <= 3 && h <= 6 && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return }
 
   if (bashFirst) {
-    if (t <= BASH_REACH && take(w, "basher")) { ag.state = "bash"; ag.timer = 0; return }
-    if (climbable && take(w, "climber")) { startClimb(w, ag); return }
+    if (t <= BASH_REACH && spend(w, ag, "basher")) { ag.state = "bash"; ag.timer = 0; return }
+    if (climbable && spend(w, ag, "climber")) { startClimb(w, ag); return }
   } else {
-    if (climbable && take(w, "climber")) { startClimb(w, ag); return }
+    if (climbable && spend(w, ag, "climber")) { startClimb(w, ag); return }
     // Climbers are the scarcest thing on the board and a pit will empty them.
     // A staircase is the other way up, and the one the level has plenty of —
     // so under the exit it comes before the bash rather than after it, and
     // brings its own allowance with it (see willBuild).
-    if (wantUp && canStartBuild(w, ag) && take(w, "builder")) { startBuild(w, ag); return }
-    if (t <= BASH_REACH && take(w, "basher")) { ag.state = "bash"; ag.timer = 0; return }
+    if (wantUp && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return }
+    if (t <= BASH_REACH && spend(w, ag, "basher")) { ag.state = "bash"; ag.timer = 0; return }
   }
 
-  if (h <= MAX_CLIMB && canStartBuild(w, ag) && take(w, "builder")) { startBuild(w, ag); return }
+  if (h <= MAX_CLIMB && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return }
 
   if (trait.standDown > 0 && ag.turns >= trait.standDown &&
-      countComing(w, ag) >= 1 && take(w, "blocker")) {
+      countComing(w, ag) >= 1 && spend(w, ag, "blocker")) {
     ag.state = "block"
     return
   }
@@ -2369,7 +2468,7 @@ function edgeAhead(w, ag, nx) {
     // danger and bridge to it. Level 15 is the worked example: every engineer
     // saw both the sentry below and a ledge sixteen cells ahead, but this early
     // return happened before any builder rule could consider the ledge.
-    if (far > 2 && canStartBuild(w, ag) && take(w, "builder")) {
+    if (far > 2 && canStartBuild(w, ag) && spend(w, ag, "builder")) {
       startBuild(w, ag, true)
       return
     }
@@ -2379,23 +2478,23 @@ function edgeAhead(w, ag, nx) {
 
 
   if (depth === Infinity) {
-    if (far > 2 && canStartBuild(w, ag, true) && take(w, "builder")) { startBuild(w, ag, true); return }
-    if (far <= 2 && countComing(w, ag) >= 2 - trait.blockBias && take(w, "blocker")) { ag.state = "block"; return }
+    if (far > 2 && canStartBuild(w, ag, true) && spend(w, ag, "builder")) { startBuild(w, ag, true); return }
+    if (far <= 2 && countComing(w, ag) >= 2 - trait.blockBias && spend(w, ag, "blocker")) { ag.state = "block"; return }
     turnAround(w, ag)
     return
   }
 
   if (far > 2 && !exitBelow(w, ag) && depth > trait.bridgeAt + ag.bridgeBias
-      && canStartBuild(w, ag) && take(w, "builder")) { startBuild(w, ag); return }
+      && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return }
 
   if (trait.noFloat && far > 2 && depth > SAFE_FALL - trait.fallMargin
-      && canStartBuild(w, ag) && take(w, "builder")) { startBuild(w, ag); return }
+      && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return }
 
   var wantsChute = depth > SAFE_FALL - trait.fallMargin
 
   if (!wantsChute) { ag.x = nx; startFall(w, ag); return }
 
-  if (take(w, "floater")) {
+  if (spend(w, ag, "floater")) {
     ag.floater = true
     ag.x = nx
     startFall(w, ag)
@@ -2422,7 +2521,7 @@ function countComing(w, ag) {
 
 var RESCUE_CLIMB = 16    // as far up as wallHeight looks; past that there is no top
 
-function climbOut(w, ag, spend) {
+function climbOut(w, ag, pay) {
   if (!exitAbove(w, ag)) return false
   var footY = Math.floor(ag.y)
   for (var side = 0; side < 2; side++) {
@@ -2430,7 +2529,7 @@ function climbOut(w, ag, spend) {
     var ax = Math.floor(ag.x) + dir
     if (!solid(w, ax, footY)) continue
     if (wallHeight(w, ax, footY) > RESCUE_CLIMB) continue
-    if (!spend(w, "climber")) return false
+    if (!pay(w, "climber")) return false
     ag.dir = dir
     ag.idle = 0
     startClimb(w, ag)
@@ -2456,7 +2555,7 @@ function considerEscape(w, ag) {
   // not. The climb comes first: it costs one skill and gains sixteen courses,
   // where a build costs one and gains four.
   if (climbOut(w, ag, take)) return true
-  if (canStartBuild(w, ag) && take(w, "builder")) { startBuild(w, ag); return true }
+  if (canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return true }
   return false
 }
 
@@ -2561,16 +2660,20 @@ function spawn(w) {
   // 42 is the same level every time and never the same colony twice. Which one
   // is the stubborn one, and how far down the queue it is, is the difference
   // between watching a level again and watching a recording of it.
-  var trait = TRAIT_POOL[Math.floor(w.traitRng() * TRAIT_POOL.length) % TRAIT_POOL.length]
-  var whim = w.traitRng()
+  var trait = w.traitBag && w.traitBag.length ? w.traitBag.pop() : "steady"
   return {
     id: w.nextId++,
     trait: trait,
     // Individual variation inside the personality, so two cautious agents
     // aren't the same agent twice. Shifts where its bridge-or-jump line
     // sits, and one in five reverses its instinct at a wall outright.
-    bridgeBias: Math.round(whim * 5) - 2,
-    contrary: whim < 0.2,
+    //
+    // Two draws, not one. Deriving both from a single number tied them
+    // together: `whim < 0.2` forces the rounding below to -2 or -1, so every
+    // contrary agent was also an eager bridger and no contrary agent could
+    // ever be a reluctant one. Half the combinations did not exist.
+    bridgeBias: Math.round(w.traitRng() * 5) - 2,
+    contrary: w.traitRng() < 0.2,
     x: w.hatch.x + 0.5,
     y: w.hatch.y + AGENT_H,
     dir: w.startDir,
@@ -2643,7 +2746,7 @@ function spawn(w) {
 // ---------------------------------------------------------------------------
 
 function stepWalk(w, ag) {
-  var nx = ag.x + ag.dir * WALK_SPEED * (ag.chilledFor > 0 ? 0.48 : 1)
+  var nx = ag.x + ag.dir * walkStep(ag)
   var cx = Math.floor(nx)
   var footY = Math.floor(ag.y)
 
@@ -2654,7 +2757,7 @@ function stepWalk(w, ag) {
   if (seen && seen !== ag.dir) {
     ag.dir = seen
     ag.turns = 0
-    nx = ag.x + ag.dir * WALK_SPEED * (ag.chilledFor > 0 ? 0.48 : 1)
+    nx = ag.x + ag.dir * walkStep(ag)
     cx = Math.floor(nx)
   }
 
@@ -2716,7 +2819,7 @@ function stepWalk(w, ag) {
       var out = Math.abs(lipOn - ag.x) < Math.abs(lipBack - ag.x) ? lipOn : lipBack
       var away = out > ag.x ? 1 : -1
       if (ag.dir !== away) { ag.dir = away; ag.turns++ }
-      var outX = ag.x + ag.dir * WALK_SPEED
+      var outX = ag.x + ag.dir * walkStep(ag)
       return advanceWalk(w, ag, outX, Math.floor(outX), footY)
     }
 
@@ -2763,6 +2866,30 @@ function advanceWalk(w, ag, nx, cx, footY) {
   ag.x = nx
   ag.y = targetY
   ag.anim++
+}
+
+// A follower lands facing whichever of its own is nearest and still on its
+// feet. This is the horizontal beacon the simulation deliberately dropped —
+// see the note above exitFloor — handed back to exactly one personality and
+// sourced from a neighbour rather than from the level, so it steers one agent
+// in the colony without overriding anything the others can see for themselves.
+//
+// Landing is the only moment it applies, and that is not a shortcut: a steer
+// that ran every tick would be two followers turning to face each other for
+// the rest of the level. Vertical distance counts double so it picks somebody
+// on its own floor rather than somebody directly overhead.
+function herdSteer(w, ag) {
+  var reach = traitOf(ag).herd || 0
+  if (reach <= 0) return
+  var best = null
+  var bestD = reach
+  for (var i = 0; i < w.agents.length; i++) {
+    var O = w.agents[i]
+    if (O === ag || O.gone || O.state !== "walk") continue
+    var d = Math.abs(O.x - ag.x) + Math.abs(O.y - ag.y) * 2
+    if (d < bestD) { bestD = d; best = O }
+  }
+  if (best) ag.dir = best.dir
 }
 
 function stepFall(w, ag) {
@@ -2821,6 +2948,7 @@ function stepFall(w, ag) {
       ag.state = "walk"
       ag.fall = 0
       ag.floater = false
+      herdSteer(w, ag)
       return
     }
   }
