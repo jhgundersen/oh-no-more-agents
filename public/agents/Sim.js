@@ -368,7 +368,13 @@ function corridorPlan(rng) {
 var LIFT_W = 5           // interior width of a shaft, in cells
 var TOWER_X0 = 10        // walkable floor between the two hoistway walls
 var TOWER_X1 = 89
-var LIFT_SPEED = 0.42    // rows per tick; a full sweep of a tall board is ~6s
+// A car answers from rest now rather than sweeping the building (see
+// liftDispatch), so it has to answer briskly: at the old patrolling speed the
+// wait at a door was long enough that a third of the queue gave up on the lift
+// and went looking for a wall to climb, and the tower lost four points of home
+// to it. Faster and stationary still adds up to a quarter of the car movement
+// the patrol used to draw.
+var LIFT_SPEED = 0.60    // rows per tick; one storey in about two thirds of a second
 var LIFT_DWELL = 34      // ticks the doors stand open at a floor it serves
 var LIFT_PASS = 4        // and how long it hesitates at one nobody rang for
 var LIFT_CAP = 5         // agents in a car; the sixth waits for the next one
@@ -404,7 +410,7 @@ function liftStopIndex(L, floorY) {
 }
 
 function liftDocked(L) {
-  return L.hold > 0 ? L.stops[L.at] : -1
+  return (L.hold > 0 || L.parked) ? L.stops[L.at] : -1
 }
 
 // Cut one hoistway: the void, the wall that separates it from the floors, and
@@ -452,6 +458,7 @@ function cutHoistway(w, corridors, x0, wallX, out) {
     dir: out > 0 ? 1 : -1,          // the two cars start at opposite ends
     car: out > 0 ? topY : botY,
     hold: LIFT_DWELL,
+    parked: false,                  // standing at L.at with nowhere to be
     riders: 0,
     doorFor: 0,
     ix: w.lifts.length
@@ -4369,6 +4376,34 @@ function liftWanted(w, L, floorY) {
   return false
 }
 
+// Which stop this car has been rung to, or -1 if nobody anywhere wants it.
+// Onward in the direction it was already travelling first, then back the other
+// way — a car that answered the nearest call instead would reverse over
+// somebody who rang behind it a tick after it set off.
+function liftCall(w, L) {
+  var s
+  for (s = L.at + L.dir; s >= 0 && s < L.stops.length; s += L.dir)
+    if (liftWanted(w, L, L.stops[s])) return s
+  for (s = L.at - L.dir; s >= 0 && s < L.stops.length; s -= L.dir)
+    if (liftWanted(w, L, L.stops[s])) return s
+  return -1
+}
+
+// Doors shut, and the question a car asks itself: is anybody ringing? A car
+// that answers "no" by carrying on to the next floor anyway is a car that
+// never stops moving, and with two of them running the full height of the
+// board that is most of what the eye sees on this biome — two boxes sweeping
+// past every storey for the whole level, drawing attention away from the one
+// thing on the floor that matters. It waits where it last stopped instead,
+// which is also where the colony last needed it.
+function liftDispatch(w, L) {
+  var call = liftCall(w, L)
+  if (call < 0) { L.parked = true; return }
+  L.dir = call > L.at ? 1 : -1
+  L.parked = false
+  L.to = L.at + L.dir
+}
+
 function boardLift(w, ag, L, floorY) {
   var slot = Math.min(LIFT_CAP - 1, L.riders)
   ag.state = "ride"
@@ -4506,25 +4541,13 @@ function stepLifts(w) {
 
     if (L.hold > 0) {
       L.hold--
-      if (L.hold === 0) {
-        // Carry on only while somebody further along wants it. A car that
-        // insists on finishing its sweep is a car that is at the far end of
-        // the building for twelve seconds out of every twenty, and the colony
-        // spends the level watching an empty shaft.
-        var si
-        var onward = false
-        for (si = L.at + L.dir; si >= 0 && si < L.stops.length; si += L.dir)
-          if (liftWanted(w, L, L.stops[si])) { onward = true; break }
-        if (!onward) {
-          for (si = L.at - L.dir; si >= 0 && si < L.stops.length; si -= L.dir)
-            if (liftWanted(w, L, L.stops[si])) { L.dir = -L.dir; break }
-        }
-        var next = L.at + L.dir
-        if (next < 0 || next >= L.stops.length) { L.dir = -L.dir; next = L.at + L.dir }
-        L.to = next
-      }
+      if (L.hold === 0) liftDispatch(w, L)
       continue
     }
+
+    // Standing at a floor with nothing to do. The only thing that moves it
+    // from here is somebody at a door, which liftWanted is the whole of.
+    if (L.parked) { liftDispatch(w, L); continue }
 
     L.car += L.dir * LIFT_SPEED
     var target = L.stops[L.to]

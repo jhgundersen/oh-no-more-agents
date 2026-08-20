@@ -659,7 +659,11 @@ function drawLifts(ctx, w, pal) {
     for (var s = 0; s < L.stops.length; s++) {
       var fy = L.stops[s] * C
       var dx = L.wallX * C
-      var open = Math.abs(L.car - L.stops[s]) < 0.6 && L.hold > 0
+      // Open exactly while the car is available, which now includes a parked
+      // one: a lift that waits to be called spends most of a level standing
+      // still, and a standing car with its doors shut is indistinguishable
+      // from a shaft with no car in it at all.
+      var open = Math.abs(L.car - L.stops[s]) < 0.6 && (L.hold > 0 || L.parked)
       var dh = 5 * C                                      // the opening
       var dy0 = fy - dh - 2
       ctx.fillStyle = pal.rig

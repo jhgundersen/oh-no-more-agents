@@ -81,6 +81,17 @@ The production site is `https://oh-no-more-agents.com`.
   alternate their walking direction, the shaft an agent walks *toward* is always
   the far one from the shaft it arrived by, and that is the whole level: cross
   the floor, ring, ride a storey, cross the next one the other way.
+- **A car is called; it does not patrol.** `liftDispatch` parks it at the floor
+  it last served and nothing moves it again until `liftWanted` says somebody is
+  at a door — the two cars used to sweep the full height of the board all level,
+  which was most of what the eye saw on this biome. `L.parked` counts as docked,
+  so a car standing at your floor is one you step straight into, and `Draw.js`
+  reads the same flag to leave that floor's doors open: one lit door per shaft
+  saying where the car is, and a shut pair everywhere else. The speed came with
+  it. Answering from rest at the old 0.42 left a third of the queue giving up
+  on the lift (`LIFT_PATIENCE`) and going to look for a wall to climb, which
+  cost four points of home; at 0.60 the tower is better off than it was
+  patrolling, and the cars still travel a quarter of the distance.
 - **A tower is also the one level shape that can be played upside down.** A drop
   is one-way, which is why every other level in this game ends below where it
   started; a car is not, so `w.ascending` puts the hatch in the lobby ceiling
@@ -310,7 +321,7 @@ goal that used to live on the world, so older baselines stay comparable, and
 being fixed it keeps its own noise out of the comparison.
 
 Baseline at the time of writing, 200 levels: **91% of levels cleared, 77% of
-agents home, 47s per attempt, no hangs**, against 90% / 75% / 44s for the same
+agents home, 46s per attempt, no hangs**, against 90% / 75% / 44s for the same
 sweep with the Skyscraper taken back out. Almost none of the gap is the tower
 being harder — most of it is the ninth biome re-assigning which level number is
 which, which a fixed sweep cannot see through. The way to measure a change on a
@@ -336,7 +347,7 @@ clearing and not. That last figure was half when `cleared` was measured against
 a goal the level rolled for itself; a fixed bar removed that roll's variance,
 and the spread in agents home — the figure that actually measures the colony —
 is unchanged at 4. Per biome nothing is an outlier — 83–100% cleared and 69–87%
-home across all nine. The Skyscraper sits at 87/76, mid-pack on both, and it
+home across all nine. The Skyscraper sits at 91/79, mid-pack on both, and it
 took work to get there: measured on 24 tower levels, the seal wall in front of
 the exit was worth eleven points of home on its own (it is skipped there now —
 see the note in `generate`), and letting a stuck agent on the exit floor take a
