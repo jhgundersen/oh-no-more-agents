@@ -251,6 +251,29 @@ an error message at the time.
   the door shut now sets `sawShut`, which is how an agent learns there is a job
   on and goes to do it.
 
+- **The exit was the only beacon, and a mission moves it.** `stepWalk` sends
+  the searchers toward the search point, but `crossingHelps`, `buildDirection`
+  and `goalDist` each read `w.exit` for themselves — so while the door was shut
+  they were all answering about a place the agent was deliberately not walking
+  to. The bridge over the bottom pit was refused as leading away from home, the
+  bricks that did get laid faced back toward the door, and an agent crossing the
+  floor to do the job read to the stall detector as one getting nowhere and was
+  bombed for it. Levels 29, 145 and 236 lost their **entire colony**; across the
+  catalogue a mission over a crossing pit ran 20 points of home below the same
+  ground without one. They ask `goalX` now, which is one question answered in
+  one place. Anything else that wants to know which way home is belongs there
+  too.
+
+- **A shut door is a door, not a wall.** The mouth rebounds an early arrival so
+  it does not vanish mid-mission, and a tower's cars can land the colony on the
+  *far* side of its own exit — with the search point beyond the doorway. The
+  rebound threw them back, the search steer turned them round, and neither rule
+  ever gives: level 369 spent four thousand ticks with twelve agents in a
+  one-cell tug of war, invisible to the loop detector because the rebound
+  renews `waitFor` and `waitFor` is the flag for holding on purpose. Somebody on
+  their way past the door is let past; only somebody who came to go home is
+  turned around.
+
 - **The corridor gap is constrained, not chosen.** The handoff at the end of a
   corridor is a drop of exactly one gap, and a drop past `SAFE_FALL` kills — so
   more floors have to pack closer rather than reach deeper.
@@ -286,8 +309,8 @@ the colony defined in `simcheck.js`. It sits at the average of the per-level
 goal that used to live on the world, so older baselines stay comparable, and
 being fixed it keeps its own noise out of the comparison.
 
-Baseline at the time of writing, 200 levels: **89% of levels cleared, 74% of
-agents home, 48s per attempt, no hangs**, against 90% / 75% / 44s for the same
+Baseline at the time of writing, 200 levels: **91% of levels cleared, 77% of
+agents home, 47s per attempt, no hangs**, against 90% / 75% / 44s for the same
 sweep with the Skyscraper taken back out. Almost none of the gap is the tower
 being harder — most of it is the ninth biome re-assigning which level number is
 which, which a fixed sweep cannot see through. The way to measure a change on a
@@ -312,8 +335,8 @@ average, and on about a third of levels the colony is the difference between
 clearing and not. That last figure was half when `cleared` was measured against
 a goal the level rolled for itself; a fixed bar removed that roll's variance,
 and the spread in agents home — the figure that actually measures the colony —
-is unchanged at 4. Per biome nothing is an outlier — 83–96% cleared and 69–83%
-home across all nine. The Skyscraper sits at 83/74, mid-pack on both, and it
+is unchanged at 4. Per biome nothing is an outlier — 83–100% cleared and 69–87%
+home across all nine. The Skyscraper sits at 87/76, mid-pack on both, and it
 took work to get there: measured on 24 tower levels, the seal wall in front of
 the exit was worth eleven points of home on its own (it is skipped there now —
 see the note in `generate`), and letting a stuck agent on the exit floor take a

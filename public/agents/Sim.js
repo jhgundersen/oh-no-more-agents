@@ -3017,6 +3017,19 @@ function exitFloor(w) { return w.exit.y + w.exit.h }
 
 function exitBelow(w, ag) { return exitFloor(w) > ag.y + 2 }
 
+// Where this agent is actually walking to, horizontally. Usually the door —
+// but a mission shuts the door, and stepWalk answers that by steering the ones
+// who have been sent to look toward the search point instead. Every other rule
+// that asks "is this the way home?" asked w.exit directly, so on a mission
+// level they were answering about a place the agent was deliberately not going
+// to, and vetoing the route stepWalk was steering along. One question, asked
+// in one place: the same beacon for the crossing, the bricks and the clock.
+function goalX(w, ag) {
+  var search = missionTarget(w, ag)
+  if (search) return search.x
+  return w.exit.x + w.exit.w / 2
+}
+
 // Is there an actual corridor under this column, rather than merely an exit
 // somewhere lower in the level? This is the useful version of "down": a shaft
 // here will open onto traversable floor instead of making an arbitrary hole.
@@ -3068,9 +3081,9 @@ function startDescent(w, ag, pay, allowMine, traitPreference, fallback, requireW
   return false
 }
 
-function goalDist(w, ag) {
+function goalDist(w, ag, goal) {
   var dy = Math.abs(ag.y - exitFloor(w))
-  if (dy <= 3) return Math.abs(ag.x - (w.exit.x + w.exit.w / 2))
+  if (dy <= 3) return Math.abs(ag.x - goal)
   // On a tower the next thing between here and the door is a lift door, and
   // reaching one is the only horizontal progress a storey has to offer. Left
   // out, the whole crossing of a floor — three hundred ticks of exactly the
@@ -3367,9 +3380,9 @@ function crossingHelps(w, ag) {
   // Vertical business overrides horizontal: if the door is above or below,
   // which side of the shaft it is on tells you nothing useful.
   if (exitBelow(w, ag) || exitAbove(w, ag)) return true
-  var exitMid = w.exit.x + w.exit.w / 2
-  if (Math.abs(exitMid - ag.x) <= 2) return true
-  return (exitMid > ag.x ? 1 : -1) === ag.dir
+  var goal = goalX(w, ag)
+  if (Math.abs(goal - ag.x) <= 2) return true
+  return (goal > ag.x ? 1 : -1) === ag.dir
 }
 
 function buildDirection(w, ag) {
@@ -3391,8 +3404,8 @@ function buildDirection(w, ag) {
   if (!solid(w, Math.floor(ag.x) + ag.dir, Math.floor(ag.y) + 1)) return ag.dir
 
   if (!exitBelow(w, ag)) {
-    var exitMid = w.exit.x + w.exit.w / 2
-    if (Math.abs(exitMid - ag.x) > 1) return exitMid > ag.x ? 1 : -1
+    var goal = goalX(w, ag)
+    if (Math.abs(goal - ag.x) > 1) return goal > ag.x ? 1 : -1
   }
   return ag.dir
 }
@@ -3536,6 +3549,7 @@ function spawn(w) {
     escapeTunnels: {}, // and one body-height rescue tunnel per corridor
     rescueCool: 0,     // do not reconsider the same escape every simulation tick
     markD: Infinity,   // closest it has ever been; see goalDist()
+    goalMark: 0,       // which beacon markD was measured against
     fuse: 0,
     waitFor: 0,       // holding at a danger for its reload, rather than pacing
     mineCool: 0,      // one charge at a time, and not again until it has gone off
@@ -6507,7 +6521,15 @@ function stepAgents(w) {
       if (!ag.special && ag.state === "walk") condemn(w, ag)
     }
 
-    var dist = goalDist(w, ag)
+    // The beacon moves when a mission opens or closes under an agent, and
+    // markD is the closest it has ever been to whichever beacon it was
+    // watching. Carried across, the old number makes the first step toward the
+    // new one read as standing still — and standing still is what ends in a
+    // bomb. A change of destination is a fresh start, like arriving anywhere.
+    var goalNow = goalX(w, ag)
+    if (goalNow !== ag.goalMark) { ag.goalMark = goalNow; ag.markD = Infinity }
+
+    var dist = goalDist(w, ag, goalNow)
     if (dist < ag.markD - 2) {
       ag.markD = dist
       ag.idle = 0
@@ -6580,7 +6602,6 @@ function stepAgents(w) {
     var e = w.exit
     if (ag.x > e.x && ag.x < e.x + e.w && ag.y > e.y && ag.y < e.y + e.h + 1) {
       if (w.mission && (!w.mission.done || w.ticks - w.mission.openedAt < 24)) {
-        ag.x = ag.dir > 0 ? e.x - 1.2 : e.x + e.w + 1.2
         // Finding the door shut is how an agent learns there is a job on.
         // Without this the colony piles up on the threshold and only the
         // scout ever goes looking, which is fine where the door sits in the
@@ -6590,8 +6611,22 @@ function stepAgents(w) {
         // runs out. It steers the ones that have actually been there, so they
         // set off in ones and twos rather than as a crowd.
         ag.sawShut = true
-        turnAround(w, ag)
-        ag.waitFor = Math.max(ag.waitFor, 12)
+        // Shut is a door, not a wall, and the job is not always on the side of
+        // it the agent came from. A tower's cars can put the colony down on
+        // the far side of its own exit, and then the only way to the search
+        // point is through the doorway: the rebound threw them back west, the
+        // search steer turned them east again, and level 369 spent four
+        // thousand ticks with twelve agents in a one-cell tug of war that
+        // neither rule would ever lose — and which the loop detector could not
+        // see, because the rebound renews waitFor. Somebody on their way past
+        // is let past; only somebody who came to go home is turned around.
+        var beyond = goalX(w, ag)
+        var passing = ag.dir > 0 ? beyond > e.x + e.w : beyond < e.x
+        if (!passing) {
+          ag.x = ag.dir > 0 ? e.x - 1.2 : e.x + e.w + 1.2
+          turnAround(w, ag)
+          ag.waitFor = Math.max(ag.waitFor, 12)
+        }
         active++
         moving++
         continue
