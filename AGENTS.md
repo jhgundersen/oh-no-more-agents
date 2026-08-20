@@ -120,6 +120,24 @@ The production site is `https://oh-no-more-agents.com`.
   may touch the ground near the exit or the hatch (`eventSafeX`), because past
   that line a change of premise stops being drama and starts being a level that
   cannot be finished.
+- **A bridge stops at the far side; a staircase does not.** `startBuild` records
+  which one this is (`buildSpan`: a lip has nothing solid beside it) and
+  `bridgeLanded` ends a bridge once the ground ahead has come back up to the
+  floor it set out from. Measure it against the starting floor rather than
+  against a depth — a staircase gains height as it goes, so the deck finishes
+  above the far side and any fixed depth either never matches or stops the
+  bridge in a dip. It used to run its full twelve regardless: 713 bricks a
+  sweep laid onto ground that was already solid, and the raised causeway they
+  made was a ramp for the queue behind to climb for nothing.
+- **A blocked builder cuts narrower steps before it gives up** — one cell
+  across and a row up, instead of two across and a row every third. A normal
+  step needs eighteen cells of floor to climb one corridor and an agent wedged
+  in a slot has three. There is no width test: the wide step is tried first
+  every time, so a builder steepens exactly as far into a pocket as the pocket
+  is tight. It is gated on `NARROW_IDLE` all the same, because steepening at an
+  ordinary wall is a bad trade — measured, always-narrow spent twelve bricks
+  climbing walls the colony had no reason to be over and took levels that
+  cleared to nothing. Getting nowhere for that long is what a hole looks like.
 - Keep simulation behavior in `Sim.js` and rendering-only behavior in `Draw.js`.
 - Match the existing pixel-art look, biome palettes, humor, and agent puns.
 - Test gameplay changes on the reported level and on nearby/random levels. Watch
@@ -320,7 +338,7 @@ the colony defined in `simcheck.js`. It sits at the average of the per-level
 goal that used to live on the world, so older baselines stay comparable, and
 being fixed it keeps its own noise out of the comparison.
 
-Baseline at the time of writing, 200 levels: **91% of levels cleared, 77% of
+Baseline at the time of writing, 200 levels: **92% of levels cleared, 78% of
 agents home, 46s per attempt, no hangs**, against 90% / 75% / 44s for the same
 sweep with the Skyscraper taken back out. Almost none of the gap is the tower
 being harder — most of it is the ninth biome re-assigning which level number is
@@ -346,7 +364,7 @@ average, and on about a third of levels the colony is the difference between
 clearing and not. That last figure was half when `cleared` was measured against
 a goal the level rolled for itself; a fixed bar removed that roll's variance,
 and the spread in agents home — the figure that actually measures the colony —
-is unchanged at 4. Per biome nothing is an outlier — 83–100% cleared and 69–87%
+is unchanged at 4. Per biome nothing is an outlier — 87–96% cleared and 70–86%
 home across all nine. The Skyscraper sits at 91/79, mid-pack on both, and it
 took work to get there: measured on 24 tower levels, the seal wall in front of
 the exit was worth eleven points of home on its own (it is skipped there now —

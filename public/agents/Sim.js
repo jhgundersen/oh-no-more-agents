@@ -39,6 +39,14 @@ var BUILD_REACH = 24     // cells a full 12-brick bridge spans
 var BASH_REACH = 10      // cells of wall a basher will commit to
 
 var BUILD_INTERVAL = 6   // ticks per brick
+// Ticks of getting nowhere before a blocked builder starts cutting its steps
+// narrow instead of giving the build up. It is a gate rather than the default
+// because steepening at an ordinary wall is a bad trade: measured, a builder
+// that always narrowed spent twelve bricks going straight up walls the colony
+// had no reason to be over, and took levels that cleared to nothing at all.
+// An agent that has been getting nowhere this long has already had the walk,
+// the turn and the climb fail, and a hole is what that usually means.
+var NARROW_IDLE = 180
 var BASH_INTERVAL = 6
 var DIG_INTERVAL = 7
 var BOMB_FUSE = 150      // 5 seconds, same as the original
@@ -3424,8 +3432,27 @@ function startBuild(w, ag, flat) {
   ag.buildWait = 0
   ag.timer = 0
   ag.buildFlat = !!flat
+  // Is this bridge answering a hole, or is it a staircase up a wall? The
+  // difference is underfoot at the moment it starts — a lip has nothing beside
+  // it — and it is what tells stepBuild when the job is done. A staircase is
+  // never finished by finding ground under it; a bridge always is.
+  ag.buildSpan = !solid(w, Math.floor(ag.x) + ag.dir, Math.floor(ag.y) + 1)
+  ag.buildY = Math.floor(ag.y)
   ag.built++
   w.buildSites.push({ x: ag.x, y: ag.y, tick: w.ticks })
+}
+
+// Has the bridge reached the far side? Not "is the drop ahead small" — over a
+// chasm it never is — but "has the ground come back up to the floor I set out
+// from". A staircase gains height as it goes, so the deck ends up above the
+// far side and a fixed depth would never match; measuring against the starting
+// floor carries the rise with it and needs no number of its own — and no
+// slack, either. Stopping while the ground ahead was still a stride or two
+// below the floor it set out from finished the bridge in a dip, and the
+// forty-odd agents a run that cost were more than the bricks were worth.
+function bridgeLanded(w, ag, nx, ny) {
+  var climbed = ag.buildY - Math.floor(ny)
+  return dropDepth(w, Math.floor(nx), Math.floor(ny)) <= climbed
 }
 
 function willBuild(ag, wantUp) {
@@ -4221,6 +4248,21 @@ function stepBuild(w, ag) {
   if (!ag.buildFlat && (ag.bricks % rise) === 0
       && headroom(w, Math.floor(nx), Math.floor(ag.y) - 1)) ny = ag.y - 1
 
+  // The far side. A bridge is finished when what is left ahead is a drop this
+  // agent would have walked into rather than answered with bricks, which is
+  // the question edgeAhead asked to start it — so whoever arrives at the end
+  // of it, builder included, meets an edge they are already known to accept.
+  // Without this a bridge ran its full twelve regardless, and because a
+  // staircase rises as it goes, the second half of one was a raised causeway
+  // laid over ground the colony could have walked along — 47% of every brick
+  // spent on bridges, and a ramp for the queue behind to climb for nothing.
+  if (ag.buildSpan && ag.bricks < 12 && !liftColumn(w, Math.floor(nx))
+      && bridgeLanded(w, ag, nx, ny)) {
+    ag.state = "walk"
+    ag.turns = 0
+    return
+  }
+
   // A brick laid across a shaft is a floor in the one place on the board that
   // has to stay a hole — and the car goes straight through it. Stop the bridge
   // at the wall rather than refusing the build outright: a builder that meets
@@ -4233,12 +4275,32 @@ function stepBuild(w, ag) {
 
   if (solid(w, Math.floor(nx), Math.floor(ny))
       || !headroom(w, Math.floor(nx), Math.floor(ny))) {
-    // Even level is blocked. Check this BEFORE laying anything: the old order
-    // left a three-cell stub from a step the builder could never occupy, and a
-    // queue of agents repeated it into the little brick heaps seen on level 19.
-    ag.dir = -ag.dir
-    ag.state = "walk"
-    return
+    // Blocked at a full stride. Before giving the build up, try a narrower
+    // one. A step is two cells across and gains a row every third brick, so a
+    // staircase needs eighteen cells of floor to climb a single corridor — and
+    // an agent wedged in a slot between a wall and a shaft has three. Cut the
+    // same brick to one cell across and a row up, and the twelve that used to
+    // buy less than a row of height buy twelve. It costs no decision and no
+    // threshold: the wide step is tried first every time and the narrow one is
+    // only reached where the wide one has nowhere to go, so a builder steepens
+    // exactly as far into a pocket as the pocket is tight, and goes back to
+    // ordinary stairs the moment the room opens out.
+    var sx = ag.x + ag.dir
+    var sy = ag.y - 1
+    if (!ag.buildFlat && ag.idle > NARROW_IDLE
+        && !solid(w, Math.floor(sx), Math.floor(sy))
+        && headroom(w, Math.floor(sx), Math.floor(sy))) {
+      nx = sx
+      ny = sy
+    } else {
+      // Even a narrow one is blocked. Check this BEFORE laying anything: the
+      // old order left a three-cell stub from a step the builder could never
+      // occupy, and a queue of agents repeated it into the little brick heaps
+      // seen on level 19.
+      ag.dir = -ag.dir
+      ag.state = "walk"
+      return
+    }
   }
 
   // A brick is three cells laid at foot level; the agent then steps along it.
