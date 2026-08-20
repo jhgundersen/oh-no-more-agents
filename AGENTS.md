@@ -262,6 +262,30 @@ an error message at the time.
   edge to have an opinion about — twelve of fourteen on the level that found it.
   `canStartBuild` refuses those now, in every biome.
 
+- **A climber let go on the tick it arrived.** `stepClimb` asked "is my head
+  about to hit something" before "have my feet cleared the wall", and the first
+  of those tests looks one row above the body — it fails a course before the
+  agent actually stops fitting. On a sealed biome the roof is a slab exactly
+  `CORR_H` above the floor, so the two coincide precisely: the tick a climber's
+  feet reached the top of a two-course obstacle in a corridor was the tick it
+  bumped its head, and it dropped back down having spent the scarcest skill on
+  the board. **Over half of every climb on a tower** ended that way, against
+  12–29% on the other eight. Asking the questions the other way round is the
+  whole fix; the order is load-bearing and there is nothing else holding it in
+  place, so leave a climber's checks alone unless you have `simcheck` numbers.
+
+- **`wallHeight` and `stepClimb` disagreed about where the top is.**
+  `wallHeight` answers "the first course with room to stand on", which is what
+  buys the climber; `stepClimb` used to answer "the first course that is not
+  wall", and let go wherever the two differed. Every no-room drop in the
+  catalogue — a thousand of them a sweep — had more wall above it, so not one
+  was a top: they were notches in the face. Two functions answering the same
+  question differently is the shape of this bug, and `climbShaftClear` is the
+  third instance of it: `wallHeight` looks up the *wall*, the agent goes up the
+  column *beside* it, and nothing checked that the second one was clear. A
+  standable ledge eight courses up with a slab four courses up was a climber
+  spent on reaching neither. Wasted climbs across the catalogue: 25% to zero.
+
 - **`wallHeight` answers zero for a wall that is not there**, and zero passed
   the "is it climbable" test. `advanceWalk` sends a low roof to `hitWall` as
   well as a wall, and its idea of the cell ahead is one step further on than
@@ -338,7 +362,7 @@ the colony defined in `simcheck.js`. It sits at the average of the per-level
 goal that used to live on the world, so older baselines stay comparable, and
 being fixed it keeps its own noise out of the comparison.
 
-Baseline at the time of writing, 200 levels: **92% of levels cleared, 78% of
+Baseline at the time of writing, 200 levels: **92% of levels cleared, 79% of
 agents home, 46s per attempt, no hangs**, against 90% / 75% / 44s for the same
 sweep with the Skyscraper taken back out. Almost none of the gap is the tower
 being harder — most of it is the ninth biome re-assigning which level number is
@@ -364,8 +388,10 @@ average, and on about a third of levels the colony is the difference between
 clearing and not. That last figure was half when `cleared` was measured against
 a goal the level rolled for itself; a fixed bar removed that roll's variance,
 and the spread in agents home — the figure that actually measures the colony —
-is unchanged at 4. Per biome nothing is an outlier — 87–96% cleared and 70–86%
-home across all nine. The Skyscraper sits at 91/79, mid-pack on both, and it
+is unchanged at 4. Per biome nothing is an outlier — 83–100% cleared and 72–87%
+home across all nine, and on a 24-level sample a two-level swing is a nine-point
+one, so widen the sweep before believing a biome has moved. The Skyscraper sits
+at 91/81, mid-pack on both, and it
 took work to get there: measured on 24 tower levels, the seal wall in front of
 the exit was worth eleven points of home on its own (it is skipped there now —
 see the note in `generate`), and letting a stuck agent on the exit floor take a

@@ -2918,6 +2918,17 @@ function wallHeight(w, x, footY) {
   return 99
 }
 
+// wallHeight looks up the wall. The agent goes up beside it, and that column
+// has a roof of its own — which on a sealed biome can stop it a long way below
+// the ledge it was promised. Every head-bumped climber in the catalogue was
+// this: a standable course eight up, a slab four up, and a climber spent on
+// reaching neither. The bump test is `solid(x, footY - AGENT_H)`, one row above
+// the head, so the run that has to be clear starts four above the feet.
+function climbShaftClear(w, x, footY, h) {
+  for (var k = 4; k <= h + 3; k++) if (solid(w, x, footY - k)) return false
+  return true
+}
+
 function wallThickness(w, x, footY, dir) {
   var t = 0
   for (var i = 0; i < BASH_REACH + 4; i++) {
@@ -3157,6 +3168,7 @@ function hitWall(w, ag) {
   // same tick. Seven of those in a row is a colony's entire climb allowance,
   // and a tower's queue at the lift doors found the case reliably.
   var climbable = h > 0 && h <= reach && footY - h >= SKY
+    && climbShaftClear(w, Math.floor(ag.x), footY, h)
 
   if (wantUp) bashFirst = false
 
@@ -3316,7 +3328,9 @@ function climbOut(w, ag, pay) {
     var dir = side === 0 ? ag.dir : -ag.dir
     var ax = Math.floor(ag.x) + dir
     if (!solid(w, ax, footY)) continue
-    if (wallHeight(w, ax, footY) > RESCUE_CLIMB) continue
+    var rise = wallHeight(w, ax, footY)
+    if (rise > RESCUE_CLIMB) continue
+    if (!climbShaftClear(w, Math.floor(ag.x), footY, rise)) continue
     if (!pay(w, "climber")) return false
     ag.dir = dir
     ag.idle = 0
@@ -4190,23 +4204,39 @@ function stepClimb(w, ag) {
     return
   }
 
-  if (!ladder && solid(w, Math.floor(ag.x), footY - AGENT_H)) {
-    ag.dir = -ag.dir
-    ag.turns++
-    beginUncontrolledFall(w, ag)
-    return
-  }
-
+  // Feet clear the wall's top course — haul over onto it. This is asked before
+  // the ceiling check below, not after, and the order is the whole of it. That
+  // check is about whether there is room to climb another course and it fails
+  // one row before the body actually stops fitting, so on a sealed biome —
+  // where the roof is a slab exactly CORR_H above the floor — it fails on the
+  // very tick the feet reach the top of a two-course obstacle. The agent had
+  // somewhere to stand and let go anyway: up the obstacle in the hallway and
+  // straight back down, over half of every climb on a tower.
   if (!solid(w, wallX, footY)) {
-    // Feet clear the wall's top course — haul over onto it.
     if (headroom(w, wallX, footY)) {
       ag.x = wallX + 0.5
       ag.state = "walk"
       ag.turns = 0
-    } else {
+      return
+    }
+    // No room to stand here, which is not the same thing as the top of the
+    // wall. wallHeight — the function that bought this climber — answers "the
+    // first course with room to stand on"; this used to answer "the first
+    // course that is not wall", and let go wherever the two disagreed. Every
+    // no-room drop in the catalogue had more wall above it: they were all
+    // notches in the face, not tops. Only a face with no top within reach is
+    // worth letting go of.
+    if (wallHeight(w, wallX, footY) > MAX_CLIMB) {
       ag.dir = -ag.dir
       beginUncontrolledFall(w, ag)
+      return
     }
+  }
+
+  if (!ladder && solid(w, Math.floor(ag.x), footY - AGENT_H)) {
+    ag.dir = -ag.dir
+    ag.turns++
+    beginUncontrolledFall(w, ag)
     return
   }
 
