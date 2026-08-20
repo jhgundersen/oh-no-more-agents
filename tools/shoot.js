@@ -66,10 +66,10 @@ if (cmd === "level") {
 
 } else if (cmd === "biomes") {
   // One level from each biome, in order, stacked into a contact sheet. The
-  // biome is picked by level number, so level N shows biome (N-1) % 8.
+  // biome is picked by level number, so level N shows biome (N-1) % BIOMES.length.
   const images = []
   const names = []
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < S.BIOMES.length; i++) {
     const lv = i + 1
     const { img, world } = frame(S, D, P, { level: lv, seed, ticks, theme, labels })
     images.push(img)

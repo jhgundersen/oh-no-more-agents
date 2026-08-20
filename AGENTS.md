@@ -37,7 +37,10 @@ The production site is `https://oh-no-more-agents.com`.
   the same playable layout on every run unless a change intentionally updates it.
 - Every level ends over a hole: `placeBottomPit` rolls none, a shaft on the dead
   ground behind the colony, or a crossing on the route between the landing and
-  the exit — and a crossing level may get both. Four of the seven biomes flood
+  the exit — and a crossing level may get both. The Skyscraper is the exception
+  and it is allowed to be: its hole is the pair of hoistways that run past every
+  storey, so `placeTowerPit` rolls only the crossing and never the shaft, which
+  on that biome would open at a lift door. Five of the nine biomes flood
   theirs (`pitLiquid`), and `Palette.poolTint` picks the matching colours from
   the same level number, which is how two files that cannot call each other stay
   in step. A crossing is only survivable because of the rule in `edgeAhead` that
@@ -65,11 +68,34 @@ The production site is `https://oh-no-more-agents.com`.
   `bridgeBias` negative, so half the combinations could not occur.
 - Biomes are picked by level number, so a new one goes on the **end** of
   `BIOMES` — inserting re-skins every level above it. `Palette.js` derives the
-  same index with its own copy of the rule (`(level - 1) % 8` in `poolTint` and
+  same index with its own copy of the rule (`(level - 1) % 9` in `poolTint` and
   `biomeTint`) and has to be changed in the same commit; the two files cannot
   call each other. Note that `rock` is mixed from the theme foreground and is
   **not** tinted — a biome skin built mostly out of `ROCK` comes out the same
   grey everywhere, which is what happened to the Factory on the first attempt.
+- **The Skyscraper is the one biome with a mechanism rather than a skin**, and
+  the rules it needs are gathered in the block above `cutHoistway`. Two shafts
+  run the full height of the board, one at each end, with a door onto every
+  storey and a car in each; the floors are STEEL slabs and nothing removes
+  ground on a tower, so the cars are the only handoff. Because the corridors
+  alternate their walking direction, the shaft an agent walks *toward* is always
+  the far one from the shaft it arrived by, and that is the whole level: cross
+  the floor, ring, ride a storey, cross the next one the other way.
+- **A tower is also the one level shape that can be played upside down.** A drop
+  is one-way, which is why every other level in this game ends below where it
+  started; a car is not, so `w.ascending` puts the hatch in the lobby ceiling
+  and the door on the top floor on half of them. `w.exitCorridor` is what the
+  rest of generation reads — obstacle density, the mission, the bottom pit — so
+  nothing else has to know which way up the level is. `liftRouted()` is the
+  other half: every rule that answers "the way home is above me" with a climber
+  or a staircase stands down on a tower, because the answer there is a machine
+  at the end of the floor and a climber spent on the partition in front of you
+  is a climber spent on nothing.
+- A tower's toolbar is the same size as everybody else's and a different shape.
+  Its diggers and miners are unreachable — `canDescendHere` never says yes
+  through a slab — so that allowance is moved into basher, climber and builder
+  at generation. Do not simply *add* skills: measured, more tools made the tower
+  worse, because the extra builds cost more clock than the obstacles did.
 - Animated scenery cannot live in `drawDecor`. That runs inside `drawTerrain`,
   which only repaints on `terrainVersion`, so a cog painted there never turns.
   `drawMachines` is called from `drawActors` instead — the per-tick pass every
@@ -191,6 +217,40 @@ an error message at the time.
   That is what makes strata, biome skins and hull plating free. `simcheck inert`
   proves it and should stay passing.
 
+- **An obstacle can reach through the floor above it.** A `step` lifts the roof
+  by as much as it lifts the floor, and with the biggest rise the raised roof of
+  one corridor comes out a row *above* the floor of the corridor over it.
+  Everywhere else that is a harmless shortcut and nobody had noticed it in two
+  hundred levels. In a building it was a twenty-one cell hole in the second
+  storey that the whole colony walked into, and no lift was ever rung for again.
+  `roofLimit` clamps it on sealed biomes only, so the other eight keep the
+  layouts they have always had.
+
+- **A bridge that runs out over a hole is a diving board.** Bridges answer holes
+  from the lip, where the far side is inside the twelve bricks' reach. One that
+  starts on solid ground twenty cells short lays its last brick in mid-air, and
+  the queue behind it walks up the ramp and off the end without ever seeing an
+  edge to have an opinion about — twelve of fourteen on the level that found it.
+  `canStartBuild` refuses those now, in every biome.
+
+- **`wallHeight` answers zero for a wall that is not there**, and zero passed
+  the "is it climbable" test. `advanceWalk` sends a low roof to `hitWall` as
+  well as a wall, and its idea of the cell ahead is one step further on than
+  `hitWall`'s whenever the stride crosses a cell boundary — so the agent bought
+  a climber, started up nothing and dropped off it on the same tick, seven times
+  in a row. The guard is `h > 0`; a blanket "turn round if the cell ahead is
+  empty" looks equivalent and costs four points of home across the catalogue,
+  because it also throws away the walls `hitWall` can see and `advanceWalk`
+  could not.
+
+- **Two rules that each reverse an agent make a trap between them.** The shut
+  mission door bounces you out; `exitInSight` turns you back toward it; and the
+  rebound renews `waitFor`, which is the flag that tells the loop detector an
+  agent is holding on purpose — so nothing ever condemns it. Fifteen agents
+  treading a threshold until the nuke. The fix is not another reflector: finding
+  the door shut now sets `sawShut`, which is how an agent learns there is a job
+  on and goes to do it.
+
 - **The corridor gap is constrained, not chosen.** The handoff at the end of a
   corridor is a drop of exactly one gap, and a drop past `SAFE_FALL` kills — so
   more floors have to pack closer rather than reach deeper.
@@ -226,11 +286,19 @@ the colony defined in `simcheck.js`. It sits at the average of the per-level
 goal that used to live on the world, so older baselines stay comparable, and
 being fixed it keeps its own noise out of the comparison.
 
-Baseline at the time of writing, 200 levels: **94% of levels cleared, 78% of
-agents home, 45s per attempt, no hangs**. Two things moved it since the colony
-rework's 95% / 82% / 43s, and only one of them is a gameplay change: adding the
-Factory re-assigns which level number is which biome, so a fixed sweep now
-covers a different mix. Events themselves are close to free — measured on the
+Baseline at the time of writing, 200 levels: **89% of levels cleared, 74% of
+agents home, 48s per attempt, no hangs**, against 90% / 75% / 44s for the same
+sweep with the Skyscraper taken back out. Almost none of the gap is the tower
+being harder — most of it is the ninth biome re-assigning which level number is
+which, which a fixed sweep cannot see through. The way to measure a change on a
+catalogue whose length just changed is to run the sweep twice, once with
+`BIOMES` and `Palette`'s modulus reverted to the old count: that isolates the
+rule change from the reshuffle, and it is how the four cross-biome fixes that
+came out of building the tower were shown to cost nothing. The extra four
+seconds per attempt is real and is the tower's: a storey is eighty cells wide
+and there is no falling down it.
+
+Events are close to free — measured on the
 same 240 levels with `stepEvents` stubbed out, overall home was 84% either way.
 Measure a change against a sweep with events both on and off before concluding
 one of them did something. Played the way the page plays it — a fresh
@@ -244,8 +312,12 @@ average, and on about a third of levels the colony is the difference between
 clearing and not. That last figure was half when `cleared` was measured against
 a goal the level rolled for itself; a fixed bar removed that roll's variance,
 and the spread in agents home — the figure that actually measures the colony —
-is unchanged at 4. Per biome nothing is now an outlier — 93–100% cleared and 75–85% home
-across all seven, where Cavern used to sit at 87/73.
+is unchanged at 4. Per biome nothing is an outlier — 83–96% cleared and 69–83%
+home across all nine. The Skyscraper sits at 83/74, mid-pack on both, and it
+took work to get there: measured on 24 tower levels, the seal wall in front of
+the exit was worth eleven points of home on its own (it is skipped there now —
+see the note in `generate`), and letting a stuck agent on the exit floor take a
+round trip in the car was worth another ten on the levels played upward.
 
 The bottom pit is the one thing worth breaking those numbers down by, and
 `tools/` has no command for it: generate a level, look at `w.pits`, and bucket
