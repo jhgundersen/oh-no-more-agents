@@ -81,6 +81,34 @@ The production site is `https://oh-no-more-agents.com`.
   alternate their walking direction, the shaft an agent walks *toward* is always
   the far one from the shaft it arrived by, and that is the whole level: cross
   the floor, ring, ride a storey, cross the next one the other way.
+- **Some towers have a fire escape instead of one of the lifts.** Rolled from
+  its own stream keyed on the level (`ESCAPE_CHANCE` in `cutHoistways`), so
+  adding it left every other level in the catalogue byte-identical and changed
+  only the towers that got one — check that with a terrain hash before and
+  after if you touch the roll. It is a `w.lifts` entry with `stairs: true`, and
+  that is the point of it: the doors, `goalDist`, `liftColumn`'s ban on terrain
+  edits and the rule that stands the climbers down all work on it unchanged,
+  because it is the same kind of thing — a way between storeys at the end of a
+  floor. Only the last step differs, and it differs by there being nothing to
+  wait for (`stepStairs`). Never both sides: a building with no lift at all is
+  one the whole colony has to bash its way down, and the clock says no.
+- **Its windows are ROCK, and that is deliberate.** A pane is one cell thick
+  and not steel, which is exactly the wall a basher goes through — that is the
+  whole mechanism, and it is why getting out onto the ironwork costs the
+  toolbar something. A material of its own would have been the exception that
+  ends the strata-and-skins scheme (`simcheck inert`). Coming back in the other
+  way is free: `alightStairs` kicks the pane out of the frame, because charging
+  twice for the same route is a toll rather than a decision, and a broken
+  window is the only readout the board gives of where the colony has been.
+- **A basher that opens a window must be handed to the doors, not left to walk
+  on.** It steps one cell into what it has just opened, and what a window opens
+  onto is a well running past every floor: level 459 lost its whole colony out
+  of a hole it had just made. `stepBash` calls `useLift` for that cell now.
+- **The switchback is written in both `Sim.js` and `Draw.js`** — `stairX` and
+  `escapeRunX`, under different names because the two files share one global
+  scope in a browser and `npm run check` refuses a name declared in two of
+  them. Change one and change the other. It is deliberately tiny for that
+  reason: a landing share and the parity of the storey index is all of it.
 - **A car is called; it does not patrol.** `liftDispatch` parks it at the floor
   it last served and nothing moves it again until `liftWanted` says somebody is
   at a door — the two cars used to sweep the full height of the board all level,
@@ -391,8 +419,11 @@ and the spread in agents home — the figure that actually measures the colony �
 is unchanged at 4. Per biome nothing is an outlier — 83–100% cleared and 72–87%
 home across all nine, and on a 24-level sample a two-level swing is a nine-point
 one, so widen the sweep before believing a biome has moved. The Skyscraper sits
-at 91/81, mid-pack on both, and it
-took work to get there: measured on 24 tower levels, the seal wall in front of
+at 91/83, mid-pack on both, and it
+Measured over the same 42 towers both ways, a fire escape costs about
+three points of cleared and two of home against lifts on both sides — the
+bashers it takes to get out, against the queue it saves — which is the width a
+variant should be. It took work to get there: measured on 24 tower levels, the seal wall in front of
 the exit was worth eleven points of home on its own (it is skipped there now —
 see the note in `generate`), and letting a stuck agent on the exit floor take a
 round trip in the car was worth another ten on the levels played upward.

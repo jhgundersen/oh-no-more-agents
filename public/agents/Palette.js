@@ -163,6 +163,16 @@ function build(theme, level) {
 
     rig: css(mix(bg, fg, 0.52)),
     rigDark: css(mix(bg, fg, 0.30)),
+
+    // A fire escape's windows. The pane is the same indigo the Skyscraper is
+    // tinted with, kept flat and a shade brighter than the wall it sits in so
+    // it reads as glazed rather than as another material; the highlight is the
+    // one thing that says it is glass at all at this size. Shards are what is
+    // left in a frame somebody has been through, and they are the board's only
+    // record of the colony's route out onto the ironwork.
+    glassPane: css(mix(bg, GLASS, 0.62)),
+    glassLit: css(mix(mix(bg, GLASS, 0.85), fg, 0.30)),
+    glassShard: css(mix(mix(bg, GLASS, 0.50), fg, 0.20)),
     warn: css(mix(bg, theme.urgent, 0.55)),
     fire: css(theme.urgent),
     fireHot: css(lighter(theme.urgent, 1.45)),

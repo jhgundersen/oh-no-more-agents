@@ -388,6 +388,36 @@ var LIFT_PASS = 4        // and how long it hesitates at one nobody rang for
 var LIFT_CAP = 5         // agents in a car; the sixth waits for the next one
 var LIFT_PATIENCE = 480  // ticks at a door before an agent gives up on the lift
 var LIFT_RIDE_MAX = 900  // and the longest anybody stays aboard, whatever happens
+var STAIR_SPEED = 0.30   // rows per tick under your own legs; a storey is ~1.3s
+var ESCAPE_CHANCE = 0.45 // towers where one of the two shafts is a fire escape
+
+// The fire escape's switchback, as a function of height. Both files need it —
+// Sim to walk an agent down it, Draw to paint it — and they cannot call each
+// other, so the rule is written twice and has to be changed twice. It is kept
+// deliberately small for that reason: land at one end of the well, cross it as
+// you descend, land at the other, and alternate per storey, which is the whole
+// of what makes a run of them read as a fire escape rather than a slide.
+var STAIR_LAND = 0.16    // share of a storey spent on the landing at each end
+
+function stairSpan(L, y) {
+  for (var i = 0; i < L.stops.length - 1; i++) {
+    if (y >= L.stops[i] - 1 && y <= L.stops[i + 1]) return i
+  }
+  return y < L.stops[0] ? 0 : L.stops.length - 2
+}
+
+function stairX(L, y) {
+  var i = stairSpan(L, y)
+  var top = L.stops[i], span = L.stops[i + 1] - top
+  var p = span > 0 ? (y - top) / span : 0
+  var a = L.x0 + 0.9, b = L.x1 - 0.4
+  var from = (i % 2 === 0) ? a : b
+  var to = (i % 2 === 0) ? b : a
+  var t = (p - STAIR_LAND) / (1 - 2 * STAIR_LAND)
+  if (t < 0) t = 0
+  if (t > 1) t = 1
+  return from + (to - from) * t
+}
 
 // Is this column inside a hoistway (interior or wall)? Terrain edits — events,
 // bottom pits, obstacles — have to keep out of both: a shaft with its wall
@@ -425,7 +455,7 @@ function liftDocked(L) {
 // a doorway in that wall at every storey. The void is cleared with setCell
 // rather than clearCell on purpose — the wall is STEEL and so is the map edge,
 // and a shaft that stops where the bedrock starts is not a shaft.
-function cutHoistway(w, corridors, x0, wallX, out) {
+function cutHoistway(w, corridors, x0, wallX, out, stairs) {
   var x, y
   var topY = corridors[0].floorY
   var botY = corridors[corridors.length - 1].floorY
@@ -443,9 +473,20 @@ function cutHoistway(w, corridors, x0, wallX, out) {
   // The doors. Only the inner face gets one; the outer is the outside of the
   // building. The floor row itself stays steel, which is the sill an agent
   // stands on while it waits.
+  //
+  // A fire escape gets windows instead. ROCK, not a material of its own: this
+  // file's whole strata and biome-skin scheme rests on dirt, rock and ore
+  // being one thing to every rule, and a pane that behaved differently would
+  // be the exception that ends that (see `simcheck inert`). What makes it a
+  // window is that it is one cell thick and not steel, which is precisely the
+  // wall a basher goes through — so getting out onto the escape costs the
+  // toolbar something, and the way home is visible through it the whole time.
+  var panes = []
   for (var ci = 0; ci < corridors.length; ci++) {
     var c = corridors[ci]
-    for (y = c.floorY - CORR_H; y < c.floorY; y++) setCell(w, wallX, y, EMPTY)
+    for (y = c.floorY - CORR_H; y < c.floorY; y++)
+      setCell(w, wallX, y, stairs ? ROCK : EMPTY)
+    if (stairs) panes.push({ y0: c.floorY - CORR_H, y1: c.floorY - 1 })
   }
 
   var stops = []
@@ -469,6 +510,14 @@ function cutHoistway(w, corridors, x0, wallX, out) {
     parked: false,                  // standing at L.at with nowhere to be
     riders: 0,
     doorFor: 0,
+    // A fire escape is a shaft with no car in it. Everything that routes an
+    // agent to a hoistway — the doors, goalDist, the ban on terrain edits, the
+    // rule that stands the climbers down — works on it unchanged, because it
+    // is the same kind of thing: a way between storeys at the end of a floor.
+    // Only the last step differs, and it differs by there being nothing to
+    // wait for; see stepStairs.
+    stairs: !!stairs,
+    panes: panes,
     ix: w.lifts.length
   }
   w.lifts.push(lift)
@@ -476,8 +525,15 @@ function cutHoistway(w, corridors, x0, wallX, out) {
 }
 
 function cutHoistways(w, corridors) {
-  cutHoistway(w, corridors, 4, TOWER_X0 - 1, 1)
-  cutHoistway(w, corridors, TOWER_X1 + 2, TOWER_X1 + 1, -1)
+  // Which side, if either, is a fire escape. Its own stream, keyed on the
+  // level: adding this leaves every existing tower's terrain, hazards,
+  // specials and mission exactly where they were, and only the side it
+  // replaces changes. Never both — a building with no lift at all is a
+  // building the whole colony has to bash its way down, and the clock says no.
+  var escRng = makeRng(w.level * 15485863 + 6151)
+  var side = escRng() < ESCAPE_CHANCE ? (escRng() < 0.5 ? 0 : 1) : -1
+  cutHoistway(w, corridors, 4, TOWER_X0 - 1, 1, side === 0)
+  cutHoistway(w, corridors, TOWER_X1 + 2, TOWER_X1 + 1, -1, side === 1)
 }
 
 // Draw.js cannot import Sim.js; shared constants travel on the world instead.
@@ -4370,6 +4426,23 @@ function stepBash(w, ag) {
       if (clearCell(w, ax + ag.dir * dx, footY + dy)) removed++
 
   addDust(w, ax, footY - 2, 3)
+
+  // Through the pane and out onto the landing. A basher walks one cell into
+  // what it has just opened, and what a fire escape's window opens onto is a
+  // well that runs past every floor of the building — so the agent that made
+  // the hole went straight down it, and the queue that followed went after it.
+  // Hand over to the doors instead, which is exactly what a walker arriving at
+  // the same cell does; there is no second rule here, only the same one
+  // reached from the other state.
+  if (w.lifts.length) {
+    var door = liftDoorAt(w, ax, footY)
+    if (door) {
+      ag.state = "walk"
+      useLift(w, ag, door, footY)
+      return
+    }
+  }
+
   ag.x += ag.dir
   ag.anim++
 
@@ -4502,9 +4575,15 @@ function boardLift(w, ag, L, floorY) {
   ag.liftIx = L.ix
   ag.liftFrom = floorY
   ag.rideTicks = 0
-  ag.x = L.mid + (slot - (LIFT_CAP - 1) / 2) * 0.85
-  ag.y = L.car - 1
-  ag.dir = -L.out
+  if (L.stairs) {
+    ag.y = floorY - 1
+    ag.x = stairX(L, ag.y)
+    ag.dir = stairX(L, ag.y + 1) > ag.x ? 1 : -1
+  } else {
+    ag.x = L.mid + (slot - (LIFT_CAP - 1) / 2) * 0.85
+    ag.y = L.car - 1
+    ag.dir = -L.out
+  }
   ag.floater = false
   ag.fall = 0
   ag.still = 0
@@ -4547,6 +4626,10 @@ function useLift(w, ag, L, footY) {
   ag.liftIx = L.ix
   ag.liftFloor = floorY
   ag.liftWant = want
+  // Stairs are always at your floor. No call, no queue, and no sixth person
+  // left on the landing — which is most of what you are buying with the
+  // basher it took to get out here.
+  if (L.stairs) { boardLift(w, ag, L, floorY); return }
   if (liftDocked(L) === floorY && L.riders < LIFT_CAP) { boardLift(w, ag, L, floorY); return }
 
   // Queue, facing the doors. Backing off is skipped where the floor behind is
@@ -4583,6 +4666,7 @@ function stepLiftWait(w, ag) {
 function stepLiftRide(w, ag) {
   var L = w.lifts[ag.liftIx]
   if (!L) { beginUncontrolledFall(w, ag); return }
+  if (L.stairs) { stepStairs(w, ag, L); return }
   ag.rideTicks++
   ag.y = L.car - 1
   ag.anim++
@@ -4609,12 +4693,57 @@ function stepLiftRide(w, ag) {
   w.lastEvent = "arrived"
 }
 
+// A storey of fire escape, under the agent's own legs. It is the ride state
+// rather than the walk state for the same reason a car is: an agent on a
+// switchback outside the building is not on terrain, and every stuck detector
+// in this file is written around walking.
+function stepStairs(w, ag, L) {
+  ag.rideTicks++
+  ag.anim++
+  var target = L.stops[liftStopIndex(L, ag.liftFrom) + ag.liftWant]
+  if (target === undefined) { alightStairs(w, ag, L, ag.liftFrom); return }
+
+  ag.y += ag.liftWant * STAIR_SPEED
+  var nx = stairX(L, ag.y)
+  ag.dir = nx > ag.x ? 1 : (nx < ag.x ? -1 : ag.dir)
+  ag.x = nx
+
+  if ((ag.y - (target - 1)) * ag.liftWant >= 0 || ag.rideTicks > LIFT_RIDE_MAX)
+    alightStairs(w, ag, L, target)
+}
+
+function alightStairs(w, ag, L, floorY) {
+  // In through the window, which it kicks out of the frame on the way. Coming
+  // the other way costs a basher because a pane is a wall from the inside;
+  // from the landing it is a thing to step through, and charging for it twice
+  // would only be a toll on the same route.
+  for (var i = 0; i < L.panes.length; i++) {
+    var pane = L.panes[i]
+    if (floorY - 1 < pane.y0 || floorY - 1 > pane.y1) continue
+    for (var y = pane.y0; y <= pane.y1; y++) clearCell(w, L.wallX, y)
+  }
+  ag.state = "walk"
+  ag.x = L.wallX + L.out + 0.5
+  ag.y = floorY - 1
+  ag.dir = L.out
+  ag.turns = 0
+  ag.still = 0
+  ag.cell = ""
+  ag.fall = 0
+  ag.floater = false
+  ag.idle = 0
+  ag.passes = {}
+  ag.bucket = ""
+  ag.markD = Infinity
+  w.lastEvent = "fire escape"
+}
+
 // The car's roof is the one piece of solid ground on this board that terrain
 // does not know about, so a fall has to ask for it separately.
 function liftDeckUnder(w, cx, y0, ny) {
   for (var i = 0; i < w.lifts.length; i++) {
     var L = w.lifts[i]
-    if (cx < L.x0 || cx > L.x1) continue
+    if (L.stairs || cx < L.x0 || cx > L.x1) continue
     var deck = L.car - 1
     if (y0 <= deck && ny >= deck && L.riders < LIFT_CAP) return L
   }
@@ -4624,6 +4753,7 @@ function liftDeckUnder(w, cx, y0, ny) {
 function stepLifts(w) {
   for (var i = 0; i < w.lifts.length; i++) {
     var L = w.lifts[i]
+    if (L.stairs) continue          // nothing to move, and nobody waiting
     L.riders = 0
     for (var a = 0; a < w.agents.length; a++) {
       var ag = w.agents[a]

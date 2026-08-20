@@ -617,6 +617,138 @@ function drawMachines(ctx, w, pal) {
 // the level without saying so is indistinguishable from the sim misbehaving,
 // so the telegraph is not decoration: it is the difference between "the floor
 // went" and "the floor went, and it said Legacy Collapse first".
+// The other thing at the end of a floor. A fire escape is bolted to the
+// outside of the building rather than cut through it, so almost none of the
+// hoistway's vocabulary carries over: no rope, no rails, no car. What it has
+// instead is a switchback — land, cross the well as you descend, land again,
+// and turn — which is the shape the eye reads as New York before it reads any
+// of the detail, and the reason stairX alternates its direction per storey.
+//
+// The switchback rule is Sim.js's, written out a second time here because the
+// two files cannot call each other — and under a different name, because in a
+// browser these files land in one global scope and `npm run check` refuses a
+// name declared in two of them. Change one and change the other; the whole of
+// it is the landing share and the parity of the storey index.
+var ESC_LAND = 0.16
+
+function escapeRunX(L, i, end) {
+  var a = L.x0 + 0.9, b = L.x1 - 0.4
+  var from = (i % 2 === 0) ? a : b
+  return end ? (from === a ? b : a) : from
+}
+
+function drawFireEscape(ctx, w, pal, L, x0, wid, top, bot) {
+  var C = w.k.CELL
+  var iron = pal.rig
+  var dark = pal.rigDark
+
+  // The well is open air, not a shaft: this is the outside of the building and
+  // it should read as sky rather than as the dark the hoistway gets.
+  ctx.fillStyle = pal.skyLow
+  ctx.fillRect(x0, top, wid, bot - top)
+
+  // The panes, painted over whatever the terrain pass made of them. A window
+  // still in its frame is the flat indigo this biome is tinted with; one that
+  // has been bashed out is an empty opening with the frame left behind, which
+  // is the only readout the board gives of where the colony has been through.
+  for (var pi = 0; pi < L.panes.length; pi++) {
+    var pane = L.panes[pi]
+    var px = L.wallX * C
+    var py = pane.y0 * C
+    var ph = (pane.y1 - pane.y0 + 1) * C
+    var intact = false
+    for (var cy = pane.y0; cy <= pane.y1; cy++)
+      if (w.terrain[cy * w.k.COLS + L.wallX] !== w.k.EMPTY) intact = true
+    if (intact) {
+      ctx.fillStyle = pal.glassPane
+      ctx.fillRect(px, py, C, ph)
+      ctx.fillStyle = pal.glassLit
+      ctx.fillRect(px + 1, py + 2, 2, ph - 6)               // the light down one edge
+      ctx.fillRect(px + 1, py + 2, C - 3, 2)
+      ctx.fillStyle = dark
+      ctx.fillRect(px, py + Math.round(ph / 2), C, 1)       // the meeting rail
+    } else {
+      ctx.fillStyle = pal.glassShard
+      for (var sh = 0; sh < 5; sh++)
+        ctx.fillRect(px + (sh % 2 ? 1 : C - 3), py + 2 + sh * 3, 2, 2)
+    }
+    ctx.fillStyle = iron
+    ctx.fillRect(px - 1, py - 2, C + 2, 2)                  // lintel
+    ctx.fillRect(px - 1, py + ph, C + 2, 2)                 // sill
+  }
+
+  // A landing at every storey, and the flight that leaves it. Both are drawn
+  // as open grating — a line for the deck, a rail above it, and balusters
+  // between — because a fire escape you cannot see the street through is a
+  // balcony.
+  for (var si = 0; si < L.stops.length; si++) {
+    var fy = L.stops[si] * C
+    ctx.fillStyle = iron
+    ctx.fillRect(x0, fy - 2, wid, 2)                        // the deck
+    ctx.fillStyle = dark
+    for (var gx = x0 + 1; gx < x0 + wid; gx += 3) ctx.fillRect(gx, fy - 2, 1, 2)
+
+    // Waist high, and open. A rail drawn head-high with a baluster every
+    // fourth pixel is a cage, and a stack of cages down the side of a building
+    // is the one thing this is not supposed to look like.
+    var rail = fy - 2 - 2 * C
+    ctx.fillStyle = iron
+    ctx.fillRect(x0, rail, wid, 2)                          // top rail
+    ctx.fillStyle = dark
+    for (var bx = x0 + 3; bx < x0 + wid - 2; bx += 7)
+      ctx.fillRect(bx, rail + 2, 1, 2 * C - 2)              // balusters
+    ctx.fillStyle = iron
+    ctx.fillRect(x0, rail, 2, 2 * C)                        // the outer post
+    ctx.fillRect(x0 + wid - 2, rail, 2, 2 * C)
+
+    // Brackets back to the wall. Nothing here is holding itself up.
+    ctx.fillStyle = dark
+    var bWall = L.out > 0 ? x0 + wid : x0
+    for (var b = 1; b <= 2; b++) {
+      ctx.fillRect(bWall - L.out * b * 5 - (L.out > 0 ? 2 : 0), fy, 2, 2 + b * 2)
+    }
+
+    if (si >= L.stops.length - 1) continue
+
+    // The flight. Drawn as treads on the diagonal the walker is actually
+    // following, so an agent on it stands on its steps rather than beside
+    // them, and with a handrail on the same slope above.
+    var span = L.stops[si + 1] - L.stops[si]
+    var yA = L.stops[si] + span * ESC_LAND
+    var yB = L.stops[si + 1] - span * ESC_LAND
+    var xA = escapeRunX(L, si, false), xB = escapeRunX(L, si, true)
+    var steps = Math.max(4, Math.round(yB - yA))
+    for (var st = 0; st <= steps; st++) {
+      var t = st / steps
+      var sx = (xA + (xB - xA) * t) * C
+      var sy = (yA + (yB - yA) * t) * C
+      ctx.fillStyle = iron
+      ctx.fillRect(Math.round(sx) - 3, Math.round(sy) - 1, 7, 2)      // tread
+      ctx.fillStyle = dark
+      ctx.fillRect(Math.round(sx) - 3, Math.round(sy) + 1, 7, 1)      // its shadow
+      // Handrail on the same slope, with a stanchion every third tread. Every
+      // other one filled the flight in solid and it stopped reading as stairs.
+      ctx.fillStyle = iron
+      ctx.fillRect(Math.round(sx) - 1, Math.round(sy) - 2 * C, 2, 2)
+      if (st % 3 === 0) {
+        ctx.fillStyle = dark
+        ctx.fillRect(Math.round(sx), Math.round(sy) - 2 * C + 2, 1, 2 * C - 3)
+      }
+    }
+  }
+
+  // The drop ladder at the bottom, counterweighted and swung up out of reach
+  // of the street, which is the one piece of a fire escape everybody can draw
+  // from memory and the one piece nobody in this game will ever use.
+  var lx = escapeRunX(L, L.stops.length - 1, false) * C
+  var ly = L.stops[L.stops.length - 1] * C
+  ctx.fillStyle = dark
+  ctx.fillRect(Math.round(lx) - 3, ly, 2, 5 * C)
+  ctx.fillRect(Math.round(lx) + 3, ly, 2, 5 * C)
+  ctx.fillStyle = iron
+  for (var rg = 0; rg < 5; rg++) ctx.fillRect(Math.round(lx) - 3, ly + 4 + rg * 5, 8, 1)
+}
+
 // The Skyscraper's two hoistways and the cars in them. On the per-tick layer
 // for the same reason the Factory's cogs are: a lift painted with the terrain
 // only repaints when the terrain changes, which is a shaft with a lift stuck
@@ -634,6 +766,8 @@ function drawLifts(ctx, w, pal) {
     var wid = (L.x1 - L.x0 + 1) * C
     var top = L.headY * C
     var bot = L.bottom * C
+
+    if (L.stairs) { drawFireEscape(ctx, w, pal, L, x0, wid, top, bot); continue }
 
     // The void. Darker than any corridor on the board, because a hoistway is
     // the one place in the building with no floor under it for fifty rows.
