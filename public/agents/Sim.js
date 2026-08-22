@@ -3502,11 +3502,12 @@ function startBuild(w, ag, flat) {
   ag.buildWait = 0
   ag.timer = 0
   ag.buildFlat = !!flat
-  // Is this bridge answering a hole, or is it a staircase up a wall? The
-  // difference is underfoot at the moment it starts — a lip has nothing beside
-  // it — and it is what tells stepBuild when the job is done. A staircase is
-  // never finished by finding ground under it; a bridge always is.
-  ag.buildSpan = !solid(w, Math.floor(ag.x) + ag.dir, Math.floor(ag.y) + 1)
+  // Is this bridge answering a hole, or is it a staircase up a wall? Most
+  // bridges start at the lip; the director may start a flat crossing a couple
+  // of cells early, so it waits until it has actually passed over open ground
+  // before treating the next floor as the far side.
+  ag.buildGap = !solid(w, Math.floor(ag.x) + ag.dir, Math.floor(ag.y) + 1)
+  ag.buildSpan = !!flat || ag.buildGap
   ag.buildY = Math.floor(ag.y)
   ag.built++
   w.buildSites.push({ x: ag.x, y: ag.y, tick: w.ticks })
@@ -4342,7 +4343,9 @@ function stepBuild(w, ag) {
   // staircase rises as it goes, the second half of one was a raised causeway
   // laid over ground the colony could have walked along — 47% of every brick
   // spent on bridges, and a ramp for the queue behind to climb for nothing.
-  if (ag.buildSpan && ag.bricks < 12 && !liftColumn(w, Math.floor(nx))
+  if (ag.buildSpan && !ag.buildGap
+      && !solid(w, Math.floor(nx), Math.floor(ny) + 1)) ag.buildGap = true
+  if (ag.buildSpan && ag.buildGap && ag.bricks < 12 && !liftColumn(w, Math.floor(nx))
       && bridgeLanded(w, ag, nx, ny)) {
     ag.state = "walk"
     ag.turns = 0
@@ -6629,7 +6632,16 @@ function runDirector(w) {
     best.timer = 0
   } else if (startDescent(w, best, grant, true, false, false, true)) {
   } else if (best.state === "walk" && canStartBuild(w, best) && grant(w, "builder")) {
-    startBuild(w, best)
+    var buildDir = buildDirection(w, best)
+    var crossing = false
+    for (var step = 1; step <= BUILD_REACH; step++) {
+      var pit = pitAt(w, Math.floor(best.x) + buildDir * step)
+      if (!pit) continue
+      var farLip = buildDir > 0 ? pit.x1 + 1 : pit.x0 - 1
+      crossing = Math.abs(farLip - best.x) <= BUILD_REACH
+      break
+    }
+    startBuild(w, best, crossing)
   } else if (w.bombsUsed < 1 && w.rescues > 6 && boxedIn(w, best) && grant(w, "bomber")) {
     w.bombsUsed++
     best.state = "bomb"
@@ -6653,7 +6665,11 @@ function countPass(w, ag) {
   if (key === ag.bucket) return
   ag.bucket = key
   ag.passes[key] = (ag.passes[key] || 0) + 1
-  if (ag.passes[key] !== LOOP_PASSES) return
+  if (ag.passes[key] < LOOP_PASSES) return
+  // A short pocket can complete five laps long before patience gives recovery
+  // a turn. Keep recognising the loop, but do not turn it into a bomb until
+  // forceEscape has had the same chance it gets on a longer route.
+  if (ag.idle <= PATIENCE - traitOf(ag).digBias) return
   condemn(w, ag)
 }
 
