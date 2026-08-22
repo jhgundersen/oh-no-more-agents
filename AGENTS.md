@@ -32,7 +32,10 @@ Production is `https://oh-no-more-agents.com`.
 - Script URLs in `index.html` carry `?v=<content hash>` so the JS can be cached
   forever. After editing anything under `public/agents/`, run `npm run stamp` and
   commit the re-stamped page with the code; `npm run check` fails on a stale
-  stamp. The soundtrack has no stamp and is cached just as hard, so a replacement
+  stamp. The same command stamps the page's own hash into `<meta name="build">`
+  and the generated `src/version.js`, which is how an open tab notices a deploy
+  (see "Staying current" below), so an edit to `index.html` alone needs a stamp
+  too. The soundtrack has no stamp and is cached just as hard, so a replacement
   track gets a new number rather than overwriting an existing file.
 - Test gameplay changes on the reported level and on nearby/random levels. Watch
   for trapped agents, repeated turning, unreachable exits, overlaps, and loops.
@@ -139,6 +142,25 @@ gathered above `cutHoistway`.
   allowance moves into basher, climber and builder at generation. Do not simply
   *add* skills — measured, more tools made the tower worse, because the extra
   builds cost more clock than the obstacles did.
+
+## Staying current
+
+A tab is left open for days, so a deploy has to reach it without anyone pressing
+reload.
+
+- **The version is the page's own content hash.** `stamp-assets.js` hashes
+  `index.html` with the build slot blanked — a hash cannot contain itself — and
+  writes the result to both `<meta name="build">` and `src/version.js`. Script
+  stamps are inside that hash, so it moves for a code change and for a
+  markup-only change alike.
+- **Nothing polls for it.** `readStats` puts `build` on every counter reply, and
+  `web.js` compares it with its own meta tag, so a deploy is noticed on a request
+  the page was already making — about one per batch of levels. The 20-minute
+  `STATS_IDLE` poll exists for a paused game, which makes no requests at all.
+- **The reload happens between levels**, right after `advance(1)` has written the
+  next level to localStorage, so it costs the player nothing.
+- **A build gets one attempt** (`BUILD_KEY`). If the reload comes back the same
+  stale page — a proxy, an over-eager cache — trying again would be a loop.
 
 ## Validation
 

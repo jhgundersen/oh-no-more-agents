@@ -25,9 +25,14 @@ plus a tiny global counter showing how many agents everyone has rescued.
 {
   "totalSaved": 12345,
   "reports": 812,
-  "updatedAt": "2026-08-18 12:34:56"
+  "updatedAt": "2026-08-18 12:34:56",
+  "build": "14f09e02"
 }
 ```
+
+`build` is the content hash of the page as currently deployed. Both endpoints
+return it, and an open tab reloads itself between levels when it stops matching
+the build it was served.
 
 ### `POST /api/saves`
 

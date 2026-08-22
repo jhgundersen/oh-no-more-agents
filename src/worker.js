@@ -1,4 +1,5 @@
 import { MAX_REPORTS_PER_MINUTE, MAX_SAVED_PER_REPORT, clientHash, json, parseSaveReport } from "./counter.js"
+import { BUILD } from "./version.js"
 
 async function readStats(env) {
   const row = await env.DB.prepare(
@@ -7,7 +8,10 @@ async function readStats(env) {
   return {
     totalSaved: Number(row?.total_saved || 0),
     reports: Number(row?.reports || 0),
-    updatedAt: row?.updated_at || null
+    updatedAt: row?.updated_at || null,
+    // The build a fresh load would get. Every reply carries it, so a page left
+    // open learns about a deploy on a request it was making anyway.
+    build: BUILD
   }
 }
 

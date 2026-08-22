@@ -38,6 +38,8 @@
   var pendingBatch = null
   var flushedThisSession = false
   var reporting = false
+  var updateBuild = null
+  var lastStatsAt = 0
   var palette = null
 
   var el = {}
@@ -59,6 +61,14 @@
   // server's cap: a full batch of the biggest colony (5 x 18).
   var BATCH_LEVELS = 5
   var MAX_REPORT_SAVED = 90
+
+  // Staying current. A tab left open all week would otherwise play last week's
+  // build forever. Every counter reply carries the build a fresh load would
+  // get, so a deploy is noticed on a request the page was making anyway —
+  // roughly one per batch of levels. The idle poll is for a paused game, where
+  // nothing else asks; it refreshes the global total on screen at the same time.
+  var BUILD_KEY = "oh-no-more-agents-update"
+  var STATS_IDLE = 20 * 60 * 1000
 
   function loadState() {
     try {
@@ -153,7 +163,9 @@
       if (!response.ok) throw new Error("counter unavailable")
       return response.json()
     }).then(function (stats) {
+      lastStatsAt = Date.now()
       globalSaved = stats.totalSaved
+      noteBuild(stats.build)
       pendingReports.shift()
       savePendingReports()
       reporting = false
@@ -167,14 +179,47 @@
   }
 
   function loadGlobalStats() {
+    lastStatsAt = Date.now()
     fetch("/api/stats").then(function (response) {
       if (!response.ok) throw new Error("counter unavailable")
       return response.json()
     }).then(function (stats) {
       globalSaved = stats.totalSaved
+      noteBuild(stats.build)
       render()
       flushGlobalSaves()
     }).catch(function () { render() })
+  }
+
+  // The build this page was served as. Deployed pages are never cached, so the
+  // two agreeing means the tab is current.
+  function pageBuild() {
+    var meta = document.querySelector('meta[name="build"]')
+    return (meta && meta.content) || ""
+  }
+
+  function noteBuild(build) {
+    var mine = pageBuild()
+    if (!build || !mine || build === mine || updateBuild) return
+    // Reloading and coming back the same build would loop, so a build gets one
+    // attempt. Something between here and the Worker is serving an old page,
+    // and hammering it will not change that.
+    var last = null
+    try { last = JSON.parse(localStorage.getItem(BUILD_KEY) || "null") } catch (e) {}
+    if (last && last.build === build) return
+    updateBuild = build
+  }
+
+  // Between levels only: mid-level there is nothing to come back to, and the
+  // level about to start is already in localStorage, so the reload is invisible
+  // apart from the flicker.
+  function applyUpdate() {
+    if (!updateBuild) return
+    try {
+      localStorage.setItem(BUILD_KEY, JSON.stringify({ build: updateBuild, at: Date.now() }))
+    } catch (e) {}
+    updateBuild = null
+    location.reload()
   }
 
   function rebuildPalette() {
@@ -316,7 +361,7 @@
 
     // Every generated colony gets one story. Success or failure, move on after
     // the result rather than replaying the same ground with a replacement cast.
-    if (world.done && world.doneTicks > DONE_HOLD) advance(1)
+    if (world.done && world.doneTicks > DONE_HOLD) { advance(1); applyUpdate() }
   }
 
   // -------------------------------------------------------------------------
@@ -591,6 +636,12 @@
       else restartClock()
     })
     window.addEventListener("online", function () { loadGlobalStats(); flushGlobalSaves() })
+
+    // A paused or hidden game makes no requests of its own. Hidden tabs throttle
+    // this to about a minute, which is far finer than it needs to be.
+    setInterval(function () {
+      if (!document.hidden && Date.now() - lastStatsAt > STATS_IDLE) loadGlobalStats()
+    }, 60000)
 
     // Leaving mid-batch would otherwise strand those rescues until the player
     // comes back. keepalive outlives the page; the report stays queued and is
