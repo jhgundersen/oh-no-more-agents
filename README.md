@@ -39,6 +39,9 @@ plus a tiny global counter showing how many agents everyone has rescued.
 ```
 
 The response is the updated stats object. Reusing an `eventId` is idempotent.
+`saved` is the rescues from a batch of up to five finished levels (1–90), not
+from a single one — the page pools them and reports every fifth level, on the
+first level finished after a load, and when the page is closed.
 
 ## Local development
 

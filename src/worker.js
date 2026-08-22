@@ -1,4 +1,4 @@
-import { MAX_REPORTS_PER_MINUTE, clientHash, json, parseSaveReport } from "./counter.js"
+import { MAX_REPORTS_PER_MINUTE, MAX_SAVED_PER_REPORT, clientHash, json, parseSaveReport } from "./counter.js"
 
 async function readStats(env) {
   const row = await env.DB.prepare(
@@ -32,7 +32,7 @@ async function recordSaves(request, env) {
     return json({ error: "invalid JSON" }, 400)
   }
   const report = parseSaveReport(body)
-  if (!report) return json({ error: "expected an eventId and 1–30 saved agents" }, 400)
+  if (!report) return json({ error: `expected an eventId and 1–${MAX_SAVED_PER_REPORT} saved agents` }, 400)
   if (!(await enforceRateLimit(request, env))) {
     return json({ error: "too many rescue reports; try again shortly" }, 429, { "retry-after": "60" })
   }

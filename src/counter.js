@@ -1,4 +1,6 @@
-export const MAX_SAVED_PER_REPORT = 30
+// A report is a batch of up to five finished levels, and the biggest colony
+// is eighteen. Clients send one of these per batch rather than per level.
+export const MAX_SAVED_PER_REPORT = 90
 export const MAX_REPORTS_PER_MINUTE = 8
 
 export function parseSaveReport(value) {

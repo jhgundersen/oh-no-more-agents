@@ -35,6 +35,8 @@
   var levelsCleared = 0
   var globalSaved = null
   var pendingReports = []
+  var pendingBatch = null
+  var flushedThisSession = false
   var reporting = false
   var palette = null
 
@@ -47,6 +49,16 @@
 
   var STORE_KEY = "oh-no-more-agents"
   var REPORT_STORE_KEY = "oh-no-more-agents-pending-reports"
+  var BATCH_STORE_KEY = "oh-no-more-agents-pending-batch"
+
+  // A level lasts under a minute, so reporting each one put a write on the
+  // counter every forty seconds per player. Rescues pool into one report per
+  // BATCH_LEVELS instead. The first completed level after a load always flushes,
+  // so a batch left over from a previous visit goes up while the player is still
+  // here rather than waiting for four more levels. MAX_REPORT_SAVED is the
+  // server's cap: a full batch of the biggest colony (5 x 18).
+  var BATCH_LEVELS = 5
+  var MAX_REPORT_SAVED = 90
 
   function loadState() {
     try {
@@ -85,16 +97,48 @@
     try { localStorage.setItem(REPORT_STORE_KEY, JSON.stringify(pendingReports)) } catch (e) {}
   }
 
+  function loadPendingBatch() {
+    try {
+      var b = JSON.parse(localStorage.getItem(BATCH_STORE_KEY) || "null")
+      if (b && typeof b.eventId === "string" && Number.isInteger(b.saved) && b.saved >= 0 &&
+          b.saved <= MAX_REPORT_SAVED && Number.isInteger(b.levels) && b.levels >= 0)
+        pendingBatch = { eventId: b.eventId, saved: b.saved, levels: b.levels }
+    } catch (e) { pendingBatch = null }
+  }
+
+  function savePendingBatch() {
+    try {
+      if (pendingBatch) localStorage.setItem(BATCH_STORE_KEY, JSON.stringify(pendingBatch))
+      else localStorage.removeItem(BATCH_STORE_KEY)
+    } catch (e) {}
+  }
+
   function reportId() {
     if (window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID()
     return "rescue_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 14)
   }
 
+  // A finished level joins the open batch; a sealed batch becomes a queued
+  // report and travels by the retry machinery below, unchanged.
   function enqueueGlobalSaves(saved) {
-    if (!Number.isInteger(saved) || saved < 1) return
-    pendingReports.push({ eventId: reportId(), saved: Math.min(30, saved) })
-    savePendingReports()
+    if (!Number.isInteger(saved) || saved < 0) return
+    if (pendingBatch && pendingBatch.saved + saved > MAX_REPORT_SAVED) sealBatch()
+    if (!pendingBatch) pendingBatch = { eventId: reportId(), saved: 0, levels: 0 }
+    pendingBatch.saved += saved
+    pendingBatch.levels += 1
+    if (pendingBatch.levels >= BATCH_LEVELS || !flushedThisSession) sealBatch()
+    savePendingBatch()
     flushGlobalSaves()
+  }
+
+  function sealBatch() {
+    flushedThisSession = true
+    if (!pendingBatch) return
+    if (pendingBatch.saved > 0) {
+      pendingReports.push({ eventId: pendingBatch.eventId, saved: pendingBatch.saved })
+      savePendingReports()
+    }
+    pendingBatch = null
   }
 
   function flushGlobalSaves() {
@@ -460,6 +504,7 @@
 
     loadState()
     loadPendingReports()
+    loadPendingBatch()
     buildToolbar()
 
     THEME_ORDER.forEach(function (name) {
@@ -546,6 +591,23 @@
       else restartClock()
     })
     window.addEventListener("online", function () { loadGlobalStats(); flushGlobalSaves() })
+
+    // Leaving mid-batch would otherwise strand those rescues until the player
+    // comes back. keepalive outlives the page; the report stays queued and is
+    // retried next visit, which the event id makes harmless.
+    window.addEventListener("pagehide", function () {
+      sealBatch()
+      savePendingBatch()
+      if (reporting || pendingReports.length === 0) return
+      try {
+        fetch("/api/saves", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(pendingReports[0]),
+          keepalive: true
+        }).catch(function () {})
+      } catch (e) {}
+    })
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot)
