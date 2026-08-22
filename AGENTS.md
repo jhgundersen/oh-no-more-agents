@@ -106,15 +106,20 @@ gathered above `cutHoistway`.
   `stepStairs` differs, by having nothing to wait for. **Never both sides** — a
   building with no lift is one the whole colony has to bash down, and the clock
   says no.
-- **Windows are ROCK, deliberately.** A pane is one cell thick and not steel,
-  which is exactly the wall a basher goes through — so getting out onto the
-  ironwork costs the toolbar something. A material of its own would be the
-  exception that ends the strata-and-skins scheme (`simcheck inert`). Coming back
-  in is free: `alightStairs` kicks the pane out, and a broken window is the only
-  readout of where the colony has been.
-- **A basher that opens a window must be handed to the doors**, not left to walk
-  on — a window opens onto a well running past every floor. `stepBash` calls
-  `useLift` for that cell.
+- **Fire-escape doors are ROCK, deliberately.** A glazed door is one cell thick
+  and not steel, but `hitWall` recognises it and opens it without spending a
+  basher. A material of its own would be the exception that ends the
+  strata-and-skins scheme (`simcheck inert`). `alightStairs` opens the same door
+  from outside, and an open frame is the readout of where the colony has been.
+- **A basher that reaches an open stair door must be handed to the stairs**, not
+  left to walk on — the door opens onto a well running past every floor.
+  `stepBash` calls `useLift` for that cell.
+- **A rider is drawn from `L.car`, never from its own `ag.y`.** Agents step
+  before lifts in a tick, so a rider's `y` is one `LIFT_SPEED` stale the whole
+  way down and the sprite floats above the floor plate. `drawAgent` reads the
+  car instead — which needs `st` assigned above that line, not after it, or the
+  branch is dead and the float comes back. The plate's own top row is the foot
+  line (`carTop + ch2 - 4`), the same join a walker makes with a floor.
 - **The switchback is written in both `Sim.js` and `Draw.js`** — `stairX` and
   `escapeRunX`, named differently because the files share one global scope and
   `npm run check` refuses a duplicate declaration. Change one, change the other;

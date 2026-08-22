@@ -442,6 +442,24 @@ function liftDoorAt(w, x, footY) {
   return null
 }
 
+function stairDoorAt(w, x, footY) {
+  for (var i = 0; i < w.lifts.length; i++) {
+    var L = w.lifts[i]
+    if (!L.stairs || x !== L.wallX) continue
+    for (var s = 0; s < L.stops.length; s++)
+      if (footY === L.stops[s] - 1) return L
+  }
+  return null
+}
+
+function openStairDoor(w, L, footY) {
+  for (var i = 0; i < L.panes.length; i++) {
+    var pane = L.panes[i]
+    if (footY < pane.y0 || footY > pane.y1) continue
+    for (var y = pane.y0; y <= pane.y1; y++) clearCell(w, L.wallX, y)
+  }
+}
+
 function liftStopIndex(L, floorY) {
   for (var i = 0; i < L.stops.length; i++) if (L.stops[i] === floorY) return i
   return -1
@@ -474,13 +492,12 @@ function cutHoistway(w, corridors, x0, wallX, out, stairs) {
   // building. The floor row itself stays steel, which is the sill an agent
   // stands on while it waits.
   //
-  // A fire escape gets windows instead. ROCK, not a material of its own: this
+  // A fire escape gets glazed doors instead. ROCK, not a material of its own: this
   // file's whole strata and biome-skin scheme rests on dirt, rock and ore
   // being one thing to every rule, and a pane that behaved differently would
   // be the exception that ends that (see `simcheck inert`). What makes it a
-  // window is that it is one cell thick and not steel, which is precisely the
-  // wall a basher goes through — so getting out onto the escape costs the
-  // toolbar something, and the way home is visible through it the whole time.
+  // door is that it is one cell thick and not steel. Walkers open it when they
+  // arrive, and the way home is visible through it the whole time.
   var panes = []
   for (var ci = 0; ci < corridors.length; ci++) {
     var c = corridors[ci]
@@ -3197,6 +3214,13 @@ function hitWall(w, ag) {
   var footY = Math.floor(ag.y)
   var ax = Math.floor(ag.x) + ag.dir
 
+  var stairs = stairDoorAt(w, ax, footY)
+  if (stairs) {
+    openStairDoor(w, stairs, footY)
+    useLift(w, ag, stairs, footY)
+    return
+  }
+
   // A ladder is the one thing on the board that every agent treats identically
   // — special or not, cautious or brave, climbers left or none. It is also the
   // only way up a wall taller than MAX_CLIMB, and it costs the toolbar
@@ -4430,8 +4454,8 @@ function stepBash(w, ag) {
 
   addDust(w, ax, footY - 2, 3)
 
-  // Through the pane and out onto the landing. A basher walks one cell into
-  // what it has just opened, and what a fire escape's window opens onto is a
+  // Through the door and out onto the landing. A basher walks one cell into
+  // what it has just opened, and what a fire escape's door opens onto is a
   // well that runs past every floor of the building — so the agent that made
   // the hole went straight down it, and the queue that followed went after it.
   // Hand over to the doors instead, which is exactly what a walker arriving at
@@ -4716,15 +4740,8 @@ function stepStairs(w, ag, L) {
 }
 
 function alightStairs(w, ag, L, floorY) {
-  // In through the window, which it kicks out of the frame on the way. Coming
-  // the other way costs a basher because a pane is a wall from the inside;
-  // from the landing it is a thing to step through, and charging for it twice
-  // would only be a toll on the same route.
-  for (var i = 0; i < L.panes.length; i++) {
-    var pane = L.panes[i]
-    if (floorY - 1 < pane.y0 || floorY - 1 > pane.y1) continue
-    for (var y = pane.y0; y <= pane.y1; y++) clearCell(w, L.wallX, y)
-  }
+  // The same door opens from the landing if this is its first use on a floor.
+  openStairDoor(w, L, floorY - 1)
   ag.state = "walk"
   ag.x = L.wallX + L.out + 0.5
   ag.y = floorY - 1
