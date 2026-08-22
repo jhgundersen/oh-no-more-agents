@@ -61,6 +61,10 @@ var ENEMY_WALK_SPEED = 0.24
 var GUN_AIM = 8           // regular shooter: a short visible tell, about a quarter-second
 var SNIPER_AIM = 36       // the planted sniper keeps its deliberate long sight picture
 var GUN_RELOAD = 80
+var SIDEARM_RELOAD = 600  // ordinary agents get one hurried shot, not a firing stance
+var SIDEARM_RANGE = 20
+var SIDEARM_ENEMY_HIT = 1
+var SIDEARM_HAZARD_HIT = 1
 var ENEMY_JET_SPEED = 0.30
 var ENEMY_JET_SINK = 0.10
 
@@ -3674,6 +3678,7 @@ function spawn(w) {
     shotTo: 0,        // where a camped sniper's last shot went, for the tracer
     shotY: 0,
     shotFor: 0,
+    gunCool: 20 + (w.released % 5) * 11,
     escapeFloors: {},  // a special may cut one rescue shaft per corridor
     escapeTunnels: {}, // and one body-height rescue tunnel per corridor
     rescueCool: 0,     // do not reconsider the same escape every simulation tick
@@ -5021,6 +5026,49 @@ function sightsHazard(w, ag) {
         && lineClear(w, Math.floor(ag.x), fy - 2, Math.round(hm.x), Math.round(hm.y))) return true
   }
   return false
+}
+
+// Everybody carries the little mission sidearm, but only the specialists know
+// what to do with a serious weapon. An ordinary agent fires opportunistically
+// at a visible danger in front of it, then spends long enough fumbling with the
+// reload that the specialist's deliberate, guaranteed shot remains valuable.
+// The roll is derived from stable state instead of consuming either level or
+// colony RNG, so adding the gun does not reshuffle maps or personalities.
+function regularSidearm(w, ag) {
+  if (ag.special || ag.state !== "walk" || ag.gunCool > 0 || ag.shotFor > 0) return
+  var fx = Math.floor(ag.x), fy = Math.floor(ag.y)
+  var target = null, targetKind = "", targetDist = Infinity, tx = 0, ty = 0
+
+  for (var ei = 0; ei < w.enemies.length; ei++) {
+    var en = w.enemies[ei]
+    if (en.gone || Math.abs(en.y - ag.y) > (en.kind === "drone" ? 14 : 3)) continue
+    var ea = (en.x - ag.x) * ag.dir
+    if (ea <= 0 || ea > SIDEARM_RANGE || ea >= targetDist
+        || !lineClear(w, fx, fy - 2, Math.floor(en.x), Math.floor(en.y) - 2)) continue
+    target = en; targetKind = "enemy"; targetDist = ea; tx = en.x; ty = en.y - 2
+  }
+  for (var hi = 0; hi < w.hazards.length; hi++) {
+    var h = w.hazards[hi]
+    if (h.wrecked) continue
+    var hm = hazardMid(h)
+    var ha = (hm.x - ag.x) * ag.dir
+    if (ha <= 0 || ha > SIDEARM_RANGE || ha >= targetDist
+        || Math.abs(hm.y - ag.y) > CORR_H + 2
+        || !lineClear(w, fx, fy - 2, Math.round(hm.x), Math.round(hm.y))) continue
+    target = h; targetKind = "hazard"; targetDist = ha; tx = hm.x; ty = hm.y
+  }
+  if (!target) return
+
+  var roll = (w.ticks * 37 + ag.id * 61 + Math.floor(tx) * 17 + Math.floor(ty) * 29) % 100
+  var hit = roll < (targetKind === "enemy" ? SIDEARM_ENEMY_HIT : SIDEARM_HAZARD_HIT)
+  ag.shotTo = hit ? tx : tx + ag.dir * (2 + roll % 4)
+  ag.shotY = hit ? ty : ty - 4 + roll % 9
+  ag.shotFor = 8
+  ag.gunCool = SIDEARM_RELOAD + (ag.id % 5) * 7
+  if (hit) {
+    if (targetKind === "enemy") killEnemy(w, target)
+    else wreckHazard(w, target)
+  }
 }
 
 // Is the danger in front of it, within range?
@@ -6746,6 +6794,7 @@ function stepAgents(w) {
       }
     }
     if (ag.shotFor > 0) ag.shotFor--
+    if (ag.gunCool > 0) ag.gunCool--
     if (ag.shoveCool > 0) ag.shoveCool--
     if (ag.hazardGrace > 0) ag.hazardGrace--
     if (ag.chilledFor > 0) ag.chilledFor--
@@ -6836,6 +6885,7 @@ function stepAgents(w) {
     if (ag.state === "walk" && ag.idle > STUCK_LIMIT) condemn(w, ag)
 
     var dirBeforeStep = ag.dir
+    regularSidearm(w, ag)
     switch (ag.state) {
       case "walk": stepWalk(w, ag); break
       case "fall": stepFall(w, ag); break

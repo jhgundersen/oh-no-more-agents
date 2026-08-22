@@ -979,7 +979,7 @@ function drawActors(ctx, w, pal, opts) {
     var ag = w.agents[i]
     if (ag.gone) continue
     drawAgent(ctx, w, pal, ag, opts)
-    drawMissionGun(ctx, w, pal, ag)
+    drawAgentSidearm(ctx, w, pal, ag)
   }
   for (var ei = 0; ei < w.enemies.length; ei++) {
     var enemy = w.enemies[ei]
@@ -1054,18 +1054,38 @@ function drawMissionContainer(ctx, kind, x, y, pal) {
   ctx.fillRect(x - 3, y - 14, 1, 12); ctx.fillRect(x + 2, y - 14, 1, 12)
 }
 
-function drawMissionGun(ctx, w, pal, ag) {
+function drawAgentSidearm(ctx, w, pal, ag) {
   var m = w.mission
-  if (!m || m.kind !== "alien" || m.done || ag.id !== m.scoutId) return
+  var hunting = m && m.kind === "alien" && !m.done && ag.id === m.scoutId
+  if (!hunting && (ag.special || ag.shotFor <= 0)) return
   var C = w.k.CELL, dir = ag.dir || 1
-  var x = Math.round(ag.x * C), y = Math.round((ag.y - 2) * C)
+  var ox = Math.round(ag.x * C) - SPRITE_W / 2
+  var oy = Math.round((ag.y + 1) * C) - SPRITE_PX
+  var handX = dir > 0 ? ox + 7 : ox + 1
+  var handY = oy + 9
+  // A compact sidearm held from the forward hand. The old six-pixel barrel
+  // began at cell centre and crossed the face; this one sits below the head,
+  // with the skin pixel making the grip visibly belong to the agent.
+  ctx.fillStyle = pal.skin
+  ctx.fillRect(handX, handY, 2, 2)
   ctx.fillStyle = pal.steelEdge
-  ctx.fillRect(x + dir * 3 - (dir < 0 ? 6 : 0), y - 1, 6, 2)
+  ctx.fillRect(dir > 0 ? handX + 1 : handX - 4, handY - 1, 5, 2)
   ctx.fillStyle = pal.rigDark
-  ctx.fillRect(x + dir * 1 - (dir < 0 ? 2 : 0), y + 1, 2, 3)
-  if (m.shotFor > 0) {
+  ctx.fillRect(dir > 0 ? handX + 1 : handX, handY + 1, 2, 2)
+  var firing = hunting ? m.shotFor > 0 : ag.shotFor > 0
+  if (firing) {
     ctx.fillStyle = pal.fireHot
-    ctx.fillRect(x + dir * 9 - (dir < 0 ? 2 : 0), y - 2, 3, 3)
+    ctx.fillRect(dir > 0 ? handX + 7 : handX - 7, handY - 2, 2, 3)
+    if (!hunting && ag.shotTo) {
+      ctx.globalAlpha = Math.min(0.8, ag.shotFor / 5)
+      var ex = ag.shotTo * C, ey = ag.shotY * C
+      var sx = handX + dir * 7, sy = handY
+      var steps = Math.max(1, Math.round(Math.abs(ex - sx) / 5))
+      for (var q = 1; q <= steps; q += 2)
+        ctx.fillRect(Math.round(sx + (ex - sx) * q / steps),
+                     Math.round(sy + (ey - sy) * q / steps), 1, 1)
+      ctx.globalAlpha = 1
+    }
   }
 }
 
