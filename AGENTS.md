@@ -86,6 +86,19 @@ Production is `https://oh-no-more-agents.com`.
   and a row up. There is no width test: the wide step is tried first every time,
   so a builder steepens exactly as far as the pocket is tight. Gated on
   `NARROW_IDLE`, because steepening at an ordinary wall is a bad trade.
+- **A charge is laid at the wall, not where the agent gave up** (`blastWall`, at
+  the end of `hitWall`). Recovery hands out tools by asking what the agent is
+  standing next to — right for a shovel, wrong for an explosive, and the reason
+  the bashers ran out on the bottom corridor while the miners and bombers sat in
+  the toolbar and the stall detector bombed the colony one at a time in the
+  middle of a corridor. The wall triggers this, not the stall: a mine first
+  because it costs the colony nobody, then the agent itself. Gated on half the
+  usual patience, because by the time `forceEscape` has run dry the bashers are
+  already gone. Three guards keep it honest — `thickness < 1` is the fractional
+  stride rather than an obstacle, wider than `MINE_RADIUS` is a hole that stops
+  inside the wall, and `chargeNear` stops a queue laying the whole toolbar into
+  one obstacle (level 6 spent six miners and sixteen bombers on five walls that
+  needed one charge each, and the colony died of its own rescue).
 - **Animated scenery cannot live in `drawDecor`.** That runs inside
   `drawTerrain`, which only repaints on `terrainVersion`. Use `drawMachines`,
   called from `drawActors` — the per-tick pass every host already calls.
@@ -214,6 +227,26 @@ Failures that have actually happened here. None produced an error at the time.
   so a crossing may only go where the roof over it is intact
   (`solid(w, x, floorY - CORR_H - 1)`) — otherwise an ordinary drop three floors
   up becomes a fall out of the world.
+- **Only generation may open that floor.** Everything else goes through
+  `clearCell`, which refuses at `w.bedFloor` and below — set at the end of
+  `generate()` so `placeBottomPit` and `roughFloor` still cut freely. The strata
+  under the last corridor are fill: no skill has a reason to be there (every
+  descent is gated on a corridor below), but a blast does not ask, and a mine or
+  a bomb at the bottom took out six rows of it. The queue fell into the crater,
+  could not climb out of a pocket with the world's floor under it, and was
+  condemned one at a time — each bomb deepening the hole the last one had
+  dropped somebody into. Level 6 buried whole colonies that way. The floor row
+  itself is sealed too, not just the fill: carve one cell out of it beside a pit
+  and the walking surface drops to the pit's own `floorY`, where the rule that
+  distrusts debris inside a hole (`insidePit` in `stepAgents`) drops everyone
+  standing there — including a builder mid-bridge and the span it had laid.
+  Worth 4 points of cleared and 2.5 of home on a 1600-run sweep.
+- **A basher does not ask what a walker asks.** Everything known about a
+  bottomless drop lives in `edgeAhead`, and `stepBash` reaches its next cell
+  without consulting any of it — so a basher that broke into the side of a
+  crossing pit stepped out of the world and the queue followed it through the
+  hole it had just made. It stops at the lip now. A floater is no answer here:
+  there is no floor to land on.
 - **A fractional `x` reads as solid.** `at()` indexes a `Uint8Array`, and a
   non-integer index returns `undefined`, which is not `EMPTY`. `landingAhead()`
   called with `ag.x` therefore always answered "nothing on the far side" and
@@ -294,11 +327,17 @@ gameplay, intended or not. `hangs` must stay at zero. The game has no pass mark,
 so `cleared` is measured against `CLEAR_SHARE`, a fixed fraction of the colony
 defined in `simcheck.js`.
 
-Baselines, 200 levels: **92% of levels cleared, 79% of agents home, 46s per
-attempt, no hangs.** Per biome nothing is an outlier — 83–100% cleared and 72–87%
-home across all nine, with the Skyscraper mid-pack at 91/83. On a 24-level
+Baselines, 200 levels: **96% of levels cleared, 87% of agents home, 45s per
+attempt, no hangs.** Per biome nothing is an outlier — 91–100% cleared and 83–91%
+home across all nine, with the Skyscraper mid-pack at 96/83. On a 24-level
 sample a two-level swing is nine points, so widen the sweep before believing a
 biome has moved.
+
+`play` pins one colony per level, which is too narrow to see a change in how the
+colony copes. The wider sweep — 200 levels × 8 colonies, played the way the page
+plays them — sits at **88% cleared, 89% home, 44s**, and is the one to run for
+anything touching recovery or the toolbar; `tools/` has no command for it, so
+write the loop against `generate`/`step` and pin the seeds.
 
 - Events are close to free: with `stepEvents` stubbed out over 240 levels,
   overall home was 84% either way. Measure a change with events both on and off

@@ -394,6 +394,40 @@
     })
   }
 
+  // The rescue counter is a community total and it only ever goes up, so the
+  // status line has to read well at sizes nobody has seen yet. Under a thousand
+  // the exact figure is the interesting thing; past that it is the leading
+  // digits, and "8m" is a number you take in at 11px where "8,049,912" is a
+  // number you have to count the commas of. One decimal below ten of a unit and
+  // none above keeps the label three or four characters wide at every
+  // magnitude, so the row stops jittering as the total ticks over. This is
+  // about reading, not about fit: measured at seven widths from 1400px down,
+  // the long form wraps the controls row in exactly the same places as the
+  // short one, because `.counts` is `margin-left: auto` at the end of a flex
+  // row and its own width is not what decides where that row breaks. The exact
+  // number goes on the title, so it is a hover away rather than gone.
+  var UNITS = [
+    { at: 1e12, suffix: "t" },
+    { at: 1e9,  suffix: "b" },
+    { at: 1e6,  suffix: "m" },
+    { at: 1e3,  suffix: "k" }
+  ]
+  function compact(n) {
+    if (!isFinite(n)) return "\u221e"
+    if (n < 0) return "-" + compact(-n)
+    for (var i = 0; i < UNITS.length; i++) {
+      var unit = UNITS[i]
+      if (n < unit.at) continue
+      var scaled = n / unit.at
+      // Truncate rather than round: a counter that has not reached eight
+      // million should not say it has.
+      var shown = scaled < 10 ? (Math.floor(scaled * 10) / 10).toFixed(1) : String(Math.floor(scaled))
+      if (shown.slice(-2) === ".0") shown = shown.slice(0, -2)
+      return shown + unit.suffix
+    }
+    return String(Math.floor(n))
+  }
+
   function render() {
     if (!world) return
     // The bar is the whole colony. There is no second, smaller number to
@@ -440,10 +474,14 @@
     el.speedWord.textContent = SPEED_NAMES[speedIndex]
     el.whoWord.textContent = showLabels ? "on" : "off"
     el.pauseWord.textContent = running ? "pause" : "resume"
-    el.lifetime.textContent = lifetimeSaved.toLocaleString() + " home, " + levelsCleared + " levels"
+    el.lifetime.textContent = compact(lifetimeSaved) + " home, " + levelsCleared + " levels"
+    el.lifetime.title = lifetimeSaved.toLocaleString() + " agents home over " + levelsCleared + " levels"
     el.global.textContent = globalSaved === null
       ? "worldwide: offline"
-      : "worldwide: " + globalSaved.toLocaleString() + " saved"
+      : "worldwide: " + compact(globalSaved) + " saved"
+    el.global.title = globalSaved === null
+      ? "Saved by everyone playing worldwide"
+      : globalSaved.toLocaleString() + " saved by everyone playing worldwide"
   }
 
   var timer = null

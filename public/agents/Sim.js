@@ -253,8 +253,24 @@ function setCell(w, x, y, v) {
 
 // Every skill routes its terrain removal through here, so "steel is forever"
 // is enforced in exactly one place rather than in each of the four diggers.
+//
+// `bedFloor` is the second rule that belongs here rather than in the tools: the
+// last corridor's floor is the bottom of the world, and the strata under it are
+// fill. Nothing has a reason to be down there — every skill that goes down is
+// gated on a corridor below, and the only holes that should reach through that
+// floor are the ones generation cuts. A blast does not ask: a mine or a bomb at
+// the bottom took out six rows of it, the queue fell into the crater, and a
+// pocket with the world's floor under it has no way home. Level 6 buried whole
+// colonies at x63-70 that way, one condemned bomb at a time, each one deepening
+// the hole the last one had dropped somebody into. Generation sets it once it
+// has finished its own cutting, so `placeBottomPit` and `roughFloor` are
+// unaffected. The floor row goes too: carve one cell out of it beside a pit and
+// the walking surface drops to the pit's own lip, where the rule that distrusts
+// debris inside a hole drops everyone standing there — bridge and builder
+// included — straight out of the world.
 function clearCell(w, x, y) {
   if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return false
+  if (w.bedFloor && y >= w.bedFloor) return false
   var i = y * COLS + x
   if (w.terrain[i] === EMPTY) return false
   if (w.terrain[i] === STEEL) return false
@@ -1030,6 +1046,9 @@ function generate(level, attempt, colonySeed) {
     for (var epadY = gc.floorY; epadY < gc.floorY + 2; epadY++)
       for (var epadX = enemyX - 2; epadX <= enemyX + 2; epadX++) setCell(w, epadX, epadY, STEEL)
   }
+
+  // Last, so that everything above this line still cuts freely (see clearCell).
+  w.bedFloor = corridors[corridors.length - 1].floorY
 
   return w
 }
@@ -3279,7 +3298,68 @@ function hitWall(w, ag) {
     return
   }
 
+  // Nothing above bought a way past a wall that is not steel, and this agent
+  // has already spent half its patience getting nowhere. Turning round again is
+  // a walk back down a corridor it has walked before, and it ends with the
+  // stall detector blowing the agent up somewhere that helps nobody. Improvise
+  // instead — see blastWall. Half, rather than the full PATIENCE the rest of
+  // recovery waits for: by the time forceEscape has run dry the level's
+  // bashers are gone, and a charge laid then is laid on the clock.
+  if (ag.idle * 2 > PATIENCE - trait.digBias && blastWall(w, ag, t)) return
+
   turnAround(w, ag)
+}
+
+// The improvisation, and the only place on the board where a charge is worth
+// laying: hard against the obstacle, where the hole it makes is the way
+// through. Everything else that hands out a tool asks what the agent is
+// standing next to and spends on the spot; that is right for a shovel and
+// wrong for an explosive, which is why the wall — not the stall — is what
+// triggers this.
+//
+// A mine first. It goes under the boots, opens the wall on its own fuse and
+// costs the colony nobody. When the miners are gone too, the agent standing at
+// the wall is the charge. That is a bad trade, and a better one than the whole
+// queue pacing out the clock in front of a wall nobody can open, which is the
+// only other thing on offer by this point.
+function blastWall(w, ag, thickness) {
+  // Nothing to open. advanceWalk sends a low roof here as well as a wall, and
+  // its idea of the cell ahead is one further on whenever the stride crosses a
+  // boundary — so a zero is the fractional-stride case rather than an
+  // obstacle, and a charge laid on it is a charge spent on thin air. Wider
+  // than the blast is the other end of the same test: the hole would stop
+  // inside the wall.
+  if (thickness < 1 || thickness > MINE_RADIUS) return false
+  // Somebody is already opening this one. Without the check a queue held up at
+  // a single obstacle lays the entire toolbar into it, one charge per agent —
+  // level 6 spent six miners and sixteen bombers on five walls that needed one
+  // charge each, and the colony died of its own rescue.
+  if (chargeNear(w, ag)) return false
+  if (canPlantMine(w, ag) && spend(w, ag, "miner")) { plantMine(w, ag); return true }
+  // A sacrifice with nobody left to walk through the gap is just a death.
+  if (thickness > BOMB_RADIUS || countComing(w, ag) < 1) return false
+  if (!take(w, "bomber")) return false
+  ag.state = "bomb"
+  ag.fuse = BOMB_FUSE
+  ag.condemned = true
+  return true
+}
+
+// Is a charge already ticking where this agent stands? A planted mine or an
+// agent counting down is the same answer to the same wall, and the wall will
+// be open before either of them finishes.
+function chargeNear(w, ag) {
+  var i
+  for (i = 0; i < w.mines.length; i++)
+    if (Math.abs(w.mines[i].x - ag.x) <= MINE_RADIUS
+        && Math.abs(w.mines[i].y - ag.y) <= MINE_RADIUS) return true
+  for (i = 0; i < w.agents.length; i++) {
+    var other = w.agents[i]
+    if (other === ag || other.gone || other.state !== "bomb") continue
+    if (Math.abs(other.x - ag.x) <= BOMB_RADIUS
+        && Math.abs(other.y - ag.y) <= BOMB_RADIUS) return true
+  }
+  return false
 }
 
 function edgeAhead(w, ag, nx) {
@@ -4473,6 +4553,19 @@ function stepBash(w, ag) {
       useLift(w, ag, door, footY)
       return
     }
+  }
+
+  // Through the side of a shaft with no bottom. Everything a walker knows
+  // about a bottomless drop is in edgeAhead, and a basher reaches its next cell
+  // without asking any of it — so the one that tunnelled along the strata under
+  // level 6's bottom corridor bashed into the wall of the crossing pit and
+  // stepped out of the world, and the queue behind followed it through the hole
+  // it had just made. A floater is no help over a hole with no floor, which is
+  // why this cannot be left to beginUncontrolledFall below. Stop at the lip.
+  if (!solid(w, ax, footY + 1) && dropDepth(w, ax, footY) === Infinity) {
+    ag.state = "walk"
+    turnAround(w, ag)
+    return
   }
 
   ag.x += ag.dir
