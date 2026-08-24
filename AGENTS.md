@@ -197,10 +197,27 @@ block above `submerged()`.
   blue-greys are the same colour at the scale this is played, and the tell was
   down to a single red pixel in the port. Every other hostile on the board is
   read by its colour first, and these are too.
-- **The current is a kill with a run-up.** It does not stop at the edge of the
-  board: a diver carried into the wall of the world goes through it. At 44
-  ticks of grip the worst it could do was undo a walk; at 150 it reaches an
-  edge from most of a corridor, and about one sweep in six ends in open sea.
+- **A current pushes you while you are in it, and not afterwards.** The grip is
+  bounded by the water (`stepSweep` cuts it to `SWEEP_TAIL` past the downstream
+  lip), not by the clock. `SWEEP_TICKS` is only the cap. Getting that backwards
+  made level 100 unplayable: an eight-cell current on the exit corridor kept
+  hold for the full 150 ticks, which at 0.34 a tick is fifty-one cells, so
+  every diver that reached it was posted back to the far end of the level and
+  walked into it again. It still kills — a diver carried into the wall of the
+  world goes through it, and one carried into a pit meets the downdraught —
+  but it kills by putting you somewhere lethal rather than by conveyor.
+- **A stuck diver looks a corridor's width for a way up, not two cells.**
+  `SWIM_SIDESTEP` is right for the ordinary case: a diver does not cross a
+  corridor on the off-chance. It is hopeless for the case the search exists to
+  answer. Level 100's exit corridor has exactly one opening in its ceiling, at
+  x21, and the colony jammed at x10-15 between a pit lip and a current with the
+  way out overhead and eleven cells away. `forceEscape` passes `SWIM_HUNT`
+  instead, and `clearAcross` keeps the wide look honest — swimming sideways to
+  a shaft is only swimming if the water in between is open, or the diver glides
+  through rock to reach a chimney behind it. Level 100 went from 5-8 home out
+  of 14 to 12-14, and the Trench's upward swims from 114 to 154 per sixty runs.
+  This is the branch that lets a diver rise at all on a level whose door is on
+  its own storey, where `exitAbove` is never true.
 - **A shark is not symmetric and a submarine is.** The first shark was a
   symmetric wedge and read, unmistakably, as a submarine — which matters here,
   because there is a submarine on the special roster. A fish needs two curves:
@@ -431,11 +448,12 @@ gameplay, intended or not. `hangs` must stay at zero. The game has no pass mark,
 so `cleared` is measured against `CLEAR_SHARE`, a fixed fraction of the colony
 defined in `simcheck.js`.
 
-Baselines, 200 levels: **98% of levels cleared, 87% of agents home, 48s per
+Baselines, 200 levels: **98% of levels cleared, 88% of agents home, 46s per
 attempt, no hangs.** Per biome nothing is an outlier — 95–100% cleared and 77–93%
-home across all ten, with the Trench at 95/81 and the Skyscraper at 95/77. On
-the wider 300×6 sweep the band is 85–93% cleared and 86–92% home, the Trench at
-85/88. On a 24-level
+home across all ten, with the Trench at 100/92 and the Skyscraper at 95/77. On
+the wider 300×6 sweep the band is 87–93% cleared and 86–92% home, the Trench at
+90/91 and carrying the most timeouts of any biome at 5%, which is the clock
+mattering to divers on air. On a 24-level
 sample a two-level swing is nine points, so widen the sweep before believing a
 biome has moved.
 

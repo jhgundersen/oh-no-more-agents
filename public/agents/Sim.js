@@ -174,12 +174,21 @@ var BOB_PERIOD = 46      // ticks per buoyancy cycle, for Draw
 // their time — and it is fair, because the flow is drawn full strength for the
 // whole of the gap before it fires, arrows and all.
 //
-// Long enough to reach an edge from most of a corridor, which is the point:
-// at 44 ticks it could only ever shuffle somebody a few cells and the worst it
-// did was undo a walk.
-var SWEEP_TICKS = 150
+// The cap, not the length. What actually ends a sweep is leaving the flow —
+// see stepSweep — because a current pushes you while you are in it and not
+// afterwards. Getting that wrong made level 100 unplayable: an eight-cell
+// current on the exit corridor kept its grip for the full 150 ticks, which at
+// 0.34 a tick is fifty-one cells, so every diver that reached it was posted
+// back to the far end of the level and walked into it again. That is not a
+// current, it is a conveyor.
+var SWEEP_TICKS = 90
 var SWEEP_SPEED = 0.34   // faster than a swim, so being caught is not a choice
 var SWEEP_GRACE = 90     // before the same diver can be taken again
+
+// Momentum out of the far end. Without it a diver stops dead on the zone
+// boundary, which reads as a wall rather than as water; with too much it is
+// the conveyor again. Six cells.
+var SWEEP_TAIL = 18
 
 // A diver still in the grip this close to the side of the board has nothing
 // left to catch hold of. Matches the margin generation keeps clear of terrain,
@@ -212,6 +221,15 @@ var DOWNWELL_SPEED = 0.72
 var SWIM_RISE = 0.22     // slower than sinking; going up is work
 var SWIM_REACH = 26      // cells of column a diver will commit to
 var SWIM_SIDESTEP = 2    // how far either side it will look for the shaft
+
+// How far a diver that has run out of ideas will look. Two cells is right for
+// the ordinary case — a diver does not cross a corridor on the off-chance —
+// but it is far too short for the case the wider look exists to answer. Level
+// 100's exit corridor has one opening in its ceiling, at x21, and the colony
+// jammed at x10-15 against a pit lip with a current between it and the door:
+// the way out was overhead and eleven cells away, and nobody ever looked more
+// than two. A stuck agent has time to cross a corridor.
+var SWIM_HUNT = 16
 
 function submerged(w) { return w.biome === "Trench" }
 
@@ -2998,6 +3016,11 @@ function hazardStrike(w, h) {
       if (ag.sweptFor > 0) continue
       ag.sweptFor = SWEEP_TICKS
       ag.sweptDir = h.dir
+      // The flow's own extent, carried on the agent. stepSweep needs to know
+      // where the water stops, and it cannot ask the hazard list every tick
+      // without caring which of them caught it.
+      ag.sweptX0 = h.zx0
+      ag.sweptX1 = h.zx1
       ag.hazardGrace = SWEEP_GRACE
       // Whatever it was doing, it is not doing it now. A builder halfway
       // through a bridge keeps its bricks and starts again where it lands.
@@ -4116,6 +4139,8 @@ function spawn(w) {
     // somewhere it did not decide to go.
     sweptFor: 0,
     sweptDir: 0,
+    sweptX0: 0,
+    sweptX1: 0,
     // Where a kick up or down through open water is going; see swimRoute.
     swimUp: false,
     swimFromX: 0,
@@ -7087,6 +7112,13 @@ function stepSweep(w, ag) {
     return
   }
 
+  // Out of the flow. The grip is bounded by the water, not by the clock: past
+  // the downstream lip the diver has only momentum left, and SWEEP_TAIL is how
+  // much. Checked after the overboard test above so a current set near the rim
+  // still carries somebody over it.
+  var out = ag.sweptDir > 0 ? nx - (ag.sweptX1 + 1) : (ag.sweptX0 - 1) - nx
+  if (out > 0 && ag.sweptFor > SWEEP_TAIL) ag.sweptFor = SWEEP_TAIL
+
   // Pinned. Rock is the one thing that stops it, and being held against a wall
   // by the flow is a survivable outcome that reads as one.
   if (solid(w, cx, footY) || !headroom(w, cx, footY)) { ag.sweptFor = 0; return }
@@ -7106,13 +7138,18 @@ function stepSweep(w, ag) {
 // through but not stop in is not a route. The landing has to be somewhere it
 // could have walked to, which is what stops this delivering the colony onto
 // the lip of a bottomless pit or into a lift shaft.
-function swimColumn(w, ag, up) {
+function swimColumn(w, ag, up, reach) {
   var footY = Math.floor(ag.y)
   var here = Math.floor(ag.x)
-  for (var side = 0; side <= SWIM_SIDESTEP; side++) {
+  var look = reach === undefined ? SWIM_SIDESTEP : reach
+  for (var side = 0; side <= look; side++) {
     for (var turn = 0; turn < 2; turn++) {
       if (side === 0 && turn === 1) continue
       var x = here + (turn === 0 ? side : -side)
+      // Swimming sideways to the shaft is only swimming if the water between
+      // here and it is open. Without this a wide hunt reaches through rock and
+      // the diver glides into a wall to get to a chimney behind it.
+      if (side > SWIM_SIDESTEP && !clearAcross(w, here, x, footY)) continue
       if (liftColumn(w, x)) continue
       if (pitAt(w, x)) continue
       // The column has to be clear from the agent's own feet outward, which
@@ -7167,6 +7204,17 @@ function swimColumn(w, ag, up) {
   return null
 }
 
+// Is the water open between two columns at this height? Body height, not one
+// row: a gap a diver could pass a hand through is not a gap it can swim along.
+function clearAcross(w, fromX, toX, footY) {
+  var lo = Math.min(fromX, toX), hi = Math.max(fromX, toX)
+  for (var x = lo; x <= hi; x++) {
+    if (!headroom(w, x, footY)) return false
+    if (solid(w, x, footY)) return false
+  }
+  return true
+}
+
 // The gate. Ordinarily a diver only swims the way home is — one that kicks
 // about for the sake of it never gets anywhere — and never on a tower, for the
 // same reason every other rule that answers "home is above me" stands down
@@ -7188,14 +7236,16 @@ function swimRoute(w, ag, force) {
   var target = null
   if (up || exitBelow(w, ag)) target = swimColumn(w, ag, up)
   if (!target && force) {
-    // Toward home first. On an ordinary level that is down; on one played
-    // upside down it is emphatically up, and trying down first there took
-    // every stuck diver back through the chimney it had just come up — the
-    // colony spent whole levels riding the same crevice.
+    // Out of ideas, so look properly. Toward home first — on an ordinary level
+    // that is down — and then the other way, across as much corridor as the
+    // water is open for. This is the branch that answers "the route on this
+    // floor is blocked and the way round is overhead", which is the whole
+    // reason a diver can rise at all on a level whose door is on its own
+    // storey and where `exitAbove` is therefore never true.
     var first = exitAbove(w, ag)
-    target = swimColumn(w, ag, first)
+    target = swimColumn(w, ag, first, SWIM_HUNT)
     up = first
-    if (!target) { target = swimColumn(w, ag, !first); up = !first }
+    if (!target) { target = swimColumn(w, ag, !first, SWIM_HUNT); up = !first }
   }
   if (!target) return false
   ag.state = "swim"
