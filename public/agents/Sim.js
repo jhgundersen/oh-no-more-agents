@@ -1176,6 +1176,18 @@ function generate(level, attempt, colonySeed) {
   // doors that nobody chose to spend.
   if (tower) w.timeLimit += 30 * (8 + 10 * corridors.length)
 
+  // Fins are slower than shoes, and the clock never knew. SWIM_PACE takes 18%
+  // off every step a diver makes and the Trench was handed the same
+  // LEVEL_LIMIT as nine biomes where nobody is wading — so a level the colony
+  // was solving correctly could still be lost to the horn, which is the one
+  // kind of defeat a player cannot read. Level 100 needed 3509 ticks and had
+  // 3300. This is not a difficulty dial: it is the pace tax handed back, which
+  // is why it is exactly 1/SWIM_PACE and not a number that looked about right.
+  // Measured on level 100 over 60 colonies it took wipeouts from 8 to 3 and
+  // timeouts from 15 to 6; past this it buys nothing, which is the check that
+  // it is a tax and not a crutch.
+  if (w.submerged) w.timeLimit = Math.round(w.timeLimit / SWIM_PACE)
+
   // Place the booth only after terrain roughening, decoration and hazards are
   // final. Earlier placement could pass a clear-space test and then have a
   // grate, hanging prop or hazard drawn straight through its roof.
@@ -3717,14 +3729,38 @@ function hitWall(w, ag) {
 // the wall is the charge. That is a bad trade, and a better one than the whole
 // queue pacing out the clock in front of a wall nobody can open, which is the
 // only other thing on offer by this point.
+// How much solid stands between this agent and the next cell it could occupy,
+// measured across its whole body rather than at its boots.
+//
+// wallThickness reads one row, at foot level, which is right for a wall and
+// blind to a ceiling. advanceWalk stops an agent for either: a low roof sends
+// it to hitWall exactly as a wall does. Level 100's colony dug itself a
+// two-row tunnel at x30 — floor at 56, slab at 53, and no room to stand or
+// crouch between them — and then turned round in it four hundred and fifty-one
+// times, because every tool that answers a wall was spent and the one that was
+// left refused to look up.
+//
+// Returns the depth in columns, or 0 if the way is genuinely clear (which is
+// the fractional-stride case the old guard existed to catch, and still does).
+function obstructionAhead(w, ag) {
+  var footY = Math.floor(ag.y)
+  var here = Math.floor(ag.x)
+  var depth = 0
+  for (var d = 1; d <= MINE_RADIUS + 1; d++) {
+    var x = here + ag.dir * d
+    var blocked = false
+    for (var j = 0; j <= AGENT_H; j++) if (solid(w, x, footY - j)) blocked = true
+    if (!blocked) break
+    depth++
+  }
+  return depth
+}
+
 function blastWall(w, ag, thickness) {
-  // Nothing to open. advanceWalk sends a low roof here as well as a wall, and
-  // its idea of the cell ahead is one further on whenever the stride crosses a
-  // boundary — so a zero is the fractional-stride case rather than an
-  // obstacle, and a charge laid on it is a charge spent on thin air. Wider
-  // than the blast is the other end of the same test: the hole would stop
-  // inside the wall.
-  if (thickness < 1 || thickness > MINE_RADIUS) return false
+  // Nothing to open — see obstructionAhead. Wider than the blast is the other
+  // end of the same test: the hole would stop inside the obstruction.
+  var depth = obstructionAhead(w, ag)
+  if (depth < 1 || depth > MINE_RADIUS) return false
   // Somebody is already opening this one. Without the check a queue held up at
   // a single obstacle lays the entire toolbar into it, one charge per agent —
   // level 6 spent six miners and sixteen bombers on five walls that needed one
@@ -3732,7 +3768,7 @@ function blastWall(w, ag, thickness) {
   if (chargeNear(w, ag)) return false
   if (canPlantMine(w, ag) && spend(w, ag, "miner")) { plantMine(w, ag); return true }
   // A sacrifice with nobody left to walk through the gap is just a death.
-  if (thickness > BOMB_RADIUS || countComing(w, ag) < 1) return false
+  if (depth > BOMB_RADIUS || countComing(w, ag) < 1) return false
   if (!take(w, "bomber")) return false
   ag.state = "bomb"
   ag.fuse = BOMB_FUSE

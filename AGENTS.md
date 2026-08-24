@@ -206,6 +206,35 @@ block above `submerged()`.
   walked into it again. It still kills — a diver carried into the wall of the
   world goes through it, and one carried into a pit meets the downdraught —
   but it kills by putting you somewhere lethal rather than by conveyor.
+- **A biome where everybody is 18% slower needs 18% more clock.** `SWIM_PACE`
+  takes that off every step a diver makes and the Trench was handed the same
+  `LEVEL_LIMIT` as nine biomes where nobody is wading, so a level the colony
+  was solving correctly could still be lost to the horn — the one kind of
+  defeat a player cannot read. The tax is handed back as exactly `1 / SWIM_PACE`
+  rather than a number that looked about right, and the check that it is a tax
+  and not a crutch is that more buys nothing: on level 100 over 60 colonies it
+  took wipeouts from 8 to 3 and timeouts from 15 to 6, and +25% and +35% were
+  identical to +18%.
+- **Thickness is measured at the boots and a ceiling has none.** `advanceWalk`
+  sends a low roof to `hitWall` exactly as it sends a wall, so `blastWall`'s
+  guard against spending a charge on thin air also refused every charge on an
+  overhang. Level 100's colony dug itself a two-row tunnel — floor at 56, slab
+  at 53, no room to stand or crouch between them — and turned round in it 451
+  times with six miners in the box and every wall tool spent.
+  `obstructionAhead` measures across the whole body instead: 451 turnarounds
+  became 39, and a mine opened the tunnel. Aggregate effect is nil either way
+  (under 1pp on 800 runs), which is the point — it is a correctness fix, not a
+  tuning one.
+- **Six pinned colonies is not a sample.** Level 100 measured 12-14 home out of
+  14 on the salts `simcheck` uses and 59% over sixty random ones, which is what
+  the page actually rolls. Anything claimed about a specific level wants
+  `generate(level, 0, <varied seed>)` in bulk, not the pinned set.
+- **Level 100 is the hardest level in the catalogue and it is not a bug.** 63%
+  home against the Trench's 92%, and about 7% of colonies get nobody out. Its
+  bottom corridor is long, carries repeated six-tall obstacles, and has a
+  current pointing away from the door; the colony runs out of climbers and
+  bashers, builders are refused at walls by design, and what is left is slow.
+  Both defects above were found in it and fixed; what remains is the level.
 - **A stuck diver looks a corridor's width for a way up, not two cells.**
   `SWIM_SIDESTEP` is right for the ordinary case: a diver does not cross a
   corridor on the off-chance. It is hopeless for the case the search exists to
@@ -452,8 +481,7 @@ Baselines, 200 levels: **98% of levels cleared, 88% of agents home, 46s per
 attempt, no hangs.** Per biome nothing is an outlier — 95–100% cleared and 77–93%
 home across all ten, with the Trench at 100/92 and the Skyscraper at 95/77. On
 the wider 300×6 sweep the band is 87–93% cleared and 86–92% home, the Trench at
-90/91 and carrying the most timeouts of any biome at 5%, which is the clock
-mattering to divers on air. On a 24-level
+91/92. On a 24-level
 sample a two-level swing is nine points, so widen the sweep before believing a
 biome has moved.
 
