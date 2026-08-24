@@ -273,6 +273,16 @@
     applyScale(1)
   }
 
+  // Accepts ?full, ?full=1 and ?fullscreen; ?full=0 and ?full=false are an
+  // explicit no, so the parameter can be templated in as a variable without
+  // the caller having to add and remove it.
+  function fullParam() {
+    var q = new URLSearchParams(window.location.search)
+    var v = q.has("full") ? q.get("full") : (q.has("fullscreen") ? q.get("fullscreen") : null)
+    if (v === null) return false
+    return v !== "0" && v !== "false" && v !== "off"
+  }
+
   // Fullscreening #stage lets the browser hide its siblings.
 
   function fullscreenEl() {
@@ -616,6 +626,20 @@
     el.player.addEventListener("ended", advanceTrack)
 
     newLevel(level)
+
+    // ?full — the visual half of fullscreen, without asking the browser for
+    // the real thing. `faux` is the CSS fallback that already exists for iOS
+    // and framed pages, where requestFullscreen is missing or refused; it
+    // covers the viewport, paints the theme background and drops everything
+    // outside #stage, which is the whole of what fullscreen looks like. What
+    // it does not do is need a user gesture, which is exactly why it is the
+    // one that can be turned on at load: the Fullscreen API refuses a request
+    // that did not come from a click, so a URL parameter could never drive it.
+    //
+    // For a kiosk, a second monitor or a screenshot — anywhere the page is the
+    // only thing on screen and nobody is going to press `f`.
+    if (fullParam()) setFaux(true)
+
     fitBoard()
     restartClock()
     loadGlobalStats()

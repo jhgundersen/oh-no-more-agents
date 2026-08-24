@@ -9,7 +9,12 @@ Production is `https://oh-no-more-agents.com`.
 
 ## Important files
 
-- `public/index.html` — standalone game page and surrounding UI.
+- `public/index.html` — standalone game page and surrounding UI. `?full` opens
+  it with the board covering the viewport and nothing else on screen — the
+  `faux` CSS path, not the Fullscreen API, which cannot be driven from a URL
+  because it refuses any request that did not come from a user gesture. For
+  kiosks, second monitors and screenshots. `?full=0` is an explicit no, so the
+  parameter can be templated in as a variable.
 - `public/agents/Sim.js` — simulation, agents, levels, skills, enemies, hazards.
 - `public/agents/Draw.js` — Canvas rendering and animation.
 - `public/agents/Palette.js` — biome and visual palettes.
