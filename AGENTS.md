@@ -180,6 +180,23 @@ block above `submerged()`.
   placement and the whole recovery ladder are written for a colony working its
   way *down*, and inverting the destination points all of them the wrong way at
   once. There is a note where the roll used to be.
+- **A trench pulls.** Underwater a fall is a sink and a sink is survivable,
+  which left the one feature on the board that exists to be feared as the one
+  feature with nothing to fear — a diver could drop into a pit, notice, and
+  kick back out. `DOWNWELL_SPEED` replaces the sink speed inside a pit column
+  and `swimRoute` refuses to fire for anybody already in one, so `edgeAhead`
+  declining to step in is self-preservation rather than a rule inherited from a
+  game with gravity in it. It is drawn as well: streamlines down the throat of
+  the hole with arrowheads on them, plus silt going over the lip, because a
+  danger the audience cannot see is a danger the audience thinks is a bug.
+- **The hostiles wear the gear too.** The roster already keeps the drone
+  operator and the planted sniper out of the water, but the ordinary gunner
+  still turned up in a hood and coat with a rifle. It shares `drawEnemyDiver`
+  with the harpooner now — same crew, two weapons, the long gun and the short
+  one. They are **oxblood**, not a colder blue than the colony: two dark
+  blue-greys are the same colour at the scale this is played, and the tell was
+  down to a single red pixel in the port. Every other hostile on the board is
+  read by its colour first, and these are too.
 - **The current is a kill with a run-up.** It does not stop at the edge of the
   board: a diver carried into the wall of the world goes through it. At 44
   ticks of grip the worst it could do was undo a walk; at 150 it reaches an

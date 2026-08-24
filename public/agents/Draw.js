@@ -1353,6 +1353,55 @@ function drawPits(ctx, w, pal) {
     ctx.fillStyle = deep
     ctx.fillRect(px, top, pw, bot - top)
 
+    // The downdraught, drawn. Underwater a fall is a sink and a sink does not
+    // hurt, so a trench that merely looked dark was the one feature on the
+    // board built to be feared with nothing about it to fear. The pull is real
+    // — see DOWNWELL_SPEED — and this is it on screen: streamlines running
+    // down the throat of the hole, faster and brighter than the drifting motes
+    // everywhere else, so a diver standing at the lip is standing somewhere
+    // the audience can already see is going one way.
+    if (w.submerged) {
+      var t = w.ticks
+      var lanes = Math.max(2, Math.floor(pw / 10))
+      for (var ln = 0; ln < lanes; ln++) {
+        var lx = px + 4 + ln * (pw / lanes)
+        // Each lane runs at its own rate, which is what stops the column
+        // reading as a barcode scrolling.
+        var rate = 5.2 + (ln % 3) * 1.6
+        var span = bot - top + 30
+        for (var seg = 0; seg < 3; seg++) {
+          var head = ((t * rate + ln * 37 + seg * 90) % span)
+          var sy = top + head - 20
+          if (sy > bot) continue
+          var len = 9 + (ln % 2) * 5
+          ctx.globalAlpha = 0.30 * Math.min(1, (bot - sy) / 60)
+          ctx.fillStyle = pal.bubble
+          ctx.fillRect(Math.round(lx), Math.round(Math.max(top, sy)),
+                       1, Math.min(len, bot - Math.max(top, sy)))
+          // An arrowhead on the leading end, so the direction survives a
+          // still frame the way the current's does.
+          var tip = Math.round(Math.max(top, sy) + Math.min(len, bot - Math.max(top, sy)))
+          if (tip < bot - 1 && tip > top + 1) {
+            ctx.fillRect(Math.round(lx) - 1, tip - 2, 1, 1)
+            ctx.fillRect(Math.round(lx) + 1, tip - 2, 1, 1)
+          }
+        }
+      }
+      ctx.globalAlpha = 1
+
+      // Silt going over the lip. A waterfall of sediment at the edges is what
+      // says the hole is drawing from the corridor either side of it rather
+      // than merely being a hole in the same water.
+      ctx.fillStyle = pal.fish
+      ctx.globalAlpha = 0.35
+      for (var sp = 0; sp < 6; sp++) {
+        var side = sp % 2 === 0 ? px + 1 : px + pw - 2
+        var drop = ((t * 3.1 + sp * 24) % 42)
+        ctx.fillRect(side, Math.round(top + drop), 1, 2)
+      }
+      ctx.globalAlpha = 1
+    }
+
     if (!p.liquid) continue
     drawPool(ctx, w, pal, p, px, pw, bot)
   }
@@ -3072,67 +3121,7 @@ function drawEnemy(ctx, w, pal, en, opts) {
   // not a line that appears, so it gets its own projectile with a line paying
   // out behind it.
   if (en.kind === "harpoon") {
-    var hDir = dir
-    var hDark = "#1d3a42"
-    // Suit and helmet, one shade colder than the colony's so the two read
-    // apart at a glance without being a different silhouette.
-    ctx.fillStyle = hDark
-    ctx.fillRect(ox + 1, oy + 6, 7, 9)                    // body
-    ctx.fillRect(ox + 1, oy + 15, 3, 2)                   // fins
-    ctx.fillRect(ox + 4, oy + 15, 3, 2)
-    ctx.fillStyle = "#8c6a2a"
-    ctx.fillRect(ox + 2, oy + 1, 5, 5)                    // helmet
-    ctx.fillStyle = "#c39a45"
-    ctx.fillRect(ox + 2, oy + 1, 3, 1)
-    ctx.fillStyle = "#7fb8c4"
-    ctx.fillRect(hDir > 0 ? ox + 5 : ox + 2, oy + 3, 2, 2)  // port
-    ctx.fillStyle = redLit
-    ctx.fillRect(hDir > 0 ? ox + 6 : ox + 2, oy + 3, 1, 1)  // the eye in it
-
-    // The gun: a stock along the forearm with the spear lying in it. Held
-    // level while walking, brought up and forward through the long aim.
-    var aiming = en.state === "aim"
-    var gunY = oy + (aiming ? 7 : 9)
-    var gunX = hDir > 0 ? ox + 7 : ox - 9
-    ctx.fillStyle = "#171920"
-    ctx.fillRect(gunX, gunY, 11, 2)
-    ctx.fillRect(hDir > 0 ? gunX : gunX + 9, gunY + 2, 2, 3)   // grip
-    ctx.fillStyle = "#9aa2b4"
-    if (!en.shotFor) ctx.fillRect(hDir > 0 ? gunX + 4 : gunX, gunY - 1, 9, 1)  // the spear, loaded
-
-    // Winding up. A speargun's tell is the rubber going taut, so the sight is
-    // a short bright line at the muzzle rather than a laser down the corridor
-    // — this thing has no laser, it has forty atmospheres and patience.
-    if (aiming) {
-      ctx.globalAlpha = 0.4 + ((en.timer >> 2) % 2) * 0.5
-      ctx.fillStyle = redLit
-      ctx.fillRect(hDir > 0 ? gunX + 11 : gunX - 3, gunY, 3, 1)
-      ctx.globalAlpha = 1
-    }
-
-    // The shot: the spear in flight with its line trailing back to the gun.
-    if (en.shotFor > 0) {
-      var spearX = Math.round(en.lineTo * C)
-      var spearY = Math.round((en.lineY + 0.5) * C)
-      var fromX = hDir > 0 ? gunX + 11 : gunX - 1
-      var fromY = gunY
-      // Travel, so the spear is somewhere along the line rather than instantly
-      // at the end of it. shotFor counts down from 8.
-      var flight = Math.min(1, (8 - en.shotFor) / 5)
-      var tipX = Math.round(fromX + (spearX - fromX) * flight)
-      var tipY = Math.round(fromY + (spearY - fromY) * flight)
-      ctx.fillStyle = "#8a9aa6"
-      var lineSteps = Math.max(1, Math.round(Math.abs(tipX - fromX) / 4))
-      ctx.globalAlpha = 0.55
-      for (var hl = 0; hl <= lineSteps; hl++)
-        ctx.fillRect(Math.round(fromX + (tipX - fromX) * hl / lineSteps),
-                     Math.round(fromY + (tipY - fromY) * hl / lineSteps) + 1, 1, 1)
-      ctx.globalAlpha = 1
-      ctx.fillStyle = "#d6dde8"
-      ctx.fillRect(tipX - (hDir > 0 ? 6 : 0), tipY, 7, 1)        // the shaft
-      hzTri(ctx, tipX + (hDir > 0 ? 1 : -1), tipY, 2, 3, hDir)   // the barb
-    }
-
+    drawEnemyDiver(ctx, w, pal, en, ox, oy, dir, true)
     if (opts && opts.labels) {
       ctx.fillStyle = "#c39a45"
       ctx.font = "7px monospace"
@@ -3220,6 +3209,27 @@ function drawEnemy(ctx, w, pal, en, opts) {
   }
 
   spriteFlip = false
+
+  // Nobody stands on the sea floor in a coat. The roster already keeps the
+  // drone operator and the planted sniper out of the Trench — a quadcopter at
+  // forty atmospheres is not a joke — but the ordinary gunner still turned up
+  // in a hood with a rifle, which is the one thing down here wearing no air.
+  // It gets the same dress as everyone else in the water, and it is the same
+  // enemy underneath: same walk, same aim, same reload, same lethality. Only
+  // the kit and the weapon change, which is exactly how the colony itself is
+  // handled a few hundred lines down.
+  if (w.submerged) {
+    drawEnemyDiver(ctx, w, pal, en, ox, oy, dir, false)
+    if (opts && opts.labels) {
+      ctx.fillStyle = "#c39a45"
+      ctx.font = "7px monospace"
+      ctx.textAlign = "center"
+      ctx.fillText("Salvage Rights", ox + 4, oy - 4)
+    }
+    ctx.globalAlpha = 1
+    return
+  }
+
   ctx.fillStyle = pale
   blit(ctx, ox, oy, dir, 1, 0, 6, 3)               // pale, hostile crest
   ctx.fillStyle = "#b9a59a"
@@ -3262,6 +3272,98 @@ function drawEnemy(ctx, w, pal, en, opts) {
     ctx.fillText(enemyLabel, ox + 4, oy - 4)
   }
   ctx.globalAlpha = 1
+}
+
+// The rival salvage crew, in the same period dress as the colony — that is the
+// joke, and it is why the helmet is the same brass. Colder suit and a red eye
+// in the port so the two read apart at a glance without being a different
+// silhouette; friend and foe are told apart by colour here rather than by
+// shape, because at this size the shape is the diving suit and there is only
+// one of those.
+//
+// `big` picks the weapon: the speargun for the harpooner, a diving pistol for
+// the gunner. Everything else is shared, which is the point — one crew.
+function drawEnemyDiver(ctx, w, pal, en, ox, oy, dir, big) {
+  var C = w.k.CELL
+  // Red team, in a diving suit. The first version put them in a colder teal
+  // than the colony's charcoal and it was not enough: at the scale this is
+  // actually played, the difference between two dark blue-greys is nothing and
+  // the only tell left was a single red pixel in the port. Every other hostile
+  // on the board is read by its colour before anything else, so these are too
+  // — the helmet stays brass, because they are the same era and that is the
+  // joke, and the suit under it is the same oxblood the dry-land squad wears.
+  var suit = "#6b1f2e"
+  var suitDark = "#4a1520"
+  var kick = Math.sin(en.anim * 0.22)
+  var lift = Math.round(kick * 1.2)
+
+  // Exhaust, on the same rule as the colony's: it is what says the thing is
+  // breathing, and an enemy diver that did not bubble would read as a statue.
+  for (var b = 0; b < 3; b++) {
+    var life = (((w.ticks * 0.9 + en.id * 37) + b * 33) % 108) / 108
+    ctx.globalAlpha = 0.55 * (1 - life * 0.75)
+    ctx.fillStyle = life > 0.5 ? (pal.bubbleLit || "#fff") : (pal.bubble || "#cfe")
+    ctx.fillRect(Math.round(ox + 3 + Math.sin(life * 7 + en.id) * 2.5),
+                 Math.round(oy + lift - life * 24), life > 0.62 ? 2 : 1, life > 0.62 ? 2 : 1)
+  }
+  ctx.globalAlpha = 1
+
+  ctx.fillStyle = suit
+  ctx.fillRect(ox + 1, oy + 6 + lift, 7, 9)                     // body
+  ctx.fillStyle = suitDark
+  ctx.fillRect(ox + 1, oy + 6 + lift, 7, 1)                     // the shoulder shadow
+  ctx.fillRect(ox + 1, oy + 15 + lift + (kick > 0 ? 1 : 0), 3, 1)   // fins
+  ctx.fillRect(ox + 4, oy + 15 + lift + (kick > 0 ? 0 : 1), 3, 1)
+  ctx.fillStyle = "#8c6a2a"
+  ctx.fillRect(ox + 2, oy + 1 + lift, 5, 5)                     // helmet
+  ctx.fillStyle = "#c39a45"
+  ctx.fillRect(ox + 2, oy + 1 + lift, 3, 1)
+  ctx.fillStyle = "#7fb8c4"
+  ctx.fillRect(dir > 0 ? ox + 5 : ox + 2, oy + 3 + lift, 2, 2)  // port
+  ctx.fillStyle = "#ff6b6b"
+  ctx.fillRect(dir > 0 ? ox + 6 : ox + 2, oy + 3 + lift, 1, 1)  // the eye in it
+
+  var aiming = en.state === "aim"
+  var gunY = oy + (aiming ? 7 : 9) + lift
+  var len = big ? 11 : 6
+  var gunX = dir > 0 ? ox + 7 : ox - (len - 2)
+  ctx.fillStyle = "#171920"
+  ctx.fillRect(gunX, gunY, len, 2)
+  ctx.fillRect(dir > 0 ? gunX : gunX + len - 2, gunY + 2, 2, 3)     // grip
+  ctx.fillStyle = "#9aa2b4"
+  if (!en.shotFor) ctx.fillRect(dir > 0 ? gunX + 4 : gunX, gunY - 1, len - 2, 1)  // spear, loaded
+
+  // The tell. A speargun's is the rubber going taut, so it is a short bright
+  // mark at the muzzle rather than a laser down the corridor — this crew has
+  // no lasers, it has forty atmospheres and patience.
+  if (aiming) {
+    ctx.globalAlpha = 0.4 + ((en.timer >> 2) % 2) * 0.5
+    ctx.fillStyle = "#ff6b6b"
+    ctx.fillRect(dir > 0 ? gunX + len : gunX - 3, gunY, 3, 1)
+    ctx.globalAlpha = 1
+  }
+
+  // The shot: a spear in flight with its line paying out behind it. It travels
+  // rather than appearing at the far end, which is the whole difference
+  // between a spear and a bullet at this scale.
+  if (en.shotFor > 0) {
+    var spearX = Math.round(en.lineTo * C)
+    var spearY = Math.round((en.lineY + 0.5) * C)
+    var fromX = dir > 0 ? gunX + len : gunX - 1
+    var flight = Math.min(1, (8 - en.shotFor) / 5)
+    var tipX = Math.round(fromX + (spearX - fromX) * flight)
+    var tipY = Math.round(gunY + (spearY - gunY) * flight)
+    ctx.fillStyle = "#8a9aa6"
+    var steps = Math.max(1, Math.round(Math.abs(tipX - fromX) / 4))
+    ctx.globalAlpha = 0.55
+    for (var hl = 0; hl <= steps; hl++)
+      ctx.fillRect(Math.round(fromX + (tipX - fromX) * hl / steps),
+                   Math.round(gunY + (tipY - gunY) * hl / steps) + 1, 1, 1)
+    ctx.globalAlpha = 1
+    ctx.fillStyle = "#d6dde8"
+    ctx.fillRect(tipX - (dir > 0 ? 6 : 0), tipY, 7, 1)            // shaft
+    hzTri(ctx, tipX + (dir > 0 ? 1 : -1), tipY, 2, 3, dir)        // barb
+  }
 }
 
 function drawAgentTrick(ctx, w, pal, ag, ox, oy, dir, robe, hair) {

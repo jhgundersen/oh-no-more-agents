@@ -186,6 +186,18 @@ var SWEEP_GRACE = 90     // before the same diver can be taken again
 // so it can only ever trigger in genuinely open water at the rim.
 var SWEEP_OVERBOARD = 3
 
+// The downdraught in a pit. Underwater a fall is a sink and a sink is
+// survivable, which left the one feature on the board that exists to be feared
+// as the one feature with nothing to fear: a diver could drop into a trench,
+// notice, and kick back out. So the trenches pull. Anything inside a pit
+// column sinks at this instead of SINK_SPEED and cannot rise against it, which
+// is what makes `edgeAhead` refusing to step in an act of self-preservation
+// rather than a rule inherited from a game with gravity in it.
+//
+// Faster than a dry fall on purpose. The pit should be the one place in the
+// biome where the water is in charge.
+var DOWNWELL_SPEED = 0.72
+
 // Kicking up or down through open water. This is the one place the Trench
 // stops being the other nine biomes with different gravity: on dry land the
 // only ways up are a climber and a staircase, both of which cost a skill and
@@ -4670,8 +4682,10 @@ function herdSteer(w, ag) {
 
 function stepFall(w, ag) {
   // An umbrella under water is a diver with an umbrella. The water is already
-  // slower than the canopy, so a sink is a sink whoever is holding what.
+  // slower than the canopy, so a sink is a sink whoever is holding what — with
+  // one exception, and it is the whole reason a trench is frightening.
   var speed = w.submerged ? SINK_SPEED : (ag.floater && ag.fall > 2 ? FLOAT_SPEED : FALL_SPEED)
+  if (w.submerged && pitAt(w, Math.floor(ag.x))) speed = DOWNWELL_SPEED
   // Null gravity. Everything falls at umbrella speed for the duration, which
   // does not change what is survivable — SAFE_FALL is a distance, not a speed
   // — but does change how long everybody spends in the air deciding.
@@ -7166,6 +7180,10 @@ function swimColumn(w, ag, up) {
 // floor — the storey above is a different route, and the water is free.
 function swimRoute(w, ag, force) {
   if (!w.submerged || liftRouted(w)) return false
+  // Caught in the downdraught: no kicking out of it. swimColumn already
+  // refuses to route *through* a pit; this is the diver already in one, which
+  // is the case that would otherwise make the whole thing survivable.
+  if (pitAt(w, Math.floor(ag.x))) return false
   var up = exitAbove(w, ag)
   var target = null
   if (up || exitBelow(w, ag)) target = swimColumn(w, ag, up)
