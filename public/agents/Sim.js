@@ -61,6 +61,16 @@ var ENEMY_WALK_SPEED = 0.24
 var GUN_AIM = 8           // regular shooter: a short visible tell, about a quarter-second
 var SNIPER_AIM = 36       // the planted sniper keeps its deliberate long sight picture
 var GUN_RELOAD = 80
+
+// The Trench's own hostile: a rival diver with a speargun. Slower than the
+// regular gunner at every stage and much longer in reach — a spear is one
+// deliberate shot on a line, not a burst — and lethal on that shot, because a
+// harpoon that merely wounds is a harpoon nobody is frightened of. What makes
+// it survivable is the tell: a very long aim with the line drawn the whole
+// time, and a reload you can cross a corridor in.
+var HARPOON_AIM = 46
+var HARPOON_RELOAD = 130
+var HARPOON_REACH = 40
 var SIDEARM_RELOAD = 600  // ordinary agents get one hurried shot, not a firing stance
 var SIDEARM_RANGE = 20
 var SIDEARM_ENEMY_HIT = 1
@@ -104,7 +114,7 @@ var SKILL_LABELS = {
 // putting a new one anywhere but the end would re-skin every level above it.
 // Palette.js derives the same index with the same rule and must be kept in
 // step — see the note over poolTint there.
-var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper"]
+var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench"]
 
 // A small job on the route gives each biome a premise beyond merely reaching
 // the door. These are deliberately one mechanism with different casts: an
@@ -120,8 +130,85 @@ var MISSION_SPECS = {
   "Ice Cave":  { id: "researcher",verb: "RESCUE THE RESEARCHER", kind: "explorer", count: 1 },
   "Spaceship": { id: "alien",     verb: "NEUTRALIZE THE ALIEN",  kind: "alien", count: 1 },
   "Factory":   { id: "interns",   verb: "FREE THE INTERNS",      kind: "civilian", count: 3 },
-  "Skyscraper":{ id: "csuite",    verb: "EVACUATE THE C-SUITE",  kind: "civilian", count: 2 }
+  "Skyscraper":{ id: "csuite",    verb: "EVACUATE THE C-SUITE",  kind: "civilian", count: 2 },
+  // The one mission on the board that is salvage rather than rescue. It needs
+  // no new mechanism at all — an agent stands beside it for a beat and the
+  // exit comes online — which is the whole argument for the mission system
+  // being one rule with different casts. What changes is what "freed" means:
+  // a chest that has been cracked open does not then wander off down the
+  // corridor, so `still` holds it where it lies (see stepFreedMission).
+  "Trench":    { id: "hoard",     verb: "RAISE THE SUNKEN HOARD", kind: "treasure", count: 2, still: true }
 }
+
+// ---------------------------------------------------------------------------
+// Water
+// ---------------------------------------------------------------------------
+//
+// One biome is not a room with a pool in it — it is a room that is entirely
+// pool, and the difference is a flag rather than a subsystem. `w.submerged` is
+// read by the three things water actually changes and by nothing else:
+//
+//   - how fast a body goes down (SINK_SPEED, not FALL_SPEED)
+//   - whether a landing can kill (it cannot; there is no terminal velocity in
+//     six atmospheres of water)
+//   - how fast a body goes along (SWIM_PACE — a fin kick is slower than a walk)
+//
+// Everything else about the level is left alone on purpose. Corridors are
+// corridors, walls are walls, and every skill in the toolbar means what it
+// meant, which is what lets a new biome be measured against the same
+// baselines as the other nine instead of being its own game.
+//
+// What it does NOT change is the drowning rule, and that is the point of the
+// helmets: a pool on any other biome is something to keep out of (see `sink`),
+// while down here the water is the medium and the colony is dressed for it.
+var SINK_SPEED = 0.20    // FALL_SPEED is 0.55; a diver does not plummet
+var SWIM_PACE = 0.82     // fins are slower than shoes
+var BOB_PERIOD = 46      // ticks per buoyancy cycle, for Draw
+
+// How long a current keeps hold of a diver, and how hard.
+//
+// A sweep is a kill with a run-up. It does not stop at the edge of the board:
+// a diver carried into the wall of the world is carried *through* it, out of
+// the level and into open sea, and does not come back. That is what makes it
+// the biome's own way of losing agents rather than merely its way of wasting
+// their time — and it is fair, because the flow is drawn full strength for the
+// whole of the gap before it fires, arrows and all.
+//
+// Long enough to reach an edge from most of a corridor, which is the point:
+// at 44 ticks it could only ever shuffle somebody a few cells and the worst it
+// did was undo a walk.
+var SWEEP_TICKS = 150
+var SWEEP_SPEED = 0.34   // faster than a swim, so being caught is not a choice
+var SWEEP_GRACE = 90     // before the same diver can be taken again
+
+// A diver still in the grip this close to the side of the board has nothing
+// left to catch hold of. Matches the margin generation keeps clear of terrain,
+// so it can only ever trigger in genuinely open water at the rim.
+var SWEEP_OVERBOARD = 3
+
+// Kicking up or down through open water. This is the one place the Trench
+// stops being the other nine biomes with different gravity: on dry land the
+// only ways up are a climber and a staircase, both of which cost a skill and
+// both of which need a wall to work against. A diver just swims.
+//
+// It is bounded by water, not by will. An agent may only rise or sink through
+// a column that is genuinely clear from here to a floor it can stand on — no
+// swimming through rock, no hovering, no arriving somewhere with no ground.
+// So the level's shape still decides where the colony can go: the holes are
+// the routes, and the difference is that everyone can use one rather than
+// only whoever still has a climber.
+var SWIM_RISE = 0.22     // slower than sinking; going up is work
+var SWIM_REACH = 26      // cells of column a diver will commit to
+var SWIM_SIDESTEP = 2    // how far either side it will look for the shaft
+
+function submerged(w) { return w.biome === "Trench" }
+
+// The two questions gravity asks, both of which water answers differently.
+// Kept as functions rather than as constants patched at generation because
+// `simcheck inert` and the height rigs build worlds by hand, and a constant
+// mutated per level is a constant that leaks between them.
+function fallSpeed(w) { return w.submerged ? SINK_SPEED : FALL_SPEED }
+function killingFall(w) { return w.submerged ? Infinity : SAFE_FALL }
 
 var TRAITS = {
   steady:   { label: "steady",   turnLimit: 3, fallMargin: 0, bridgeAt: 8,  bashFirst: false, blockBias: 0, buildCap: 2, noFloat: false, standDown: 0, digBias: 0, pace: 1 },
@@ -221,8 +308,9 @@ function traitOf(ag) { return TRAITS[ag.trait] || TRAITS.steady }
 // going to disagree about. It is not decoration — hazardExposure asks the
 // same question, so a quick walker really can take a crossing a slow one
 // correctly refuses.
-function walkStep(ag) {
-  return WALK_SPEED * (traitOf(ag).pace || 1) * (ag.chilledFor > 0 ? 0.48 : 1)
+function walkStep(ag, w) {
+  var swim = w && w.submerged ? SWIM_PACE : 1
+  return WALK_SPEED * (traitOf(ag).pace || 1) * (ag.chilledFor > 0 ? 0.48 : 1) * swim
 }
 
 // Out of bounds reads as STEEL to the sides and below, EMPTY above. That way
@@ -608,6 +696,10 @@ function generate(level, attempt, colonySeed) {
     level: level,
     attempt: attempt,
     biome: BIOMES[(level - 1) % BIOMES.length],
+    // Set here rather than asked for repeatedly: the flag is read on every
+    // agent on every tick, and one biome comparison per world beats sixty
+    // thousand string compares a second. See the Water block above.
+    submerged: BIOMES[(level - 1) % BIOMES.length] === "Trench",
     k: K,
     decor: [],
     corrGap: CORR_GAP,
@@ -716,6 +808,23 @@ function generate(level, attempt, colonySeed) {
   var tower = w.biome === "Skyscraper"
   if (tower) w.ascending = rng() < 0.5
 
+  // A Trench level played upside down — hatch on the sea floor, way out at the
+  // surface — was tried and does not work, and the reason is worth writing
+  // down because the idea will occur to somebody else.
+  //
+  // It is not that `w.ascending` is tower-specific; it is not, and it did
+  // exactly what it says. It is that everything *else* assumes descent.
+  // goalDist, exitInSight, the corridor handoffs, where obstacles go, where
+  // hazards go and the whole of the recovery ladder are written for a colony
+  // working its way down, and inverting the destination leaves all of them
+  // pointing the wrong way at once. Measured, with chimneys cut and swimming
+  // working in both directions: ascending Trench levels cleared 4% of the time
+  // and got 12% of the colony home, against 79% and 87% for descending ones in
+  // the same run. That is not a tuning gap, it is a different game.
+  //
+  // Left here as a signpost rather than a flag, because the flag is one line
+  // and the four hours are in the sentence above it.
+
   var flip = rng() < 0.5 ? 1 : -1
   var plan = corridorPlan(rng)
   // A storey of a tower costs the walk across it twice over — out to the far
@@ -787,6 +896,22 @@ function generate(level, attempt, colonySeed) {
     if (!tower && j < corridors.length - 1) {
       carveDescent(w, rng, cur, corridors[j + 1])
     }
+    // The Trench's own vertical routes. Everywhere else the ground between two
+    // corridors is earth a digger goes through, and the handoff at the end of
+    // the run is the only other way down — which is exactly why swimming was
+    // almost never worth anything down here: a diver can rise or sink through
+    // open water, and there was no open water to rise through. Corridor floors
+    // are solid, and every hole the colony makes it makes downward.
+    //
+    // So the sea floor gets chimneys: natural crevices connecting one storey
+    // to the next, open in both directions and usable by anybody. They are the
+    // thing that makes the biome swim rather than walk, and they are cut here
+    // with the obstacles rather than after the roughening, for the reason the
+    // whole of generation is ordered that way — roughening a floor that has
+    // already been holed leaves raised dirt hanging across the gap.
+    if (w.submerged && j < corridors.length - 1) {
+      cutChimneys(w, rng, cur, corridors[j + 1])
+    }
   }
 
   // A building's floors are slabs. Everywhere else the ground between two
@@ -854,7 +979,18 @@ function generate(level, attempt, colonySeed) {
     // Warnings patrolling in person. Mixing them stacks ranged pressure in a
     // way the colony cannot read or answer cleanly.
     var enemyKindRoll = enemyRng()
-    if (enemyKindRoll < 0.32) w.enemyRoster.push("operator")
+    // A drone operator on the sea floor is a joke the biome does not need, and
+    // a quadcopter under forty atmospheres is not a joke at all. Down here the
+    // post is held by a rival salvage crew: one diver with a speargun, or a
+    // pair of them with the ordinary sidearm.
+    if (submerged(w)) {
+      if (enemyKindRoll < 0.55) w.enemyRoster.push("harpoon")
+      else {
+        var divers = irand(enemyRng, 1, 2)
+        for (var dv = 0; dv < divers; dv++) w.enemyRoster.push("gun")
+      }
+    }
+    else if (enemyKindRoll < 0.32) w.enemyRoster.push("operator")
     else if (enemyKindRoll < 0.57) w.enemyRoster.push("sniper")
     else {
       var enemyCount = irand(enemyRng, 1, 2)
@@ -960,8 +1096,13 @@ function generate(level, attempt, colonySeed) {
   // The hole in the bottom of the world. It goes in here, after the exit and
   // the wall in front of it are settled — a crossing has to be placed relative
   // to both — and before the floors are roughened.
+  // A hole in the floor is a descent-level idea. On a level played upside down
+  // the "last" corridor is the top one, and a bottomless shaft cut there would
+  // punch through every floor beneath it — the failure AGENTS.md records as
+  // making a level unwinnable. An ascending Trench simply has no bottom pit;
+  // its danger is the water and what lives in it.
   if (tower) placeTowerPit(w, rng, corridors, hx, sealFrom)
-  else placeBottomPit(w, rng, last, corridors.length > 1 ? corridors[corridors.length - 2] : null, sealFrom)
+  else if (!w.ascending) placeBottomPit(w, rng, last, corridors.length > 1 ? corridors[corridors.length - 2] : null, sealFrom)
   w.pit = w.pits.length ? w.pits[0] : null
 
   // A hole the whole colony has to get over is a bridge the whole colony
@@ -978,6 +1119,23 @@ function generate(level, attempt, colonySeed) {
     var placedHazard = placeHazard(w, rng, corridors, hazardCorridors[hpi])
     if (placedHazard) w.hazards.push(placedHazard)
   }
+  // The weather roll, on top of whatever danger the level already drew. Only
+  // the Trench has any, and it is deliberately placed on a different corridor
+  // from the level's real hazard where there is one to spare — a current and a
+  // shark in the same stretch of corridor is not two problems, it is one
+  // problem you cannot read.
+  var weather = hazardsWeather(w.biome)
+  if (weather.length && rng() < 0.55) {
+    var wcorr = pick(rng, corridors.map(function (_, ix) { return ix }).filter(function (ix) {
+      for (var hz = 0; hz < w.hazards.length; hz++) if (w.hazards[hz].corridor === ix) return false
+      return true
+    }))
+    if (wcorr !== undefined) {
+      var placedWeather = placeHazard(w, rng, corridors, wcorr, weather)
+      if (placedWeather) w.hazards.push(placedWeather)
+    }
+  }
+
   w.hazard = w.hazards.length ? w.hazards[0] : null
 
   placeMission(w, corridors)
@@ -1100,7 +1258,7 @@ function placeMission(w, corridors) {
     return true
   })
   w.mission = {
-    id: spec.id, verb: spec.verb, kind: spec.kind,
+    id: spec.id, verb: spec.verb, kind: spec.kind, still: !!spec.still,
     x: base, y: site.y, targets: targets,
     done: false, discovered: false, progress: 0,
     completed: 0, need: targets.length
@@ -1418,6 +1576,60 @@ function biomeSkin(w, rng) {
         rx += rng() < 0.4 ? (rng() < 0.5 ? -1 : 1) : 0
         if (rx < 4 || rx >= COLS - 4 || ry >= ROWS - 3) break
         if (at(w, rx, ry) !== STEEL) setCell(w, rx, ry, ORE)
+      }
+    }
+
+  } else if (w.biome === "Trench") {
+    // Sediment. The one place on the board where the strata are horizontal and
+    // mean it: silt settles in flat beds, so the bands run the full width and
+    // wander by a row rather than by a slope. Everything else in this function
+    // is trying to look like rock that was forced somewhere; this is trying to
+    // look like rock that was dropped.
+    var bed = SKY + 2
+    var grain = 0
+    while (bed < ROWS - 2) {
+      var thick = irand(rng, 2, 5)
+      var band = grain % 3 === 0 ? ORE : (grain % 3 === 1 ? DIRT : ROCK)
+      var wander = 0
+      for (x = 3; x < COLS - 3; x++) {
+        // A bed is level, not ruled. One row of drift every few columns is the
+        // difference between sediment and a brick wall.
+        if (rng() < 0.10) wander += rng() < 0.5 ? -1 : 1
+        if (wander < -2) wander = -2
+        if (wander > 2) wander = 2
+        for (y = bed + wander; y < bed + wander + thick; y++) {
+          if (y < SKY || y >= ROWS - 2) continue
+          if (at(w, x, y) === STEEL) continue
+          setCell(w, x, y, band)
+        }
+      }
+      bed += thick
+      grain++
+    }
+
+    // Boulders that rolled in and were buried where they stopped, breaking the
+    // banding up. Without them the whole floor reads as a barcode.
+    for (var bo = 0; bo < 14; bo++) {
+      var box = irand(rng, 6, COLS - 8), boy = irand(rng, SKY + 4, ROWS - 6)
+      var bor = irand(rng, 2, 4)
+      for (var bdy = -bor; bdy <= bor; bdy++)
+        for (var bdx = -bor; bdx <= bor; bdx++) {
+          if (bdx * bdx + bdy * bdy > bor * bor) continue
+          if (at(w, box + bdx, boy + bdy) === STEEL) continue
+          setCell(w, box + bdx, boy + bdy, ROCK)
+        }
+    }
+
+    // Shell beds: thin bright seams following the top of a band, which is
+    // where things that lived here would have been left.
+    for (var sh = 0; sh < 18; sh++) {
+      var shx = irand(rng, 5, COLS - 12), shy = irand(rng, SKY + 3, ROWS - 4)
+      var shlen = irand(rng, 5, 14)
+      for (var sl = 0; sl < shlen; sl++) {
+        if (shx + sl >= COLS - 4) break
+        if (rng() < 0.25) shy += rng() < 0.5 ? -1 : 1
+        if (shy < SKY + 1 || shy >= ROWS - 3) break
+        if (at(w, shx + sl, shy) !== STEEL) setCell(w, shx + sl, shy, ORE)
       }
     }
   }
@@ -1799,6 +2011,15 @@ var SPECIALS = [
   // going because stopping at the requested boundary would require judgment.
   ,{ id: "autocomplete", name: "Auto Complete", act: "complete", height: "steps", cool: 125, robe: "#176b87", hair: "#7de3ff" }
 
+  // The Trench's own, and the only one on the roster that is a vehicle rather
+  // than an agent with a gimmick. Everybody else on this list answers the wall
+  // in front of them; the piledriver is the only one that goes down and
+  // nothing at all goes up. A submarine blowing its tanks does, which is the
+  // move the colony wants on the levels where home is above and the climbers
+  // have run out — and it is what a sub actually does, rather than a shaft
+  // with a periscope drawn on it.
+  ,{ id: "submarine", name: "Deep Learning", act: "ballast", height: "conning", cool: 165, robe: "#2f5a68", hair: "#e0b649" }
+
   // Takes nearby agents through an obstacle as one linked conclusion. Whether
   // any of them agreed to the premise is outside the context window.
   ,{ id: "chainthought", name: "Chain of Thought", act: "chain", height: "chain", cool: 165, robe: "#713f98", hair: "#dfb7ff" }
@@ -2045,6 +2266,14 @@ function specialShapeCut(w, ag, act, dry) {
       if (dry ? workable(w, fx + i, fy + j) : clearCell(w, fx + i, fy + j)) {
         if (dry) return true; moved = true
       }
+  } else if (act === "ballast") {
+    // Straight up, three across, through whatever is over its head. Wider than
+    // an agent so the queue behind can use the shaft too — a hole exactly one
+    // body across is a hole only the one that made it gets through.
+    for (i = -1; i <= 1; i++) for (j = 1; j <= 9; j++)
+      if (dry ? workable(w, fx + i, fy - AGENT_H - j) : clearCell(w, fx + i, fy - AGENT_H - j)) {
+        if (dry) return true; moved = true
+      }
   } else if (act === "quarry") {
     for (i = 1; i <= 7; i++) for (j = -7; j <= 0; j++)
       if (dry ? workable(w, fx + d * i, fy + j) : clearCell(w, fx + d * i, fy + j)) {
@@ -2173,7 +2402,8 @@ function specialCut(w, ag, act, dry) {
     setCell(w, fx, fy, ROCK)
     setCell(w, fx + d * (1 + thick), fy, ROCK)
 
-  } else if (act === "rocket" || act === "stomp" || act === "quarry" || act === "slab") {
+  } else if (act === "rocket" || act === "stomp" || act === "quarry" || act === "slab"
+             || act === "ballast") {
     return specialShapeCut(w, ag, act, dry)
 
   } else if (act === "sap") {
@@ -2309,20 +2539,64 @@ var HAZARDS = [
   // is on a route of its own, and the shredder is where it always is.
   { id: "sprinkler", name: "Rate Limiter", mech: "beam", mount: "ceiling", reach: 7, charge: 26, fire: 30, rest: 56, w: 7, h: 6, only: ["Skyscraper"] },
   { id: "polisher",  name: "Buffer Cleaner", mech: "cycle", mount: "floor", reach: 0, charge: 22, fire: 30, rest: 50, w: 6, h: 3, only: ["Skyscraper"] },
-  { id: "shredder",  name: "Garbage In", mech: "plate", mount: "floor", reach: 3, charge: 16, fire: 24, rest: 48, w: 5, h: 3, only: ["Skyscraper"] }
+  { id: "shredder",  name: "Garbage In", mech: "plate", mount: "floor", reach: 3, charge: 16, fire: 24, rest: 48, w: 5, h: 3, only: ["Skyscraper"] },
+
+  // Trench. The two things the sea does to a diver, and they are deliberately
+  // not the same kind of thing. One eats you and one moves you.
+  //
+  // The shark is an ordinary `watch`: it notices somebody in reach, winds up
+  // where they can see it wind up, and bites. Long rest, because a shark that
+  // is always biting is a wall, and the point of it is the run you make while
+  // it is somewhere else.
+  // Six wide, not eight. It hangs off the ceiling anchor like everything else
+  // that mounts there, and placeHazard needs that anchor solid across the
+  // whole span — at eight it placed on 8 of 120 Trench runs against the vent's
+  // 28, which left the biome's headline danger as its rarest. At six it places
+  // twice as often for the same clear rate. The body is 22px inside a 48px
+  // zone, so it still has water to patrol.
+  { id: "shark",    name: "Loan Shark", mech: "watch", mount: "ceiling", reach: 14, charge: 30, fire: 16, rest: 96, w: 6, h: 5, only: ["Trench"] },
+
+  // The current is the only fixture on the board that does not kill anything —
+  // see the sweep branch in hazardStrike. `cycle`, because a current does not
+  // notice you and does not care: it is on its own clock whether the corridor
+  // is full or empty, which is the whole character of the thing.
+  // Narrow, against the instinct. A current ought to be a broad stretch of
+  // water going somewhere, and the first version was eighteen cells across for
+  // exactly that reason — but placeHazard needs an unbroken span of clear
+  // floor with something solid under all of it, and at eighteen there is
+  // nowhere on the board that qualifies: it placed on none of 240 runs. What
+  // decides how often the colony actually meets a current is how often it gets
+  // placed, not how much corridor it covers. Measured over 240 Trench runs:
+  // w=6 placed 24 times for 37 sweeps, w=12 placed 18 times for 21, w=16
+  // placed 12 times for 25. Eight is six's placement rate with a flow wide
+  // enough to read as one.
+  // `weather: true` keeps it out of the ordinary draw entirely — see
+  // hazardsFor and the extra roll in generate(). A fixture that cannot kill
+  // must not be able to win the level's one hazard slot: measured, the Trench
+  // lost 34 agents to hazards where the Cavern lost 64 and the Skyscraper 97,
+  // purely because a third of its levels spent that slot on something
+  // harmless, and it came out the easiest biome on the board by six points.
+  // The current is weather. Weather does not replace the sharks.
+  { id: "current",  name: "Data Drift", mech: "cycle", mount: "wall", reach: 0, charge: 26, fire: 40, rest: 74, w: 8, h: 6, only: ["Trench"], weather: true },
+
+  // An old wreck venting what is left in its tanks. `cycle` and vertical,
+  // so it reads as the one place in the level where the water is going up.
+  { id: "vent",     name: "Memory Pressure", mech: "cycle", mount: "floor", reach: 0, charge: 28, fire: 26, rest: 62, w: 4, h: 6, only: ["Trench"] }
 ]
 
 // Open flame and steam have no business in an ice cave, and the industrial
 // machinery reads wrong in a jungle.
 var HAZARD_NOT = {
-  brazier: ["Ice Cave", "Skyscraper"],
-  flame: ["Ice Cave"],
-  geyser: ["Ice Cave", "Spaceship", "Skyscraper"],
+  brazier: ["Ice Cave", "Skyscraper", "Trench"],
+  flame: ["Ice Cave", "Trench"],
+  geyser: ["Ice Cave", "Spaceship", "Skyscraper", "Trench"],
+  // Nothing that burns, arcs or catches fire works at forty atmospheres, and
+  // an office shredder on the sea floor is a joke the biome does not need.
+  tesla: ["Jungle", "Trench"],
+  fence: ["Jungle", "Trench"],
   grinder: ["Jungle"],
   piston: ["Jungle"],
-  crusher: ["Jungle"],
-  tesla: ["Jungle"],
-  fence: ["Jungle"]
+  crusher: ["Jungle"]
 }
 
 // Which of them may turn up on this level.
@@ -2330,9 +2604,23 @@ function hazardsFor(biome) {
   var out = []
   for (var i = 0; i < HAZARDS.length; i++) {
     var spec = HAZARDS[i]
+    if (spec.weather) continue
     if (spec.only && spec.only.indexOf(biome) < 0) continue
     var banned = HAZARD_NOT[spec.id]
     if (banned && banned.indexOf(biome) >= 0) continue
+    out.push(spec)
+  }
+  return out
+}
+
+// The fixtures kept out of the ordinary draw; see the `weather` note on the
+// current. Same shape as hazardsFor so the two read as a pair.
+function hazardsWeather(biome) {
+  var out = []
+  for (var i = 0; i < HAZARDS.length; i++) {
+    var spec = HAZARDS[i]
+    if (!spec.weather) continue
+    if (spec.only && spec.only.indexOf(biome) < 0) continue
     out.push(spec)
   }
   return out
@@ -2343,13 +2631,13 @@ function hazardSpec(id) {
   return HAZARDS[0]
 }
 
-function placeHazard(w, rng, corridors, ci) {
+function placeHazard(w, rng, corridors, ci, forced) {
   var c = corridors[ci]
-  var pool = hazardsFor(w.biome).filter(function(candidate) {
+  var pool = (forced || hazardsFor(w.biome)).filter(function(candidate) {
     for (var hi = 0; hi < w.hazards.length; hi++) if (w.hazards[hi].kind === candidate.id) return false
     return true
   })
-  if (!pool.length) pool = hazardsFor(w.biome)
+  if (!pool.length) pool = forced || hazardsFor(w.biome)
   var localPool = pool.filter(function(candidate) { return candidate.only && candidate.only.indexOf(w.biome) >= 0 })
   // Biome hazards would be drowned out by the large shared roster under a
   // flat draw. Nearly half the time, prefer the local story when one exists.
@@ -2686,6 +2974,31 @@ function hazardStrike(w, h) {
       w.lastEvent = "cold start"
       continue
     }
+    // The current takes hold rather than kills — the second fixture on the
+    // board to do something other than end an agent, and it follows the
+    // frostjet's shape exactly: a grace window so one diver is not seized on
+    // every tick it spends in the flow, and a `known` flag so the colony still
+    // learns the corridor has something in it. Which way it runs is fixed at
+    // generation (`h.dir`), because a current that reversed would be a
+    // coin-toss the colony could never learn.
+    if (h.kind === "current") {
+      if (ag.hazardGrace > 0) continue
+      if (ag.sweptFor > 0) continue
+      ag.sweptFor = SWEEP_TICKS
+      ag.sweptDir = h.dir
+      ag.hazardGrace = SWEEP_GRACE
+      // Whatever it was doing, it is not doing it now. A builder halfway
+      // through a bridge keeps its bricks and starts again where it lands.
+      if (ag.state === "build" || ag.state === "bash" || ag.state === "dig"
+          || ag.state === "block" || ag.state === "climb") {
+        ag.state = "walk"
+        ag.timer = 0
+      }
+      h.known = true
+      w.hazardKnown = true
+      w.lastEvent = "swept away"
+      continue
+    }
     addBlood(w, ag.x, ag.y - 1.5, 14)
     ag.gone = true
     ag.state = "dead"
@@ -2730,7 +3043,7 @@ function hazardExposure(w, h, ag) {
   var near = h.dir > 0 ? mid - 1 : mid - spec.reach - 1
   var far = h.dir > 0 ? mid + spec.reach + 1 : mid + 1
   var edge = ag.dir > 0 ? far : near
-  return Math.abs(edge - ag.x) / walkStep(ag)
+  return Math.abs(edge - ag.x) / walkStep(ag, w)
 }
 
 var HAZARD_WAIT = 260    // ticks of waiting before somebody tries it regardless
@@ -2783,13 +3096,54 @@ function hazardAhead(w, ag, nx) {
   return false
 }
 
+// Everything that reads this is asking "is it lethal over there" — it is what
+// stops a walker at a lip, holds a queue for a reload and steers a floater out
+// of a zone on the way down. So a fixture that cannot kill has no business
+// being in the answer. The current is weather: you do not route around
+// weather, you get caught in it, and a colony that treated it like a sentry
+// would file politely past the one hazard in the biome that is meant to
+// happen to them. Nothing else on the board is exempt, and nothing else on
+// the board is survivable.
 function hazardZoneAt(w, x, y, perceptive) {
   for (var i = 0; i < w.hazards.length; i++) {
     var h = w.hazards[i]
     if (h.wrecked || (!h.known && !perceptive)) continue
+    if (h.kind === "current") continue
     if (hazardCovers(w, h, x, y)) return h
   }
   return null
+}
+
+// Two or three per storey, two cells wide, placed away from the ends of the
+// run and away from each other so the colony meets one rather than a colander.
+// Width matters: at one cell a diver can pass but the walk rules read the lip
+// as an ordinary hole and half the queue falls in before anybody swims, and at
+// three the floor stops being a floor.
+var CHIMNEY_WIDE = 2
+function cutChimneys(w, rng, c, next) {
+  var lo = Math.min(c.x0, c.x1) + 12
+  var hi = Math.max(c.x0, c.x1) - 12
+  if (hi - lo < 20) return
+  var want = irand(rng, 2, 3)
+  var cut = []
+  for (var n = 0; n < want; n++) {
+    for (var tryN = 0; tryN < 14; tryN++) {
+      var x = irand(rng, lo, hi - CHIMNEY_WIDE)
+      // Never under the door or the hatch, and never so close to another that
+      // the floor between them stops holding anybody up.
+      if (!eventSafeX(w, x) || !eventSafeX(w, x + CHIMNEY_WIDE)) continue
+      var clash = false
+      for (var q = 0; q < cut.length; q++) if (Math.abs(cut[q] - x) < 16) clash = true
+      if (clash) continue
+      // It has to open into corridor on both ends, or it is a crevice into
+      // solid rock with a diver at the bottom of it.
+      if (solid(w, x, c.floorY - 1) || solid(w, x, next.floorY - 1)) continue
+      for (var cx = x; cx < x + CHIMNEY_WIDE; cx++)
+        for (var cy = c.floorY; cy < next.floorY; cy++) clearCell(w, cx, cy)
+      cut.push(x)
+      break
+    }
+  }
 }
 
 function carveDescent(w, rng, c, next) {
@@ -3256,6 +3610,12 @@ function hitWall(w, ag) {
   // Steel is the one honest "no". Nothing to try, so don't waste a skill on it.
   if (mat === STEEL) { turnAround(w, ag); return }
 
+  // Before any of the tools: if home is up or down and the water is open, the
+  // wall is somebody else's problem. This is what makes the biome read as
+  // swimming rather than as walking with a longer fall — a diver meeting an
+  // obstacle under the exit goes over it, not through it.
+  if (swimRoute(w, ag)) return
+
   var h = wallHeight(w, ax, footY)
   var t = wallThickness(w, ax, footY, ag.dir)
   var trait = traitOf(ag)
@@ -3390,6 +3750,18 @@ function edgeAhead(w, ag, nx) {
   // it is exactly how a floater ends up drifting serenely out of the world.
   var trait = traitOf(ag)
 
+  // On a level played upside down, a hole in the floor is not a route — it is
+  // the way back to where you started. Sinking is free down here, so a diver
+  // with the surface above it would otherwise stroll into the first chimney it
+  // met, sink a storey, swim back up, land beside the same chimney and do it
+  // again: 50,358 rises in sixty runs, and not one colony out. Stepping over a
+  // hole you are trying to get above is the ordinary reading, and it is only
+  // safe to be this blunt because the water means nothing is lost by turning.
+  if (w.submerged && !ag.special && exitAbove(w, ag) && far <= 2) {
+    turnAround(w, ag)
+    return
+  }
+
   if (ag.special) { specialAtEdge(w, ag, nx, depth, far); return }
 
   if (depth !== Infinity
@@ -3427,10 +3799,10 @@ function edgeAhead(w, ag, nx) {
   if (far > 2 && !exitBelow(w, ag) && depth > trait.bridgeAt + ag.bridgeBias
       && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return }
 
-  if (trait.noFloat && far > 2 && depth > SAFE_FALL - trait.fallMargin
+  if (trait.noFloat && far > 2 && depth > killingFall(w) - trait.fallMargin
       && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return }
 
-  var wantsChute = depth > SAFE_FALL - trait.fallMargin
+  var wantsChute = depth > killingFall(w) - trait.fallMargin
 
   if (!wantsChute) { ag.x = nx; startFall(w, ag); return }
 
@@ -3442,7 +3814,7 @@ function edgeAhead(w, ag, nx) {
   }
 
   // Survivable after all, just not comfortably. Better than turning back.
-  if (depth <= SAFE_FALL) { ag.x = nx; startFall(w, ag); return }
+  if (depth <= killingFall(w)) { ag.x = nx; startFall(w, ag); return }
 
   turnAround(w, ag)
 }
@@ -3513,6 +3885,12 @@ function considerEscape(w, ag) {
   if (ag.turns < turnLimit) return false
   ag.turns = 0
 
+  // Water first, and it costs nothing. A diver with open water above or below
+  // it has no reason to dig a hole or buy a climber for a route the sea is
+  // already offering — and unlike both of those, it works for whoever comes
+  // along next as well, because the shaft was there all along.
+  if (swimRoute(w, ag)) return true
+
   if (below) {
     return startDescent(w, ag, take, true, true, true, false)
   }
@@ -3543,7 +3921,7 @@ function startFall(w, ag) {
 function beginUncontrolledFall(w, ag) {
   if (!ag.floater) {
     var d = dropDepth(w, Math.floor(ag.x), Math.floor(ag.y))
-    if (d > SAFE_FALL && take(w, "floater")) ag.floater = true
+    if (d > killingFall(w) && take(w, "floater")) ag.floater = true
   }
   startFall(w, ag)
 }
@@ -3721,6 +4099,17 @@ function spawn(w) {
     infected: 0,
     fall: 0,
     timer: 0,
+    // Ticks left in a current's grip, and which way it is carrying. See
+    // stepSweep — this is the one thing on the board that moves an agent
+    // somewhere it did not decide to go.
+    sweptFor: 0,
+    sweptDir: 0,
+    // Where a kick up or down through open water is going; see swimRoute.
+    swimUp: false,
+    swimFromX: 0,
+    swimShaftX: 0,
+    swimToX: 0,
+    swimToY: 0,
     bricks: 0,
     built: 0,          // bridges laid; see willBuild()
     turns: 0,
@@ -4078,7 +4467,7 @@ function eventSpawn(w, ev) {
 // ---------------------------------------------------------------------------
 
 function stepWalk(w, ag) {
-  var nx = ag.x + ag.dir * walkStep(ag)
+  var nx = ag.x + ag.dir * walkStep(ag, w)
   var cx = Math.floor(nx)
   var footY = Math.floor(ag.y)
 
@@ -4088,7 +4477,7 @@ function stepWalk(w, ag) {
   var search = missionTarget(w, ag)
   if (search && Math.abs(search.x - ag.x) > 2) {
     ag.dir = search.x > ag.x ? 1 : -1
-    nx = ag.x + ag.dir * walkStep(ag)
+    nx = ag.x + ag.dir * walkStep(ag, w)
     cx = Math.floor(nx)
   }
 
@@ -4099,11 +4488,23 @@ function stepWalk(w, ag) {
   if (!search && seen && seen !== ag.dir) {
     ag.dir = seen
     ag.turns = 0
-    nx = ag.x + ag.dir * walkStep(ag)
+    nx = ag.x + ag.dir * walkStep(ag, w)
     cx = Math.floor(nx)
   }
 
   if (anyBlockerNear(w, ag, nx)) { turnAround(w, ag); return }
+
+  // Passing under an opening with the surface above. This is the one rule that
+  // makes an ascending level playable: every other caller of swimRoute is a
+  // reaction — a wall, a turn, a stall — and a diver walking a corridor with a
+  // chimney in its ceiling meets none of them. It paced the bottom floor for
+  // eleven hundred ticks and was bombed by the stall detector while a clear
+  // route to the surface went past over its head.
+  //
+  // Only when home is up, and only on the tick the agent changes cell, so this
+  // is a handful of column scans a second rather than one per agent per tick.
+  if (w.submerged && !ag.special && cx !== Math.floor(ag.x) && exitAbove(w, ag)
+      && swimRoute(w, ag)) return
 
   // The doors. On every floor but the lowest this is also an edge, so
   // edgeAhead carries the same call for the routes that reach it instead —
@@ -4170,7 +4571,7 @@ function stepWalk(w, ag) {
       var out = Math.abs(lipOn - ag.x) < Math.abs(lipBack - ag.x) ? lipOn : lipBack
       var away = out > ag.x ? 1 : -1
       if (ag.dir !== away) { ag.dir = away; ag.turns++ }
-      var outX = ag.x + ag.dir * walkStep(ag)
+      var outX = ag.x + ag.dir * walkStep(ag, w)
       return advanceWalk(w, ag, outX, Math.floor(outX), footY)
     }
 
@@ -4268,7 +4669,9 @@ function herdSteer(w, ag) {
 }
 
 function stepFall(w, ag) {
-  var speed = ag.floater && ag.fall > 2 ? FLOAT_SPEED : FALL_SPEED
+  // An umbrella under water is a diver with an umbrella. The water is already
+  // slower than the canopy, so a sink is a sink whoever is holding what.
+  var speed = w.submerged ? SINK_SPEED : (ag.floater && ag.fall > 2 ? FLOAT_SPEED : FALL_SPEED)
   // Null gravity. Everything falls at umbrella speed for the duration, which
   // does not change what is survivable — SAFE_FALL is a distance, not a speed
   // — but does change how long everybody spends in the air deciding.
@@ -4304,7 +4707,7 @@ function stepFall(w, ag) {
   // break the shaft has to offer, provided the car is under them and has room.
   var deck = liftDeckUnder(w, cx, ag.y, ny)
   if (deck) {
-    if (ag.fall > SAFE_FALL && !ag.floater) { ag.y = deck.car - 1; splat(w, ag); return }
+    if (ag.fall > killingFall(w) && !ag.floater) { ag.y = deck.car - 1; splat(w, ag); return }
     ag.liftWant = exitAbove(w, ag) ? -1 : 1
     boardLift(w, ag, deck, deck.stops[deck.at])
     return
@@ -4322,9 +4725,9 @@ function stepFall(w, ag) {
     return
   }
 
-  if (!ag.floater && ag.fall > SAFE_FALL - 6) {
+  if (!ag.floater && ag.fall > killingFall(w) - 6) {
     var remaining = dropDepth(w, cx, Math.floor(ny))
-    if (ag.fall + remaining > SAFE_FALL && take(w, "floater")) ag.floater = true
+    if (ag.fall + remaining > killingFall(w) && take(w, "floater")) ag.floater = true
   }
 
   for (var yy = Math.floor(ag.y) + 1; yy <= Math.floor(ny) + 1; yy++) {
@@ -4334,7 +4737,7 @@ function stepFall(w, ag) {
     if (shaft && yy >= shaft.floorY) continue
     if (solid(w, cx, yy)) {
       ag.y = yy - 1
-      if (ag.fall > SAFE_FALL && !ag.floater) { splat(w, ag); return }
+      if (ag.fall > killingFall(w) && !ag.floater) { splat(w, ag); return }
       ag.state = "walk"
       ag.fall = 0
       ag.floater = false
@@ -5017,8 +5420,8 @@ function stepBomb(w, ag) {
   ag.fuse--
 
   if (unsupported(w, ag)) {
-    ag.fall += FALL_SPEED
-    var ny = ag.y + FALL_SPEED
+    ag.fall += fallSpeed(w)
+    var ny = ag.y + fallSpeed(w)
     var pool = liquidAt(w, Math.floor(ag.x), ny)
     if (pool && ny >= pool.surfaceY) { sink(w, ag, pool); return }
     if (Math.floor(ny) >= ROWS - 1) { ag.gone = true; w.lost++; return }
@@ -5295,6 +5698,14 @@ function specialAtWall(w, ag) {
   // Drilling downward is only ever the answer when down is where home is.
   if (spec.act === "stomp" && !exitBelow(w, ag)) { turnAround(w, ag); return }
 
+  // And surfacing only when up is. Same rule, other way up: a sub that blows
+  // its tanks at every wall it meets spends the level rising through ceilings
+  // the colony had no reason to be above. `liftRouted` stands it down on a
+  // tower for the reason everything else that answers "home is above me" is
+  // stood down there — the answer on a tower is a machine at the end of a
+  // floor, not a hole in the storey above.
+  if (spec.act === "ballast" && (!exitAbove(w, ag) || liftRouted(w))) { turnAround(w, ag); return }
+
   // Ask first. A block too big to shift, a column too short to topple, a wall
   // with nothing but steel behind it — it turns and tries somewhere else
   // rather than winding up and whiffing.
@@ -5439,7 +5850,7 @@ function stepWebEscape(w, ag) {
 // goes down, not another terrain-crossing trick, so an earlier roof walk must
 // not leave it stranded at a shaft while that move's cooldown expires.
 function rappelAtEdge(w, ag, nx, depth) {
-  if (depth === Infinity || depth <= SAFE_FALL) return false
+  if (depth === Infinity || depth <= killingFall(w)) return false
   var cx = Math.floor(nx)
   var footY = Math.floor(ag.y)
 
@@ -5625,6 +6036,7 @@ function stepSpecialHeight(w, ag) {
   // Even when the only safe landing is directly below, these devices travel
   // through the air instead of wearing nineteen costumes for the same fall.
   var sway = {
+    conning: 0.6,
     recoil: -2, cyclone: 3, web: 0.4, logchute: 2, balloon: -3,
     promptchute: 1.5, piledrive: 0, helicopter: 5, glasswing: 3,
     ghost: -2, gunwing: 2.5, tractor: 0.8, steps: 1.5, chain: 3,
@@ -5678,7 +6090,7 @@ function specialAtEdge(w, ag, nx, depth, far) {
   // A crawler uses a real roof when there is one. Its fallback is still a web,
   // cast back to the lip, so it shares the universal promise without borrowing
   // anybody else's umbrella or machine.
-  if (depth > SAFE_FALL) {
+  if (depth > killingFall(w)) {
     if (spec.act === "ceiling" && rappelAtEdge(w, ag, nx, depth)) return
     if (startSpecialHeight(w, ag, nx, depth, far)) return
   }
@@ -5711,7 +6123,7 @@ function specialAtEdge(w, ag, nx, depth, far) {
     return
   }
 
-  if (spec.act === "ceiling" && ag.cool <= 0 && depth > SAFE_FALL) {
+  if (spec.act === "ceiling" && ag.cool <= 0 && depth > killingFall(w)) {
     var before = ag.state
     startCeiling(w, ag)
     if (ag.state === "ceil") return
@@ -5723,7 +6135,7 @@ function specialAtEdge(w, ag, nx, depth, far) {
   }
   if (depth === Infinity) { turnAround(w, ag); return }
 
-  if (depth <= SAFE_FALL) { ag.x = nx; startFall(w, ag); return }
+  if (depth <= killingFall(w)) { ag.x = nx; startFall(w, ag); return }
   turnAround(w, ag)
 }
 
@@ -6467,7 +6879,7 @@ function stepEnemyWalk(w, en) {
 function fireEnemyGun(w, en) {
   en.backedOff = 0        // it got a shot away, so the retreat is earned again
   var fy = Math.floor(en.y) - 2
-  var gunReach = en.kind === "sniper" ? 55 : 28
+  var gunReach = en.kind === "sniper" ? 55 : (en.kind === "harpoon" ? HARPOON_REACH : 28)
   for (var step = 1; step <= gunReach; step++) {
     var x = Math.floor(en.x) + en.dir * step
     for (var ai = 0; ai < w.agents.length; ai++) {
@@ -6475,7 +6887,7 @@ function fireEnemyGun(w, en) {
       if (ag.gone || ag.state === "saved") continue
       if (Math.abs(ag.x - (x + 0.5)) < 0.8 && Math.abs((ag.y - 2) - fy) < 2.5) {
         en.lineTo = ag.x; en.lineY = ag.y - 2; en.shotFor = 8
-        woundFriendly(w, ag, en.x, en.kind === "gun")
+        woundFriendly(w, ag, en.x, en.kind === "gun" || en.kind === "harpoon")
         return
       }
     }
@@ -6586,7 +6998,8 @@ function stepEnemy(w, en) {
       // target too, and spent the level displaying red dots without firing.
       // Keep the elapsed aim and transfer it to another clear target. The
       // planted sniper remains deliberate and pays the old reset penalty.
-      var replacement = en.kind === "sniper" ? null : enemyTarget(w, en, 28)
+      var replacement = en.kind === "sniper" ? null
+        : enemyTarget(w, en, en.kind === "harpoon" ? HARPOON_REACH : 28)
       if (replacement) {
         aimed = replacement
         en.targetId = aimed.id
@@ -6598,14 +7011,16 @@ function stepEnemy(w, en) {
       }
     }
     en.lineTo = aimed.x; en.lineY = aimed.y - 2
-    if (en.timer >= (en.kind === "sniper" ? SNIPER_AIM : GUN_AIM)) {
+    if (en.timer >= (en.kind === "sniper" ? SNIPER_AIM
+                    : (en.kind === "harpoon" ? HARPOON_AIM : GUN_AIM))) {
       fireEnemyGun(w, en)
       en.state = "reload"; en.timer = 0
     }
     return
   }
 
-  if (en.state === "reload" && en.timer >= GUN_RELOAD) {
+  if (en.state === "reload"
+      && en.timer >= (en.kind === "harpoon" ? HARPOON_RELOAD : GUN_RELOAD)) {
     en.state = en.kind === "sniper" ? "camp" : "walk"; en.timer = 0
   }
   if (en.state === "recover") {
@@ -6628,6 +7043,209 @@ function stepEnemy(w, en) {
     en.anim++
     if (en.timer >= 75) { en.state = "walk"; en.timer = 0; en.targetId = 0 }
   }
+}
+
+// A diver in a current is baggage. The sweep runs before the agent's own state
+// gets its tick, so whatever it decides this frame it decides from where the
+// water has put it — which is the difference between a hazard that hurts and a
+// hazard that ruins a plan.
+//
+// It stops rather than shoves at a wall: pinned against rock is a readable
+// outcome and a body inside rock is not. Carried off a ledge, though, is the
+// whole point, so the drop is not defended against at all — the water takes
+// you over the edge and you sink from there, which underwater is survivable
+// and on the way to somewhere you did not want to be.
+function stepSweep(w, ag) {
+  if (ag.state === "saved" || ag.state === "bomb" || ag.gone) { ag.sweptFor = 0; return }
+  var nx = ag.x + ag.sweptDir * SWEEP_SPEED
+  var cx = Math.floor(nx)
+  var footY = Math.floor(ag.y)
+
+  // Out of the world. The one death on the board with no body and no crater:
+  // the water simply keeps going and takes them with it. Checked before the
+  // wall test below, because at the rim there is no wall left to stop against.
+  if (nx <= SWEEP_OVERBOARD || nx >= COLS - SWEEP_OVERBOARD) {
+    ag.gone = true
+    ag.sweptFor = 0
+    w.lost++
+    w.lastEvent = "carried out to sea"
+    addDust(w, ag.x, ag.y - 1, 10)
+    return
+  }
+
+  // Pinned. Rock is the one thing that stops it, and being held against a wall
+  // by the flow is a survivable outcome that reads as one.
+  if (solid(w, cx, footY) || !headroom(w, cx, footY)) { ag.sweptFor = 0; return }
+  ag.x = nx
+  ag.anim++
+  // Turned to face the way it is travelling, because a diver being carried
+  // backwards past a shark reads as a bug rather than as a current.
+  ag.dir = ag.sweptDir
+  if (ag.state === "walk" && !solid(w, cx, footY + 1) && !liftColumn(w, cx)) startFall(w, ag)
+}
+
+// Is there a clear column from this agent to a floor it can stand on, the way
+// it wants to go? Returns the target, or null.
+//
+// `headroom` at every step, not merely "not solid": a diver needs the same
+// room to occupy a cell that a walker does, and a one-cell gap it can pass
+// through but not stop in is not a route. The landing has to be somewhere it
+// could have walked to, which is what stops this delivering the colony onto
+// the lip of a bottomless pit or into a lift shaft.
+function swimColumn(w, ag, up) {
+  var footY = Math.floor(ag.y)
+  var here = Math.floor(ag.x)
+  for (var side = 0; side <= SWIM_SIDESTEP; side++) {
+    for (var turn = 0; turn < 2; turn++) {
+      if (side === 0 && turn === 1) continue
+      var x = here + (turn === 0 ? side : -side)
+      if (liftColumn(w, x)) continue
+      if (pitAt(w, x)) continue
+      // The column has to be clear from the agent's own feet outward, which
+      // includes the cell it is standing in when it steps sideways to the
+      // shaft.
+      if (!headroom(w, x, footY)) continue
+      // There has to be an opening at all. Without this the downward scan
+      // found the floor the agent was already standing on — the first solid
+      // cell below its feet — handed back the cell it was in, and the state
+      // machine bounced between walk and swim every tick: 322,956 swims in 120
+      // runs, every one of them zero cells long, and the colony bombed by the
+      // stall detector for standing still.
+      if (!up && solid(w, x, footY + 1)) continue
+      for (var d = 1; d <= SWIM_REACH; d++) {
+        var y = footY + (up ? -d : d)
+        if (y <= SKY || y >= ROWS - 1) break
+        if (up) {
+          // Rising: up the crevice, then out onto the ledge beside it. The
+          // landing is never inside the shaft — the chimney removed the floor
+          // there, which is the whole reason the shaft exists, so a riser
+          // looking for ground under its own feet finds none the whole way up
+          // and every ascending level was unwinnable. It has to kick sideways
+          // at the top, the way anybody coming up a hole in a floor does.
+          if (solid(w, x, y)) break
+          if (d <= AGENT_H) continue
+          for (var out = 1; out <= 2; out++) {
+            for (var oturn = 0; oturn < 2; oturn++) {
+              var lx = x + (oturn === 0 ? out : -out)
+              if (!headroom(w, lx, y) || !solid(w, lx, y + 1)) continue
+              // Reachable from the shaft: the cells between have to be open at
+              // this height or the "ledge" is on the other side of a wall.
+              var blocked = false
+              for (var step = 1; step <= out; step++)
+                if (solid(w, x + (oturn === 0 ? step : -step), y)) blocked = true
+              if (blocked) continue
+              return { x: lx + 0.5, y: y, shaftX: x + 0.5 }
+            }
+          }
+        } else {
+          // Sinking: through open water until ground. Anything solid is the
+          // floor, and it only counts if there is room to stand on it — and
+          // only if it is a storey down rather than a kerb, which the walk
+          // rules already handle better than a swim would.
+          if (!solid(w, x, y)) continue
+          if (d <= MAX_STEP + 1) break
+          if (!headroom(w, x, y - 1)) break
+          return { x: x + 0.5, y: y - 1, shaftX: x + 0.5 }
+        }
+      }
+    }
+  }
+  return null
+}
+
+// The gate. Ordinarily a diver only swims the way home is — one that kicks
+// about for the sake of it never gets anywhere — and never on a tower, for the
+// same reason every other rule that answers "home is above me" stands down
+// there.
+//
+// `force` is the recovery case, and it is the only way an upward swim ever
+// happens in practice. The door is on the last corridor, so measured over
+// 800,000 agent-ticks the exit was above somebody for 0.0% of them: gating a
+// rise on `exitAbove` is gating it on a case the catalogue does not contain.
+// What actually wants to go up is an agent that has run out of ideas on this
+// floor — the storey above is a different route, and the water is free.
+function swimRoute(w, ag, force) {
+  if (!w.submerged || liftRouted(w)) return false
+  var up = exitAbove(w, ag)
+  var target = null
+  if (up || exitBelow(w, ag)) target = swimColumn(w, ag, up)
+  if (!target && force) {
+    // Toward home first. On an ordinary level that is down; on one played
+    // upside down it is emphatically up, and trying down first there took
+    // every stuck diver back through the chimney it had just come up — the
+    // colony spent whole levels riding the same crevice.
+    var first = exitAbove(w, ag)
+    target = swimColumn(w, ag, first)
+    up = first
+    if (!target) { target = swimColumn(w, ag, !first); up = !first }
+  }
+  if (!target) return false
+  ag.state = "swim"
+  ag.swimUp = up
+  ag.swimFromX = ag.x
+  // The shaft and the landing are different columns on the way up: a riser
+  // comes up the crevice and kicks out onto the ledge beside it at the top.
+  // Travelling in the landing's column instead meant rising straight into the
+  // underside of the ledge — the abort below saw solid rock, dropped the swim
+  // and the diver sank all the way back, forever.
+  ag.swimShaftX = target.shaftX
+  ag.swimToX = target.x
+  ag.swimToY = target.y
+  ag.timer = 0
+  ag.idle = 0
+  ag.turns = 0
+  ag.still = 0
+  w.lastEvent = up ? "kicked up" : "dived"
+  return true
+}
+
+// Straight up or straight down, with a lean toward the shaft so a diver that
+// started one cell to the side arrives in the middle of it rather than
+// clipping the lip.
+function stepSwim(w, ag) {
+  ag.anim++
+
+  // Over the shaft before going up or down it. The lean used to run at the
+  // same time as the descent, so a diver that started a cell to the side spent
+  // its first tick still above the old floor — and the abort below, which
+  // reads the column the body is in, cancelled the swim immediately. 16,283 of
+  // 16,320 swims travelled less than a cell.
+  if (Math.abs(ag.swimShaftX - ag.x) > 0.12) {
+    ag.x += (ag.swimShaftX - ag.x) * 0.34
+    if (Math.abs(ag.swimShaftX - ag.x) > 0.5) return
+  } else ag.x = ag.swimShaftX
+
+  var ny = ag.y + (ag.swimUp ? -SWIM_RISE : SINK_SPEED)
+
+  // Arrived. Checked against the recorded landing rather than by feeling for
+  // ground, because the ground under a diver rising past a floor is the
+  // underside of that floor and it would stop at every storey it passed.
+  if (ag.swimUp ? ny <= ag.swimToY : ny >= ag.swimToY) {
+    ag.x = ag.swimToX
+    ag.y = ag.swimToY
+    ag.state = "walk"
+    ag.fall = 0
+    ag.turns = 0
+    // Facing away from the hole it came up. Somebody who surfaces on a ledge
+    // and then turns back toward the shaft goes straight down it again, and
+    // the pair of them make a loop no stall detector can see as one, because
+    // the agent is genuinely changing floors the whole time.
+    if (ag.swimUp) ag.dir = ag.swimToX >= ag.swimFromX ? 1 : -1
+    else herdSteer(w, ag)
+    return
+  }
+
+  // Somebody bashed the shaft shut, or an event dropped a floor into it. Take
+  // the ground that is actually there rather than swimming into it. Read
+  // against the shaft's own column, which is where the body now is.
+  var cx = Math.floor(ag.swimShaftX)
+  if (solid(w, cx, Math.floor(ny) + (ag.swimUp ? -1 : 1))) {
+    ag.y = ny
+    ag.state = "walk"
+    if (!solid(w, cx, Math.floor(ag.y) + 1)) startFall(w, ag)
+    return
+  }
+  ag.y = ny
 }
 
 function stepParticles(w) {
@@ -6702,6 +7320,11 @@ function forceEscape(w, ag) {
   }
   var footY = Math.floor(ag.y)
   var ahead = Math.floor(ag.x) + ag.dir
+
+  // The free answer, before any of the paid ones — and the one place that may
+  // ask for a rise, because an agent that has got nowhere on this floor has a
+  // reason to try the next one.
+  if (swimRoute(w, ag, true)) return
 
   if (exitAbove(w, ag) && !liftRouted(w)) {
     // Below the exit: the only useful direction is up. Climb if there is a
@@ -6833,6 +7456,7 @@ function countPass(w, ag) {
 
 function condemn(w, ag) {
   if (ag.state === "bomb" || ag.state === "block" || ag.state === "camp" || ag.state === "saved") return
+  if (ag.state === "swim") return
   if (ag.waitFor > 0) return
 
   if (ag.special && ag.idle < STUCK_LIMIT) { specialEscape(w, ag); return }
@@ -6890,6 +7514,7 @@ function stepAgents(w) {
     if (ag.gunCool > 0) ag.gunCool--
     if (ag.shoveCool > 0) ag.shoveCool--
     if (ag.hazardGrace > 0) ag.hazardGrace--
+    if (ag.sweptFor > 0) { ag.sweptFor--; stepSweep(w, ag) }
     if (ag.chilledFor > 0) ag.chilledFor--
 
     // A sniper takes a position it can see something from. Camping at the first
@@ -6995,6 +7620,7 @@ function stepAgents(w) {
       case "webup": stepWebEscape(w, ag); break
       case "stunned": stepStunned(w, ag); break
       case "jump":  stepJump(w, ag); break
+      case "swim":  stepSwim(w, ag); break
       case "slide": stepSlide(w, ag); break
       case "camp":  stepCamp(w, ag); break
       case "wait":  stepLiftWait(w, ag); break
@@ -7111,6 +7737,9 @@ function stepMission(w) {
 }
 
 function stepFreedMission(w, m) {
+  // Cargo, not casualties. A rescued civilian walks about once it is out; a
+  // chest of doubloons stays exactly where the sea left it.
+  if (m.still) return
   for (var i = 0; i < m.targets.length; i++) {
     var t = m.targets[i]
     if (!t.freed) continue

@@ -70,7 +70,7 @@ Production is `https://oh-no-more-agents.com`.
   side gets bricks, and the blocker is kept for the drop with no far side.
 - **Biomes are picked by level number, so a new one goes on the end of `BIOMES`**
   — inserting re-skins every level above it. `Palette.js` derives the same index
-  with its own copy of the rule (`(level - 1) % 9` in `poolTint` and `biomeTint`)
+  with its own copy of the rule (`(level - 1) % 10` in `poolTint` and `biomeTint`)
   and must change in the same commit. `rock` is mixed from the theme foreground and is **not** tinted, so a
   skin built mostly of `ROCK` comes out the same grey everywhere.
 - **Events change a level's premise while it is played** (see the block above
@@ -102,6 +102,93 @@ Production is `https://oh-no-more-agents.com`.
 - **Animated scenery cannot live in `drawDecor`.** That runs inside
   `drawTerrain`, which only repaints on `terrainVersion`. Use `drawMachines`,
   called from `drawActors` — the per-tick pass every host already calls.
+
+## The Trench
+
+The second biome with a mechanism rather than a skin, and the only one that is
+water rather than a place with water in it. The rules live around the Water
+block above `submerged()`.
+
+- **`w.submerged` is a flag, not a subsystem.** It is set once at generation and
+  read by exactly three things: how fast a body sinks (`SINK_SPEED`), whether a
+  landing can kill (`killingFall`, which answers `Infinity` down here), and how
+  fast a body swims (`SWIM_PACE`). Everything else about the level is left
+  alone on purpose — corridors are corridors, every skill means what it meant,
+  and the biome can therefore be measured against the same baselines as the
+  other nine instead of being its own game.
+- **Every drop is survivable, so the biome must get its danger elsewhere.**
+  Removing splat deaths is most of what the water does to the game, and the
+  first version came out the easiest biome on the board by six points. What
+  fixed it was not the clock — cutting 40s of air moved the clear rate two
+  points, because most levels finish long before the limit — it was
+  `weather: true`. See below.
+- **A fixture that cannot kill must not win the level's one hazard slot.** The
+  current is weather: it sweeps a diver instead of killing one. While it sat in
+  the ordinary draw it took the hazard slot on a third of Trench levels, which
+  is why the biome lost 34 agents to hazards where the Cavern lost 64 and the
+  Skyscraper 97. `weather: true` keeps it out of `hazardsFor` altogether and
+  gives it a roll of its own after the real hazard is placed, on a corridor
+  that hazard is not using. That alone brought the Trench from 97/92 to 90/89,
+  in the middle of the band.
+- **The current is also exempt from `hazardZoneAt`**, and it is the only thing
+  on the board that is. Everything reading that function is asking "is it
+  lethal over there" — it stops a walker at a lip and holds a queue for a
+  reload. A colony that routed around the current would file politely past the
+  one hazard in the biome that is *meant* to happen to them.
+- **Hazard width is a placement budget, not a size.** `placeHazard` needs an
+  unbroken span of clear floor with a solid anchor under or over all of it, so
+  a wide fixture is a rare one. An 18-cell current placed on none of 240 runs;
+  an 8-cell shark placed on 8 of 120 against the vent's 28. Both were fixed by
+  making them narrower. How often the colony meets a thing is decided by how
+  often it can be placed, not by how much corridor it covers.
+- **The scenery has no state.** Fish, marine snow and every bubble are pure
+  functions of `w.ticks` and the level number — there is no `w.fish`. Scenery
+  with state is scenery with bugs, and this way it costs the simulation nothing
+  and cannot drift between two hosts. It lives in `drawWaterLife`, called from
+  `drawMachines`, for the reason in the `drawDecor` note above.
+- **The sea is drawn in front of the terrain, not behind it.** `drawSea` runs at
+  the end of `drawTerrain`: the earth is drawn first and then looked *through*.
+  Light is a filter, not a curtain — the first pass used 0.30 of wash over a
+  0.42 depth fade and the sediment banding the biome is built from vanished.
+- **The helmet is the silhouette.** On dry land what carries an agent against a
+  dark board is the pale face over the white collar; there is no face to see
+  through six inches of copper, so the helmet takes that job and is the only
+  warm colour in the biome. It is built row by row rather than as a rectangle —
+  the corners are the whole difference between a copper sphere and a brass
+  brick, and the first version read as a blond square with a window in it.
+- **A diver swims between corridors, and the chimneys are why.** Corridor floors
+  are solid and every hole the colony makes it makes downward, so swimming was
+  worth almost nothing until the Trench started cutting `cutChimneys`: two or
+  three crevices per storey, open in both directions and usable by anybody
+  rather than only by whoever still has a climber. `swimColumn` is bounded by
+  water, not by will — a clear column to a floor that can actually be stood on,
+  no swimming through rock and no hovering — so the level's shape still decides
+  where the colony can go.
+- **The shaft and the landing are different columns going up.** A chimney
+  removes the floor at its own column, which is the whole point of it, so a
+  riser looking for ground under its feet finds none the whole way up. It has
+  to kick out sideways onto the ledge at the top, and `stepSwim` has to travel
+  in `swimShaftX` while aiming at `swimToX`: travelling in the landing's column
+  meant rising into the underside of the ledge, aborting, and sinking back —
+  forever.
+- **A Trench level played upside down does not work, and it is not close.**
+  Hatch on the sea floor, way out at the surface, `w.ascending` doing exactly
+  what it says. Measured with chimneys cut and swimming working both ways:
+  **4% of ascending levels cleared and 12% of the colony home**, against 79%
+  and 87% for descending levels in the same run. The flag is not the problem —
+  `goalDist`, `exitInSight`, the corridor handoffs, obstacle and hazard
+  placement and the whole recovery ladder are written for a colony working its
+  way *down*, and inverting the destination points all of them the wrong way at
+  once. There is a note where the roll used to be.
+- **The current is a kill with a run-up.** It does not stop at the edge of the
+  board: a diver carried into the wall of the world goes through it. At 44
+  ticks of grip the worst it could do was undo a walk; at 150 it reaches an
+  edge from most of a corridor, and about one sweep in six ends in open sea.
+- **A shark is not symmetric and a submarine is.** The first shark was a
+  symmetric wedge and read, unmistakably, as a submarine — which matters here,
+  because there is a submarine on the special roster. A fish needs two curves:
+  a long shallow arch for the back, a deep one for the belly, a peduncle that
+  pinches to nothing, and a crescent tail with the upper lobe longer.
 
 ## The Skyscraper
 
@@ -327,17 +414,26 @@ gameplay, intended or not. `hangs` must stay at zero. The game has no pass mark,
 so `cleared` is measured against `CLEAR_SHARE`, a fixed fraction of the colony
 defined in `simcheck.js`.
 
-Baselines, 200 levels: **96% of levels cleared, 87% of agents home, 45s per
-attempt, no hangs.** Per biome nothing is an outlier — 91–100% cleared and 83–91%
-home across all nine, with the Skyscraper mid-pack at 96/83. On a 24-level
+Baselines, 200 levels: **98% of levels cleared, 87% of agents home, 48s per
+attempt, no hangs.** Per biome nothing is an outlier — 95–100% cleared and 77–93%
+home across all ten, with the Trench at 95/81 and the Skyscraper at 95/77. On
+the wider 300×6 sweep the band is 85–93% cleared and 86–92% home, the Trench at
+85/88. On a 24-level
 sample a two-level swing is nine points, so widen the sweep before believing a
 biome has moved.
 
 `play` pins one colony per level, which is too narrow to see a change in how the
 colony copes. The wider sweep — 200 levels × 8 colonies, played the way the page
-plays them — sits at **88% cleared, 89% home, 44s**, and is the one to run for
-anything touching recovery or the toolbar; `tools/` has no command for it, so
-write the loop against `generate`/`step` and pin the seeds.
+plays them — is the one to run for anything touching recovery or the toolbar;
+`tools/` has no command for it, so write the loop against `generate`/`step` and
+pin the seeds. It sat at **88% cleared, 89% home, 44s** on the nine-biome
+catalogue and **91% cleared, 90% home, 45s** on the ten-biome one.
+
+Adding the Trench changed the length of `BIOMES`, so nothing before it is
+like-for-like with anything after it. The isolation AGENTS.md asks for was run
+and is the number that matters: with `"Trench"` spliced back out of `BIOMES`,
+the branch measures 88.0/89.05 against main's 88.2/89.14 over 1600 runs — the
+other nine biomes and the shared physics changes cost nothing.
 
 - Events are close to free: with `stepEvents` stubbed out over 240 levels,
   overall home was 84% either way. Measure a change with events both on and off

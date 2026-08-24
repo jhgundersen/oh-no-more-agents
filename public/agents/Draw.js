@@ -162,6 +162,54 @@ function drawTerrain(ctx, w, pal) {
 
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
+  drawSea(ctx, w, pal)
+}
+
+// The Trench's water, laid over the finished terrain rather than behind it.
+// That is the whole trick of the biome: every other skin is a thing you look
+// at, and this one is a thing you look *through*, so the earth has to be drawn
+// first and then have the sea put in front of it. It lives in drawTerrain
+// because none of it moves — the shafts hang from the same place all level and
+// the depth gradient is a property of the board, not of the tick. Everything
+// that does move (fish, bubbles, motes) is in drawWaterLife, on the actor pass.
+function drawSea(ctx, w, pal) {
+  if (w.biome !== "Trench") return
+  var k = w.k
+  var C = k.CELL
+  var wide = k.COLS * C
+  var tall = k.ROWS * C
+
+  // Light coming down from a surface far above the top of the board. Vertical
+  // rather than angled: a shaft that leans implies a sun with a position, and
+  // the joke of the biome is that there is no sky in it at all. Seeded from
+  // the level so a shot of level 20 is the same shot every time.
+  var seed = (w.level * 2654435761) % 100000
+  var next = function () { seed = (seed * 1103515245 + 12345) % 2147483648; return seed >> 6 }
+  ctx.fillStyle = pal.sunShaft
+  for (var sh = 0; sh < 7; sh++) {
+    var sx = next() % wide
+    var swide = 6 + next() % 22
+    var sdeep = (k.SKY * C) + next() % (tall - k.SKY * C)
+    // Tapered, by stacking narrowing slices. A rectangle of pale blue is a
+    // rectangle; the taper is the only thing that says "light".
+    var slices = 14
+    for (var sl = 0; sl < slices; sl++) {
+      var f = sl / slices
+      var sw2 = Math.max(1, Math.round(swide * (1 - f * 0.75)))
+      ctx.fillRect(Math.round(sx + (swide - sw2) / 2), Math.round(f * sdeep),
+                   sw2, Math.ceil(sdeep / slices) + 1)
+    }
+  }
+
+  // Depth. The board gets bluer and darker toward the bottom, which is the one
+  // cue that makes a corridor near the floor feel further down than a corridor
+  // near the top rather than merely lower on the screen.
+  var deep = ctx.createLinearGradient(0, 0, 0, tall)
+  deep.addColorStop(0, pal.seaWash)
+  deep.addColorStop(0.55, pal.seaWash)
+  deep.addColorStop(1, pal.seaDeep)
+  ctx.fillStyle = deep
+  ctx.fillRect(0, 0, wide, tall)
 }
 
 // Decor is non-solid and disappears visually when its supporting cell is gone.
@@ -495,7 +543,74 @@ function drawExitBack(ctx, w, pal) {
 // terrain changes — a cog painted there is a cog that never turns and smoke
 // that never rises, which is most of what this biome is supposed to be. They
 // go in first so the machinery sits behind the agents working in front of it.
+// Everything in the Trench that moves and is not an agent. Called from
+// drawMachines, which is on the per-tick actor pass — drawDecor is not, because
+// it lives inside drawTerrain and only repaints when the terrain changes, and a
+// fish that only moves when somebody bashes a wall is not a fish.
+//
+// None of this is simulated. There is no `w.fish`: every position here is a
+// pure function of w.ticks and the level number, so the shoals cost the
+// simulation nothing, can never drift out of step between two hosts, and
+// cannot possibly affect a clear rate. That is the right trade for scenery —
+// the moment scenery has state, it has bugs.
+function drawWaterLife(ctx, w, pal) {
+  if (w.biome !== "Trench") return
+  var k = w.k
+  var C = k.CELL
+  var wide = k.COLS * C
+  var tall = k.ROWS * C
+  var t = w.ticks
+
+  // Marine snow: the constant slow fall of detritus that makes deep water
+  // read as water rather than as a blue room. Drawn first and dimmest.
+  var seed = (w.level * 40503) % 65536
+  var next = function () { seed = (seed * 1103515245 + 12345) % 2147483648; return seed >> 6 }
+  ctx.fillStyle = pal.bubble
+  ctx.globalAlpha = 0.22
+  for (var m = 0; m < 90; m++) {
+    var mx = next() % wide
+    var speed = 0.12 + (next() % 60) / 400
+    var my = ((next() % tall) + t * speed) % tall
+    // A sway, so it drifts rather than drops.
+    mx += Math.sin((t * 0.01) + m) * 3
+    ctx.fillRect(Math.round(mx), Math.round(my), 1, 1)
+  }
+  ctx.globalAlpha = 1
+
+  // Shoals. Each is a loop of fish crossing the board on its own line, turning
+  // at the edges — a school reads as a school because the members hold station
+  // on each other, so the offsets inside one are fixed and only the shoal
+  // moves. Three of them, at different depths and speeds.
+  for (var sc = 0; sc < 3; sc++) {
+    var lane = (k.SKY + 4) * C + ((next() % Math.max(1, tall - (k.SKY + 8) * C)))
+    var rate = 0.5 + sc * 0.28
+    var period = wide * 2
+    var travel = (t * rate + sc * 400) % period
+    // Out and back: past the halfway mark the shoal is returning, and it faces
+    // the way it is going.
+    var goingRight = travel < wide
+    var headX = goingRight ? travel : period - travel
+    var members = 5 + sc * 2
+    for (var f = 0; f < members; f++) {
+      // Station-keeping: each fish sits a fixed distance back and to one side
+      // of the leader, with a small tail-beat of its own.
+      var back = (f % 4) * 9 + 4
+      var side = ((f * 37) % 13) - 6
+      var fx = headX - (goingRight ? back : -back)
+      var fy = lane + side + Math.sin(t * 0.08 + f * 1.7) * 2
+      if (fx < -8 || fx > wide + 8) continue
+      // The body is three pixels and the tail is one, which at this size is
+      // the whole animal. The tail alternates so the shoal shimmers.
+      var beat = Math.floor(t * 0.2 + f) % 2 === 0
+      ctx.fillStyle = beat ? pal.fishLit : pal.fish
+      ctx.fillRect(Math.round(fx), Math.round(fy), 3, 2)
+      ctx.fillRect(Math.round(fx + (goingRight ? -2 : 3)), Math.round(fy + (beat ? -1 : 1)), 2, 1)
+    }
+  }
+}
+
 function drawMachines(ctx, w, pal) {
+  drawWaterLife(ctx, w, pal)
   if (w.biome !== "Factory") return
   var k = w.k
   var C = k.CELL
@@ -1025,6 +1140,22 @@ function drawMission(ctx, w, pal) {
 
 function drawMissionContainer(ctx, kind, x, y, pal) {
   if (kind === "alien") return // a hunt, not a prisoner exchange
+  if (kind === "treasure") {
+    // Not a container at all: the silt and coral that grew over the wreck
+    // while it lay here. It is what the divers are digging the chest out of,
+    // so it wants to read as accretion rather than as a cage — no straight
+    // lines, and it sits low and wide around the base.
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(x - 9, y - 4, 18, 4)
+    ctx.fillRect(x - 7, y - 6, 14, 2)
+    ctx.fillStyle = pal.decor
+    for (var cr = 0; cr < 5; cr++) {
+      var crx = x - 8 + cr * 4
+      ctx.fillRect(crx, y - 8 - (cr % 2), 2, 4)
+      ctx.fillRect(crx - 1, y - 10 - (cr % 2), 1, 2)
+    }
+    return
+  }
   if (kind === "animal") {
     // A pegged rope net: organic and visibly different from a cell.
     ctx.fillStyle = pal.decorDim
@@ -1094,6 +1225,42 @@ function drawMissionSubject(ctx, kind, t, x, y, pal) {
   var dir = t.dir || 1
   var bob = t.freed && Math.floor(t.anim / 5) % 2 ? 1 : 0
   y -= bob
+
+  if (kind === "treasure") {
+    // A strongbox with banded iron and a hasp. Shut it is a dark box with a
+    // brass line across it; open it is the only genuinely bright thing in the
+    // biome, which is what makes finding one worth watching — everything else
+    // down here is blue.
+    var open = t.freed
+    ctx.fillStyle = pal.helmetDark
+    ctx.fillRect(x - 6, y - 9, 12, 9)                 // the body of the chest
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(x - 6, y - 9, 12, 1)
+    ctx.fillStyle = pal.helmet
+    ctx.fillRect(x - 6, y - 5, 12, 1)                 // the band
+    ctx.fillRect(x - 1, y - 5, 2, 3)                  // the hasp
+    if (!open) {
+      // The lid, shut: a shallow curve of staves across the top.
+      ctx.fillStyle = pal.helmetDark
+      ctx.fillRect(x - 6, y - 13, 12, 4)
+      ctx.fillStyle = pal.helmet
+      ctx.fillRect(x - 5, y - 14, 10, 1)
+      return
+    }
+    // Thrown back, and what is inside it. The glow is drawn as loose coins
+    // rather than as a light because a light source in a biome with one sun
+    // shaft would read as a second sun.
+    ctx.fillStyle = pal.helmetDark
+    ctx.fillRect(x - 7, y - 15, 12, 3)
+    ctx.fillStyle = pal.helmetLit
+    ctx.fillRect(x - 5, y - 12, 10, 3)                // the hoard
+    for (var co = 0; co < 6; co++) {
+      var glint = (Math.floor(t.anim / 4) + co) % 3 === 0
+      ctx.fillStyle = glint ? "#fff2b0" : pal.helmetLit
+      ctx.fillRect(x - 5 + co * 2, y - 13 - (co % 2), 2, 2)
+    }
+    return
+  }
 
   if (kind === "animal") {
     ctx.fillStyle = v === 0 ? pal.decorLit : (v === 1 ? pal.exitLight : pal.ore)
@@ -1650,13 +1817,30 @@ var SPECIAL_FACTS = {
 
 // A bust of the special, drawn at double size so it reads as a portrait rather
 // than as an agent that wandered into the sky.
-function drawBust(ctx, x, y, sp, pal) {
+function drawBust(ctx, x, y, sp, pal, submerged) {
   var P = 2
   function px(bx, by, bw, bh, fill) { ctx.fillStyle = fill; ctx.fillRect(x + bx * P, y + by * P, bw * P, bh * P) }
   // Dressed like the colony it came out of. This was still wearing the old
   // face — one eye pixel, no collar — while every agent on the board below it
   // had shades and a shirt, and a portrait that does not match the sprite it
-  // is captioning is worse than no portrait.
+  // is captioning is worse than no portrait. The same argument applies to the
+  // helmet: on a Trench level every agent under this card has one, so a
+  // portrait with a bare face is the same mismatch again.
+  if (submerged) {
+    px(2, 0, 4, 1, pal.helmetDark)
+    px(1, 1, 6, 5, pal.helmetDark)
+    px(3, 0, 2, 1, pal.helmet)
+    px(2, 1, 4, 4, pal.helmet)
+    px(3, 0, 1, 1, pal.helmetLit)
+    px(4, 2, 2, 3, pal.port)
+    px(4, 2, 1, 1, pal.bubbleLit)
+    px(1, 6, 6, 1, pal.helmetDark)   // the bolted collar
+    px(1, 6, 6, 5, sp.robe)          // shoulders
+    px(0, 7, 1, 4, sp.robe)
+    px(7, 7, 1, 4, sp.robe)
+    px(1, 8, 2, 2, sp.hair)          // the shoulder pip
+    return
+  }
   px(1, 0, 6, 3, sp.hair)          // hair
   px(0, 1, 1, 2, sp.hair)          // and the back of the head
   px(2, 3, 4, 3, pal.skin)         // face
@@ -1695,7 +1879,7 @@ function drawSpecialCard(ctx, w, pal) {
   ctx.fillStyle = sp.robe
   ctx.fillRect(onRight ? boardW - 2 : 0, 0, 2, skyH)   // spine, on the outside
 
-  drawBust(ctx, bustX, 3, sp, pal)
+  drawBust(ctx, bustX, 3, sp, pal, w.submerged)
 
   var tx = onRight ? bustX - 8 : bustX + bustW + 8
   ctx.textAlign = onRight ? "right" : "left"
@@ -2343,6 +2527,149 @@ function drawHazardKind(ctx, w, pal, h) {
     }
     break
 
+  // --- Trench -------------------------------------------------------------
+
+  case "shark":
+    // The only hazard on the board that is not bolted to anything, so it is
+    // the only one that has to say where it is going. It patrols its zone at
+    // rest, hangs still and turns side-on while it winds up — a shark lining
+    // somebody up stops swimming, which is the tell — and crosses the zone in
+    // one run when it strikes.
+    var swim = live
+      ? (h.t / Math.max(1, 16)) * wide           // the run
+      : (winding ? wide * 0.5 : (0.5 + 0.5 * Math.sin(t * 0.018 + seed)) * (wide - 22))
+    var shdir = h.zx0 % 2 === 0 ? 1 : -1
+    var shx = Math.round(shdir > 0 ? x0 + swim : x1 - swim - 22)
+    var shy = Math.round(y0 + tall * 0.42 + Math.sin(t * 0.05) * 2)
+    var nose = shdir > 0 ? shx + 22 : shx
+
+    // Body. The first version drew a symmetric wedge and it read, unmistakably,
+    // as a submarine — which in this biome is a real confusion, because there
+    // is a submarine on the roster. A fish is not symmetric: the back is a
+    // long shallow arch and the belly is a deep one, the snout is blunt below
+    // and pointed above, and the body narrows to a thin peduncle before the
+    // tail rather than tapering all the way. Two curves, not one.
+    ctx.fillStyle = live ? hot : pal.rigDark
+    for (var sk = 0; sk < 22; sk++) {
+      var along = shdir > 0 ? sk / 22 : 1 - sk / 22
+      // Peduncle: everything behind 0.82 pinches to almost nothing, which is
+      // what makes the tail read as attached rather than as a bracket.
+      var girth = along < 0.82
+        ? Math.sin(Math.pow(along, 0.55) * Math.PI * 0.92)
+        : 0.16
+      var back = Math.round(3.2 * girth)
+      var belly = Math.round(2.0 * girth + (along > 0.15 && along < 0.7 ? 1 : 0))
+      ctx.fillRect(shx + sk, shy - back, 1, Math.max(1, back + belly + 1))
+    }
+    // The pale underside. A shark is recognised by countershading more than by
+    // outline, and it is two pixels a column.
+    ctx.fillStyle = pal.rig
+    for (var bk = 3; bk < 17; bk++) {
+      var balong = shdir > 0 ? bk / 22 : 1 - bk / 22
+      var bgirth = Math.sin(Math.pow(balong, 0.55) * Math.PI * 0.92)
+      var bbelly = Math.round(2.0 * bgirth + (balong > 0.15 && balong < 0.7 ? 1 : 0))
+      ctx.fillRect(shx + bk, shy + bbelly, 1, 1)
+    }
+
+    // The fins. A crescent tail with the upper lobe longer than the lower —
+    // the one detail that says shark rather than fish — plus a tall dorsal set
+    // forward of centre and a pectoral swept back under it.
+    ctx.fillStyle = live ? hot : pal.rigDark
+    var tailX = shdir > 0 ? shx - 1 : shx + 22
+    for (var tl = 0; tl < 5; tl++) {
+      var spread = 1 + tl                                   // opens away from the body
+      ctx.fillRect(tailX + (shdir > 0 ? -tl : tl), shy - spread - 1, 1, 2)   // upper lobe
+      if (tl < 4) ctx.fillRect(tailX + (shdir > 0 ? -tl : tl), shy + spread - 1, 1, 2)
+    }
+    hzTri(ctx, shx + (shdir > 0 ? 13 : 9), shy - 3, 2, 5, -1)      // dorsal
+    ctx.fillRect(shx + (shdir > 0 ? 6 : 13), shy + 3, 4, 1)        // pectoral
+    ctx.fillRect(shx + (shdir > 0 ? 6 : 16), shy + 4, 2, 1)
+    // Gill slits, and the eye set right up at the snout.
+    ctx.fillStyle = pal.rigDark
+    for (var gs = 0; gs < 3; gs++)
+      ctx.fillRect(nose + (shdir > 0 ? -6 - gs * 2 : 6 + gs * 2), shy - 1, 1, 3)
+    ctx.fillStyle = pal.eye
+    ctx.fillRect(shdir > 0 ? nose - 4 : nose + 3, shy - 2, 1, 1)
+    // The jaw. Shut until it means it, and then the whole point of the thing.
+    if (show) {
+      ctx.fillStyle = live ? "#ffffff" : pal.warn
+      for (var tooth = 0; tooth < 4; tooth++)
+        hzTri(ctx, nose + (shdir > 0 ? -2 - tooth * 2 : 2 + tooth * 2), shy + 2, 1, 2, -1)
+      ctx.fillStyle = live ? hot : pal.warn
+      ctx.fillRect(shdir > 0 ? nose - 8 : nose + 1, shy + 1, 8, 1)
+    }
+    break
+
+  case "current":
+    // No machine, no mount, nothing to wreck: the fixture IS the water. Drawn
+    // as streamlines rather than as a box, because the one thing it has to say
+    // is which way it is going — being carried the wrong way down a corridor
+    // is only fair if the direction was on screen before the diver arrived.
+    //
+    // It is the only hazard that draws at full strength when it is NOT firing,
+    // for the same reason: the flow has to be legible in the gap so somebody
+    // watching can see what is about to happen to the queue walking into it.
+    var flowDir = h.dir
+    var lines = 7
+    for (var fl = 0; fl < lines; fl++) {
+      var fy2 = y0 + 3 + fl * Math.max(2, Math.floor((tall - 6) / lines))
+      // Each streamline runs at its own speed and phase, which is what makes
+      // the band read as moving water instead of as marching dashes.
+      var rate = live ? 3.4 : 1.1
+      var span = wide + 40
+      var head = ((t * rate + fl * 23) % span)
+      var fx2 = flowDir > 0 ? x0 - 20 + head : x1 + 20 - head
+      var len = live ? 16 : 9
+      ctx.globalAlpha = live ? 0.85 : 0.42
+      ctx.fillStyle = live ? pal.bubbleLit : pal.bubble
+      // Clipped to the zone by hand: a streamline that ran past the edge would
+      // claim corridor the current cannot actually reach.
+      var sx2 = Math.max(x0, Math.min(x1, fx2))
+      var ex2 = Math.max(x0, Math.min(x1, fx2 + flowDir * len))
+      if (ex2 !== sx2) ctx.fillRect(Math.min(sx2, ex2), fy2, Math.abs(ex2 - sx2), 1)
+      // An arrowhead on the leading end, so the direction survives a still.
+      var tip = flowDir > 0 ? ex2 : sx2
+      if (tip > x0 + 1 && tip < x1 - 1) {
+        ctx.fillRect(tip - (flowDir > 0 ? 2 : -1), fy2 - 1, 1, 1)
+        ctx.fillRect(tip - (flowDir > 0 ? 2 : -1), fy2 + 1, 1, 1)
+      }
+    }
+    ctx.globalAlpha = 1
+    // Bubbles caught in it, tumbling along faster than they rise.
+    ctx.fillStyle = pal.bubble
+    ctx.globalAlpha = live ? 0.7 : 0.3
+    for (var cb = 0; cb < 9; cb++) {
+      var cbx = x0 + (((t * (live ? 4.2 : 1.4)) + cb * 31) % Math.max(1, wide))
+      if (flowDir < 0) cbx = x1 - (cbx - x0)
+      ctx.fillRect(Math.round(cbx), Math.round(y0 + 2 + ((cb * 37) % Math.max(1, tall - 4))), 1, 1)
+    }
+    ctx.globalAlpha = 1
+    break
+
+  case "vent":
+    // A split in the sea floor letting go of what is under it. Vertical, so it
+    // is the one thing in the biome going decisively up.
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(x0 + 1, y1 - 3, wide - 2, 3)                 // the fissure lip
+    ctx.fillStyle = pal.rig
+    ctx.fillRect(x0 + 2, y1 - 4, wide - 4, 1)
+    if (show) {
+      // The plume: bubbles widening and fading as they climb, which is the
+      // same rule the divers' own exhaust follows so the biome stays coherent.
+      for (var vb = 0; vb < 16; vb++) {
+        var vlife = (((t * (live ? 2.6 : 1.0)) + vb * 19) % 100) / 100
+        var vx = cx + Math.sin(vlife * 5 + vb) * (2 + vlife * (wide / 2))
+        var vy = y1 - 4 - vlife * tall
+        if (vy < y0) continue
+        ctx.globalAlpha = (live ? 0.85 : 0.4) * (1 - vlife * 0.8)
+        ctx.fillStyle = live ? pal.bubbleLit : pal.bubble
+        var vsz = vlife > 0.6 ? 2 : 1
+        ctx.fillRect(Math.round(vx), Math.round(vy), vsz, vsz)
+      }
+      ctx.globalAlpha = 1
+    }
+    break
+
   case "spores":
     // A pod that splits, and a drift of spores under it.
     ctx.fillStyle = pal.rigDark
@@ -2738,6 +3065,83 @@ function drawEnemy(ctx, w, pal, en, opts) {
     return
   }
 
+  // The rival salvage crew. A diver in the same period dress as the colony —
+  // that is the joke, and it is why the helmet is the same brass — with a
+  // speargun instead of a shovel. Drawn before the shared aim and tracer code
+  // below, which it deliberately does not use: a spear is a thing that flies,
+  // not a line that appears, so it gets its own projectile with a line paying
+  // out behind it.
+  if (en.kind === "harpoon") {
+    var hDir = dir
+    var hDark = "#1d3a42"
+    // Suit and helmet, one shade colder than the colony's so the two read
+    // apart at a glance without being a different silhouette.
+    ctx.fillStyle = hDark
+    ctx.fillRect(ox + 1, oy + 6, 7, 9)                    // body
+    ctx.fillRect(ox + 1, oy + 15, 3, 2)                   // fins
+    ctx.fillRect(ox + 4, oy + 15, 3, 2)
+    ctx.fillStyle = "#8c6a2a"
+    ctx.fillRect(ox + 2, oy + 1, 5, 5)                    // helmet
+    ctx.fillStyle = "#c39a45"
+    ctx.fillRect(ox + 2, oy + 1, 3, 1)
+    ctx.fillStyle = "#7fb8c4"
+    ctx.fillRect(hDir > 0 ? ox + 5 : ox + 2, oy + 3, 2, 2)  // port
+    ctx.fillStyle = redLit
+    ctx.fillRect(hDir > 0 ? ox + 6 : ox + 2, oy + 3, 1, 1)  // the eye in it
+
+    // The gun: a stock along the forearm with the spear lying in it. Held
+    // level while walking, brought up and forward through the long aim.
+    var aiming = en.state === "aim"
+    var gunY = oy + (aiming ? 7 : 9)
+    var gunX = hDir > 0 ? ox + 7 : ox - 9
+    ctx.fillStyle = "#171920"
+    ctx.fillRect(gunX, gunY, 11, 2)
+    ctx.fillRect(hDir > 0 ? gunX : gunX + 9, gunY + 2, 2, 3)   // grip
+    ctx.fillStyle = "#9aa2b4"
+    if (!en.shotFor) ctx.fillRect(hDir > 0 ? gunX + 4 : gunX, gunY - 1, 9, 1)  // the spear, loaded
+
+    // Winding up. A speargun's tell is the rubber going taut, so the sight is
+    // a short bright line at the muzzle rather than a laser down the corridor
+    // — this thing has no laser, it has forty atmospheres and patience.
+    if (aiming) {
+      ctx.globalAlpha = 0.4 + ((en.timer >> 2) % 2) * 0.5
+      ctx.fillStyle = redLit
+      ctx.fillRect(hDir > 0 ? gunX + 11 : gunX - 3, gunY, 3, 1)
+      ctx.globalAlpha = 1
+    }
+
+    // The shot: the spear in flight with its line trailing back to the gun.
+    if (en.shotFor > 0) {
+      var spearX = Math.round(en.lineTo * C)
+      var spearY = Math.round((en.lineY + 0.5) * C)
+      var fromX = hDir > 0 ? gunX + 11 : gunX - 1
+      var fromY = gunY
+      // Travel, so the spear is somewhere along the line rather than instantly
+      // at the end of it. shotFor counts down from 8.
+      var flight = Math.min(1, (8 - en.shotFor) / 5)
+      var tipX = Math.round(fromX + (spearX - fromX) * flight)
+      var tipY = Math.round(fromY + (spearY - fromY) * flight)
+      ctx.fillStyle = "#8a9aa6"
+      var lineSteps = Math.max(1, Math.round(Math.abs(tipX - fromX) / 4))
+      ctx.globalAlpha = 0.55
+      for (var hl = 0; hl <= lineSteps; hl++)
+        ctx.fillRect(Math.round(fromX + (tipX - fromX) * hl / lineSteps),
+                     Math.round(fromY + (tipY - fromY) * hl / lineSteps) + 1, 1, 1)
+      ctx.globalAlpha = 1
+      ctx.fillStyle = "#d6dde8"
+      ctx.fillRect(tipX - (hDir > 0 ? 6 : 0), tipY, 7, 1)        // the shaft
+      hzTri(ctx, tipX + (hDir > 0 ? 1 : -1), tipY, 2, 3, hDir)   // the barb
+    }
+
+    if (opts && opts.labels) {
+      ctx.fillStyle = "#c39a45"
+      ctx.font = "7px monospace"
+      ctx.textAlign = "center"
+      ctx.fillText("Spear Phishing", ox + 4, oy - 4)
+    }
+    return
+  }
+
   // Trigger Warning announces the shot before it happens. The thin blinking
   // sight is an instruction to flee; the bright tracer is the consequence.
   if ((en.kind === "gun" || en.kind === "sniper") && en.state === "aim") {
@@ -2937,6 +3341,23 @@ function drawAgentTrick(ctx, w, pal, ag, ox, oy, dir, robe, hair) {
       case "stomp":                             // straight down, under its feet
         ctx.fillRect(ox + 1, oy + SPRITE_PX, 6, Math.round(18 * reach))
         break
+      case "ballast": {                         // straight up, over its head
+        // The mirror of the stomp, and drawn as the tanks emptying rather than
+        // as a beam: the shaft above is full of the air that made it rise, so
+        // it is a column of bubbles widening as it climbs. The only trick on
+        // the roster that leaves the board looking like something happened to
+        // the water rather than to the rock.
+        var bshaft = Math.round(26 * reach)
+        ctx.fillRect(ox + 1, oy - bshaft, 6, bshaft)
+        for (var bb = 0; bb < 14; bb++) {
+          var bl = ((w.ticks * 2 + bb * 17) % 100) / 100
+          ctx.globalAlpha = 0.8 * (1 - bl * 0.6)
+          ctx.fillRect(Math.round(ox + 4 + Math.sin(bl * 6 + bb) * 5),
+                       Math.round(oy - bl * bshaft), bl > 0.6 ? 2 : 1, bl > 0.6 ? 2 : 1)
+        }
+        ctx.globalAlpha = 1
+        break
+      }
       case "quarry":                            // a whole room's worth
         var qwide = Math.round(28 * reach)
         ctx.globalAlpha = 0.28
@@ -3078,6 +3499,35 @@ function drawAgentHeightGear(ctx, w, pal, ag, ox, oy, dir, robe, hair) {
         ctx.globalAlpha = 1
         break
       }
+      case "conning": {
+        // The one device on the roster that is a vehicle: a little hull with a
+        // conning tower and a lit port, and the agent inside it rather than
+        // hanging off it. Everything else here is a machine somebody is
+        // wearing; this one they are driving, so it is drawn around them and
+        // the sprite shows through the port rather than above the gear.
+        var subY = oy + 2
+        ctx.fillStyle = hc
+        ctx.fillRect(ox - 5, subY + 3, 18, 8)                 // hull
+        ctx.fillRect(ox - 7, subY + 5, 2, 4)                  // bow cap
+        ctx.fillRect(ox + 13, subY + 5, 2, 4)                 // stern cap
+        ctx.fillStyle = robe
+        ctx.fillRect(ox + 1, subY - 2, 6, 5)                  // conning tower
+        ctx.fillRect(ox + 3, subY - 5, 1, 3)                  // periscope
+        ctx.fillStyle = pal.port || "#9fd8e4"
+        ctx.fillRect(ox + 7, subY + 5, 3, 3)                  // the port
+        ctx.fillStyle = pal.bubbleLit || "#ffffff"
+        ctx.fillRect(ox + 7, subY + 5, 1, 1)
+        // The screw, turning, and the wake it is putting out behind.
+        ctx.fillStyle = hc
+        var blade = Math.floor(ag.heightTick * 0.4) % 2 === 0
+        ctx.fillRect(ox + 15, subY + (blade ? 4 : 6), 1, blade ? 6 : 2)
+        ctx.globalAlpha = 0.5
+        ctx.fillStyle = pal.bubble || "#ffffff"
+        for (var wk = 0; wk < 5; wk++)
+          ctx.fillRect(ox + 17 + wk * 3, subY + 6 + ((ag.heightTick + wk) % 3) - 1, 2, 1)
+        ctx.globalAlpha = 1
+        break
+      }
       case "web":
       case "chain": {
         var anchorX = Math.round((ag.heightUp ? ag.heightToX : ag.heightFromX) * C)
@@ -3202,6 +3652,80 @@ function drawAgentHeightGear(ctx, w, pal, ag, ox, oy, dir, robe, hair) {
   // its pile of cheaper selves. Keep the pad and the label upright; rotate the
   // original agent alone around the middle of its sprite.
 }
+// A standard diving dress of about 1870: a spherical copper helmet with one
+// round front port and a bolted collar, on top of the same suit everybody else
+// is wearing. It replaces the head rather than sitting over it, because the
+// helmet IS the silhouette down here — on dry land what carries an agent
+// against a dark board is the pale face over the white collar, and there is no
+// face to see through six inches of copper. So the helmet takes that job: it
+// is the only warm colour in the biome, which makes a colony of them read at a
+// glance against water that is entirely blue-green.
+//
+// The port faces the way the agent is going. That is the one piece of
+// information the head used to carry with its nose and lens, and it has to
+// survive the change or a colony walking left looks exactly like a colony
+// walking right.
+function drawDiverHead(ctx, w, pal, ag, ox, oy, dir, drop) {
+  // Built row by row rather than as one rectangle, because the corners are the
+  // whole difference between a copper sphere and a brass brick: the first
+  // version was a 6x7 block and read as a blond square with a window in it.
+  ctx.fillStyle = pal.helmetDark
+  blit(ctx, ox, oy, dir, 2, 0 + drop, 4, 1)            // narrow crown
+  blit(ctx, ox, oy, dir, 1, 1 + drop, 6, 5)            // the full round of it
+  ctx.fillStyle = pal.helmet
+  blit(ctx, ox, oy, dir, 3, 0 + drop, 2, 1)
+  blit(ctx, ox, oy, dir, 2, 1 + drop, 4, 4)            // the lit body
+  ctx.fillStyle = pal.helmetLit
+  blit(ctx, ox, oy, dir, 3, 0 + drop, 1, 1)            // the crown highlight
+  blit(ctx, ox, oy, dir, 2, 1 + drop, 1, 1)
+
+  // The front port, and a glint in it. Two pixels of pale blue-white is all
+  // the glass there is room for, and it is what stops the helmet reading as a
+  // brass ball.
+  ctx.fillStyle = pal.port
+  blit(ctx, ox, oy, dir, 4, 2 + drop, 2, 3)
+  blit(ctx, ox, oy, dir, 3, 3 + drop, 1, 1)
+  ctx.fillStyle = pal.bubbleLit
+  blit(ctx, ox, oy, dir, 4, 2 + drop, 1, 1)            // the glint on the glass
+
+  // The bolted collar the helmet screws down onto, and the air hose leaving
+  // the back of it. The hose is what says the suit is fed from somewhere and
+  // is the one line on the sprite that trails, so it also reads as motion.
+  ctx.fillStyle = pal.helmetDark
+  blit(ctx, ox, oy, dir, 1, 6 + drop, 6, 1)
+  ctx.fillStyle = pal.airline
+  var hoseWave = Math.sin(ag.anim * 0.18) * 1.4
+  blit(ctx, ox, oy, dir, 0, 4 + drop, 1, 1)
+  blit(ctx, ox, oy, dir, -1, 4 + drop + Math.round(hoseWave), 1, 1)
+  blit(ctx, ox, oy, dir, -2, 5 + drop + Math.round(hoseWave * 1.6), 1, 1)
+}
+
+// Exhaust. Every diver on the board is breathing, so every diver trails a
+// column of bubbles that wobbles as it climbs and gets bigger as the pressure
+// drops — which is the only thing on the board that reports depth continuously
+// and the reason the biome reads as under water even in a still frame.
+//
+// Derived from the agent's id and the tick rather than stored, for the same
+// reason the fish are: scenery with state is scenery with bugs. The id offsets
+// the phase so fifteen divers are not one diver drawn fifteen times.
+function drawDiverBubbles(ctx, w, pal, ag, ox, oy, drop) {
+  var phase = w.ticks * 0.9 + ag.id * 41
+  for (var b = 0; b < 4; b++) {
+    // Each bubble climbs its own 40-tick cycle and starts again at the helmet.
+    var life = ((phase + b * 27) % 108) / 108
+    var rise = life * 26
+    var wob = Math.sin(life * 7 + ag.id) * 2.5
+    // Bigger as it rises: gas expands on the way up, and it is a two-pixel
+    // difference that nonetheless makes the column look like it is going
+    // somewhere rather than scrolling.
+    var size = life > 0.62 ? 2 : 1
+    ctx.globalAlpha = 0.65 * (1 - life * 0.75)
+    ctx.fillStyle = life > 0.5 ? pal.bubbleLit : pal.bubble
+    ctx.fillRect(Math.round(ox + 2 + wob), Math.round(oy + drop - rise), size, size)
+  }
+  ctx.globalAlpha = 1
+}
+
 function drawAgent(ctx, w, pal, ag, opts) {
   var k = w.k
   var C = k.CELL
@@ -3438,6 +3962,17 @@ function drawAgent(ctx, w, pal, ag, opts) {
   // a back instead: hair bulging behind, and brow, lens and nose stepping out
   // in front. Three pixels, but they are the three that make a colony walking
   // left look different from a colony walking right.
+  //
+  // Under water the whole head is replaced by the helmet — see drawDiverHead.
+  // The bubbles go on before it so they leave from behind the crown.
+  if (w.submerged && st !== "saved") {
+    // The helmet rides the kick with the torso, off the same sine as the legs
+    // below: a head that stays level while the body bobs has come off.
+    var headLift = (st === "walk" || st === "swim")
+      ? Math.round(Math.sin(ag.anim * 0.22) * 1.2) : 0
+    drawDiverBubbles(ctx, w, pal, ag, ox, oy, bodyDrop + headLift)
+    drawDiverHead(ctx, w, pal, ag, ox, oy, dir, bodyDrop + headLift)
+  } else {
   ctx.fillStyle = hair
   blit(ctx, ox, oy, dir, 2, 0 + bodyDrop, 4, 3)
   blit(ctx, ox, oy, dir, 0, 1 + bodyDrop, 2, 3)        // the back of the head
@@ -3453,6 +3988,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   blit(ctx, ox, oy, dir, 2, 4 + bodyDrop, 5, 1)
   ctx.fillStyle = pal.lens
   blit(ctx, ox, oy, dir, 5, 4 + bodyDrop, 1, 1)        // the lit lens, in front
+  }
 
   // --- collar ------------------------------------------------------------
   // Drawn before the body so each pose's own torso closes over it, leaving a
@@ -3460,7 +3996,9 @@ function drawAgent(ctx, w, pal, ag, opts) {
   // shirt front painted per-pose would not: there are a dozen torsos below.
   if (st !== "saved") {
     ctx.fillStyle = pal.shirt
-    blit(ctx, ox, oy, dir, 3, 6 + bodyDrop, 2, 4)
+    var collarLift = (w.submerged && (st === "walk" || st === "swim"))
+      ? Math.round(Math.sin(ag.anim * 0.22) * 1.2) : 0
+    blit(ctx, ox, oy, dir, 3, 6 + bodyDrop + collarLift, 2, 4)
   }
 
   // Shoulder line. A dark suit has to sit on a dark board: too light and it is
@@ -3547,6 +4085,36 @@ function drawAgent(ctx, w, pal, ag, opts) {
     blit(ctx, ox, oy, dir, 0, 11 + bodyDrop, 2, 3)
     blit(ctx, ox, oy, dir, 6, 11 + bodyDrop, 2, 3)
     blit(ctx, ox, oy, dir, 2, 14, 4, 2)
+
+  } else if (w.submerged && (st === "walk" || st === "swim")) {
+    // Finning, not striding. Two changes carry it and neither needs a new
+    // sprite: the body rides the kick, and the legs beat together instead of
+    // alternating. A walk cycle is two legs taking turns to hold the ground; a
+    // swimmer's legs never touch anything, so they move as a pair and the
+    // whole body rises and falls on the same clock.
+    var kick = Math.sin(ag.anim * 0.22)
+    var lift = Math.round(kick * 1.2)
+    var rising = st === "swim" && ag.swimUp
+
+    // Trim. Head-up kicking for the surface, head-down on the way down, level
+    // otherwise — standing a walker upright in water was most of what made the
+    // first version read as somebody strolling along the sea bed.
+    var lean = rising ? -1 : (st === "swim" ? 1 : 0)
+
+    blit(ctx, ox, oy, dir, 1, 7 + lift, 6, 6)                  // torso
+    // The trailing arm, swept back along the body. One arm, not two: the far
+    // one is behind the torso at this angle and drawing it makes a starfish.
+    blit(ctx, ox, oy, dir, 0, 8 + lift + lean, 2, 2)
+    // Both legs together, beating. One pixel between them — enough to say two
+    // legs, not enough to read as a stride.
+    blit(ctx, ox, oy, dir, 2, 13 + lift, 2, 3)
+    blit(ctx, ox, oy, dir, 4, 13 + lift + (kick > 0 ? 1 : -1), 2, 3)
+    // Fins: the one piece of kit that exists only down here, and what makes
+    // the silhouette unmistakable at this size.
+    ctx.fillStyle = pal.suit || robe
+    blit(ctx, ox, oy, dir, 0, 15 + lift + (kick > 0 ? 1 : 0), 3, 1)
+    blit(ctx, ox, oy, dir, 0, 16 + lift + (kick > 0 ? 0 : 1), 3, 1)
+    ctx.fillStyle = robe
 
   } else {
     // Walking (and the saved fade-out, which keeps the walk pose).

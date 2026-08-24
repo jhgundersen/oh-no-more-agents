@@ -73,6 +73,17 @@ var BRASS = { r: 0.80, g: 0.46, b: 0.14 }
 var GLASS = { r: 0.30, g: 0.28, b: 0.54 }
 
 var WATER = { r: 0.13, g: 0.42, b: 0.52 }
+
+// The Trench is the one biome that is water rather than a place with water in
+// it, so it needs two of them. SEA is the medium the whole level is seen
+// through — greener and deeper than the WATER a cistern is flooded with,
+// because a pool is read against dry rock either side of it and this one has
+// nothing to be read against. ABYSS is what is at the bottom of a hole in the
+// floor of a place that is already at the bottom: not a darker blue but an
+// absence, since the one thing deeper than the deep sea is the part of it the
+// light has never reached.
+var SEA = { r: 0.06, g: 0.34, b: 0.40 }
+var ABYSS = { r: 0.01, g: 0.05, b: 0.09 }
 var LAVA = { r: 0.88, g: 0.26, b: 0.06 }
 var COOLANT = { r: 0.20, g: 0.80, b: 0.76 }
 // Not a colour anything is: near-black with a green-violet bias, so the sheen
@@ -85,7 +96,7 @@ var VOID = { r: 0, g: 0, b: 0 }
 // number by the same rule, which is how every other per-biome difference in
 // this game stays in step across two files that cannot call each other.
 function poolTint(level) {
-  switch ((level - 1) % 9) {
+  switch ((level - 1) % 10) {
     case 1: return WATER      // Ruins: a flooded cistern
     case 3: return LAVA       // Foundry: what the place is for
     case 4: return WATER      // Jungle: the swamp, and what lives in it
@@ -93,12 +104,13 @@ function poolTint(level) {
     case 7: return OIL        // Factory: what has been draining out for years
     // 8, the Skyscraper, is dry: its hole is the hoistway, and there is
     // nothing at the bottom of one of those but the lobby floor.
+    case 9: return ABYSS      // Trench: a hole in the floor of the sea
     default: return WATER     // dry biomes; unused, but never undefined
   }
 }
 
 function biomeTint(theme, level) {
-  switch ((level - 1) % 9) {
+  switch ((level - 1) % 10) {
     case 0: return theme.accent                              // Cavern
     case 1: return theme.urgent                              // Ruins
     case 2: return lighter(theme.accent, 1.7)                // Frost
@@ -110,7 +122,12 @@ function biomeTint(theme, level) {
     // Foundry is the theme's own muted grey and the Spaceship is pulled toward
     // hull, so this one goes warm. Brass and old machine paint, not heat.
     case 7: return toward(theme.accent, BRASS, 0.88)         // Factory
-    default: return toward(theme.accent, GLASS, 0.80)        // Skyscraper
+    case 8: return toward(theme.accent, GLASS, 0.80)         // Skyscraper
+    // Pulled hard toward the sea and then darkened, because the Trench is the
+    // only biome where the earth is meant to lose to the water in front of it.
+    // Every other skin wants to be legible; this one wants to be a silhouette
+    // with fish across it.
+    default: return toward(lighter(theme.accent, 1.25), SEA, 0.78)  // Trench
   }
 }
 
@@ -186,6 +203,39 @@ function build(theme, level) {
     // the top of the fade is transparent so the lip is not a drawn line.
     pitLip: css(VOID, 0.0),
     pitDeep: css(VOID, 0.62),
+
+    // The Trench's own water: not a pool with edges but the medium everything
+    // else is drawn behind. Draw.js lays `seaWash` over the whole board and
+    // hangs `sunShaft` down from the surface — the one light in the level,
+    // and the reason a diver at the top of the board reads differently from
+    // one at the bottom of it.
+    sea: css(mix(bg, SEA, 0.46)),
+    // Light. The first pass laid 0.30 of wash over the whole board on top of a
+    // 0.42 depth fade and the terrain went to mud — the sediment banding this
+    // biome is built out of was not visible at all. The water has to be a
+    // filter, not a curtain: enough to unify, not enough to erase.
+    seaWash: css(mix(bg, SEA, 0.72), 0.16),
+    seaDeep: css(mix(bg, mix(SEA, ABYSS, 0.75), 0.85), 0.30),
+    sunShaft: css(mix(lighter(SEA, 1.9), fg, 0.30), 0.10),
+    bubble: css(mix(lighter(SEA, 2.1), fg, 0.55), 0.72),
+    bubbleLit: css(mix(lighter(SEA, 2.4), fg, 0.80), 0.90),
+
+    // Fish are scenery and must never compete with an agent, so they are the
+    // water two shades up rather than a colour of their own. The lit one is
+    // for the shoal's turn, when a school flashes as it banks.
+    fish: css(mix(bg, lighter(SEA, 1.5), 0.50)),
+    fishLit: css(mix(mix(bg, lighter(SEA, 1.8), 0.72), fg, 0.22)),
+
+    // Brass, canvas and glass: a diving suit of the wrong century, which is
+    // the joke. The helmet is the only warm thing in the biome, so it is what
+    // carries a diver's silhouette the way the pale face does on dry land.
+    helmet: "#b58a3c",
+    helmetLit: "#e8c274",
+    helmetDark: "#6b4f1e",
+    port: "#9fd8e4",
+    suit: "#4a5560",
+    suitLit: "#6d7a86",
+    airline: "#8a9aa6",
 
     poolBody: css(mix(bg, pool, 0.62)),
     poolDeep: css(mix(bg, mix(pool, VOID, 0.7), 0.75)),
