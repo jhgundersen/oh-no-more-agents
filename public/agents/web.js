@@ -404,36 +404,44 @@
     })
   }
 
-  // The rescue counter is a community total and it only ever goes up, so the
-  // status line has to read well at sizes nobody has seen yet. Under a thousand
-  // the exact figure is the interesting thing; past that it is the leading
-  // digits, and "8m" is a number you take in at 11px where "8,049,912" is a
-  // number you have to count the commas of. One decimal below ten of a unit and
-  // none above keeps the label three or four characters wide at every
-  // magnitude, so the row stops jittering as the total ticks over. This is
-  // about reading, not about fit: measured at seven widths from 1400px down,
-  // the long form wraps the controls row in exactly the same places as the
-  // short one, because `.counts` is `margin-left: auto` at the end of a flex
-  // row and its own width is not what decides where that row breaks. The exact
-  // number goes on the title, so it is a hover away rather than gone.
+  // The rescue counter is a community total that only ever goes up, and the
+  // first rule of a live ticker is that it has to tick. The version before this
+  // one showed two significant digits above ten thousand — "96k" — and the site
+  // earns about nine hundred rescues a day, so the number on screen changed
+  // once per thousand and sat still for a whole day at a time. It was reported
+  // as the API being down, which is exactly right as a reading: a counter that
+  // does not move is a counter that is broken, whatever the database says.
+  //
+  // So: the exact figure while it still reads as one, and compaction only when
+  // it genuinely stops being legible. A million is where "8,049,912" turns into
+  // something you have to count the commas of; below that, "96,670" is both
+  // shorter to understand and honest about the fact that it is climbing.
+  //
+  // Fit is not the constraint and never was — measured at seven widths from
+  // 1400px down, the long form wraps the controls row in exactly the same
+  // places as the short one, because `.counts` is `margin-left: auto` at the
+  // end of a flex row and its own width is not what decides where that row
+  // breaks. That is why precision is affordable here.
+  var COMPACT_FROM = 1e6
   var UNITS = [
     { at: 1e12, suffix: "t" },
     { at: 1e9,  suffix: "b" },
-    { at: 1e6,  suffix: "m" },
-    { at: 1e3,  suffix: "k" }
+    { at: 1e6,  suffix: "m" }
   ]
   function compact(n) {
     if (!isFinite(n)) return "\u221e"
     if (n < 0) return "-" + compact(-n)
+    if (n < COMPACT_FROM) return Math.floor(n).toLocaleString()
     for (var i = 0; i < UNITS.length; i++) {
       var unit = UNITS[i]
       if (n < unit.at) continue
       var scaled = n / unit.at
-      // Truncate rather than round: a counter that has not reached eight
+      // Two decimals, not one, and for the same reason as everything above:
+      // at a million a day's rescues are a rounding error, so "8.0m" would go
+      // back to standing still. "8.04m" moves every ten thousand.
+      // Truncated rather than rounded — a counter that has not reached eight
       // million should not say it has.
-      var shown = scaled < 10 ? (Math.floor(scaled * 10) / 10).toFixed(1) : String(Math.floor(scaled))
-      if (shown.slice(-2) === ".0") shown = shown.slice(0, -2)
-      return shown + unit.suffix
+      return (Math.floor(scaled * 100) / 100).toFixed(2) + unit.suffix
     }
     return String(Math.floor(n))
   }

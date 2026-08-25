@@ -321,6 +321,15 @@ reload.
   writes the result to both `<meta name="build">` and `src/version.js`. Script
   stamps are inside that hash, so it moves for a code change and for a
   markup-only change alike.
+- **A live ticker has to tick.** The rescue counter was compacted to two
+  significant digits ("96k") and the site earns about nine hundred rescues a
+  day, so the number on screen changed once per thousand — it stood still for a
+  whole day at a time and was reported as the API being down. That is the right
+  reading: a counter that does not move is broken, whatever the database says.
+  It shows the exact figure below a million now and two decimals above
+  ("8.04m"), which moves every ten thousand. Fit was never the constraint —
+  measured at seven widths from 1400px down, the long form wraps the controls
+  row in exactly the same places as the short one.
 - **Nothing polls for it.** `readStats` puts `build` on every counter reply, and
   `web.js` compares it with its own meta tag, so a deploy is noticed on a request
   the page was already making — about one per batch of levels. The 20-minute
