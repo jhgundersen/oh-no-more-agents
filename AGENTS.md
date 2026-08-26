@@ -321,6 +321,24 @@ reload.
   writes the result to both `<meta name="build">` and `src/version.js`. Script
   stamps are inside that hash, so it moves for a code change and for a
   markup-only change alike.
+- **`reporting` was a latch with nothing to open it.** It stops two reports
+  going up at once and was cleared only by the fetch settling — and a fetch is
+  not obliged to settle. A request in flight when the tab is backgrounded, or
+  on a network that goes away without closing the socket, can hang for the life
+  of the page; the latch then stayed shut for the rest of the session and every
+  later report was queued and never sent. The page kept playing and kept
+  counting, so nothing looked wrong locally: a screen left running for a day
+  rescued thirteen thousand agents and posted about nine hundred. It is now
+  aborted on a timer *and* treated as stale past `REPORT_STALE` regardless of
+  what the promise did, because the failure is silent and there is no way to
+  notice it from inside the page.
+- **The reload that recovers a backlog was throwing most of it away.** The
+  queue was trimmed to the last fifty reports on load — about three thousand
+  rescues kept out of however many had piled up. `REPORT_QUEUE_CAP` is four
+  hundred now, and `packReports` merges a run of part-batches, though not full
+  ones: two five-level batches are 130 against a `MAX_SAVED_PER_REPORT` of 90,
+  so on a stalled day of full batches it merges nothing. The cap is what saves
+  that day; the packing is for a browser that keeps being closed mid-run.
 - **A live ticker has to tick.** The rescue counter was compacted to two
   significant digits ("96k") and the site earns about nine hundred rescues a
   day, so the number on screen changed once per thousand — it stood still for a

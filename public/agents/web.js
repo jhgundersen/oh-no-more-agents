@@ -38,6 +38,7 @@
   var pendingBatch = null
   var flushedThisSession = false
   var reporting = false
+  var reportingSince = 0
   var updateBuild = null
   var lastStatsAt = 0
   var palette = null
@@ -94,16 +95,54 @@
     } catch (e) { /* private browsing; the sim doesn't care */ }
   }
 
+  // A backlog used to be trimmed to the last fifty reports on load and the rest
+  // thrown away — about three thousand rescues kept, and the rest of a stalled
+  // day discarded on the very reload that was supposed to recover it. The cap
+  // is four hundred now, which at a full batch of sixty-odd is a day and a
+  // half of total outage, and it is still a cap because an unbounded queue in
+  // localStorage is its own failure.
+  //
+  // packReports is the smaller half and worth being honest about: reports are
+  // pure addition, so a run of them is worth one larger one — but only up to
+  // MAX_REPORT_SAVED, and a full five-level batch is already two thirds of
+  // that. Measured on a stalled day of full batches it merges nothing at all.
+  // What it does is stop a queue of part-batches (a browser that keeps being
+  // closed mid-run) from eating the cap with reports worth five rescues each.
+  //
+  // The head is never merged. It is the one report that may have been in
+  // flight when the page went away, and the server's idempotency is keyed on
+  // its event id — re-sending it under a new id would count it twice, which is
+  // the one failure worse than losing it.
+  var REPORT_QUEUE_CAP = 400
+
+  function packReports(list) {
+    if (list.length < 2) return list
+    var out = [list[0]]
+    var open = null
+    for (var i = 1; i < list.length; i++) {
+      var r = list[i]
+      if (open && open.saved + r.saved <= MAX_REPORT_SAVED) { open.saved += r.saved; continue }
+      open = { eventId: r.eventId, saved: r.saved }
+      out.push(open)
+    }
+    return out
+  }
+
   function loadPendingReports() {
     try {
       var reports = JSON.parse(localStorage.getItem(REPORT_STORE_KEY) || "[]")
-      if (Array.isArray(reports)) pendingReports = reports.filter(function (r) {
-        return r && typeof r.eventId === "string" && Number.isInteger(r.saved) && r.saved > 0
-      }).slice(-50)
+      if (Array.isArray(reports)) pendingReports = packReports(reports.filter(function (r) {
+        return r && typeof r.eventId === "string" && Number.isInteger(r.saved)
+          && r.saved > 0 && r.saved <= MAX_REPORT_SAVED
+      })).slice(-REPORT_QUEUE_CAP)
     } catch (e) { pendingReports = [] }
   }
 
   function savePendingReports() {
+    // Compact before writing too, so a session that never reloads cannot grow
+    // the queue past what localStorage will take.
+    if (pendingReports.length > 24) pendingReports = packReports(pendingReports)
+    if (pendingReports.length > REPORT_QUEUE_CAP) pendingReports = pendingReports.slice(-REPORT_QUEUE_CAP)
     try { localStorage.setItem(REPORT_STORE_KEY, JSON.stringify(pendingReports)) } catch (e) {}
   }
 
@@ -151,28 +190,67 @@
     pendingBatch = null
   }
 
+  // `reporting` is a latch that stops two reports going up at once, and it was
+  // cleared only by the fetch settling. A fetch is not obliged to settle: a
+  // request in flight when the tab is backgrounded, or on a network that goes
+  // away without closing the socket, can hang for the life of the page. When
+  // that happened the latch stayed shut for the rest of the session and every
+  // later report was queued and never sent — the page kept playing and kept
+  // counting, and nothing left the machine. A screen left running for a day
+  // rescued thirteen thousand agents and posted about nine hundred.
+  //
+  // Two belts for one job, because this failure is silent and expensive: the
+  // request is aborted on a timer, and the latch itself is treated as stale
+  // past REPORT_STALE regardless of what the promise did. Either alone would
+  // have been enough; both, because there is no way to notice from inside the
+  // page that the latch is shut and no reason to trust the promise again.
+  var REPORT_TIMEOUT = 15000
+  var REPORT_STALE = 45000
+
   function flushGlobalSaves() {
-    if (reporting || pendingReports.length === 0) return
+    if (pendingReports.length === 0) return
+    if (reporting) {
+      if (Date.now() - reportingSince < REPORT_STALE) return
+      // Whatever that request is doing, it is not coming back.
+      reporting = false
+    }
     reporting = true
+    reportingSince = Date.now()
     var report = pendingReports[0]
-    fetch("/api/saves", {
+    var done = false
+    function release() {
+      if (done) return
+      done = true
+      reporting = false
+    }
+    var ctl = typeof AbortController === "function" ? new AbortController() : null
+    var timer = setTimeout(function () {
+      release()
+      if (ctl) try { ctl.abort() } catch (e) {}
+    }, REPORT_TIMEOUT)
+    var opts = {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(report)
-    }).then(function (response) {
+    }
+    if (ctl) opts.signal = ctl.signal
+    fetch("/api/saves", opts).then(function (response) {
       if (!response.ok) throw new Error("counter unavailable")
       return response.json()
     }).then(function (stats) {
+      clearTimeout(timer)
+      if (done) return          // the timeout already gave up on this one
       lastStatsAt = Date.now()
       globalSaved = stats.totalSaved
       noteBuild(stats.build)
       pendingReports.shift()
       savePendingReports()
-      reporting = false
+      release()
       render()
       flushGlobalSaves()
     }).catch(function () {
-      reporting = false
+      clearTimeout(timer)
+      release()
       // The queue remains in localStorage. Retry on the next completed level,
       // on the next page load, or when the browser comes back online.
     })
