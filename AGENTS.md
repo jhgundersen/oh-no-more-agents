@@ -339,6 +339,15 @@ reload.
   ones: two five-level batches are 130 against a `MAX_SAVED_PER_REPORT` of 90,
   so on a stalled day of full batches it merges nothing. The cap is what saves
   that day; the packing is for a browser that keeps being closed mid-run.
+- **Every retry trigger was an event that might never come again.** The report
+  queue was flushed when a level completed, when a send succeeded, and when the
+  browser came back online — and nothing else. So any wedge at the head of the
+  queue (a 429, a reload that killed the request in flight, a stalled socket)
+  parked the whole backlog until somebody finished another level, and if the
+  wedge also stopped the game there was no next level. There is a 20-second
+  timer now that owes nothing to any of that, and a head that fails
+  `REPORT_MAX_TRIES` times rotates to the back so one poisoned report cannot
+  hold everything behind it — safe, because the server dedupes on event id.
 - **A live ticker has to tick.** The rescue counter was compacted to two
   significant digits ("96k") and the site earns about nine hundred rescues a
   day, so the number on screen changed once per thousand — it stood still for a

@@ -206,6 +206,21 @@
   // page that the latch is shut and no reason to trust the promise again.
   var REPORT_TIMEOUT = 15000
   var REPORT_STALE = 45000
+  // Unconditional retry. Every other trigger is an event that may never come
+  // again on a machine left running: a level completing, a send succeeding, the
+  // browser coming back online. If the head of the queue wedges for any reason
+  // — a 429, a reload that killed the request in flight, a stall — the backlog
+  // used to sit there until somebody finished another level, and if the thing
+  // that wedged it also stopped the game there was no next level. A timer owes
+  // nothing to any of that.
+  var REPORT_RETRY = 20000
+  // A report that keeps failing must not hold the queue shut behind it. After
+  // this many consecutive failures the head goes to the back and the next one
+  // gets a turn; re-sending it later is free, because the server dedupes on
+  // its event id. Losing one report is a rounding error. Losing every report
+  // behind it is what this whole afternoon was.
+  var REPORT_MAX_TRIES = 4
+  var headFailures = 0
 
   function flushGlobalSaves() {
     if (pendingReports.length === 0) return
@@ -244,6 +259,7 @@
       globalSaved = stats.totalSaved
       noteBuild(stats.build)
       pendingReports.shift()
+      headFailures = 0
       savePendingReports()
       release()
       render()
@@ -251,8 +267,16 @@
     }).catch(function () {
       clearTimeout(timer)
       release()
-      // The queue remains in localStorage. Retry on the next completed level,
-      // on the next page load, or when the browser comes back online.
+      // The queue stays in localStorage and the timer will come back for it.
+      // What must not happen is the head sitting at the front forever: rotate
+      // it once it has had its turns, so a single poisoned or rate-limited
+      // report cannot hold everything behind it.
+      headFailures++
+      if (headFailures >= REPORT_MAX_TRIES && pendingReports.length > 1) {
+        pendingReports.push(pendingReports.shift())
+        headFailures = 0
+        savePendingReports()
+      }
     })
   }
 
@@ -784,6 +808,9 @@
       else restartClock()
     })
     window.addEventListener("online", function () { loadGlobalStats(); flushGlobalSaves() })
+
+    // The drain that does not depend on anything else happening.
+    setInterval(flushGlobalSaves, REPORT_RETRY)
 
     // A paused or hidden game makes no requests of its own. Hidden tabs throttle
     // this to about a minute, which is far finer than it needs to be.
