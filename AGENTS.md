@@ -339,6 +339,19 @@ reload.
   ones: two five-level batches are 130 against a `MAX_SAVED_PER_REPORT` of 90,
   so on a stalled day of full batches it merges nothing. The cap is what saves
   that day; the packing is for a browser that keeps being closed mid-run.
+- **A limit written in two places drifted, and the database won.** 0001 capped
+  `rescue_events.saved` at 30, back when a report was one finished level and the
+  biggest colony was eighteen. Batching then made a report up to five levels and
+  raised `MAX_SAVED_PER_REPORT` to 90 — in `src/counter.js`, not in the schema.
+  The Worker accepted what the table then refused: the INSERT raised a CHECK
+  violation, the D1 batch is one transaction so the whole thing rolled back, and
+  the client queued the report and retried it forever. In 7,712 rows the largest
+  `saved` ever stored was 29. Anybody finishing three or more levels between
+  reports had those rescues refused for as long as they kept playing, and a
+  screen left running reported about seven per cent of what it rescued.
+  Migration 0002 rebuilds the table around the right bound — SQLite cannot alter
+  a CHECK — and `npm test` now fails if the two numbers ever disagree again,
+  which is the only guard available when one of them lives in a .sql file.
 - **Every retry trigger was an event that might never come again.** The report
   queue was flushed when a level completed, when a send succeeded, and when the
   browser came back online — and nothing else. So any wedge at the head of the
