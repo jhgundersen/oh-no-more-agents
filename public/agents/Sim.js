@@ -2660,7 +2660,13 @@ var HAZARDS = [
 
   // Biome-only. `only` keeps a thing where it belongs — a snake in a foundry
   // is a snake in the wrong story — and `not` keeps open flame out of the ice.
-  { id: "echobat",  name: "Echo Location", mech: "watch", mount: "ceiling", reach: 15, charge: 24, fire: 18, rest: 64, w: 5, h: 4, only: ["Cavern"] },
+  // Its screech fills the corridor both ways out to `reach`. At 15 that was a
+  // 32-cell zone, about 114 ticks to walk, against a quiet window (rest and
+  // wind-up) of 88: no timing got anybody across, and the bat killed 1.7 per
+  // placement where the next worst fixture in the game killed under 1.2 — the
+  // Cavern lost three times the agents to hazards of any other biome. At 9 the
+  // walk is about 71 ticks, and timing it is a skill rather than a lottery.
+  { id: "echobat",  name: "Echo Location", mech: "watch", mount: "ceiling", reach: 9, charge: 24, fire: 18, rest: 64, w: 5, h: 4, only: ["Cavern"] },
   { id: "scarab",   name: "Legacy Daemon", mech: "watch", mount: "floor", reach: 10, charge: 18, fire: 20, rest: 58, w: 5, h: 3, only: ["Ruins"] },
   { id: "snowball", name: "Cold Cache", mech: "cycle", mount: "ceiling", reach: 0, charge: 28, fire: 24, rest: 62, w: 6, h: 5, only: ["Frost"] },
   { id: "molten",   name: "Memory Leak", mech: "cycle", mount: "ceiling", reach: 0, charge: 26, fire: 26, rest: 58, w: 5, h: 6, only: ["Foundry"] },
@@ -2847,6 +2853,7 @@ function placeHazard(w, rng, corridors, ci, forced) {
     fired: 0,
     dir: -c.dir,
     known: false,
+    reach: spec.reach, // for Draw, which cannot ask hazardSpec (the core files share nothing)
     throttled: 0,
     lineTo: -1,
     lineY: 0,

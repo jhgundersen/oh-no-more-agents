@@ -584,3 +584,28 @@ draws every kind with and without fine detail.
 **Next.** Animals, alien, treasure and camel are untouched — smaller wins.
 Time for gameplay again: the drone operator (survives 38 of 42), or a look at
 whether any biome has drifted out of the band after all the changes.
+
+## 24 — 2026-10-09 · Balance check: the echo bat
+
+**Why.** Twenty-three iterations of changes; time to look at the band.
+First-attempt runs, 40 levels × 6 colonies per biome: Cavern 88.6, Spaceship
+91.3, Frost 92.4 — no outlier in home. But Cavern lost 157 agents to hazards
+where the others lost 40–50. By kind: the Cavern-only echo bat, placed in 60
+of 132 Cavern hazard slots (local fixtures are preferred 45% of the time),
+killed 1.7 per placement; the worst elsewhere was under 1.2.
+
+**Found.** Its screech kills anyone in the corridor out to `reach` both
+ways. At 15 that is a 32-cell zone — about 114 ticks of walking — against a
+quiet window (rest + wind-up) of 88. No timing got anybody across. And it
+was drawn out to 5 cells: the colony died to something nobody could see.
+
+**Changed.** Reach 15 → 9 (≈71 ticks to cross: timing becomes a skill).
+Hazards carry `reach` on the object so Draw can read it; the screech is now
+drawn as three rings travelling to the true reach, with end caps, fading out.
+
+**Checked.** Cavern 88.6 → 91.8% home, hazard deaths 157 → 81, its worst
+level (276, 49%) off the worst list. `sim play` 98 / 89 / 46s / 0 hangs.
+AGENTS.md baselines brought up to date (89%).
+
+**Next.** Deploy (23 + 24). Same audit for the other biome-only fixtures —
+a local fixture is drawn 45% of the time, so one bad one dominates a biome.

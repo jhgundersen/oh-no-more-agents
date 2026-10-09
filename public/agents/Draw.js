@@ -3153,12 +3153,20 @@ function drawHzEchobat(ctx, w, pal, h, geo) {
   ctx.fillStyle = show ? hot : pal.rig
   hzTri(ctx, cx - 5, y0 + 4, 5, 4, 1)
   hzTri(ctx, cx + 5, y0 + 4, 5, 4, 1)
+  // The screech, out to where it actually kills: three rings travelling to
+  // the full reach either side. It used to stop at five cells while the
+  // lethal zone ran to fifteen — the colony died to something nobody could see.
   if (show) {
+    var span = (h.reach || 9) * geo.C
     ctx.fillStyle = hot
     for (var eb = 1; eb <= 3; eb++) {
-      var er = ((t + eb * 6) % 18) + 3
+      var er = Math.round(((t + eb * 6) % 18) / 18 * span) + 3
+      ctx.globalAlpha = 1 - er / (span + 4)
       ctx.fillRect(cx - er, y0 + 8 + eb * 2, er * 2, 1)
+      ctx.fillRect(cx - er, y0 + 6 + eb * 2, 1, 3)
+      ctx.fillRect(cx + er - 1, y0 + 6 + eb * 2, 1, 3)
     }
+    ctx.globalAlpha = 1
   }
 }
 

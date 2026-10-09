@@ -566,8 +566,10 @@ gameplay, intended or not. `hangs` must stay at zero. The game has no pass mark,
 so `cleared` is measured against `CLEAR_SHARE`, a fixed fraction of the colony
 defined in `simcheck.js`.
 
-Baselines, 200 levels: **98% of levels cleared, 88% of agents home, 46s per
-attempt, no hangs.** Per biome nothing is an outlier — 95–100% cleared and 77–93%
+Baselines, 200 levels (as of the eleven-biome catalogue, October 2026):
+**98% of levels cleared, 89% of agents home, 46s per attempt, no hangs.**
+Earlier figures below are from the ten-biome catalogue and are kept as they
+were measured. Per biome nothing is an outlier — 95–100% cleared and 77–93%
 home across all ten, with the Trench at 100/92 and the Skyscraper at 95/77. On
 the wider 300×6 sweep the band is 87–93% cleared and 86–92% home, the Trench at
 91/92. On a 24-level
