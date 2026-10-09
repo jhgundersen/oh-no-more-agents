@@ -2854,6 +2854,7 @@ function placeHazard(w, rng, corridors, ci, forced) {
     dir: -c.dir,
     known: false,
     reach: spec.reach, // for Draw, which cannot ask hazardSpec (the core files share nothing)
+    kills: 0,         // bookkeeping for `npm run sim hazards`
     throttled: 0,
     lineTo: -1,
     lineY: 0,
@@ -3111,6 +3112,7 @@ function stepSniper(w, h, spec) {
       h.known = true
       w.hazardKnown = true
       w.hazardKills++
+      h.kills = (h.kills || 0) + 1
       w.lastEvent = "hazard"
       h.targetId = undefined
     }
@@ -3174,6 +3176,7 @@ function hazardStrike(w, h) {
     h.known = true
     w.hazardKnown = true
     w.hazardKills++
+    h.kills = (h.kills || 0) + 1
     w.lastEvent = "hazard"
   }
   for (var ei = 0; ei < w.enemies.length; ei++) {

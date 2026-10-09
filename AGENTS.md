@@ -554,7 +554,14 @@ npm run sim inert     # materials must not affect behaviour
 npm run sim gravity   # planted things must fall when their floor goes
 npm run sim heights   # every special must be a distinct height device
 npm run sim spread    # the same level played by several different colonies
+npm run sim hazards   # kills per placement for every fixture kind
 ```
+
+`hazards` averages about 0.5. A kind far above it is usually one level where
+it landed on a spot the queue cannot leave — a lip, or in front of a wall —
+not a bad spec; read that level before touching the numbers. Keeping fixtures
+off such spots in `placeHazard` was tried and measured: it removed a fifth of
+all hazards and left kills per placement where they were.
 
 Every one pins the colony seed, so the numbers are repeatable and comparable
 with the baselines below. A run that varies between invocations means something

@@ -611,3 +611,30 @@ AGENTS.md baselines brought up to date (89%).
 a local fixture is drawn 45% of the time, so one bad one dominates a biome.
 
 **Deployed** after 24 (name="build" content="05ddc8ce"): prisoner faces, echo bat. Browser check clean.
+
+## 25 — 2026-10-09 · Hazard audit, and a fix that was not one
+
+**Why.** Log 24's lead: one bad fixture can dominate a biome.
+
+**Measured.** Kills per placement for every kind, attributed to the fixture
+that struck (not guessed): 759 placements, 406 kills, 0.53 average. Above
+1.5: the grinder (2.04) and the sniper (1.59, intended). Zero: darts,
+pendulum, flywheel, spores, packetloss — timed perfectly by the colony.
+
+**Tried, measured, reverted.** The grinder's grind (fire 30 → 18): no change
+at all. Traced its kills: most on its *first* turn, queue bunched on the
+plate — level 96 had it between a chasm lip and a wall, eight dead at once.
+Kept fixtures off lips in `placeHazard`: grinder 2.04 → 0.71, but the
+sawblade jumped to 2.58 — now against a wall on level 109 (14 of 17 dead).
+Kept them off walls too, swept the clearance 0–3 cells: kills per placement
+stayed at 0.57–0.67 at every setting, and placements fell from 759 to
+390–645. It only removed danger; it did not make danger fairer. Reverted.
+
+**Kept.** Each hazard counts its own kills (`h.kills`, bookkeeping only);
+`npm run sim hazards` prints the table. AGENTS.md records the finding so the
+placement rule is not tried again blind. `sim play` unchanged.
+
+**Next.** The real fix for queue traps is behavioural (a queue that sees the
+plate wind up under it should scatter, not stand) — bigger, and worth its
+own iteration. Or something visible for a while: animals/alien/treasure at
+the finer res.

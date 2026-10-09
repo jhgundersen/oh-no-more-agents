@@ -14,6 +14,7 @@
 //                                          ground under them is removed
 //   node tools/simcheck.js heights         every special survives a lethal drop
 //   node tools/simcheck.js biomes [levels] outcome broken down per biome
+//   node tools/simcheck.js hazards [levels] kills per placement, per fixture
 //
 // It loads Sim.js the way a browser does — as text, with the top-level
 // declarations exported — so it needs no changes to the game files.
@@ -290,6 +291,30 @@ function cmdSpread(S, levels, colonies) {
   console.log(`levels where the colony decided it: ${flips} (${Math.round(100 * flips / counted)}%)`)
 }
 
+
+// How deadly each fixture is where it lands: placements over the catalogue
+// with three colonies each, and the agents it killed. The average sits around
+// 0.5. A kind far above it is either tuned wrong or (more often) one level
+// where it landed somewhere the queue cannot avoid — read the level before
+// changing the spec. A kind at zero is scenery the colony has learned to time.
+function cmdHazards(S, levels) {
+  const placed = {}, kills = {}
+  for (let lv = 1; lv <= levels; lv++) for (let salt = 0; salt < 3; salt++) {
+    const r = play(S, lv, 0, salt)
+    for (const h of r.w.hazards) {
+      placed[h.kind] = (placed[h.kind] || 0) + 1
+      kills[h.kind] = (kills[h.kind] || 0) + (h.kills || 0)
+    }
+  }
+  const rows = Object.keys(placed).map(k => [k, placed[k], kills[k], kills[k] / placed[k]]).sort((a, b) => b[3] - a[3])
+  let p = 0, k = 0
+  for (const [kind, n, d, per] of rows) {
+    p += n; k += d
+    console.log(`  ${kind.padEnd(11)} placed ${String(n).padStart(4)}  kills ${String(d).padStart(4)}  ${per.toFixed(2)}`)
+  }
+  console.log(`  all         placed ${String(p).padStart(4)}  kills ${String(k).padStart(4)}  ${(k / p).toFixed(2)}`)
+}
+
 const cmd = process.argv[2] || "play"
 const arg = Number(process.argv[3])
 const S = loadSim()
@@ -298,5 +323,6 @@ else if (cmd === "biomes") cmdBiomes(S, arg || 210)
 else if (cmd === "inert") cmdInert(S)
 else if (cmd === "gravity") cmdGravity(S)
 else if (cmd === "heights") cmdHeights(S)
+else if (cmd === "hazards") cmdHazards(S, arg || 440)
 else if (cmd === "spread") cmdSpread(S, arg || 60, Number(process.argv[4]) || 8)
 else { console.error("usage: simcheck.js play|biomes|inert|gravity|heights|spread [levels] [colonies]"); process.exit(2) }
