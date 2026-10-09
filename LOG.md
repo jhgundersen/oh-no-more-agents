@@ -4,6 +4,23 @@ One entry per iteration of the improvement loop, newest last. Each entry says
 what was chosen and why, what changed, how it was checked, and what to look at
 next. Start every iteration by reading the last entry's **Next**.
 
+## Standing priorities
+
+Considered at the start of every iteration, alongside the last entry's Next.
+
+- **Finer pixels** (asked for by the owner, 2026-10-09). The board is drawn
+  at 400×248 and scaled up in whole steps, so every art pixel is a big block.
+  Draw at a higher internal resolution so sprites, terrain edges, hazards and
+  effects can carry more detail — while keeping the retro pixel-art look: hard
+  pixels, flat palette, no smoothing, no anti-aliasing, same silhouettes.
+  Plan: first a resolution factor that changes nothing on screen (canvas ×2,
+  Draw under a ×2 transform, renders byte-identical at ×1 art); then refine
+  the art piece by piece — agents, terrain edges, hazards, effects — one or
+  two per iteration, reviewed at full size. Mind the Omarchy plugin: it hosts
+  the same Draw.js, so the factor has to come from the host and default to 1.
+- Keep CRAP down: new or touched functions under 30 (`npm run crap -- --changed`).
+- Deploy every two or three iterations, after a headless browser check.
+
 Baselines to measure against are in AGENTS.md ("Checking gameplay changes").
 The CRAP figure is `npm run crap` — count of functions scoring over 30, and the
 worst one.
