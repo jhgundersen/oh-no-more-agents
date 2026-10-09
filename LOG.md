@@ -975,3 +975,17 @@ enemy test already draws the xeno at res 2).
 
 **Next.** Ideas still open: a mechanic for Ruins; mission animals/treasure
 at the finer res; deploy after the next iteration.
+
+## 42 — 2026-10-09 · Finer pixels: the rest of the prisoners
+
+**Changed.** `CREATURE_FINE` (res ≥ 2), run after every mission subject is
+drawn (`drawMissionSubject` now wraps `drawMissionSubjectBase`): boar —
+bristles and a tusk; bird — feathers; monkey — a pale face with eyes; chest —
+lock plate and rivets, and coins glinting once it is open; camel — a red
+halter and light on the hump; alien — a glow round its eyes. With 23
+(people) every mission subject in the game now has res-2 detail.
+
+**Checked.** Four kinds × three variants, held and freed, at 5×. Mission
+test draws every kind with and without fine detail.
+
+**Deployed** with 41 (below).

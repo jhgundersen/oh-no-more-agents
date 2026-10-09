@@ -1782,6 +1782,54 @@ function drawAgentSidearm(ctx, w, pal, ag) {
 }
 
 function drawMissionSubject(ctx, kind, t, x, y, pal, fine) {
+  drawMissionSubjectBase(ctx, kind, t, x, y, pal, fine)
+  if (fine && CREATURE_FINE[kind]) CREATURE_FINE[kind](ctx, t, x, y - (t.freed && Math.floor(t.anim / 5) % 2 ? 1 : 0), pal, t.variant || 0, t.dir || 1)
+}
+
+// The non-human prisoners at res 2 (the people have drawPersonFine): a touch
+// each, inside the coarse shape, keyed by mission kind.
+var CREATURE_FINE = {
+  animal: function (ctx, t, x, y, pal, v, dir) {
+    if (v === 0) {                                                     // boar
+      ctx.fillStyle = pal.decorDim
+      for (var b = -3; b < 3; b += 1.5) ctx.fillRect(x + b, y - 7.5, 0.5, 1)
+      ctx.fillStyle = "#f2f2e6"
+      ctx.fillRect(x + dir * 6.5 - (dir < 0 ? 0.5 : 0), y - 5.5, 0.5, 1)  // tusk
+    } else if (v === 1) {                                              // bird
+      ctx.fillStyle = pal.decorDim
+      ctx.fillRect(x - 4.5, y - 7, 2, 0.5); ctx.fillRect(x + 3.5, y - 7, 2, 0.5)
+    } else {                                                           // monkey
+      ctx.fillStyle = "#e9d6b8"
+      ctx.fillRect(x - 1, y - 8.5, 2.5, 2)
+      ctx.fillStyle = "#1c1c22"
+      ctx.fillRect(x - 0.5, y - 8, 0.5, 0.5); ctx.fillRect(x + 0.5, y - 8, 0.5, 0.5)
+    }
+  },
+  treasure: function (ctx, t, x, y, pal) {
+    ctx.fillStyle = "#e0b649"
+    ctx.fillRect(x - 0.5, y - 6, 1, 1.5)                               // lock plate
+    for (var r = -5; r <= 5; r += 2.5) ctx.fillRect(x + r, y - 2, 0.5, 0.5)   // rivets
+    if (!t.freed) return
+    ctx.fillStyle = "#ffffff"                                          // coins glinting
+    for (var g = 0; g < 3; g++) if ((t.anim + g * 7) % 18 < 6) ctx.fillRect(x - 3 + g * 3, y - 9.5 + (g % 2), 0.5, 0.5)
+  },
+  camel: function (ctx, t, x, y, pal, v, dir) {
+    ctx.fillStyle = "#b8362e"
+    ctx.fillRect(x + dir * 6 - (dir < 0 ? 3 : 0), y - 12, 3, 0.5)       // halter
+    ctx.fillStyle = "#e3b77a"
+    ctx.fillRect(x - 2, y - (v % 2 ? 10 : 11), 2, 0.5)                 // light on the hump
+  },
+  alien: function (ctx, t, x, y, pal, v) {
+    if (t.dead) return
+    ctx.fillStyle = "#ffffff"
+    ctx.globalAlpha = 0.5
+    var ey = y - (v === 1 ? 11 : 7)
+    ctx.fillRect(x - 2.5, ey - 0.5, 2, 2); ctx.fillRect(x + 1.5, ey - 0.5, 2, 2)  // eye glow
+    ctx.globalAlpha = 1
+  }
+}
+
+function drawMissionSubjectBase(ctx, kind, t, x, y, pal, fine) {
   var v = t.variant || 0
   var dir = t.dir || 1
   var bob = t.freed && Math.floor(t.anim / 5) % 2 ? 1 : 0
