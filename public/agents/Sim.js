@@ -2087,6 +2087,13 @@ var SPECIALS = [
   // the board, and the only one that is worth more to the queue behind it than
   // to the agent doing it.
   ,{ id: "bulwark", name: "Ada Blocker", act: "shield", height: "shieldglider", cool: 150, robe: "#7b8794", hair: "#ffd23f" }
+
+  // Neither breaks the danger nor stands in front of it: tells it to slow
+  // down. Any fixture on the board, electronic or not, stops for THROTTLE_TICKS
+  // and then comes back exactly as it was — so the move is only worth anything
+  // to whoever is close enough to walk through the window, and the special
+  // spends most of its life waiting for the queue to catch up.
+  ,{ id: "ratelimit", name: "Rate Limiter", act: "throttle", height: "backoff", cool: 180, robe: "#c9821a", hair: "#2a2a30" }
 ]
 
 function specialSpec(id) {
@@ -2740,6 +2747,7 @@ function placeHazard(w, rng, corridors, ci, forced) {
     fired: 0,
     dir: -c.dir,
     known: false,
+    throttled: 0,
     lineTo: -1,
     lineY: 0,
     wrecked: false
@@ -2893,6 +2901,12 @@ function hazardMid(h) { return { x: (h.zx0 + h.zx1) / 2, y: (h.zy0 + h.zy1) / 2 
 
 function stepOneHazard(w, h) {
   if (!h || h.wrecked) return
+  // Throttled: frozen where it stands, and it comes back through `rest` so the
+  // window does not close on a shot already wound up when the limit lifted.
+  if (h.throttled > 0) {
+    if (--h.throttled === 0) { h.phase = "rest"; h.t = 0; h.lineTo = -1; h.targetId = undefined }
+    return
+  }
   var spec = hazardSpec(h.kind)
   h.t++
 
@@ -3136,7 +3150,7 @@ function hazardAhead(w, ag, nx) {
   var footY = Math.floor(ag.y)
   for (var hi = 0; hi < w.hazards.length; hi++) {
     var h = w.hazards[hi]
-    if (h.wrecked || (!h.known && !hazardPerceptive(ag))
+    if (h.wrecked || h.throttled > 0 || (!h.known && !hazardPerceptive(ag))
         || (h.phase !== "charge" && h.phase !== "fire")) continue
     if (hazardCovers(w, h, ax, footY)) return true
   }
@@ -3154,7 +3168,7 @@ function hazardAhead(w, ag, nx) {
 function hazardZoneAt(w, x, y, perceptive) {
   for (var i = 0; i < w.hazards.length; i++) {
     var h = w.hazards[i]
-    if (h.wrecked || (!h.known && !perceptive)) continue
+    if (h.wrecked || h.throttled > 0 || (!h.known && !perceptive)) continue
     if (h.kind === "current") continue
     if (hazardCovers(w, h, x, y)) return h
   }
@@ -4230,6 +4244,7 @@ function spawn(w) {
     waitFor: 0,       // holding at a danger for its reload, rather than pacing
     mineCool: 0,      // one charge at a time, and not again until it has gone off
     shieldFor: 0,     // ticks left on the plate; renewed while a threat is in front
+    throttleFor: 0,   // Rate Limiter's pose and signal, after it throttles something
     shieldHeld: 0,    // how long it has been up for, which is what tires it out
     blockFor: 0,      // ticks of the spark from the last thing it stopped
     coveredFor: 0,    // ticks since it was last inside somebody's cover
@@ -5676,6 +5691,44 @@ function specialCountersHazard(w, ag, act) {
   return false
 }
 
+// Rate Limiter. Everything hostile it can see within reach — fixtures and red
+// team alike — stops for THROTTLE_TICKS. The window is long enough for a queue
+// of five to file past at walking pace and short enough that a straggler can
+// still be caught. Reach runs both ways: a fixture it has already got past is
+// the one the queue behind it is waiting at, and that is where it is worth most.
+var THROTTLE_TICKS = 210
+var THROTTLE_REACH = 34
+
+function throttleHazard(w, ag) {
+  var fx = Math.floor(ag.x), fy = Math.floor(ag.y)
+  var inReach = function (x, y) {
+    return Math.abs(x - ag.x) <= THROTTLE_REACH && Math.abs(y - fy) <= CORR_H + 2
+      && lineClear(w, fx, fy - 2, Math.round(x), Math.round(y))
+  }
+  var hit = 0
+  for (var hi = 0; hi < w.hazards.length; hi++) {
+    var h = w.hazards[hi]
+    if (h.wrecked || h.throttled > 0 || h.kind === "current") continue
+    var hm = hazardMid(h)
+    if (!inReach(hm.x, hm.y)) continue
+    h.throttled = THROTTLE_TICKS
+    h.known = true
+    w.hazardKnown = true
+    hit++
+  }
+  for (var ei = 0; ei < w.enemies.length; ei++) {
+    var en = w.enemies[ei]
+    if (en.gone || en.throttled > 0 || en.state === "fall" || !inReach(en.x, en.y - 2)) continue
+    en.throttled = THROTTLE_TICKS
+    hit++
+  }
+  if (!hit) return false
+  ag.throttleFor = 24
+  ag.cool = specOf(ag).cool
+  w.lastEvent = "429 too many requests"
+  return true
+}
+
 function stepCamp(w, ag) {
   if (unsupported(w, ag)) { beginUncontrolledFall(w, ag); return }
 
@@ -5766,7 +5819,7 @@ function specialAtWall(w, ag) {
   // Ada Blocker has no move for a wall — its move is for what a wall cannot
   // help with. Turning at one must not spend the cooldown, or it arrives at
   // the danger it exists for with the plate still on its back.
-  if (spec.act === "shield") { turnAround(w, ag); return }
+  if (spec.act === "shield" || spec.act === "throttle") { turnAround(w, ag); return }
 
   if (spec.act === "ceiling") { startCeiling(w, ag); return }
 
@@ -6000,7 +6053,7 @@ function specialDropLanding(w, ag, nx, depth, mode) {
     recoil: -3, cyclone: 4, web: 0, logchute: 3, balloon: -4,
     promptchute: 2, piledrive: 0, helicopter: 7, glasswing: 5,
     ghost: -3, gunwing: 4, tractor: 1, steps: 3, chain: 5,
-    jetpack: 7, cushion: 2, extender: 0, shieldglider: 5
+    jetpack: 7, cushion: 2, extender: 0, shieldglider: 5, backoff: 1
   }[mode] || 0
   var footY = Math.floor(ag.y) + depth
   var baseX = Math.floor(nx)
@@ -6046,6 +6099,7 @@ function startSpecialHeight(w, ag, nx, depth, far) {
   if (spec.height === "cushion") ag.heightTicks += 18
   if (spec.height === "helicopter") ag.heightTicks += 60
   if (spec.height === "balloon") ag.heightTicks += 25
+  if (spec.height === "backoff") ag.heightTicks += 40
   ag.x = nx
   ag.timer = 0
   w.lastEvent = spec.height === "cushion" ? "copies, cushion!" : spec.height
@@ -6096,6 +6150,22 @@ function startSpecialAscent(w, ag) {
   return true
 }
 
+// Progress through a fall that stops to retry: four equal drops, separated by
+// pauses of 1, 2 and 4 units against a drop's 1. Answers 0 at 0 and 1 at 1.
+var BACKOFF_SPANS = [1, 1, 1, 2, 1, 4, 1]
+function backoffCurve(p) {
+  var total = 0
+  for (var i = 0; i < BACKOFF_SPANS.length; i++) total += BACKOFF_SPANS[i]
+  var at = p * total, done = 0
+  for (var j = 0; j < BACKOFF_SPANS.length; j++) {
+    var span = BACKOFF_SPANS[j]
+    if (at <= span) return (done + (j % 2 === 0 ? at / span : 0)) / 4
+    at -= span
+    if (j % 2 === 0) done++
+  }
+  return 1
+}
+
 function stepSpecialHeight(w, ag) {
   ag.heightTick++
   var p = Math.min(1, ag.heightTick / ag.heightTicks)
@@ -6104,6 +6174,9 @@ function stepSpecialHeight(w, ag) {
   // The copy pile is in place before the stunt begins; hold for that readable
   // beat, then jump. The other machines leave immediately.
   if (ag.heightMode === "cushion") moveP = Math.max(0, (p - 0.18) / 0.82)
+  // Exponential backoff: drop, wait, drop, wait longer. Four retries, each
+  // pause twice the last, and every drop the same height.
+  if (ag.heightMode === "backoff") moveP = backoffCurve(p)
 
   ag.x = ag.heightFromX + (ag.heightToX - ag.heightFromX) * moveP
   ag.y = ag.heightFromY + (ag.heightToY - ag.heightFromY) * moveP
@@ -6115,7 +6188,7 @@ function stepSpecialHeight(w, ag) {
     recoil: -2, cyclone: 3, web: 0.4, logchute: 2, balloon: -3,
     promptchute: 1.5, piledrive: 0, helicopter: 5, glasswing: 3,
     ghost: -2, gunwing: 2.5, tractor: 0.8, steps: 1.5, chain: 3,
-    jetpack: 4, cushion: 1.5, extender: 0, shieldglider: 3
+    jetpack: 4, cushion: 1.5, extender: 0, shieldglider: 3, backoff: 0.5
   }[ag.heightMode] || 0
   ag.x += ag.dir * sway * Math.sin(moveP * Math.PI)
   if (ag.heightMode === "helicopter") {
@@ -6996,6 +7069,8 @@ function stepEnemy(w, en) {
   if (wet && en.y >= wet.surfaceY) { sinkEnemy(w, en, wet); return }
 
   if (en.shotFor > 0) en.shotFor--
+  // Rate-limited: it stands (or hovers) where it is and does nothing at all.
+  if (en.throttled > 0) { en.throttled--; return }
   if (en.kind === "drone") { stepDrone(w, en); return }
   if (en.kind === "sniper" && en.state === "seekpost") { seekSniperPost(w, en); return }
   if ((en.kind === "operator" || en.kind === "sniper") && en.state === "deploy") {
@@ -7615,6 +7690,7 @@ function stepAgents(w) {
       }
     }
     if (ag.shotFor > 0) ag.shotFor--
+    if (ag.throttleFor > 0) ag.throttleFor--
     if (ag.gunCool > 0) ag.gunCool--
     if (ag.shoveCool > 0) ag.shoveCool--
     if (ag.hazardGrace > 0) ag.hazardGrace--
@@ -7633,6 +7709,7 @@ function stepAgents(w) {
       // one: same answer either way, and the last of those is the one that
       // matters — cover is worth nothing raised after the first shot.
       if (sact === "shield" && (seesDanger || seesRed || threatAhead(w, ag, 14))) raiseShield(w, ag)
+      if (sact === "throttle" && ag.cool <= 0 && (seesDanger || seesRed)) throttleHazard(w, ag)
 
       if (sact === "camp" && (seesDanger || seesRed)) {
         ag.state = "camp"

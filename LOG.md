@@ -81,3 +81,34 @@ functions CRAP ≤ 7.
 **Next.** Gameplay or heroes — two graphics iterations in a row. Look at what
 the colony does least well (`npm run sim biomes`, the Skyscraper is lowest at
 77% home) or add a special. Deploy after the next iteration if it holds up.
+
+## 4 — 2026-10-09 · Hero: Rate Limiter
+
+**Why.** Balance is not the problem: with varied colonies every biome lands
+within 86–93% home (the Skyscraper's 77% in `sim biomes` is the pinned
+colony, not the biome). So the iteration went to variety.
+
+**Changed.** Special #19, *Rate Limiter* (`ratelimit`, act `throttle`,
+height `backoff`, amber robe). When it can see a hazard or red team within
+`THROTTLE_REACH` (34, either direction — the fixture it has already passed is
+the one the queue is waiting at), everything hostile in reach is frozen for
+`THROTTLE_TICKS` (210 ≈ 7s): fixtures stop in their phase and drop out of
+`hazardZoneAt`/`hazardAhead`, so the waiting queue walks through; enemies
+stand or hover and do nothing. A fixture comes back through `rest`, never
+mid-shot. At a wall it turns, like Ada Blocker. Its fall is exponential
+backoff: four equal drops with waits of 1, 2 and 4 (`backoffCurve`).
+Drawn: stop sign raised and a ring going out to its reach; a pause mark with
+a draining bar over each frozen thing, blinking in its last second; a frozen
+fixture is drawn at rest so it does not look lethal; a stop-sign canopy that
+lights on each drop. Ten flavour lines.
+
+**Checked.** `sim play` 98% / 88% / 46s / 0 hangs (unchanged); `inert`,
+`gravity`, `heights` (19/19 distinct) pass. On its own levels, on vs off over
+57 runs: 91.2% vs 91.3% home — no balance effect, it acts in about a quarter
+of its levels (hazards are sparse: ~0.6 per level). Rendered mid-throttle on
+level 17. Tests: `test/specials.test.js` (backoff shape; throttle freezes,
+clears the zone, resumes at rest). CRAP: `throttleHazard` 21, rest < 20.
+
+**Next.** Deploy (iterations 2–4 are all visible). Then: the hero only
+matters when it meets danger — consider whether hazards per level are too
+sparse for the specials built around them, or start on a new biome.

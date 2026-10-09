@@ -1369,7 +1369,10 @@ function drawActors(ctx, w, pal, opts) {
   }
   for (var ei = 0; ei < w.enemies.length; ei++) {
     var enemy = w.enemies[ei]
-    if (!enemy.gone) drawEnemy(ctx, w, pal, enemy, opts)
+    if (!enemy.gone) {
+      drawEnemy(ctx, w, pal, enemy, opts)
+      if (enemy.throttled > 0) drawThrottled(ctx, w, enemy.x * w.k.CELL, (enemy.y - 4) * w.k.CELL - 4, enemy.throttled)
+    }
   }
 }
 
@@ -1929,6 +1932,18 @@ function drawCroc(ctx, w, pal, p, px, pw, sy) {
 // Three per special, picked by level number so it is the same line every time
 // you come back to level 42 — the same rule the rest of the level runs on.
 var SPECIAL_FACTS = {
+  ratelimit: [
+    "returns 429 to anything that moves too often.",
+    "does not fix the danger. Schedules it.",
+    "please retry after the colony has passed.",
+    "believes every problem is a throughput problem.",
+    "has never once been asked to go faster.",
+    "falls the way it retries: exponentially.",
+    "the turret has been asked to wait its turn.",
+    "a quota is a kindness, explained slowly.",
+    "is holding the door by holding everything else.",
+    "your request is important to us. Please hold."
+  ],
   ladder: [
     "calls itself, one rung at a time. There is no base case.",
     "grew the stack until something gave.",
@@ -3240,7 +3255,19 @@ function drawHazard(ctx, w, pal, h, opts) {
     return
   }
 
-  drawHazardKind(ctx, w, pal, h)
+  // Rate-limited: drawn at rest whatever phase it was frozen in, because a
+  // fixture caught mid-shot would otherwise sit there looking lethal for seven
+  // seconds while the colony walks through it unharmed.
+  if (h.throttled > 0) {
+    var resting = {}
+    for (var hk in h) resting[hk] = h[hk]
+    resting.phase = "rest"
+    resting.lineTo = -1
+    drawHazardKind(ctx, w, pal, resting)
+    drawThrottled(ctx, w, cx, y0 - 6, h.throttled)
+  } else {
+    drawHazardKind(ctx, w, pal, h)
+  }
   if (opts && opts.labels) {
     ctx.fillStyle = h.wrecked ? pal.labelFaint : pal.warn
     ctx.font = "bold 6px monospace"
@@ -3250,6 +3277,45 @@ function drawHazard(ctx, w, pal, h, opts) {
   }
 
   spriteFlip = false
+  ctx.globalAlpha = 1
+}
+
+// Rate Limiter's mark over whatever it has throttled: a pause sign in the
+// special's colour and a bar that drains as the window closes. The last second
+// blinks, so the end of the window is something a viewer sees coming — the
+// same rule as a hazard's wind-up.
+var THROTTLE_AMBER = "#ffb13b"
+function drawThrottled(ctx, w, cx, y, left) {
+  var full = 210
+  if (left < 30 && Math.floor(w.ticks / 3) % 2 === 0) return
+  ctx.fillStyle = "#1c1c22"
+  ctx.fillRect(Math.round(cx) - 6, Math.round(y) - 8, 12, 10)
+  ctx.fillStyle = THROTTLE_AMBER
+  ctx.fillRect(Math.round(cx) - 3, Math.round(y) - 6, 2, 6)
+  ctx.fillRect(Math.round(cx) + 1, Math.round(y) - 6, 2, 6)
+  ctx.fillRect(Math.round(cx) - 6, Math.round(y) + 3, Math.max(1, Math.round(12 * left / full)), 1)
+}
+
+// The moment it happens: a stop sign held up at arm's length and a ring
+// going out from it to the edge of its reach, so the pause marks that appear on
+// the far side of the room are seen to have come from this agent.
+function drawThrottleSignal(ctx, pal, ag, ox, oy, dir, robe) {
+  var p = 1 - ag.throttleFor / 24
+  ctx.fillStyle = robe
+  blit(ctx, ox, oy, dir, 7, 3, 1, 5)                 // the arm up
+  ctx.fillStyle = pal.skin
+  blit(ctx, ox, oy, dir, 7, 2, 1, 1)
+  ctx.fillStyle = THROTTLE_AMBER
+  blit(ctx, ox, oy, dir, 6, -3, 5, 5)                // the sign
+  ctx.fillStyle = "#1c1c22"
+  blit(ctx, ox, oy, dir, 7, -2, 1, 3); blit(ctx, ox, oy, dir, 9, -2, 1, 3)
+  var r = Math.round(6 + p * 60), cx = ox + SPRITE_W / 2, cy = oy + 6
+  ctx.globalAlpha = 0.6 * (1 - p)
+  ctx.fillStyle = THROTTLE_AMBER
+  for (var a = 0; a < 16; a++) {
+    var ang = a / 16 * Math.PI * 2
+    ctx.fillRect(Math.round(cx + Math.cos(ang) * r), Math.round(cy + Math.sin(ang) * r * 0.5), 2, 1)
+  }
   ctx.globalAlpha = 1
 }
 
@@ -3925,6 +3991,17 @@ function drawAgentHeightGear(ctx, w, pal, ag, ox, oy, dir, robe, hair) {
       case "shieldglider":
         ctx.fillRect(ox - 8, oy - 7, 24, 3)
         ctx.fillRect(ox - 5, oy - 4, 18, 2); break
+      case "backoff":
+        // An octagonal stop sign worn as a canopy. It lights on each drop and
+        // goes dark on each wait, so the retries can be counted.
+        var dropping = Math.floor(hp * 11) % 2 === 0 || hp >= 1
+        ctx.fillStyle = dropping ? THROTTLE_AMBER : robe
+        ctx.fillRect(ox - 3, oy - 12, 14, 8)
+        ctx.fillRect(ox - 1, oy - 14, 10, 12)
+        ctx.fillStyle = "#1c1c22"
+        ctx.fillRect(ox + 1, oy - 10, 2, 4); ctx.fillRect(ox + 5, oy - 10, 2, 4)
+        ctx.fillStyle = robe
+        ctx.fillRect(ox, oy - 2, 1, 4); ctx.fillRect(ox + 7, oy - 2, 1, 4); break
       case "glasswing":
         ctx.globalAlpha = 0.55
         ctx.fillRect(ox - 10, oy + 2, 10, 8); ctx.fillRect(ox + 8, oy + 2, 10, 8)
@@ -4282,6 +4359,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   // gets its own shape for the same reason each danger does — a special you
   // cannot tell from the last one is the same special.
   drawAgentTrick(ctx, w, pal, ag, ox, oy, dir, robe, hair)
+  if (ag.throttleFor > 0) drawThrottleSignal(ctx, pal, ag, ox, oy, dir, robe)
   if (st === "camp" && ag.shotFor > 0 && ag.special) {
     var csp = w.specialSpec
     ctx.globalAlpha = Math.min(1, ag.shotFor / 6)
