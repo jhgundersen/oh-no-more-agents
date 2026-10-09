@@ -1630,6 +1630,7 @@ function drawActors(ctx, w, pal, opts) {
   }
   ctx.globalAlpha = 1
   if (w.prints && w.prints.length) drawPrints(ctx, w, pal)
+  if (w.eventSiteFx) drawEventSite(ctx, w, pal, w.eventSiteFx)
   if (w.nets) for (var ni = 0; ni < w.nets.length; ni++) drawNet(ctx, w, w.nets[ni])
   if (w.reloadFx) drawReloadTrail(ctx, w, w.reloadFx)
 
@@ -4364,6 +4365,62 @@ function drawReloadSign(ctx, ag, ox, oy, hair) {
     ctx.fillRect(Math.round(cx + Math.cos(ang) * 3), Math.round(cy + Math.sin(ang) * 3), 1, 1)
   }
   ctx.fillRect(Math.round(cx + Math.cos(turn) * 3) - 1, Math.round(cy + Math.sin(turn) * 3), 2, 1)
+}
+
+// Where an event is about to land (Sim's eventSiteFx), through the
+// countdown the banner announces: cracks spreading across the slab that is
+// going to fall, with dust trickling out of it faster as it comes; or, for
+// growth, the floor's edge blinking in warning where it will rise. Then, for a
+// collapse, the rubble coming down. The banner says what; this says where.
+function drawEventSite(ctx, w, pal, fx) {
+  if (w.ticks < fx.fireAt) {
+    var p = (w.ticks - fx.warnAt) / Math.max(1, fx.fireAt - fx.warnAt)
+    if (fx.mech === "growth") drawGrowthWarning(ctx, w, pal, fx, p)
+    else drawCrackWarning(ctx, w, pal, fx, p)
+  } else if (fx.mech === "collapse" && fx.firedAt >= 0) drawRubble(ctx, w, pal, fx, w.ticks - fx.firedAt)
+}
+
+// Growth: the floor's edge where it will rise, blinking, steadier as it comes.
+function drawGrowthWarning(ctx, w, pal, fx, p) {
+  if (Math.floor(w.ticks / 6) % 2) return
+  var C = w.k.CELL
+  ctx.fillStyle = pal.warn
+  ctx.globalAlpha = 0.5 + 0.4 * p
+  ctx.fillRect(fx.x * C, fx.floorY * C - 1, fx.span * C, 1)
+  ctx.globalAlpha = 1
+}
+
+// A collapse: a zigzag crack growing outward across the slab from the middle,
+// a branch every few pixels, and for a ceiling, dust trickling out faster as
+// the moment comes.
+function drawCrackWarning(ctx, w, pal, fx, p) {
+  var C = w.k.CELL, x0 = fx.x * C, wide = fx.span * C
+  var ceiling = fx.at === "ceiling", edgeY = ceiling ? fx.ceilY * C : fx.floorY * C
+  ctx.fillStyle = pal.dust
+  ctx.globalAlpha = 0.6 + 0.4 * p
+  var reach = Math.round(wide * 0.5 * Math.min(1, p * 1.3)), cy = edgeY + (ceiling ? -3 : 1)
+  for (var dx = -reach; dx <= reach; dx += 2) {
+    var cx = x0 + wide / 2 + dx, zig = (dx >> 1) % 3
+    ctx.fillRect(cx, cy + zig, 2, 1)
+    if (dx % 6 === 0) ctx.fillRect(cx, cy + zig + (ceiling ? -2 : 1), 1, 2)
+  }
+  ctx.globalAlpha = 1
+  if (!ceiling) return
+  var fall = (fx.floorY - fx.ceilY) * C
+  for (var i = 0; i < 1 + Math.floor(p * 6); i++)
+    ctx.fillRect(x0 + ((i * 37 + fx.x * 11) % Math.max(1, wide)), edgeY + ((w.ticks * (0.6 + i * 0.1) + i * 9) % fall), 1, 1)
+}
+
+// The slab coming down: chunks accelerating for half a second, fading.
+function drawRubble(ctx, w, pal, fx, age) {
+  if (age > 18) return
+  var C = w.k.CELL, x0 = fx.x * C, wide = fx.span * C
+  var top = fx.at === "ceiling" ? (fx.ceilY - fx.deep) * C : fx.floorY * C
+  ctx.fillStyle = pal.rock
+  ctx.globalAlpha = 1 - age / 18
+  for (var k = 0; k < fx.span * 2; k++)
+    ctx.fillRect(x0 + ((k * 23) % wide), top + age * age * 0.08 * C + (k % 3) * 3, 2 + (k % 2), 2)
+  ctx.globalAlpha = 1
 }
 
 // Tracks in the snow or the sand (Sim's notePrint): a small dent on the

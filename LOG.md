@@ -932,3 +932,27 @@ covered). Tests 161 → 176.
 
 **Next.** Something visible again — xenos at the finer res, or an event that
 has never been looked at closely.
+
+## 40 — 2026-10-09 · Events say where, not only what
+
+**Why.** A collapse or a growth was announced by a line of text across the
+sky band and then happened somewhere — instantly, under a puff of dust. The
+banner said what; nothing said where.
+
+**Changed.** `stepEvents` picks the spot when the warning starts (it used to
+pick it on landing) and puts it on the world as `eventSiteFx` (with the
+ceiling row — Draw cannot see `CORR_H`); `fireEvent` uses that same spot.
+Draw: a zigzag crack spreading across the slab from the middle through the
+countdown, with dust trickling out of a ceiling faster as it comes
+(`drawCrackWarning`); the floor's edge blinking where a growth will rise
+(`drawGrowthWarning`); for a collapse, the slab's chunks falling and fading
+over half a second (`drawRubble`).
+
+**Checked.** First crack was drawn in the slab's own dark colour —
+invisible — and at NaN: `w.k` has no `CORR_H`. Fixed both; rendered level 1
+ten ticks before and three after a ceiling collapse. Test: each mechanism is
+marked through the countdown and the rubble falls for 18 ticks and stops.
+Choosing the spot earlier draws the event stream in a different order, so
+runs differ slightly: `sim play` 95 / 88 (was 95 / 88), `inert` passes.
+
+**Next.** Deploy (39 + 40).

@@ -864,6 +864,7 @@ function generate(level, attempt, colonySeed) {
     eventWarn: "",
     eventWarnFor: 0,
     eventFlash: 0,
+    eventSiteFx: null, // where the coming collapse or growth will land, for Draw; see stepEvents
     eventDrift: 0,
     driftWhat: "",
     eventBoost: 0,
@@ -4637,23 +4638,36 @@ function stepEvents(w) {
       w.eventWarn = e.spec.name
       w.eventWarnFor = EVENT_TELEGRAPH
       w.lastEvent = e.spec.name
+      // A collapse or a growth happens somewhere, and the banner never said
+      // where. Choose the spot now and put it on the world for Draw, which
+      // marks it through the countdown; fireEvent uses the same spot.
+      if (e.spec.mech === "collapse" || e.spec.mech === "growth") {
+        e.site = eventSite(w, e.spec.span)
+        if (e.site) w.eventSiteFx = { mech: e.spec.mech, at: e.spec.at, x: e.site.x, span: e.spec.span,
+          floorY: e.site.c.floorY, ceilY: e.site.c.floorY - CORR_H, deep: e.spec.deep || 0,
+          high: e.spec.high || 0, warnAt: w.ticks, fireAt: e.at, firedAt: -1 }
+      }
     }
-    if (w.ticks >= e.at) { e.fired = true; fireEvent(w, e.spec) }
+    if (w.ticks >= e.at) {
+      e.fired = true
+      fireEvent(w, e.spec, e.site)
+      if (w.eventSiteFx && w.eventSiteFx.fireAt === e.at) w.eventSiteFx.firedAt = w.ticks
+    }
   }
   if (w.eventWarnFor > 0) w.eventWarnFor--
   if (w.eventFlash > 0) w.eventFlash--
   stepSpill(w)
 }
 
-function fireEvent(w, ev) {
+function fireEvent(w, ev, site) {
   w.lastEvent = ev.name
   w.eventLog.push(ev.id)
   // The mechanism travels on the world, because Outcome.js needs it and the
   // core files cannot call each other. See the note in check-core-refs.
   w.eventMechs[ev.mech] = true
   w.eventFlash = 40
-  if (ev.mech === "collapse") eventCollapse(w, ev)
-  else if (ev.mech === "growth") eventGrowth(w, ev)
+  if (ev.mech === "collapse") eventCollapse(w, ev, site)
+  else if (ev.mech === "growth") eventGrowth(w, ev, site)
   else if (ev.mech === "spill") eventSpill(w, ev)
   else if (ev.mech === "blackout") { w.eventBoost = ev.ticks; w.eventMult = ev.mult }
   else if (ev.mech === "drift") { w.eventDrift = ev.ticks; w.driftWhat = ev.what }
@@ -4673,8 +4687,8 @@ function eventSite(w, span) {
   return null
 }
 
-function eventCollapse(w, ev) {
-  var site = eventSite(w, ev.span)
+function eventCollapse(w, ev, chosen) {
+  var site = chosen || eventSite(w, ev.span)
   if (!site) return
   var top = ev.at === "ceiling" ? site.c.floorY - CORR_H - 1 - ev.deep : site.c.floorY
   for (var x = site.x; x < site.x + ev.span; x++)
@@ -4682,8 +4696,8 @@ function eventCollapse(w, ev) {
   addDust(w, site.x + ev.span / 2, top + ev.deep, 26)
 }
 
-function eventGrowth(w, ev) {
-  var site = eventSite(w, ev.span)
+function eventGrowth(w, ev, chosen) {
+  var site = chosen || eventSite(w, ev.span)
   if (!site) return
   for (var x = site.x; x < site.x + ev.span; x++) {
     if (!solid(w, x, site.c.floorY)) continue

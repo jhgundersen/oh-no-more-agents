@@ -37,3 +37,23 @@ test("footprints are left in soft ground only, and fill back in", () => {
     for (const p of w.prints) assert.ok(w.ticks - p.t <= S.PRINT_LIFE)
   }
 })
+
+test("an event's site is marked through its countdown and its rubble falls after", async () => {
+  const D = loadCore("Draw.js")
+  const theme = themeOf("tokyo-night"), pal = P.build(theme.theme, 1)
+  const w = S.generate(1, 0, 99)
+  for (const fx of [
+    { mech: "collapse", at: "ceiling", x: 30, span: 8, floorY: 40, ceilY: 34, deep: 4, warnAt: 100, fireAt: 175, firedAt: 175 },
+    { mech: "collapse", at: "floor", x: 30, span: 6, floorY: 40, ceilY: 34, deep: 2, warnAt: 100, fireAt: 175, firedAt: 175 },
+    { mech: "growth", x: 30, span: 10, floorY: 40, ceilY: 34, high: 2, warnAt: 100, fireAt: 175, firedAt: 175 }]) {
+    for (const t of [100, 150, 174, 176, 190, 300]) {
+      const img = canvas(400, 248, theme.background)
+      const blank = Buffer.from(img.buf).toString("base64")
+      w.ticks = t
+      D.drawEventSite(img.ctx, w, pal, fx)
+      const drew = Buffer.from(img.buf).toString("base64") !== blank
+      const expect = t < 175 ? (fx.mech !== "growth" || Math.floor(t / 6) % 2 === 0) : (fx.mech === "collapse" && t - 175 <= 18)
+      assert.equal(drew, expect, `${fx.mech} ${fx.at || ""} at ${t}`)
+    }
+  }
+})
