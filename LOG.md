@@ -752,3 +752,5 @@ biomes swing ±10 both ways from reassignment alone. `sim play` 95 / 89 / 44s
 `heights` pass. New functions CRAP ≤ 10.
 
 **Next.** A mechanic of its own, the way the Desert got wind. Deploy now.
+
+**Deployed** after 30 (name="build" content="ad2f1f52"): drawAgent split, Data Center. Browser check on level 12 clean.
