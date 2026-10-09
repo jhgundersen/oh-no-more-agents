@@ -4089,6 +4089,7 @@ function drawEnemy(ctx, w, pal, en, opts) {
     ctx.fillRect(dir > 0 ? ox + 8 : ox + 3, oy + 7, 2, 2)
     ctx.fillStyle = "#ff9a35"
     ctx.fillRect(ox + 5, oy + 10, 2, 2 + rotor)
+    if ((w.res || 1) >= 2) drawDroneFine(ctx, w, ox, oy, dir, rotor)
     if (opts && opts.labels) {
       ctx.fillStyle = redLit
       ctx.font = "7px monospace"
@@ -4120,6 +4121,7 @@ function drawEnemy(ctx, w, pal, en, opts) {
     ctx.fillRect(ox + 7 - opStride, oy + 14, 2, 3)
     ctx.fillStyle = redLit
     ctx.fillRect(ox, oy + 9, 1, 2)                  // small red-team lamp
+    if ((w.res || 1) >= 2) drawOperatorFine(ctx, w, ox, oy, dir)
     if (opts && opts.labels) {
       ctx.fillStyle = amberLit
       ctx.font = "7px monospace"
@@ -4257,6 +4259,7 @@ function drawEnemy(ctx, w, pal, en, opts) {
     }
     ctx.fillStyle = redLit
     ctx.fillRect(dir > 0 ? rifleX + 2 : rifleX + 11, oy + (posted ? 9 : 7), 1, 1)
+    if ((w.res || 1) >= 2) drawSniperFine(ctx, ox, oy, dir, rifleX, posted)
     if (en.shotFor > 5) {
       ctx.fillStyle = "#ffe68a"
       hzTri(ctx, dir > 0 ? rifleX + 13 : rifleX - 4, oy + (posted ? 10 : 7), 3, 5, dir)
@@ -4336,6 +4339,57 @@ function drawEnemy(ctx, w, pal, en, opts) {
     ctx.fillText(enemyLabel, ox + 4, oy - 4)
   }
   ctx.globalAlpha = 1
+}
+
+// The drone at res 2: rotors as blurred discs rather than bars, a seam on the
+// body, a camera with a glint, and a tail light that blinks.
+function drawDroneFine(ctx, w, ox, oy, dir, rotor) {
+  ctx.fillStyle = "#8a8f9c"
+  ctx.globalAlpha = 0.55
+  ctx.fillRect(ox - 1, oy + 5.5 + rotor, 6, 0.5)
+  ctx.fillRect(ox + 7, oy + 6.5 - rotor, 6, 0.5)
+  ctx.globalAlpha = 1
+  ctx.fillStyle = "#3a3e49"
+  ctx.fillRect(ox + 4, oy + 8, 4, 0.5)                          // seam
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(dir > 0 ? ox + 9 : ox + 3, oy + 7, 0.5, 0.5)     // glint on the lens
+  if (Math.floor(w.ticks / 6) % 2 === 0) {
+    ctx.fillStyle = "#7dff9a"
+    ctx.fillRect(dir > 0 ? ox + 2 : ox + 9.5, oy + 7.5, 0.5, 0.5)
+  }
+}
+
+// The operator at res 2: a streak across the visor, an antenna on the radio
+// pack with a blinking tip, a belt, and two sticks on the controller.
+function drawOperatorFine(ctx, w, ox, oy, dir) {
+  ctx.fillStyle = "#ffffff"
+  ctx.globalAlpha = 0.7
+  ctx.fillRect(ox + (dir > 0 ? 5 : 2), oy + 3, 1.5, 0.5)       // visor streak
+  ctx.globalAlpha = 1
+  ctx.fillStyle = "#34313a"
+  ctx.fillRect(ox - 0.5, oy + 3, 0.5, 4)                        // antenna
+  ctx.fillRect(ox + 2, oy + 12, 7, 0.5)                         // belt
+  ctx.fillStyle = Math.floor(w.ticks / 10) % 2 ? "#ff5268" : "#5c1424"
+  ctx.fillRect(ox - 0.5, oy + 2.5, 0.5, 0.5)
+  ctx.fillStyle = "#5a3a12"
+  var cx = dir > 0 ? ox + 9 : ox + 1
+  ctx.fillRect(cx, oy + 8.5, 0.5, 0.5); ctx.fillRect(cx + 1.5, oy + 8.5, 0.5, 0.5)   // sticks
+}
+
+// The sniper at res 2: a scope on the rifle with a lens glint, a darker rim
+// to the hood, and when it is lying down a ragged fringe of camouflage.
+function drawSniperFine(ctx, ox, oy, dir, rifleX, posted) {
+  var sy = oy + (posted ? 10 : 7)
+  ctx.fillStyle = "#2c2f3a"
+  ctx.fillRect(dir > 0 ? rifleX + 4 : rifleX + 5, sy, 3, 1)       // scope
+  ctx.fillStyle = "#9fd6ff"
+  ctx.fillRect(dir > 0 ? rifleX + 7 : rifleX + 4.5, sy, 0.5, 0.5) // lens
+  ctx.fillStyle = "#16161b"
+  if (posted) {
+    for (var g = 0; g < 9; g += 1.5) ctx.fillRect(ox + 1 + g, oy + 10.5 + (g % 3 ? 0 : 0.5), 0.5, 0.5)
+  } else {
+    ctx.fillRect(ox + 2, oy + 5.5, 5, 0.5)                          // hood rim
+  }
 }
 
 // The gunner's half-pixel detail at res 2 (see drawAgentFine for the colony's

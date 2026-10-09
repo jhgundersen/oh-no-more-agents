@@ -684,3 +684,17 @@ shaft was drawn and sat hidden behind the head — removed.
 
 **Next.** Deploy soon (27 + whatever comes next). Remaining coarse pieces in
 order of screen time: drones/operators, sniper, divers, then hazards.
+
+## 28 — 2026-10-09 · Finer pixels: drone, operator, sniper
+
+**Changed.** At res ≥ 2: `drawDroneFine` — rotors as blurred discs, a seam,
+a lens glint, a blinking green tail light; `drawOperatorFine` — a streak on
+the visor, a radio antenna with a blinking red tip, a belt, two sticks on
+the controller; `drawSniperFine` — a scope with a blue lens on the rifle, a
+hood rim, and a ragged camouflage fringe when prone.
+
+**Checked.** Eight poses at 8× before/after. The hood rim barely shows on
+the dark hood; kept, it costs nothing. Every enemy the colony meets on dry
+land now has res-2 detail (divers and xenos still coarse).
+
+**Deployed** with 27 (below).
