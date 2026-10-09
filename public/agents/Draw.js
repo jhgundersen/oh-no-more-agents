@@ -2830,6 +2830,54 @@ function drawHazardKind(ctx, w, pal, h) {
     live: live, winding: winding, t: t, seed: seed, show: show, hot: hot }
   var draw = HAZARD_DRAW[h.kind] || drawHzDefault
   draw(ctx, w, pal, h, geo)
+  var fine = (w.res || 1) >= 2 && HAZARD_FINE[h.kind]
+  if (fine) fine(ctx, w, pal, h, geo)
+}
+
+// Half-pixel detail at res 2 for the commonest fixtures, laid over the coarse
+// drawing and inside its silhouette — the agents' rule (drawAgentFine).
+var HAZARD_FINE = {
+  fence: function (ctx, w, pal, h, g) {
+    ctx.fillStyle = "#e9edf7"                                   // insulators
+    for (var p = 0; p < 2; p++) for (var i = 0; i < 3; i++)
+      ctx.fillRect((p ? g.x1 - 1.5 : g.x0 + 0.5), g.y0 + 3.5 + i * Math.max(2, Math.round((g.tall - 6) / 3)), 1, 1)
+    ctx.fillStyle = pal.warn                                    // a warning plate
+    ctx.fillRect(g.cx - 1.5, g.y1 - 5, 3, 2)
+    ctx.fillStyle = "#1c1c22"
+    ctx.fillRect(g.cx - 0.5, g.y1 - 4.5, 1, 1)
+  },
+  tripwire: function (ctx, w, pal, h, g) {
+    ctx.fillStyle = "#e9edf7"                                   // eyelets
+    ctx.fillRect(g.x0 + 0.5, g.y1 - 7.5, 1, 1.5); ctx.fillRect(g.x1 - 1.5, g.y1 - 7.5, 1, 1.5)
+    ctx.fillStyle = g.show ? g.hot : (Math.floor(w.ticks / 12) % 2 ? "#5dffa0" : "#1f4a33")
+    ctx.fillRect(g.x0 + 0.5, g.y1 - 5, 1, 0.5)                  // armed lamp on the post
+  },
+  beartrap: function (ctx, w, pal, h, g) {
+    if (g.show && g.live) return
+    ctx.fillStyle = "#e9edf7"                                   // teeth along both jaws
+    for (var j = 0; j < 5; j += 1) {
+      ctx.fillRect(g.x0 + j + 0.5, g.y1 - 3.5 - j, 0.5, 0.5)
+      ctx.fillRect(g.x1 - 1.5 - j, g.y1 - 3.5 - j, 0.5, 0.5)
+    }
+    ctx.fillStyle = pal.rigDark                                 // chain to the floor
+    for (var c = 0; c < 4; c++) ctx.fillRect(g.cx + 1 + c, g.y1 - 0.5 - (c % 2) * 0.5, 0.5, 0.5)
+  },
+  gun: function (ctx, w, pal, h, g) {
+    ctx.fillStyle = "#1c1c22"
+    ctx.fillRect(g.cx - 0.5, g.y0 + 10.5, 1, 0.5)               // the bore
+    ctx.fillStyle = pal.warn                                    // ammo belt
+    for (var b = 0; b < 4; b++) ctx.fillRect(g.cx - 6 + b, g.y0 + 6 + (b % 2) * 0.5, 0.5, 1)
+    ctx.fillStyle = "#e9edf7"                                   // bolts
+    ctx.fillRect(g.x0 + 2.5, g.y0 + 2.5, 0.5, 0.5); ctx.fillRect(g.x1 - 3, g.y0 + 2.5, 0.5, 0.5)
+  },
+  sentry: function (ctx, w, pal, h, g) {
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(g.cx + 0.5, g.y0 + 2.5, 0.5, 0.5)              // glint on the lens
+    ctx.fillStyle = pal.rigDark                                 // vents
+    for (var v = 0; v < 3; v++) ctx.fillRect(g.x0 + 1 + v * 1.5, g.y0 + 0.5, 0.5, 1.5)
+    ctx.fillStyle = Math.floor(w.ticks / 9) % 2 ? "#ff5268" : "#5c1424"
+    ctx.fillRect(g.x1 - 1.5, g.y0 + 0.5, 1, 0.5)                // status lamp
+  }
 }
 
 // One drawing per hazard kind. A new hazard adds a function and a row here.

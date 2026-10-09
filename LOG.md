@@ -774,3 +774,18 @@ streaks read as rain; a column wash and denser streaks fixed it. Suites pass.
 
 **Next.** Deploy with the next one. Candidates: a hero (twenty now; one that
 uses the board's new pieces?), hazards at the finer res, or divers/xenos.
+
+## 32 — 2026-10-09 · Finer pixels: the commonest fixtures
+
+**Changed.** `HAZARD_FINE`, a table of half-pixel detail drawn over the
+coarse fixture at res ≥ 2, inside its silhouette: fence — white insulators
+on both posts and a warning plate; tripwire — eyelets and a blinking armed
+lamp; bear trap — teeth along both jaws while open, a chain to the floor;
+gun — the bore, an ammo belt, two bolts; sentry — vents, a lens glint, a
+blinking status lamp. The five most-placed kinds outside the Trench (about a
+fifth of all placements).
+
+**Checked.** Five kinds × four phases at 3×, before and after.
+`test/hazards.test.js` now draws every kind at res 1 and res 2.
+
+**Next.** Deploy (31 + 32).

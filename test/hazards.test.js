@@ -18,8 +18,10 @@ for (const spec of S.HAZARDS) {
     const theme = themeOf("tokyo-night")
     const w = S.generate(1, 0, 99)
     const pal = P.build(theme.theme, 1)
-    for (const phase of ["idle", "charge", "fire", "rest"]) for (const ticks of [0, 5, 60]) for (const dir of [1, -1]) {
-      const img = canvas(400, 248, theme.background)
+    for (const res of [1, 2]) for (const phase of ["idle", "charge", "fire", "rest"]) for (const ticks of [0, 5, 60]) for (const dir of [1, -1]) {
+      w.res = res
+      const img = canvas(400 * res, 248 * res, theme.background)
+      img.ctx.setTransform(res, 0, 0, res, 0, 0)
       const blank = Buffer.from(img.buf).toString("base64")
       w.ticks = ticks
       const h = { kind: spec.id, phase, t: 3, fired: 1, dir, known: true, throttled: 0, lineTo: 30, lineY: 20,
