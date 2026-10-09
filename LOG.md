@@ -872,3 +872,21 @@ no change — the sheet script never passed the flag; caught by looking.
 biomes that is still only a skin (Frost, Ruins, Jungle…).
 
 **Deployed** after 36 (name="build" content="989e8998"): hero tests, finer portraits. Browser check clean.
+
+## 37 — 2026-10-09 · Tracks in the snow and the sand
+
+**Changed.** Frost and Desert: every walker leaves a footprint per cell
+crossed (`notePrint` in `stepWalk`, render-only like the blasts, capped at
+`PRINT_CAP` 240, aged out at `PRINT_LIFE` 900 ticks). Draw: alternating
+feet, toe toward the way it was going, fading as the snow or the wind fills
+them in (`drawPrints`). A still frame now says where the colony has been and
+which routes it took.
+
+**Checked.** First version drew prints in `dirtShade` on the very top row and
+faded them fast — invisible on Frost's rock floors and barely there on snow.
+Now `rigDark`, inside the lit edge, with a floor of 0.1 alpha. Crops of Frost
+(level 3) and Desert (level 11) after 500 ticks: tracks read. Test: prints in
+Frost, none in the Cavern, none older than their life. `sim play` unchanged.
+
+**Next.** Deploy with the next. Ideas still open: a mechanic for Ruins or
+Jungle; specials' trick poses at the finer res; xeno at the finer res.

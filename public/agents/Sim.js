@@ -814,6 +814,7 @@ function generate(level, attempt, colonySeed) {
     pit: null,
     particles: [],
     blasts: [],       // recent explosions, for Draw's fireball; see noteBlast
+    prints: [],       // footprints in snow and sand, for Draw; see notePrint
     buildSites: [],
     ticks: 0,
     nextId: 1,
@@ -4767,7 +4768,25 @@ function eventSpawn(w, ev) {
 // Per-state updates
 // ---------------------------------------------------------------------------
 
+// Footprints, render-only like the blasts: where a walker set a foot down in
+// a biome with something soft underfoot. One print per cell crossed, capped
+// so a long level keeps only the freshest tracks; Draw fades them as they age
+// and the snow or the wind fills them in.
+var PRINT_BIOMES = { "Frost": true, "Desert": true }
+var PRINT_LIFE = 900
+var PRINT_CAP = 240
+function notePrint(w, ag) {
+  if (!PRINT_BIOMES[w.biome]) return
+  var cx = Math.floor(ag.x)
+  if (cx === ag.printX) return
+  ag.printX = cx
+  if (!solid(w, cx, Math.floor(ag.y) + 1)) return
+  w.prints.push({ x: ag.x, y: Math.floor(ag.y), dir: ag.dir, t: w.ticks, odd: (ag.printN = (ag.printN || 0) + 1) % 2 })
+  if (w.prints.length > PRINT_CAP) w.prints.shift()
+}
+
 function stepWalk(w, ag) {
+  notePrint(w, ag)
   var nx = ag.x + ag.dir * walkStep(ag, w)
   var cx = Math.floor(nx)
   var footY = Math.floor(ag.y)
@@ -7779,6 +7798,7 @@ function stepParticles(w) {
   for (var ni = w.nets.length - 1; ni >= 0; ni--)
     if (w.ticks - w.nets[ni].t > NET_LIFE) w.nets.splice(ni, 1)
   while (w.blasts.length && w.ticks - w.blasts[0].t > BLAST_LIFE) w.blasts.shift()
+  while (w.prints.length && w.ticks - w.prints[0].t > PRINT_LIFE) w.prints.shift()
   for (var i = w.particles.length - 1; i >= 0; i--) {
     var p = w.particles[i]
     p.x += p.vx

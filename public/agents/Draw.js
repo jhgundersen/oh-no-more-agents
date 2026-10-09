@@ -1628,6 +1628,7 @@ function drawActors(ctx, w, pal, opts) {
     }
   }
   ctx.globalAlpha = 1
+  if (w.prints && w.prints.length) drawPrints(ctx, w, pal)
   if (w.nets) for (var ni = 0; ni < w.nets.length; ni++) drawNet(ctx, w, w.nets[ni])
   if (w.reloadFx) drawReloadTrail(ctx, w, w.reloadFx)
 
@@ -4362,6 +4363,25 @@ function drawReloadSign(ctx, ag, ox, oy, hair) {
     ctx.fillRect(Math.round(cx + Math.cos(ang) * 3), Math.round(cy + Math.sin(ang) * 3), 1, 1)
   }
   ctx.fillRect(Math.round(cx + Math.cos(turn) * 3) - 1, Math.round(cy + Math.sin(turn) * 3), 2, 1)
+}
+
+// Tracks in the snow or the sand (Sim's notePrint): a small dent on the
+// floor's top edge per step, alternating feet, toe toward the way it was
+// going, fading as it fills in. Drawn in the floor's own shadow colour so a
+// track reads as a dent and not as something lying on the ground.
+function drawPrints(ctx, w, pal) {
+  var C = w.k.CELL, fine = (w.res || 1) >= 2
+  ctx.fillStyle = pal.rigDark
+  for (var i = 0; i < w.prints.length; i++) {
+    var p = w.prints[i], age = w.ticks - p.t
+    ctx.globalAlpha = 0.85 * Math.max(0, 1 - age / 900) + 0.1
+    var px = Math.round(p.x * C) + (p.odd ? -1 : 1), py = (p.y + 1) * C
+    if (fine) {
+      ctx.fillRect(px - 1, py + 0.5, 2, 1)
+      ctx.fillRect(px + (p.dir > 0 ? 1 : -1.5), py + 0.5, 0.5, 0.5)   // the toe, forward
+    } else ctx.fillRect(px - 1, py, 2, 1)
+  }
+  ctx.globalAlpha = 1
 }
 
 // Fallback's net: two posts and a mesh slung between them on the landing

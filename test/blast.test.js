@@ -28,3 +28,12 @@ test("the sim forgets an explosion once it has burned out", () => {
   for (let i = 0; i <= S.BLAST_LIFE + 1; i++) S.step(w)
   assert.equal(w.blasts.length, 0)
 })
+
+test("footprints are left in soft ground only, and fill back in", () => {
+  for (const [level, soft] of [[3, true], [1, false]]) {
+    const w = S.generate(level, 0, 99)
+    for (let i = 0; i < 300; i++) S.step(w)
+    assert.equal(w.prints.length > 0, soft, `level ${level} (${w.biome})`)
+    for (const p of w.prints) assert.ok(w.ticks - p.t <= S.PRINT_LIFE)
+  }
+})
