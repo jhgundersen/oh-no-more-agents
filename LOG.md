@@ -789,3 +789,5 @@ fifth of all placements).
 `test/hazards.test.js` now draws every kind at res 1 and res 2.
 
 **Next.** Deploy (31 + 32).
+
+**Deployed** after 32 (name="build" content="14727faa"): updrafts, finer fixtures. Browser check clean.
