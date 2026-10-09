@@ -206,3 +206,29 @@ split, this. Headless Chromium on level 11 first — no errors, Desert reads.
 a halo. Then the agent-drawing switches (`drawAgentTrick` CC 70,
 `drawAgentHeightGear` CC 46) are the next crap to split, same method as
 log 5.
+
+## 8 — 2026-10-09 · Desert sun; agent-gear switches split
+
+**Sun.** In the browser it read as a boulder, and the first fix (rays in
+wall shades) as a gear set into the rock. A light has to be lighter than
+what it lights: now three discs of `decorLit` at 0.10/0.18/0.55 alpha with
+thin rays at 0.22 — a glow, still behind the terrain.
+
+**Crap.** `drawAgentTrick` (CC 70, 1.5k) and `drawAgentHeightGear` (CC 46,
+843) split by script into `TRICK_DRAW` (16 functions) and `GEAR_DRAW` (19,
+`web`/`chain` share one). The script is stricter than log 5's: these switches
+mix `; break` on the statement line, braced cases, a fall-through, comments
+between cases that belong to the next one, and loop `break`s that must stay.
+Golden: every canvas call for every special × trick timer × flight device ×
+tick × anim × direction, hashed — identical before and after.
+Tests: every special has a flight drawing (and a trick drawing unless its act
+never enters `trick`: ceiling, camp, shield, throttle); every trick and device
+draws on a raster both ways.
+
+**CRAP.** Both giants gone; worst of the new functions 25. Remaining worst
+real code: `drawAgent` (CC 119, 1.1k), `stepCamp` (624, barely covered),
+`drawEnemy` (CC 63, 559).
+
+**Next.** Gameplay/graphics again rather than crap three in a row. Candidate:
+the agents' own animation — walk cycle, landing squash, a celebration at the
+exit — the thing on screen most of the time.

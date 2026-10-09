@@ -46,3 +46,34 @@ test("Rate Limiter freezes a fixture and the colony stops treating it as lethal"
   while (h.throttled > 0) S.stepOneHazard(w, h)
   assert.equal(h.phase, "rest", "comes back through rest, not mid-shot")
 })
+
+test("every special has its own flight gear, and a trick unless it never does one", () => {
+  const D = loadCore("Draw.js")
+  // These four never enter the `trick` state: they act while walking, or camp.
+  const noTrick = new Set(["ceiling", "camp", "shield", "throttle"])
+  for (const spec of S.SPECIALS) {
+    assert.ok(D.GEAR_DRAW[spec.height], spec.name + " has no drawing for " + spec.height)
+    if (!noTrick.has(spec.act)) assert.ok(D.TRICK_DRAW[spec.act], spec.name + " has no drawing for " + spec.act)
+  }
+})
+
+test("every trick and every flight device draws without throwing, both ways", async () => {
+  const { canvas, themeOf } = await import("../tools/render.js")
+  const D = loadCore("Draw.js"), P = loadCore("Palette.js")
+  const theme = themeOf("tokyo-night")
+  const w = S.generate(3, 0, 99)
+  const pal = P.build(theme.theme, 3)
+  for (const spec of S.SPECIALS) {
+    w.specialSpec = spec
+    for (const dir of [1, -1]) for (const anim of [0, 3]) {
+      const img = canvas(200, 160, theme.background)
+      for (let timer = 0; timer <= 14; timer += 7)
+        D.drawAgentTrick(img.ctx, w, pal, { special: spec.id, state: "trick", timer, anim, dir, x: 25, y: 20, id: 1, shotIndex: 2 },
+          100, 80, dir, spec.robe, spec.hair)
+      for (const tick of [0, 20, 45])
+        D.drawAgentHeightGear(img.ctx, w, pal, { special: spec.id, state: "height", heightMode: spec.height, heightTick: tick,
+          heightTicks: 60, anim, dir, x: 25, y: 20, id: 1, heightFromX: 24, heightFromY: 15, heightToX: 30, heightToY: 30 },
+          100, 80, dir, spec.robe, spec.hair)
+    }
+  }
+})
