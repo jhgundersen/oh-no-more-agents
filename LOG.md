@@ -989,3 +989,5 @@ halter and light on the hump; alien — a glow round its eyes. With 23
 test draws every kind with and without fine detail.
 
 **Deployed** with 41 (below).
+
+**Deployed** after 42 (name="build" content="77eaad9c"): xeno and creature detail. Browser check clean.
