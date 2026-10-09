@@ -307,3 +307,7 @@ first try drew agents over the fireball; moved to the end of `drawActors`.
 **Next.** Deploy (10 + 11). Then: deaths by `red team` — the enemies'
 shooting could get the same treatment (tracer, muzzle flash, hit spark) if it
 is as thin as the bombs were; check before assuming.
+
+**Deployed** after 11 (version 90cb98c7, build 0b8fce95): wind and
+explosions. Browser check clean. The stats endpoint answered the old build
+for ~20s after the deploy before catching up — propagation, not a failure.
