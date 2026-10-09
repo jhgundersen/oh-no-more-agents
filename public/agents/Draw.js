@@ -3803,6 +3803,56 @@ var spriteFlip = false
 var SPECIALS_LADDER_WOOD = "#b5651d"
 var SPECIALS_LADDER_RUNG = "#ffe9a8"
 
+// blit at half-pixel precision: the same mirroring and flipping, rounded to
+// 0.5 instead of 1. Only for detail that is drawn when the host gives each art
+// pixel two canvas pixels (`w.res`); at res 1 it would smear.
+function blitFine(ctx, ox, oy, dir, x, y, bw, bh) {
+  var sx = dir > 0 ? ox + x : ox + (SPRITE_W - x - bw)
+  var sy = spriteFlip ? oy + (SPRITE_PX - y - bh) : oy + y
+  ctx.fillRect(Math.round(sx * 2) / 2, Math.round(sy * 2) / 2, bw, bh)
+}
+
+// The agent's half-pixel detail. Everything here sits inside the silhouette
+// the coarse sprite already draws, so at res 1 nothing is missing and at res 2
+// the same figure turns out to be wearing something: a tie, lapels, buttons,
+// shoes, glasses with arms that reach the ear and a glint on the lens.
+// Upright poses only — the rest move the parts around.
+var FINE_POSES = { walk: true, block: true, ride: true, bash: true, wait: true, camp: true, trick: true }
+function drawAgentFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe) {
+  if (!FINE_POSES[ag.state]) return
+  var hy = drop
+  ctx.fillStyle = pal.lapel
+  blitFine(ctx, ox, oy, dir, 2.5, 0.5 + hy, 2.5, 0.5)       // light on the hair
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 1.5, 3.5 + hy, 0.5, 1)         // an ear in the hair
+  ctx.fillStyle = pal.eye
+  blitFine(ctx, ox, oy, dir, 1.5, 4 + hy, 1, 0.5)           // glasses arm
+  ctx.globalAlpha = 0.35
+  blitFine(ctx, ox, oy, dir, 4, 6 + hy, 1.5, 0.5)           // mouth
+  ctx.globalAlpha = 1
+  ctx.fillStyle = "#ffffff"
+  blitFine(ctx, ox, oy, dir, 5.5, 4 + hy, 0.5, 0.5)         // glint
+  if (ag.state === "saved") return
+  var ty = 7 + Math.max(drop, -1)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 3, ty, 2, 1.5)                 // shirt front
+  ctx.fillStyle = pal.eye
+  blitFine(ctx, ox, oy, dir, 3.75, ty - 0.5, 0.5, 0.5)      // the knot
+  blitFine(ctx, ox, oy, dir, 3.75, ty, 0.5, 2.5)            // the tie
+  ctx.fillStyle = pal.lapel
+  blitFine(ctx, ox, oy, dir, 2.5, ty, 0.5, 1.5)             // lapels
+  blitFine(ctx, ox, oy, dir, 5, ty, 0.5, 1.5)
+  blitFine(ctx, ox, oy, dir, 4.5, ty + 3.5, 0.5, 0.5)       // buttons
+  blitFine(ctx, ox, oy, dir, 4.5, ty + 5, 0.5, 0.5)
+  if (ag.state !== "walk") return
+  // Shoes: the last row of each leg, with a toe forward of the heel.
+  ctx.fillStyle = pal.eye
+  var l1 = squash ? 1 : 2 + lead, l2 = squash ? 5 : 4 - lead
+  blitFine(ctx, ox, oy, dir, l1, 15, 2.5, 1)
+  blitFine(ctx, ox, oy, dir, l2, 15, 2.5, 1)
+  ctx.fillStyle = robe
+}
+
 function blit(ctx, ox, oy, dir, x, y, bw, bh) {
   var sx = dir > 0 ? ox + x : ox + (SPRITE_W - x - bw)
   var sy = spriteFlip ? oy + (SPRITE_PX - y - bh) : oy + y
@@ -5167,6 +5217,8 @@ function drawAgent(ctx, w, pal, ag, opts) {
     blit(ctx, ox, oy, dir, 1, 7 + bodyDrop, 1, 1)
     blit(ctx, ox, oy, dir, 6, 7 + bodyDrop, 1, 1)
   }
+
+  if ((w.res || 1) >= 2 && !w.submerged) drawAgentFine(ctx, pal, ag, ox, oy, dir, bodyDrop, walkLead, squash, robe)
 
   // A pip on the shoulder in the special's second colour. The robe alone is a
   // handful of pixels on a board that already has a lot going on.

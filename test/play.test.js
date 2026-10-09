@@ -20,8 +20,10 @@ for (let level = 1; level <= S.BIOMES.length * 3; level++) {
     while (!w.done && t < 6000) { S.step(w); t++ }
     assert.ok(w.done, "level hung")
     assert.ok(w.saved + w.lost <= w.released)
-    for (const ticks of [0, 300]) {
-      const { img } = frame(S, D, P, { level, ticks })
+    // Both resolutions: res 1 is the Omarchy panel, res 2 the page, and the
+    // half-pixel detail only runs at 2.
+    for (const ticks of [0, 300]) for (const res of [1, 2]) {
+      const { img } = frame(S, D, P, { level, ticks, res })
       assert.ok(img)
     }
   })

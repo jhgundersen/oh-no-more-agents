@@ -416,3 +416,22 @@ half-pixel. Headless Chromium: same layout, same size, no errors.
 **Next.** Step 2: spend the resolution. Agents first — they are on screen
 most — then terrain edges, then hazards and effects. Review each at the
 page's res, full size.
+
+## 16 — 2026-10-09 · Finer pixels, step 2: the agents
+
+**Changed.** `drawAgentFine`, drawn only when `w.res >= 2` and on dry land,
+in upright poses (`FINE_POSES`): a light band on the hair (reads as the brim
+of a hat), an ear, glasses with an arm back to the ear and a white glint on
+the lens, a mouth, a shirt front with a black knotted tie, lapels, two
+buttons, and black shoes with a toe ahead of the heel (walk only). All at
+half-pixel steps through `blitFine` (`blit` rounded to 0.5), all inside the
+silhouette the coarse sprite already draws — at res 1 nothing is missing.
+
+**Checked.** Contact sheet of ten poses in two themes at 8× before and
+after; a jungle crop at the page's res. They read as agents in suits and
+shades now — men in black — where before they were a dark block with a face.
+`test/play.test.js` now draws every level at res 1 and res 2.
+
+**Next.** Terrain at the finer res: the earth is drawn in 4-px cells, and
+next to the new agents the edges look like a different game. A half-pixel lip
+on every top edge, grain inside the strata.
