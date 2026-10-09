@@ -359,3 +359,5 @@ vs 96.8 / 86.9 — every biome up or level, no hangs. `sim play` 98 / 88 /
 biggest self-inflicted death; and a visible cue for the stand-down (a
 "STAND DOWN" banner like the events have) would let a viewer see why the
 blockers suddenly started walking.
+
+**Deployed** after 13 (version 8f354663, build 57059384): hatch + stand-down. Browser check clean.
