@@ -608,6 +608,10 @@ way to check a set of things against each other: every hazard in all three
 phases, or every special, side by side. That is how eight dangers were found
 sharing one graphic.
 
+Each hazard kind is drawn by its own function, listed in `HAZARD_DRAW` in
+`Draw.js`; `test/hazards.test.js` fails if a kind in `HAZARDS` has no row there
+and would fall back to the generic box.
+
 ## Checking the page itself, headlessly
 
 Layout, controls and anything using the browser's own APIs have to be checked in

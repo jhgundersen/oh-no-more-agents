@@ -2404,822 +2404,932 @@ function drawHazardKind(ctx, w, pal, h) {
   var t = w.ticks, seed = h.zx0
   var show = live || (winding && Math.floor(t / 4) % 2 === 0)
   var hot = live ? pal.fireHot : pal.warn
-  switch (h.kind) {
+  // The frame every drawing below is measured against, worked out once.
+  var geo = { C: C, x0: x0, x1: x1, y0: y0, y1: y1, cx: cx, wide: wide, tall: tall,
+    live: live, winding: winding, t: t, seed: seed, show: show, hot: hot }
+  var draw = HAZARD_DRAW[h.kind] || drawHzDefault
+  draw(ctx, w, pal, h, geo)
+}
 
-  // --- watch: mounted, dormant, wakes when somebody walks into reach -------
-  case "gun":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0 + 2, y0, wide - 4, 5)          // mount
-    ctx.fillRect(cx - 2, y0 + 5, 4, 6)             // barrel
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(cx - 6, y0 + 2, 4, 4)             // drum magazine
+// One drawing per hazard kind. A new hazard adds a function and a row here.
+var HAZARD_DRAW = {
+  gun: drawHzGun, sentry: drawHzSentry, turret: drawHzTurret, darts: drawHzDarts,
+  flame: drawHzFlame, tesla: drawHzTesla, sniper: drawHzSniper,
+  lasergrid: drawHzLasergrid, sweeper: drawHzSweeper, tripwire: drawHzTripwire,
+  spikes: drawHzSpikes, beartrap: drawHzBeartrap, sawblade: drawHzSawblade,
+  grinder: drawHzGrinder, crusher: drawHzCrusher, pendulum: drawHzPendulum,
+  geyser: drawHzGeyser, rockfall: drawHzRockfall, piston: drawHzPiston,
+  brazier: drawHzBrazier, fence: drawHzFence, echobat: drawHzEchobat,
+  scarab: drawHzScarab, snowball: drawHzSnowball, molten: drawHzMolten,
+  vinelock: drawHzVinelock, blackice: drawHzBlackice, packetloss: drawHzPacketloss,
+  snake: drawHzSnake, shark: drawHzShark, current: drawHzCurrent, vent: drawHzVent,
+  spores: drawHzSpores, icicle: drawHzIcicle, frostjet: drawHzFrostjet,
+  airlock: drawHzAirlock, stamper: drawHzStamper, flywheel: drawHzFlywheel,
+  steamvent: drawHzSteamvent, sprinkler: drawHzSprinkler, polisher: drawHzPolisher,
+  shredder: drawHzShredder, servo: drawHzServo
+}
+
+// --- watch: mounted, dormant, wakes when somebody walks into reach -------
+function drawHzGun(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, cx = geo.cx, wide = geo.wide, tall = geo.tall,
+    live = geo.live, t = geo.t, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0 + 2, y0, wide - 4, 5)          // mount
+  ctx.fillRect(cx - 2, y0 + 5, 4, 6)             // barrel
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(cx - 6, y0 + 2, 4, 4)             // drum magazine
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(x0 + 2, y0 + 1, wide - 4, 1)
+  if (show) {
+    ctx.fillStyle = hot
+    if (live) {
+      hzTri(ctx, cx, y0 + 11, 3, 4, 1)           // muzzle flash
+      for (var g = 0; g < tall; g += 5) ctx.fillRect(cx - 1, y0 + 13 + ((t * 4 + g) % tall), 2, 3)
+    } else ctx.fillRect(cx - 1, y0 + 11, 2, 2)
+  }
+}
+
+function drawHzSentry(ctx, w, pal, h, geo) {
+  var C = geo.C, x0 = geo.x0, y0 = geo.y0, cx = geo.cx, wide = geo.wide,
+    live = geo.live, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0, y0, wide, 6)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0 + 1, y0 + 6, wide - 2, 2)
+  ctx.fillStyle = show ? hot : pal.warn
+  ctx.fillRect(cx - 2, y0 + 2, 4, 3)             // lens
+  if (show) {
+    ctx.fillStyle = hot
+    var sentryReach = 16 * C * h.dir
+    ctx.fillRect(Math.min(cx, cx + sentryReach), y0 + 4, Math.abs(sentryReach), live ? 2 : 1)
+  }
+}
+
+function drawHzTurret(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, cx = geo.cx, wide = geo.wide, tall = geo.tall,
+    live = geo.live, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0 + 1, y0, wide - 2, 4)
+  ctx.fillRect(cx - 4, y0 + 4, 3, 5)             // twin barrels
+  ctx.fillRect(cx + 2, y0 + 4, 3, 5)
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(x0 + 1, y0 + 1, wide - 2, 1)
+  if (show) {
+    ctx.fillStyle = hot
+    ctx.fillRect(cx - 3, y0 + 9, live ? 2 : 1, tall - 9)
+    ctx.fillRect(cx + 3, y0 + 9, live ? 2 : 1, tall - 9)
+  }
+}
+
+function drawHzDarts(ctx, w, pal, h, geo) {
+  var C = geo.C, x0 = geo.x0, y0 = geo.y0, cx = geo.cx, tall = geo.tall,
+    live = geo.live, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0, y0, 5, tall)                  // wall plate
+  ctx.fillStyle = pal.rigDark
+  for (var dh = 0; dh < 3; dh++) ctx.fillRect(x0 + 5, y0 + 3 + dh * 5, 2, 2)
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(x0 + 1, y0 + 2, 1, tall - 4)
+  if (show) {
+    ctx.fillStyle = hot
+    // Darts in flight: short dashes marching away from the plate.
+    for (var dd = 0; dd < 3; dd++) {
+      var dartTravel = ((h.t * 4 + dd * 13) % (11 * C)) * h.dir
+      var dx2 = cx + dartTravel
+      ctx.fillRect(dx2, y0 + 3 + dd * 3, live ? 5 : 2, 1)
+    }
+  }
+}
+
+function drawHzFlame(ctx, w, pal, h, geo) {
+  var y0 = geo.y0, cx = geo.cx, wide = geo.wide, tall = geo.tall,
+    live = geo.live, t = geo.t, show = geo.show
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(cx - 4, y0, 8, 3)
+  hzTri(ctx, cx, y0 + 3, 3, 4, 1)                // flared nozzle
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(cx - 3, y0 + 1, 6, 1)
+  if (show) {
+    // A cone that widens as it falls, with a hotter core.
+    for (var f = 0; f < (live ? tall - 7 : 5); f++) {
+      var fw = Math.round((wide / 2) * (0.25 + (f / tall) * (live ? 1.5 : 0.5)))
+      ctx.fillStyle = f % 3 === Math.floor(t / 3) % 3 ? pal.fireHot : pal.fire
+      ctx.fillRect(cx - fw, y0 + 7 + f, fw * 2, 1)
+    }
+  }
+}
+
+function drawHzTesla(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, x1 = geo.x1, y0 = geo.y0, y1 = geo.y1, cx = geo.cx,
+    wide = geo.wide, tall = geo.tall, live = geo.live, t = geo.t,
+    seed = geo.seed, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(cx - 2, y1 - tall + 4, 4, tall - 4)   // post
+  ctx.fillRect(x0 + 1, y1 - 3, wide - 2, 3)          // base
+  ctx.fillStyle = show ? hot : pal.rigDark
+  ctx.fillRect(cx - 4, y0, 8, 4)                     // ball on top
+  if (show) {
+    ctx.fillStyle = hot
+    hzBolt(ctx, cx, y0 + 2, x0, y1 - 4, seed + t, live ? 2 : 1)
+    hzBolt(ctx, cx, y0 + 2, x1, y1 - 4, seed + t + 3, live ? 2 : 1)
+  }
+}
+
+// --- snipe: one target, a long way off, one shot then a long reload -----
+function drawHzSniper(ctx, w, pal, h, geo) {
+  var C = geo.C, x0 = geo.x0, y0 = geo.y0, tall = geo.tall, live = geo.live,
+    show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0, y0 + 2, 4, tall - 4)              // housing
+  ctx.fillRect(x0 + 4, y0 + 4, 7, 3)                 // barrel
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0 + 4, y0 + 1, 4, 3)                 // scope
+  ctx.fillStyle = h.phase === "rest" ? pal.rigDark : pal.warn
+  ctx.fillRect(x0 + 1, y0 + 3, 1, tall - 6)
+  if (show && h.lineTo >= 0) {
+    // The sight, then the shot. One pixel high while it is only looking, and
+    // it reaches all the way to whoever it has picked out.
+    var tx = h.lineTo * C
+    var ty = h.lineY * C
+    var sy = y0 + 5
+    ctx.fillStyle = hot
+    var n2 = Math.max(1, Math.round(Math.abs(tx - (x0 + 11))))
+    for (var q = 0; q <= n2; q += live ? 1 : 3) {
+      var qx = (x0 + 11) + (tx - (x0 + 11)) * (q / n2)
+      var qy = sy + (ty - sy) * (q / n2)
+      ctx.fillRect(Math.round(qx), Math.round(qy), live ? 2 : 1, live ? 2 : 1)
+    }
+  }
+}
+
+// --- beam: keeps its own schedule ---------------------------------------
+function drawHzLasergrid(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, x1 = geo.x1, y0 = geo.y0, wide = geo.wide, tall = geo.tall,
+    live = geo.live, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0, y0, wide, 3)
+  ctx.fillStyle = pal.rigDark
+  for (var e = x0 + 2; e < x1 - 1; e += 8) ctx.fillRect(e, y0 + 3, 3, 2)
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(x0, y0 + 1, wide, 1)
+  if (show) {
+    ctx.fillStyle = hot
+    for (var b2 = x0 + 3; b2 < x1 - 1; b2 += 8) ctx.fillRect(b2, y0 + 5, live ? 2 : 1, tall - 5)
+  }
+}
+
+function drawHzSweeper(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, wide = geo.wide, tall = geo.tall,
+    live = geo.live, t = geo.t, show = geo.show, hot = geo.hot
+  // A head that travels along a rail, with the beam raking after it.
+  var rail = x0 + Math.round((wide - 8) * (0.5 + 0.5 * Math.sin(t * 0.05)))
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0, y0, wide, 2)                      // the rail
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(rail, y0, 8, 5)                       // the head
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(rail + 1, y0 + 1, 6, 1)
+  if (show) {
+    ctx.fillStyle = hot
+    for (var sv = 0; sv < tall - 5; sv++) {
+      var lean = Math.round(sv * Math.sin(t * 0.05) * 0.5)
+      ctx.fillRect(rail + 3 + lean, y0 + 5 + sv, live ? 3 : 1, 1)
+    }
+  }
+}
+
+function drawHzTripwire(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, x1 = geo.x1, y1 = geo.y1, wide = geo.wide, live = geo.live,
+    t = geo.t, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0, y1 - 8, 2, 8)                     // posts
+  ctx.fillRect(x1 - 2, y1 - 8, 2, 8)
+  ctx.fillStyle = show ? hot : pal.warn
+  ctx.fillRect(x0, y1 - 7, wide, 1)                  // the wire itself
+  if (show && live) {
+    ctx.fillStyle = pal.fireHot
+    for (var tw = 0; tw < wide; tw += 3) ctx.fillRect(x0 + tw, y1 - 9 - ((t + tw) % 4), 2, 2)
+  }
+}
+
+// --- plate: armed by being stood on -------------------------------------
+function drawHzSpikes(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, x1 = geo.x1, y1 = geo.y1, wide = geo.wide, live = geo.live,
+    show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0, y1 - 3, wide, 3)                  // the plate
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(x0 + 1, y1 - 2, wide - 2, 1)
+  if (show) {
+    ctx.fillStyle = hot
+    for (var sp = x0 + 2; sp < x1 - 1; sp += 4) hzTri(ctx, sp, y1 - 3, 2, live ? 10 : 3, -1)
+  }
+}
+
+function drawHzBeartrap(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, x1 = geo.x1, y1 = geo.y1, cx = geo.cx, live = geo.live,
+    show = geo.show, hot = geo.hot
+  // Jaws: open and waiting, or shut.
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(cx - 1, y1 - 2, 2, 2)                 // the plate between them
+  ctx.fillStyle = show && live ? hot : pal.rigDark
+  if (show && live) {
+    hzTri(ctx, cx - 3, y1 - 2, 3, 7, -1)
+    hzTri(ctx, cx + 3, y1 - 2, 3, 7, -1)
+  } else {
+    for (var jw = 0; jw < 5; jw++) {
+      ctx.fillRect(x0 + jw, y1 - 3 - jw, 2, 1)       // open, leaning out
+      ctx.fillRect(x1 - 2 - jw, y1 - 3 - jw, 2, 1)
+    }
     ctx.fillStyle = pal.warn
-    ctx.fillRect(x0 + 2, y0 + 1, wide - 4, 1)
-    if (show) {
-      ctx.fillStyle = hot
-      if (live) {
-        hzTri(ctx, cx, y0 + 11, 3, 4, 1)           // muzzle flash
-        for (var g = 0; g < tall; g += 5) ctx.fillRect(cx - 1, y0 + 13 + ((t * 4 + g) % tall), 2, 3)
-      } else ctx.fillRect(cx - 1, y0 + 11, 2, 2)
-    }
-    break
+    ctx.fillRect(cx - 2, y1 - 3, 4, 1)
+  }
+}
 
-  case "sentry":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0, y0, wide, 6)
+function drawHzSawblade(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y1 = geo.y1, cx = geo.cx, wide = geo.wide, live = geo.live,
+    t = geo.t, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0 + 2, y1 - 3, wide - 4, 3)          // slot
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(x0 + 3, y1 - 2, wide - 6, 1)
+  if (show) {
+    // A disc rising out of the slot, teeth turning.
+    var rise = live ? 9 : 3
+    var rad = Math.min(rise, 8)
+    ctx.fillStyle = hot
+    for (var a2 = 0; a2 < 12; a2++) {
+      var ang = (a2 / 12) * Math.PI * 2 + t * 0.25
+      ctx.fillRect(Math.round(cx + Math.cos(ang) * rad), Math.round(y1 - 3 - rise / 2 + Math.sin(ang) * rad * 0.6), 2, 2)
+    }
+    ctx.fillRect(cx - 1, y1 - 4 - rise / 2, 2, 2)
+  }
+}
+
+function drawHzGrinder(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y1 = geo.y1, cx = geo.cx, wide = geo.wide, live = geo.live,
+    t = geo.t, show = geo.show, hot = geo.hot
+  // Two toothed rollers side by side, turning inward.
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0, y1 - 6, wide, 6)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(cx - 1, y1 - 6, 2, 6)
+  ctx.fillStyle = show ? hot : pal.warn
+  for (var gr = 0; gr < wide; gr += 4) {
+    var off = (t * 2 + gr) % 4
+    ctx.fillRect(x0 + gr + (gr < wide / 2 ? off : 3 - off), y1 - 7, 2, live ? 4 : 2)
+  }
+}
+
+// --- cycle: never triggers, never stops ---------------------------------
+function drawHzCrusher(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, x1 = geo.x1, y0 = geo.y0, wide = geo.wide, tall = geo.tall,
+    live = geo.live, winding = geo.winding, hot = geo.hot
+  // A block on two rams, hanging high or driven down.
+  var drop = live ? tall - 8 : (winding ? 3 : 0)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0 + 3, y0, 2, 4 + drop)
+  ctx.fillRect(x1 - 5, y0, 2, 4 + drop)
+  ctx.fillStyle = live ? hot : pal.rig
+  ctx.fillRect(x0, y0 + 4 + drop, wide, 7)
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(x0 + 1, y0 + 5 + drop, wide - 2, 1)
+}
+
+function drawHzPendulum(ctx, w, pal, h, geo) {
+  var y0 = geo.y0, cx = geo.cx, wide = geo.wide, tall = geo.tall, t = geo.t,
+    show = geo.show, hot = geo.hot
+  // A blade on an arm, swinging from a pivot.
+  var sw = Math.sin(t * 0.06) * (wide / 2 - 2)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(cx - 2, y0, 4, 3)                     // pivot
+  ctx.fillStyle = pal.rig
+  var bx = Math.round(cx + sw)
+  var by = y0 + tall - 6
+  var an = Math.max(1, Math.round(Math.max(Math.abs(bx - cx), by - y0)))
+  for (var pa = 0; pa <= an; pa++)
+    ctx.fillRect(Math.round(cx + (bx - cx) * pa / an), Math.round(y0 + 3 + (by - y0 - 3) * pa / an), 2, 2)
+  ctx.fillStyle = show ? hot : pal.warn
+  hzTri(ctx, bx, by + 5, 4, 6, -1)                   // the blade
+}
+
+function drawHzGeyser(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, x1 = geo.x1, y1 = geo.y1, cx = geo.cx, wide = geo.wide,
+    tall = geo.tall, live = geo.live, t = geo.t, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0, y1 - 3, wide, 3)                  // grate
+  ctx.fillStyle = pal.rigDark
+  for (var gg = x0 + 1; gg < x1 - 1; gg += 3) ctx.fillRect(gg, y1 - 3, 1, 3)
+  if (show) {
+    // A plume that billows wider the higher it gets.
+    for (var pu = 0; pu < (live ? tall - 4 : 4); pu++) {
+      var pw = Math.round((wide / 2) * (0.3 + (pu / tall) * (live ? 1.4 : 0.4)))
+      ctx.fillStyle = (pu + Math.floor(t / 2)) % 4 === 0 ? pal.fireHot : hot
+      ctx.fillRect(cx - pw, y1 - 4 - pu, pw * 2, 1)
+    }
+  }
+}
+
+function drawHzRockfall(ctx, w, pal, h, geo) {
+  var C = geo.C, x0 = geo.x0, y0 = geo.y0, wide = geo.wide, live = geo.live,
+    show = geo.show
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0, y0, wide, 3)                      // cracked slab
+  ctx.fillStyle = pal.rig
+  for (var cr = 0; cr < wide; cr += 5) ctx.fillRect(x0 + cr, y0 + 3, 3, 1)
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(x0 + 2, y0 + 1, wide - 4, 1)
+  if (show) {
+    // Rocks on their way down, at staggered heights.
+    ctx.fillStyle = live ? pal.rig : pal.warn
+    for (var rk = 0; rk < 4; rk++) {
+      var rockX = (h.zx0 + 0.5 + ((rk * 2.3 + h.fired) % Math.max(1, h.zx1 - h.zx0 + 1))) * C
+      var ry = (h.zy0 + ((h.t * 0.55 + rk * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))) * C
+      ctx.fillRect(rockX, ry, live ? 4 : 2, live ? 4 : 2)
+    }
+  }
+}
+
+function drawHzPiston(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, wide = geo.wide, tall = geo.tall,
+    live = geo.live, winding = geo.winding, show = geo.show, hot = geo.hot
+  // A ram in a housing, driven out sideways.
+  var ext = live ? wide - 6 : (winding ? 3 : 0)
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0, y0, 5, tall)                      // housing
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0 + 5, y0 + 2, ext, tall - 4)        // the ram
+  ctx.fillStyle = show ? hot : pal.warn
+  ctx.fillRect(x0 + 5 + ext, y0 + 1, 3, tall - 2)    // the head
+}
+
+// --- field: always live -------------------------------------------------
+function drawHzBrazier(ctx, w, pal, h, geo) {
+  var y1 = geo.y1, cx = geo.cx, tall = geo.tall, t = geo.t
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(cx - 4, y1 - 4, 8, 4)                 // bowl
+  ctx.fillRect(cx - 1, y1 - 6, 2, 2)
+  // Flames, flickering on their own clock.
+  for (var fl = 0; fl < tall - 5; fl++) {
+    var fw2 = Math.max(1, Math.round((3 - fl * 0.35) + Math.sin((t + fl * 3) * 0.3)))
+    ctx.fillStyle = fl < 2 ? pal.fireHot : pal.fire
+    ctx.fillRect(cx - fw2, y1 - 6 - fl, fw2 * 2, 1)
+  }
+}
+
+function drawHzFence(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, x1 = geo.x1, y0 = geo.y0, y1 = geo.y1, wide = geo.wide,
+    tall = geo.tall, t = geo.t, seed = geo.seed
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0, y0 + 2, 2, tall - 2)              // posts
+  ctx.fillRect(x1 - 2, y0 + 2, 2, tall - 2)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0, y1 - 2, wide, 2)
+  // Wires, with a charge running between them.
+  for (var wi = 0; wi < 3; wi++) {
+    var wy = y0 + 4 + wi * Math.max(2, Math.round((tall - 6) / 3))
     ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0 + 1, y0 + 6, wide - 2, 2)
-    ctx.fillStyle = show ? hot : pal.warn
-    ctx.fillRect(cx - 2, y0 + 2, 4, 3)             // lens
-    if (show) {
-      ctx.fillStyle = hot
-      var sentryReach = 16 * C * h.dir
-      ctx.fillRect(Math.min(cx, cx + sentryReach), y0 + 4, Math.abs(sentryReach), live ? 2 : 1)
-    }
-    break
-
-  case "turret":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0 + 1, y0, wide - 2, 4)
-    ctx.fillRect(cx - 4, y0 + 4, 3, 5)             // twin barrels
-    ctx.fillRect(cx + 2, y0 + 4, 3, 5)
-    ctx.fillStyle = pal.warn
-    ctx.fillRect(x0 + 1, y0 + 1, wide - 2, 1)
-    if (show) {
-      ctx.fillStyle = hot
-      ctx.fillRect(cx - 3, y0 + 9, live ? 2 : 1, tall - 9)
-      ctx.fillRect(cx + 3, y0 + 9, live ? 2 : 1, tall - 9)
-    }
-    break
-
-  case "darts":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0, y0, 5, tall)                  // wall plate
-    ctx.fillStyle = pal.rigDark
-    for (var dh = 0; dh < 3; dh++) ctx.fillRect(x0 + 5, y0 + 3 + dh * 5, 2, 2)
-    ctx.fillStyle = pal.warn
-    ctx.fillRect(x0 + 1, y0 + 2, 1, tall - 4)
-    if (show) {
-      ctx.fillStyle = hot
-      // Darts in flight: short dashes marching away from the plate.
-      for (var dd = 0; dd < 3; dd++) {
-        var dartTravel = ((h.t * 4 + dd * 13) % (11 * C)) * h.dir
-        var dx2 = cx + dartTravel
-        ctx.fillRect(dx2, y0 + 3 + dd * 3, live ? 5 : 2, 1)
-      }
-    }
-    break
-
-  case "flame":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(cx - 4, y0, 8, 3)
-    hzTri(ctx, cx, y0 + 3, 3, 4, 1)                // flared nozzle
-    ctx.fillStyle = pal.warn
-    ctx.fillRect(cx - 3, y0 + 1, 6, 1)
-    if (show) {
-      // A cone that widens as it falls, with a hotter core.
-      for (var f = 0; f < (live ? tall - 7 : 5); f++) {
-        var fw = Math.round((wide / 2) * (0.25 + (f / tall) * (live ? 1.5 : 0.5)))
-        ctx.fillStyle = f % 3 === Math.floor(t / 3) % 3 ? pal.fireHot : pal.fire
-        ctx.fillRect(cx - fw, y0 + 7 + f, fw * 2, 1)
-      }
-    }
-    break
-
-  case "tesla":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(cx - 2, y1 - tall + 4, 4, tall - 4)   // post
-    ctx.fillRect(x0 + 1, y1 - 3, wide - 2, 3)          // base
-    ctx.fillStyle = show ? hot : pal.rigDark
-    ctx.fillRect(cx - 4, y0, 8, 4)                     // ball on top
-    if (show) {
-      ctx.fillStyle = hot
-      hzBolt(ctx, cx, y0 + 2, x0, y1 - 4, seed + t, live ? 2 : 1)
-      hzBolt(ctx, cx, y0 + 2, x1, y1 - 4, seed + t + 3, live ? 2 : 1)
-    }
-    break
-
-  // --- snipe: one target, a long way off, one shot then a long reload -----
-  case "sniper":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0, y0 + 2, 4, tall - 4)              // housing
-    ctx.fillRect(x0 + 4, y0 + 4, 7, 3)                 // barrel
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0 + 4, y0 + 1, 4, 3)                 // scope
-    ctx.fillStyle = h.phase === "rest" ? pal.rigDark : pal.warn
-    ctx.fillRect(x0 + 1, y0 + 3, 1, tall - 6)
-    if (show && h.lineTo >= 0) {
-      // The sight, then the shot. One pixel high while it is only looking, and
-      // it reaches all the way to whoever it has picked out.
-      var tx = h.lineTo * C
-      var ty = h.lineY * C
-      var sy = y0 + 5
-      ctx.fillStyle = hot
-      var n2 = Math.max(1, Math.round(Math.abs(tx - (x0 + 11))))
-      for (var q = 0; q <= n2; q += live ? 1 : 3) {
-        var qx = (x0 + 11) + (tx - (x0 + 11)) * (q / n2)
-        var qy = sy + (ty - sy) * (q / n2)
-        ctx.fillRect(Math.round(qx), Math.round(qy), live ? 2 : 1, live ? 2 : 1)
-      }
-    }
-    break
-
-  // --- beam: keeps its own schedule ---------------------------------------
-  case "lasergrid":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0, y0, wide, 3)
-    ctx.fillStyle = pal.rigDark
-    for (var e = x0 + 2; e < x1 - 1; e += 8) ctx.fillRect(e, y0 + 3, 3, 2)
-    ctx.fillStyle = pal.warn
-    ctx.fillRect(x0, y0 + 1, wide, 1)
-    if (show) {
-      ctx.fillStyle = hot
-      for (var b2 = x0 + 3; b2 < x1 - 1; b2 += 8) ctx.fillRect(b2, y0 + 5, live ? 2 : 1, tall - 5)
-    }
-    break
-
-  case "sweeper":
-    // A head that travels along a rail, with the beam raking after it.
-    var rail = x0 + Math.round((wide - 8) * (0.5 + 0.5 * Math.sin(t * 0.05)))
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0, y0, wide, 2)                      // the rail
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(rail, y0, 8, 5)                       // the head
-    ctx.fillStyle = pal.warn
-    ctx.fillRect(rail + 1, y0 + 1, 6, 1)
-    if (show) {
-      ctx.fillStyle = hot
-      for (var sv = 0; sv < tall - 5; sv++) {
-        var lean = Math.round(sv * Math.sin(t * 0.05) * 0.5)
-        ctx.fillRect(rail + 3 + lean, y0 + 5 + sv, live ? 3 : 1, 1)
-      }
-    }
-    break
-
-  case "tripwire":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0, y1 - 8, 2, 8)                     // posts
-    ctx.fillRect(x1 - 2, y1 - 8, 2, 8)
-    ctx.fillStyle = show ? hot : pal.warn
-    ctx.fillRect(x0, y1 - 7, wide, 1)                  // the wire itself
-    if (show && live) {
+    ctx.fillRect(x0, wy, wide, 1)
+    if ((Math.floor(t / 3) + wi) % 3 === 0) {
       ctx.fillStyle = pal.fireHot
-      for (var tw = 0; tw < wide; tw += 3) ctx.fillRect(x0 + tw, y1 - 9 - ((t + tw) % 4), 2, 2)
+      hzBolt(ctx, x0 + 1, wy, x1 - 1, wy, seed + wi + t, 1)
     }
-    break
+  }
+}
 
-  // --- plate: armed by being stood on -------------------------------------
-  case "spikes":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0, y1 - 3, wide, 3)                  // the plate
-    ctx.fillStyle = pal.warn
-    ctx.fillRect(x0 + 1, y1 - 2, wide - 2, 1)
-    if (show) {
-      ctx.fillStyle = hot
-      for (var sp = x0 + 2; sp < x1 - 1; sp += 4) hzTri(ctx, sp, y1 - 3, 2, live ? 10 : 3, -1)
+// --- biome-exclusive oddities -----------------------------------------
+function drawHzEchobat(ctx, w, pal, h, geo) {
+  var y0 = geo.y0, cx = geo.cx, t = geo.t, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(cx - 2, y0, 4, 5)
+  ctx.fillStyle = show ? hot : pal.rig
+  hzTri(ctx, cx - 5, y0 + 4, 5, 4, 1)
+  hzTri(ctx, cx + 5, y0 + 4, 5, 4, 1)
+  if (show) {
+    ctx.fillStyle = hot
+    for (var eb = 1; eb <= 3; eb++) {
+      var er = ((t + eb * 6) % 18) + 3
+      ctx.fillRect(cx - er, y0 + 8 + eb * 2, er * 2, 1)
     }
-    break
+  }
+}
 
-  case "beartrap":
-    // Jaws: open and waiting, or shut.
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(cx - 1, y1 - 2, 2, 2)                 // the plate between them
-    ctx.fillStyle = show && live ? hot : pal.rigDark
-    if (show && live) {
-      hzTri(ctx, cx - 3, y1 - 2, 3, 7, -1)
-      hzTri(ctx, cx + 3, y1 - 2, 3, 7, -1)
-    } else {
-      for (var jw = 0; jw < 5; jw++) {
-        ctx.fillRect(x0 + jw, y1 - 3 - jw, 2, 1)       // open, leaning out
-        ctx.fillRect(x1 - 2 - jw, y1 - 3 - jw, 2, 1)
-      }
-      ctx.fillStyle = pal.warn
-      ctx.fillRect(cx - 2, y1 - 3, 4, 1)
-    }
-    break
-
-  case "sawblade":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0 + 2, y1 - 3, wide - 4, 3)          // slot
-    ctx.fillStyle = pal.warn
-    ctx.fillRect(x0 + 3, y1 - 2, wide - 6, 1)
-    if (show) {
-      // A disc rising out of the slot, teeth turning.
-      var rise = live ? 9 : 3
-      var rad = Math.min(rise, 8)
-      ctx.fillStyle = hot
-      for (var a2 = 0; a2 < 12; a2++) {
-        var ang = (a2 / 12) * Math.PI * 2 + t * 0.25
-        ctx.fillRect(Math.round(cx + Math.cos(ang) * rad), Math.round(y1 - 3 - rise / 2 + Math.sin(ang) * rad * 0.6), 2, 2)
-      }
-      ctx.fillRect(cx - 1, y1 - 4 - rise / 2, 2, 2)
-    }
-    break
-
-  case "grinder":
-    // Two toothed rollers side by side, turning inward.
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0, y1 - 6, wide, 6)
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(cx - 1, y1 - 6, 2, 6)
-    ctx.fillStyle = show ? hot : pal.warn
-    for (var gr = 0; gr < wide; gr += 4) {
-      var off = (t * 2 + gr) % 4
-      ctx.fillRect(x0 + gr + (gr < wide / 2 ? off : 3 - off), y1 - 7, 2, live ? 4 : 2)
-    }
-    break
-
-  // --- cycle: never triggers, never stops ---------------------------------
-  case "crusher":
-    // A block on two rams, hanging high or driven down.
-    var drop = live ? tall - 8 : (winding ? 3 : 0)
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0 + 3, y0, 2, 4 + drop)
-    ctx.fillRect(x1 - 5, y0, 2, 4 + drop)
-    ctx.fillStyle = live ? hot : pal.rig
-    ctx.fillRect(x0, y0 + 4 + drop, wide, 7)
-    ctx.fillStyle = pal.warn
-    ctx.fillRect(x0 + 1, y0 + 5 + drop, wide - 2, 1)
-    break
-
-  case "pendulum":
-    // A blade on an arm, swinging from a pivot.
-    var sw = Math.sin(t * 0.06) * (wide / 2 - 2)
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(cx - 2, y0, 4, 3)                     // pivot
-    ctx.fillStyle = pal.rig
-    var bx = Math.round(cx + sw)
-    var by = y0 + tall - 6
-    var an = Math.max(1, Math.round(Math.max(Math.abs(bx - cx), by - y0)))
-    for (var pa = 0; pa <= an; pa++)
-      ctx.fillRect(Math.round(cx + (bx - cx) * pa / an), Math.round(y0 + 3 + (by - y0 - 3) * pa / an), 2, 2)
-    ctx.fillStyle = show ? hot : pal.warn
-    hzTri(ctx, bx, by + 5, 4, 6, -1)                   // the blade
-    break
-
-  case "geyser":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0, y1 - 3, wide, 3)                  // grate
-    ctx.fillStyle = pal.rigDark
-    for (var gg = x0 + 1; gg < x1 - 1; gg += 3) ctx.fillRect(gg, y1 - 3, 1, 3)
-    if (show) {
-      // A plume that billows wider the higher it gets.
-      for (var pu = 0; pu < (live ? tall - 4 : 4); pu++) {
-        var pw = Math.round((wide / 2) * (0.3 + (pu / tall) * (live ? 1.4 : 0.4)))
-        ctx.fillStyle = (pu + Math.floor(t / 2)) % 4 === 0 ? pal.fireHot : hot
-        ctx.fillRect(cx - pw, y1 - 4 - pu, pw * 2, 1)
-      }
-    }
-    break
-
-  case "rockfall":
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0, y0, wide, 3)                      // cracked slab
-    ctx.fillStyle = pal.rig
-    for (var cr = 0; cr < wide; cr += 5) ctx.fillRect(x0 + cr, y0 + 3, 3, 1)
-    ctx.fillStyle = pal.warn
-    ctx.fillRect(x0 + 2, y0 + 1, wide - 4, 1)
-    if (show) {
-      // Rocks on their way down, at staggered heights.
-      ctx.fillStyle = live ? pal.rig : pal.warn
-      for (var rk = 0; rk < 4; rk++) {
-        var rockX = (h.zx0 + 0.5 + ((rk * 2.3 + h.fired) % Math.max(1, h.zx1 - h.zx0 + 1))) * C
-        var ry = (h.zy0 + ((h.t * 0.55 + rk * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))) * C
-        ctx.fillRect(rockX, ry, live ? 4 : 2, live ? 4 : 2)
-      }
-    }
-    break
-
-  case "piston":
-    // A ram in a housing, driven out sideways.
-    var ext = live ? wide - 6 : (winding ? 3 : 0)
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0, y0, 5, tall)                      // housing
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0 + 5, y0 + 2, ext, tall - 4)        // the ram
-    ctx.fillStyle = show ? hot : pal.warn
-    ctx.fillRect(x0 + 5 + ext, y0 + 1, 3, tall - 2)    // the head
-    break
-
-  // --- field: always live -------------------------------------------------
-  case "brazier":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(cx - 4, y1 - 4, 8, 4)                 // bowl
-    ctx.fillRect(cx - 1, y1 - 6, 2, 2)
-    // Flames, flickering on their own clock.
-    for (var fl = 0; fl < tall - 5; fl++) {
-      var fw2 = Math.max(1, Math.round((3 - fl * 0.35) + Math.sin((t + fl * 3) * 0.3)))
-      ctx.fillStyle = fl < 2 ? pal.fireHot : pal.fire
-      ctx.fillRect(cx - fw2, y1 - 6 - fl, fw2 * 2, 1)
-    }
-    break
-
-  case "fence":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0, y0 + 2, 2, tall - 2)              // posts
-    ctx.fillRect(x1 - 2, y0 + 2, 2, tall - 2)
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0, y1 - 2, wide, 2)
-    // Wires, with a charge running between them.
-    for (var wi = 0; wi < 3; wi++) {
-      var wy = y0 + 4 + wi * Math.max(2, Math.round((tall - 6) / 3))
-      ctx.fillStyle = pal.rigDark
-      ctx.fillRect(x0, wy, wide, 1)
-      if ((Math.floor(t / 3) + wi) % 3 === 0) {
-        ctx.fillStyle = pal.fireHot
-        hzBolt(ctx, x0 + 1, wy, x1 - 1, wy, seed + wi + t, 1)
-      }
-    }
-    break
-
-  // --- biome-exclusive oddities -----------------------------------------
-  case "echobat":
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(cx - 2, y0, 4, 5)
+function drawHzScarab(ctx, w, pal, h, geo) {
+  var C = geo.C, x0 = geo.x0, y1 = geo.y1, cx = geo.cx, wide = geo.wide,
+    live = geo.live, t = geo.t, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0, y1 - 2, wide, 2)
+  for (var sca = 0; sca < 5; sca++) {
+    var scx = cx + h.dir * ((sca * 7 + (live ? t * 2 : t >> 2)) % (10 * C))
     ctx.fillStyle = show ? hot : pal.rig
-    hzTri(ctx, cx - 5, y0 + 4, 5, 4, 1)
-    hzTri(ctx, cx + 5, y0 + 4, 5, 4, 1)
-    if (show) {
-      ctx.fillStyle = hot
-      for (var eb = 1; eb <= 3; eb++) {
-        var er = ((t + eb * 6) % 18) + 3
-        ctx.fillRect(cx - er, y0 + 8 + eb * 2, er * 2, 1)
-      }
-    }
-    break
+    ctx.fillRect(scx, y1 - 5 - (sca % 2), 3, 2)
+    ctx.fillRect(scx + 1, y1 - 7 - (sca % 2), 1, 2)
+  }
+}
 
-  case "scarab":
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0, y1 - 2, wide, 2)
-    for (var sca = 0; sca < 5; sca++) {
-      var scx = cx + h.dir * ((sca * 7 + (live ? t * 2 : t >> 2)) % (10 * C))
-      ctx.fillStyle = show ? hot : pal.rig
-      ctx.fillRect(scx, y1 - 5 - (sca % 2), 3, 2)
-      ctx.fillRect(scx + 1, y1 - 7 - (sca % 2), 1, 2)
-    }
-    break
+function drawHzSnowball(ctx, w, pal, h, geo) {
+  var C = geo.C, x0 = geo.x0, y0 = geo.y0, wide = geo.wide, live = geo.live,
+    show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0, y0, wide, 2)
+  ctx.fillStyle = show ? hot : pal.decorLit
+  for (var sn = 0; sn < 4; sn++) {
+    var snowX = (h.zx0 + 0.5 + ((sn * 2.3 + h.fired) % Math.max(1, h.zx1 - h.zx0 + 1))) * C
+    var sny = (h.zy0 + ((h.t * 0.55 + sn * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))) * C
+    var snr = live ? 4 : 2
+    ctx.fillRect(snowX - snr, sny - snr, snr * 2, snr * 2)
+  }
+}
 
-  case "snowball":
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0, y0, wide, 2)
-    ctx.fillStyle = show ? hot : pal.decorLit
-    for (var sn = 0; sn < 4; sn++) {
-      var snowX = (h.zx0 + 0.5 + ((sn * 2.3 + h.fired) % Math.max(1, h.zx1 - h.zx0 + 1))) * C
-      var sny = (h.zy0 + ((h.t * 0.55 + sn * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))) * C
-      var snr = live ? 4 : 2
-      ctx.fillRect(snowX - snr, sny - snr, snr * 2, snr * 2)
-    }
-    break
+function drawHzMolten(ctx, w, pal, h, geo) {
+  var C = geo.C, x0 = geo.x0, y0 = geo.y0, wide = geo.wide, live = geo.live,
+    show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0, y0, wide, 3)
+  ctx.fillStyle = show ? hot : pal.warn
+  for (var ml = 0; ml < 4; ml++) {
+    var moltenX = (h.zx0 + 0.5 + ((ml * 2.3 + h.fired) % Math.max(1, h.zx1 - h.zx0 + 1))) * C
+    var mly = (h.zy0 + ((h.t * 0.55 + ml * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))) * C
+    ctx.fillRect(moltenX, mly, live ? 3 : 1, live ? 5 : 2)
+  }
+}
 
-  case "molten":
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0, y0, wide, 3)
-    ctx.fillStyle = show ? hot : pal.warn
-    for (var ml = 0; ml < 4; ml++) {
-      var moltenX = (h.zx0 + 0.5 + ((ml * 2.3 + h.fired) % Math.max(1, h.zx1 - h.zx0 + 1))) * C
-      var mly = (h.zy0 + ((h.t * 0.55 + ml * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))) * C
-      ctx.fillRect(moltenX, mly, live ? 3 : 1, live ? 5 : 2)
-    }
-    break
+function drawHzVinelock(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y1 = geo.y1, wide = geo.wide, tall = geo.tall,
+    live = geo.live, winding = geo.winding, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.decorDim
+  ctx.fillRect(x0, y1 - 2, wide, 2)
+  ctx.fillStyle = show ? hot : pal.decor
+  for (var vl = 1; vl < wide; vl += 4) {
+    var vh = live ? tall - 2 : (winding ? 5 : 2)
+    for (var vv = 0; vv < vh; vv++) ctx.fillRect(x0 + vl + ((vv >> 2) % 2), y1 - 3 - vv, 2, 1)
+  }
+}
 
-  case "vinelock":
-    ctx.fillStyle = pal.decorDim
-    ctx.fillRect(x0, y1 - 2, wide, 2)
-    ctx.fillStyle = show ? hot : pal.decor
-    for (var vl = 1; vl < wide; vl += 4) {
-      var vh = live ? tall - 2 : (winding ? 5 : 2)
-      for (var vv = 0; vv < vh; vv++) ctx.fillRect(x0 + vl + ((vv >> 2) % 2), y1 - 3 - vv, 2, 1)
-    }
-    break
+function drawHzBlackice(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y1 = geo.y1, cx = geo.cx, wide = geo.wide, live = geo.live,
+    show = geo.show, hot = geo.hot
+  ctx.fillStyle = show ? hot : pal.decorLit
+  ctx.fillRect(x0, y1 - 2, wide, 2)
+  ctx.fillStyle = pal.rockEdge
+  for (var bi = 1; bi < wide; bi += 5) ctx.fillRect(x0 + bi, y1 - 3, 3, 1)
+  if (live) {
+    ctx.fillStyle = hot
+    hzTri(ctx, cx, y1 - 2, 5, 8, -1)
+  }
+}
 
-  case "blackice":
-    ctx.fillStyle = show ? hot : pal.decorLit
-    ctx.fillRect(x0, y1 - 2, wide, 2)
-    ctx.fillStyle = pal.rockEdge
-    for (var bi = 1; bi < wide; bi += 5) ctx.fillRect(x0 + bi, y1 - 3, 3, 1)
-    if (live) {
-      ctx.fillStyle = hot
-      hzTri(ctx, cx, y1 - 2, 5, 8, -1)
-    }
-    break
+function drawHzPacketloss(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, wide = geo.wide, tall = geo.tall,
+    live = geo.live, t = geo.t, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0, y0, wide, 3)
+  ctx.fillStyle = show ? hot : pal.warn
+  for (var pk = 0; pk < 18; pk++) {
+    if ((pk + Math.floor(t / 3)) % 4 === 0) continue
+    var pkx = x0 + ((pk * 7) % Math.max(1, wide))
+    var pky = y0 + 4 + ((pk * 11 + t) % Math.max(1, tall - 5))
+    ctx.fillRect(pkx, pky, live ? 3 : 1, live ? 2 : 1)
+  }
+}
 
-  case "packetloss":
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0, y0, wide, 3)
-    ctx.fillStyle = show ? hot : pal.warn
-    for (var pk = 0; pk < 18; pk++) {
-      if ((pk + Math.floor(t / 3)) % 4 === 0) continue
-      var pkx = x0 + ((pk * 7) % Math.max(1, wide))
-      var pky = y0 + 4 + ((pk * 11 + t) % Math.max(1, tall - 5))
-      ctx.fillRect(pkx, pky, live ? 3 : 1, live ? 2 : 1)
-    }
-    break
-
-  // --- jungle -------------------------------------------------------------
-  case "snake":
-    // An S of body along the floor with a wedge head on the end of it, rather
-    // than the vertical post the first version drew — which, with a bright tip
-    // and a muzzle flash, read as a mounted gun and not as an animal at all.
-    var sdir = h.zx0 % 2 === 0 ? 1 : -1
-    var bodyY = y1 - 3
-    ctx.fillStyle = pal.rigDark
-    for (var sb = 0; sb < wide; sb++) {
-      // Two shallow humps: a snake at rest is a curve, and a curve is what
-      // separates it from every straight-edged machine on this board.
-      var hump = Math.round(Math.sin(sb * 0.55) * 1.6)
-      ctx.fillRect(x0 + sb, bodyY - hump, 1, 3)
-    }
-    // Scales along the back, a shade lighter.
-    ctx.fillStyle = pal.rig
-    for (var sc = 0; sc < wide; sc += 2) {
-      var hump2 = Math.round(Math.sin(sc * 0.55) * 1.6)
-      ctx.fillRect(x0 + sc, bodyY - hump2, 1, 1)
-    }
-
-    // The head, at the end it is facing, raised a little when it is winding up
-    // and thrown forward when it strikes.
-    var hx = sdir > 0 ? x1 - 4 : x0
-    var rear2 = live ? 0 : (winding ? 4 : 2)
-    var hy = bodyY - rear2 - 2
-    if (winding || live) {
-      // The raised neck curving up out of the coil.
-      ctx.fillStyle = pal.rigDark
-      for (var nk = 0; nk <= rear2 + 2; nk++)
-        ctx.fillRect(hx + (sdir > 0 ? 0 : 3), bodyY - nk, 2, 1)
-    }
-    ctx.fillStyle = show ? hot : pal.rig
-    ctx.fillRect(hx, hy, 4, 3)                        // wedge head
-    ctx.fillRect(hx + (sdir > 0 ? 4 : -1), hy + 1, 1, 2)
-    ctx.fillStyle = pal.eye
-    ctx.fillRect(hx + (sdir > 0 ? 3 : 0), hy + 1, 1, 1)   // eye
-    if (live) {
-      // Struck: the head is thrown out, and the tongue with it.
-      ctx.fillStyle = pal.fireHot
-      ctx.fillRect(hx + (sdir > 0 ? 5 : -6), hy + 1, 6, 1)
-    } else if (winding) {
-      ctx.fillStyle = pal.warn
-      ctx.fillRect(hx + (sdir > 0 ? 5 : -3), hy + 1, 3, 1)  // flicking tongue
-    }
-    break
-
-  // --- Trench -------------------------------------------------------------
-
-  case "shark":
-    // The only hazard on the board that is not bolted to anything, so it is
-    // the only one that has to say where it is going. It patrols its zone at
-    // rest, hangs still and turns side-on while it winds up — a shark lining
-    // somebody up stops swimming, which is the tell — and crosses the zone in
-    // one run when it strikes.
-    var swim = live
-      ? (h.t / Math.max(1, 16)) * wide           // the run
-      : (winding ? wide * 0.5 : (0.5 + 0.5 * Math.sin(t * 0.018 + seed)) * (wide - 22))
-    var shdir = h.zx0 % 2 === 0 ? 1 : -1
-    var shx = Math.round(shdir > 0 ? x0 + swim : x1 - swim - 22)
-    var shy = Math.round(y0 + tall * 0.42 + Math.sin(t * 0.05) * 2)
-    var nose = shdir > 0 ? shx + 22 : shx
-
-    // Body. The first version drew a symmetric wedge and it read, unmistakably,
-    // as a submarine — which in this biome is a real confusion, because there
-    // is a submarine on the roster. A fish is not symmetric: the back is a
-    // long shallow arch and the belly is a deep one, the snout is blunt below
-    // and pointed above, and the body narrows to a thin peduncle before the
-    // tail rather than tapering all the way. Two curves, not one.
-    ctx.fillStyle = live ? hot : pal.rigDark
-    for (var sk = 0; sk < 22; sk++) {
-      var along = shdir > 0 ? sk / 22 : 1 - sk / 22
-      // Peduncle: everything behind 0.82 pinches to almost nothing, which is
-      // what makes the tail read as attached rather than as a bracket.
-      var girth = along < 0.82
-        ? Math.sin(Math.pow(along, 0.55) * Math.PI * 0.92)
-        : 0.16
-      var back = Math.round(3.2 * girth)
-      var belly = Math.round(2.0 * girth + (along > 0.15 && along < 0.7 ? 1 : 0))
-      ctx.fillRect(shx + sk, shy - back, 1, Math.max(1, back + belly + 1))
-    }
-    // The pale underside. A shark is recognised by countershading more than by
-    // outline, and it is two pixels a column.
-    ctx.fillStyle = pal.rig
-    for (var bk = 3; bk < 17; bk++) {
-      var balong = shdir > 0 ? bk / 22 : 1 - bk / 22
-      var bgirth = Math.sin(Math.pow(balong, 0.55) * Math.PI * 0.92)
-      var bbelly = Math.round(2.0 * bgirth + (balong > 0.15 && balong < 0.7 ? 1 : 0))
-      ctx.fillRect(shx + bk, shy + bbelly, 1, 1)
-    }
-
-    // The fins. A crescent tail with the upper lobe longer than the lower —
-    // the one detail that says shark rather than fish — plus a tall dorsal set
-    // forward of centre and a pectoral swept back under it.
-    ctx.fillStyle = live ? hot : pal.rigDark
-    var tailX = shdir > 0 ? shx - 1 : shx + 22
-    for (var tl = 0; tl < 5; tl++) {
-      var spread = 1 + tl                                   // opens away from the body
-      ctx.fillRect(tailX + (shdir > 0 ? -tl : tl), shy - spread - 1, 1, 2)   // upper lobe
-      if (tl < 4) ctx.fillRect(tailX + (shdir > 0 ? -tl : tl), shy + spread - 1, 1, 2)
-    }
-    hzTri(ctx, shx + (shdir > 0 ? 13 : 9), shy - 3, 2, 5, -1)      // dorsal
-    ctx.fillRect(shx + (shdir > 0 ? 6 : 13), shy + 3, 4, 1)        // pectoral
-    ctx.fillRect(shx + (shdir > 0 ? 6 : 16), shy + 4, 2, 1)
-    // Gill slits, and the eye set right up at the snout.
-    ctx.fillStyle = pal.rigDark
-    for (var gs = 0; gs < 3; gs++)
-      ctx.fillRect(nose + (shdir > 0 ? -6 - gs * 2 : 6 + gs * 2), shy - 1, 1, 3)
-    ctx.fillStyle = pal.eye
-    ctx.fillRect(shdir > 0 ? nose - 4 : nose + 3, shy - 2, 1, 1)
-    // The jaw. Shut until it means it, and then the whole point of the thing.
-    if (show) {
-      ctx.fillStyle = live ? "#ffffff" : pal.warn
-      for (var tooth = 0; tooth < 4; tooth++)
-        hzTri(ctx, nose + (shdir > 0 ? -2 - tooth * 2 : 2 + tooth * 2), shy + 2, 1, 2, -1)
-      ctx.fillStyle = live ? hot : pal.warn
-      ctx.fillRect(shdir > 0 ? nose - 8 : nose + 1, shy + 1, 8, 1)
-    }
-    break
-
-  case "current":
-    // No machine, no mount, nothing to wreck: the fixture IS the water. Drawn
-    // as streamlines rather than as a box, because the one thing it has to say
-    // is which way it is going — being carried the wrong way down a corridor
-    // is only fair if the direction was on screen before the diver arrived.
-    //
-    // It is the only hazard that draws at full strength when it is NOT firing,
-    // for the same reason: the flow has to be legible in the gap so somebody
-    // watching can see what is about to happen to the queue walking into it.
-    var flowDir = h.dir
-    var lines = 7
-    for (var fl = 0; fl < lines; fl++) {
-      var fy2 = y0 + 3 + fl * Math.max(2, Math.floor((tall - 6) / lines))
-      // Each streamline runs at its own speed and phase, which is what makes
-      // the band read as moving water instead of as marching dashes.
-      var rate = live ? 3.4 : 1.1
-      var span = wide + 40
-      var head = ((t * rate + fl * 23) % span)
-      var fx2 = flowDir > 0 ? x0 - 20 + head : x1 + 20 - head
-      var len = live ? 16 : 9
-      ctx.globalAlpha = live ? 0.85 : 0.42
-      ctx.fillStyle = live ? pal.bubbleLit : pal.bubble
-      // Clipped to the zone by hand: a streamline that ran past the edge would
-      // claim corridor the current cannot actually reach.
-      var sx2 = Math.max(x0, Math.min(x1, fx2))
-      var ex2 = Math.max(x0, Math.min(x1, fx2 + flowDir * len))
-      if (ex2 !== sx2) ctx.fillRect(Math.min(sx2, ex2), fy2, Math.abs(ex2 - sx2), 1)
-      // An arrowhead on the leading end, so the direction survives a still.
-      var tip = flowDir > 0 ? ex2 : sx2
-      if (tip > x0 + 1 && tip < x1 - 1) {
-        ctx.fillRect(tip - (flowDir > 0 ? 2 : -1), fy2 - 1, 1, 1)
-        ctx.fillRect(tip - (flowDir > 0 ? 2 : -1), fy2 + 1, 1, 1)
-      }
-    }
-    ctx.globalAlpha = 1
-    // Bubbles caught in it, tumbling along faster than they rise.
-    ctx.fillStyle = pal.bubble
-    ctx.globalAlpha = live ? 0.7 : 0.3
-    for (var cb = 0; cb < 9; cb++) {
-      var cbx = x0 + (((t * (live ? 4.2 : 1.4)) + cb * 31) % Math.max(1, wide))
-      if (flowDir < 0) cbx = x1 - (cbx - x0)
-      ctx.fillRect(Math.round(cbx), Math.round(y0 + 2 + ((cb * 37) % Math.max(1, tall - 4))), 1, 1)
-    }
-    ctx.globalAlpha = 1
-    break
-
-  case "vent":
-    // A split in the sea floor letting go of what is under it. Vertical, so it
-    // is the one thing in the biome going decisively up.
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0 + 1, y1 - 3, wide - 2, 3)                 // the fissure lip
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0 + 2, y1 - 4, wide - 4, 1)
-    if (show) {
-      // The plume: bubbles widening and fading as they climb, which is the
-      // same rule the divers' own exhaust follows so the biome stays coherent.
-      for (var vb = 0; vb < 16; vb++) {
-        var vlife = (((t * (live ? 2.6 : 1.0)) + vb * 19) % 100) / 100
-        var vx = cx + Math.sin(vlife * 5 + vb) * (2 + vlife * (wide / 2))
-        var vy = y1 - 4 - vlife * tall
-        if (vy < y0) continue
-        ctx.globalAlpha = (live ? 0.85 : 0.4) * (1 - vlife * 0.8)
-        ctx.fillStyle = live ? pal.bubbleLit : pal.bubble
-        var vsz = vlife > 0.6 ? 2 : 1
-        ctx.fillRect(Math.round(vx), Math.round(vy), vsz, vsz)
-      }
-      ctx.globalAlpha = 1
-    }
-    break
-
-  case "spores":
-    // A pod that splits, and a drift of spores under it.
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(cx - 4, y0, 8, 4)
-    ctx.fillStyle = show ? hot : pal.rig
-    ctx.fillRect(cx - 5, y0 + 4, 10, 2)
-    if (show) {
-      ctx.fillStyle = hot
-      for (var sp2 = 0; sp2 < 14; sp2++) {
-        var sy3 = y0 + 6 + ((t + sp2 * 9) % Math.max(1, tall - 6))
-        var sx3 = x0 + ((sp2 * 5 + Math.floor(t / 6)) % Math.max(1, wide))
-        ctx.fillRect(sx3, sy3, live ? 2 : 1, live ? 2 : 1)
-      }
-    }
-    break
-
-  // --- ice cave -----------------------------------------------------------
-  case "icicle":
-    // Hanging, until it isn't.
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0, y0, wide, 2)
-    var drop2 = live ? tall - 10 : (winding ? 2 : 0)
-    ctx.fillStyle = show ? hot : pal.rig
-    for (var ic = 0; ic < 3; ic++) {
-      var icx = x0 + 2 + ic * Math.max(3, Math.round((wide - 4) / 3))
-      hzTri(ctx, icx, y0 + 2 + drop2, 2, 8, 1)
-    }
-    break
-
-  case "frostjet":
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0, y0 + 1, 4, tall - 2)             // the nozzle housing
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0 + 4, y0 + 3, 3, 3)
-    ctx.fillStyle = pal.warn
-    ctx.fillRect(x0 + 1, y0 + 2, 1, tall - 4)
-    if (show) {
-      // A cone of vapour, thickening as it goes.
-      ctx.fillStyle = hot
-      for (var fj = 0; fj < (live ? 12 * C : 6); fj++) {
-        var fh = Math.round(1 + fj * (live ? 0.18 : 0.1))
-        ctx.fillRect(cx + h.dir * fj, y0 + 4 - fh / 2, 1, fh + 1)
-      }
-    }
-    break
-
-  // --- spaceship ----------------------------------------------------------
-  case "airlock":
-    // Floor plates that part, and everything above them goes.
-    var gap2 = live ? Math.round(wide / 2) - 2 : (winding ? 2 : 0)
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0, y1 - 4, Math.max(0, wide / 2 - gap2), 4)
-    ctx.fillRect(x0 + wide / 2 + gap2, y1 - 4, Math.max(0, wide / 2 - gap2), 4)
-    ctx.fillStyle = show ? hot : pal.warn
-    ctx.fillRect(x0 + 1, y1 - 5, wide - 2, 1)
-    if (live) {
-      ctx.fillStyle = pal.fire
-      ctx.globalAlpha = 0.5
-      ctx.fillRect(x0 + wide / 2 - gap2, y0, gap2 * 2, tall - 4)
-      ctx.globalAlpha = 1
-    }
-    break
-
-  // --- Factory ------------------------------------------------------------
-  case "stamper":
-    // A press on a ram. The head sits high while it winds and is driven to the
-    // floor of its zone when it fires, so the whole cycle is in one moving part.
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0 + 1, y0, wide - 2, 3)                   // the gantry
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(cx - 2, y0 + 3, 4, live ? tall - 9 : 6)    // the ram
-    var headY = live ? y1 - 6 : y0 + 9
-    ctx.fillRect(x0 + 2, headY, wide - 4, 6)                // the head
-    ctx.fillStyle = pal.rigDark
-    for (var sb = 0; sb < wide - 6; sb += 4)                // its bolts
-      ctx.fillRect(x0 + 3 + sb, headY + 2, 2, 2)
-    if (show) {
-      ctx.fillStyle = hot
-      ctx.fillRect(x0 + 2, live ? y1 - 1 : headY + 6, wide - 4, 1)
-    }
-    break
-
-  case "flywheel":
-    // A wheel that idles and then runs up. Dormant it turns slowly, live it
-    // blurs into a disc and throws its spokes out as a ring.
-    var fr = Math.min(wide, tall) / 2 - 1
-    var fcx = cx, fcy = y0 + tall / 2
-    var rate = live ? 0.42 : (winding ? 0.16 : 0.04)
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(fcx - fr - 1, fcy - 1, fr * 2 + 2, 2)      // the shaft
-    ctx.fillStyle = pal.rig
-    for (var sp = 0; sp < 6; sp++) {
-      var sa = t * rate + sp * Math.PI / 3
-      ctx.fillRect(Math.round(fcx + Math.cos(sa) * fr) - 1,
-                   Math.round(fcy + Math.sin(sa) * fr) - 1, 2, 2)
-    }
-    ctx.fillStyle = live ? hot : pal.rigDark
-    ctx.fillRect(fcx - 2, fcy - 2, 4, 4)                    // the hub
-    if (live) {
-      ctx.globalAlpha = 0.4
-      ctx.fillStyle = hot
-      for (var rg = 0; rg < 10; rg++) {
-        var ra = t * rate * 1.6 + rg * Math.PI / 5
-        ctx.fillRect(Math.round(fcx + Math.cos(ra) * (fr + 3)) - 1,
-                     Math.round(fcy + Math.sin(ra) * (fr + 3)) - 1, 2, 2)
-      }
-      ctx.globalAlpha = 1
-    }
-    break
-
-  case "steamvent":
-    // A floor pipe that lets go upward. Nothing to see between times except
-    // the cowl, which is the point: the danger is the column, not the fitting.
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(cx - 4, y1 - 4, 8, 4)                      // the cowl
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(cx - 3, y1 - 6, 6, 2)
-    if (show) {
-      // The column, widening as it rises and thinning as it loses pressure.
-      for (var jv = 0; jv < tall - 6; jv += 2) {
-        var lift = live ? 1 : 0.45
-        var wj = 2 + Math.round(jv * 0.22 * lift)
-        ctx.globalAlpha = (live ? 0.75 : 0.35) * (1 - jv / (tall - 6))
-        ctx.fillStyle = jv % 4 === 0 ? hot : pal.decorLit
-        ctx.fillRect(cx - wj / 2 + Math.sin((t * 0.12) + jv * 0.4) * 2,
-                     y1 - 7 - jv, wj, 2)
-      }
-      ctx.globalAlpha = 1
-    }
-    break
-
-  case "sprinkler":
-    // A pipe run with heads on it. Between times it is plumbing; live, it is
-    // the reason nobody keeps paper on their desk any more.
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0, y0 + 1, wide, 3)                       // the main
-    ctx.fillStyle = pal.rig
-    for (var sk = 0; sk < 4; sk++) {
-      var skx = x0 + 4 + Math.round(sk * (wide - 8) / 3)
-      ctx.fillRect(skx - 1, y0 + 4, 3, 3)                   // and its heads
-    }
-    if (show) {
-      ctx.fillStyle = live ? pal.poolLip : pal.decorLit
-      for (var sw2 = 0; sw2 < 4; sw2++) {
-        var swx = x0 + 4 + Math.round(sw2 * (wide - 8) / 3)
-        var reach = live ? tall - 8 : 6
-        for (var sd = 0; sd < reach; sd += 3) {
-          var spread = Math.round(sd * 0.35)
-          ctx.globalAlpha = live ? 0.8 - sd / (tall * 1.6) : 0.4
-          ctx.fillRect(swx - spread + ((t + sd * 3) % 5) - 2, y0 + 7 + sd, 1, 2)
-          ctx.fillRect(swx + spread - ((t + sd * 5) % 5) + 1, y0 + 7 + sd, 1, 2)
-        }
-      }
-      ctx.globalAlpha = 1
-    }
-    break
-
-  case "polisher":
-    // A floor buffer nobody switched off, running its beat up and down the
-    // same six cells for as long as the building stands.
-    var run = (Math.sin(t * 0.035 + seed) * 0.5 + 0.5)
-    var pcx = Math.round(x0 + 6 + run * (wide - 12))
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(pcx - 5, y1 - 4, 10, 4)                    // the deck
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(pcx + 3, y1 - 12, 2, 9)                    // the handle
-    ctx.fillRect(pcx + 3, y1 - 13, 5, 2)
-    ctx.fillStyle = live ? hot : pal.steelShade
-    for (var pb = 0; pb < 5; pb++)                          // the pad, spinning
-      ctx.fillRect(pcx - 5 + ((pb * 3 + t) % 10), y1 - 1, 2, 1)
-    if (show) {
-      ctx.globalAlpha = 0.5
-      ctx.fillStyle = pal.decorLit
-      for (var pf = 0; pf < 4; pf++)
-        ctx.fillRect(pcx - 7 + pf * 4, y1 - 6 - ((t + pf * 7) % 5), 2, 1)
-      ctx.globalAlpha = 1
-    }
-    break
-
-  case "shredder":
-    // A slot in the floor with a very good appetite. Dormant it is furniture;
-    // armed, the rollers turn and you can see how far down it goes.
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0 + 1, y1 - 5, wide - 2, 5)               // the hopper
-    ctx.fillStyle = pal.hatchMouth
-    ctx.fillRect(x0 + 3, y1 - 4, wide - 6, 3)               // the slot
-    if (show) {
-      ctx.fillStyle = hot
-      for (var sr = 0; sr < 6; sr++)
-        ctx.fillRect(x0 + 4 + ((sr * 4 + Math.floor(t * (live ? 0.8 : 0.3))) % (wide - 8)),
-                     y1 - 4, 2, 3)                          // the rollers
-      if (live) for (var st5 = 0; st5 < wide - 6; st5 += 4)
-        hzTri(ctx, x0 + 4 + st5, y1 - 5, 2, 3, -1)          // and the teeth
-    }
-    break
-
-  case "servo":
-    // An arm on a rail that swings down and sweeps.
-    var swing2 = live ? 1 : (winding ? 0.5 : 0)
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x0, y0, wide, 3)
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(cx - 2, y0 + 3, 4, Math.round(4 + swing2 * (tall - 8)))
-    ctx.fillStyle = show ? hot : pal.warn
-    var armY = y0 + 3 + Math.round(4 + swing2 * (tall - 8))
-    ctx.fillRect(cx - Math.round(wide / 2 * swing2) - 1, armY, Math.round(wide * swing2) + 2, 2)
-    break
-
-  default:
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0, y0, wide, 4)
-    if (show) { ctx.fillStyle = hot; ctx.fillRect(x0, y0, wide, tall) }
+// --- jungle -------------------------------------------------------------
+function drawHzSnake(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, x1 = geo.x1, y1 = geo.y1, wide = geo.wide, live = geo.live,
+    winding = geo.winding, show = geo.show, hot = geo.hot
+  // An S of body along the floor with a wedge head on the end of it, rather
+  // than the vertical post the first version drew — which, with a bright tip
+  // and a muzzle flash, read as a mounted gun and not as an animal at all.
+  var sdir = h.zx0 % 2 === 0 ? 1 : -1
+  var bodyY = y1 - 3
+  ctx.fillStyle = pal.rigDark
+  for (var sb = 0; sb < wide; sb++) {
+    // Two shallow humps: a snake at rest is a curve, and a curve is what
+    // separates it from every straight-edged machine on this board.
+    var hump = Math.round(Math.sin(sb * 0.55) * 1.6)
+    ctx.fillRect(x0 + sb, bodyY - hump, 1, 3)
+  }
+  // Scales along the back, a shade lighter.
+  ctx.fillStyle = pal.rig
+  for (var sc = 0; sc < wide; sc += 2) {
+    var hump2 = Math.round(Math.sin(sc * 0.55) * 1.6)
+    ctx.fillRect(x0 + sc, bodyY - hump2, 1, 1)
   }
 
+  // The head, at the end it is facing, raised a little when it is winding up
+  // and thrown forward when it strikes.
+  var hx = sdir > 0 ? x1 - 4 : x0
+  var rear2 = live ? 0 : (winding ? 4 : 2)
+  var hy = bodyY - rear2 - 2
+  if (winding || live) {
+    // The raised neck curving up out of the coil.
+    ctx.fillStyle = pal.rigDark
+    for (var nk = 0; nk <= rear2 + 2; nk++)
+      ctx.fillRect(hx + (sdir > 0 ? 0 : 3), bodyY - nk, 2, 1)
+  }
+  ctx.fillStyle = show ? hot : pal.rig
+  ctx.fillRect(hx, hy, 4, 3)                        // wedge head
+  ctx.fillRect(hx + (sdir > 0 ? 4 : -1), hy + 1, 1, 2)
+  ctx.fillStyle = pal.eye
+  ctx.fillRect(hx + (sdir > 0 ? 3 : 0), hy + 1, 1, 1)   // eye
+  if (live) {
+    // Struck: the head is thrown out, and the tongue with it.
+    ctx.fillStyle = pal.fireHot
+    ctx.fillRect(hx + (sdir > 0 ? 5 : -6), hy + 1, 6, 1)
+  } else if (winding) {
+    ctx.fillStyle = pal.warn
+    ctx.fillRect(hx + (sdir > 0 ? 5 : -3), hy + 1, 3, 1)  // flicking tongue
+  }
 }
+
+// --- Trench -------------------------------------------------------------
+function drawHzShark(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, x1 = geo.x1, y0 = geo.y0, wide = geo.wide, tall = geo.tall,
+    live = geo.live, winding = geo.winding, t = geo.t, seed = geo.seed,
+    show = geo.show, hot = geo.hot
+  // The only hazard on the board that is not bolted to anything, so it is
+  // the only one that has to say where it is going. It patrols its zone at
+  // rest, hangs still and turns side-on while it winds up — a shark lining
+  // somebody up stops swimming, which is the tell — and crosses the zone in
+  // one run when it strikes.
+  var swim = live
+    ? (h.t / Math.max(1, 16)) * wide           // the run
+    : (winding ? wide * 0.5 : (0.5 + 0.5 * Math.sin(t * 0.018 + seed)) * (wide - 22))
+  var shdir = h.zx0 % 2 === 0 ? 1 : -1
+  var shx = Math.round(shdir > 0 ? x0 + swim : x1 - swim - 22)
+  var shy = Math.round(y0 + tall * 0.42 + Math.sin(t * 0.05) * 2)
+  var nose = shdir > 0 ? shx + 22 : shx
+
+  // Body. The first version drew a symmetric wedge and it read, unmistakably,
+  // as a submarine — which in this biome is a real confusion, because there
+  // is a submarine on the roster. A fish is not symmetric: the back is a
+  // long shallow arch and the belly is a deep one, the snout is blunt below
+  // and pointed above, and the body narrows to a thin peduncle before the
+  // tail rather than tapering all the way. Two curves, not one.
+  ctx.fillStyle = live ? hot : pal.rigDark
+  for (var sk = 0; sk < 22; sk++) {
+    var along = shdir > 0 ? sk / 22 : 1 - sk / 22
+    // Peduncle: everything behind 0.82 pinches to almost nothing, which is
+    // what makes the tail read as attached rather than as a bracket.
+    var girth = along < 0.82
+      ? Math.sin(Math.pow(along, 0.55) * Math.PI * 0.92)
+      : 0.16
+    var back = Math.round(3.2 * girth)
+    var belly = Math.round(2.0 * girth + (along > 0.15 && along < 0.7 ? 1 : 0))
+    ctx.fillRect(shx + sk, shy - back, 1, Math.max(1, back + belly + 1))
+  }
+  // The pale underside. A shark is recognised by countershading more than by
+  // outline, and it is two pixels a column.
+  ctx.fillStyle = pal.rig
+  for (var bk = 3; bk < 17; bk++) {
+    var balong = shdir > 0 ? bk / 22 : 1 - bk / 22
+    var bgirth = Math.sin(Math.pow(balong, 0.55) * Math.PI * 0.92)
+    var bbelly = Math.round(2.0 * bgirth + (balong > 0.15 && balong < 0.7 ? 1 : 0))
+    ctx.fillRect(shx + bk, shy + bbelly, 1, 1)
+  }
+
+  // The fins. A crescent tail with the upper lobe longer than the lower —
+  // the one detail that says shark rather than fish — plus a tall dorsal set
+  // forward of centre and a pectoral swept back under it.
+  ctx.fillStyle = live ? hot : pal.rigDark
+  var tailX = shdir > 0 ? shx - 1 : shx + 22
+  for (var tl = 0; tl < 5; tl++) {
+    var spread = 1 + tl                                   // opens away from the body
+    ctx.fillRect(tailX + (shdir > 0 ? -tl : tl), shy - spread - 1, 1, 2)   // upper lobe
+    if (tl < 4) ctx.fillRect(tailX + (shdir > 0 ? -tl : tl), shy + spread - 1, 1, 2)
+  }
+  hzTri(ctx, shx + (shdir > 0 ? 13 : 9), shy - 3, 2, 5, -1)      // dorsal
+  ctx.fillRect(shx + (shdir > 0 ? 6 : 13), shy + 3, 4, 1)        // pectoral
+  ctx.fillRect(shx + (shdir > 0 ? 6 : 16), shy + 4, 2, 1)
+  // Gill slits, and the eye set right up at the snout.
+  ctx.fillStyle = pal.rigDark
+  for (var gs = 0; gs < 3; gs++)
+    ctx.fillRect(nose + (shdir > 0 ? -6 - gs * 2 : 6 + gs * 2), shy - 1, 1, 3)
+  ctx.fillStyle = pal.eye
+  ctx.fillRect(shdir > 0 ? nose - 4 : nose + 3, shy - 2, 1, 1)
+  // The jaw. Shut until it means it, and then the whole point of the thing.
+  if (show) {
+    ctx.fillStyle = live ? "#ffffff" : pal.warn
+    for (var tooth = 0; tooth < 4; tooth++)
+      hzTri(ctx, nose + (shdir > 0 ? -2 - tooth * 2 : 2 + tooth * 2), shy + 2, 1, 2, -1)
+    ctx.fillStyle = live ? hot : pal.warn
+    ctx.fillRect(shdir > 0 ? nose - 8 : nose + 1, shy + 1, 8, 1)
+  }
+}
+
+function drawHzCurrent(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, x1 = geo.x1, y0 = geo.y0, wide = geo.wide, tall = geo.tall,
+    live = geo.live, t = geo.t
+  // No machine, no mount, nothing to wreck: the fixture IS the water. Drawn
+  // as streamlines rather than as a box, because the one thing it has to say
+  // is which way it is going — being carried the wrong way down a corridor
+  // is only fair if the direction was on screen before the diver arrived.
+  //
+  // It is the only hazard that draws at full strength when it is NOT firing,
+  // for the same reason: the flow has to be legible in the gap so somebody
+  // watching can see what is about to happen to the queue walking into it.
+  var flowDir = h.dir
+  var lines = 7
+  for (var fl = 0; fl < lines; fl++) {
+    var fy2 = y0 + 3 + fl * Math.max(2, Math.floor((tall - 6) / lines))
+    // Each streamline runs at its own speed and phase, which is what makes
+    // the band read as moving water instead of as marching dashes.
+    var rate = live ? 3.4 : 1.1
+    var span = wide + 40
+    var head = ((t * rate + fl * 23) % span)
+    var fx2 = flowDir > 0 ? x0 - 20 + head : x1 + 20 - head
+    var len = live ? 16 : 9
+    ctx.globalAlpha = live ? 0.85 : 0.42
+    ctx.fillStyle = live ? pal.bubbleLit : pal.bubble
+    // Clipped to the zone by hand: a streamline that ran past the edge would
+    // claim corridor the current cannot actually reach.
+    var sx2 = Math.max(x0, Math.min(x1, fx2))
+    var ex2 = Math.max(x0, Math.min(x1, fx2 + flowDir * len))
+    if (ex2 !== sx2) ctx.fillRect(Math.min(sx2, ex2), fy2, Math.abs(ex2 - sx2), 1)
+    // An arrowhead on the leading end, so the direction survives a still.
+    var tip = flowDir > 0 ? ex2 : sx2
+    if (tip > x0 + 1 && tip < x1 - 1) {
+      ctx.fillRect(tip - (flowDir > 0 ? 2 : -1), fy2 - 1, 1, 1)
+      ctx.fillRect(tip - (flowDir > 0 ? 2 : -1), fy2 + 1, 1, 1)
+    }
+  }
+  ctx.globalAlpha = 1
+  // Bubbles caught in it, tumbling along faster than they rise.
+  ctx.fillStyle = pal.bubble
+  ctx.globalAlpha = live ? 0.7 : 0.3
+  for (var cb = 0; cb < 9; cb++) {
+    var cbx = x0 + (((t * (live ? 4.2 : 1.4)) + cb * 31) % Math.max(1, wide))
+    if (flowDir < 0) cbx = x1 - (cbx - x0)
+    ctx.fillRect(Math.round(cbx), Math.round(y0 + 2 + ((cb * 37) % Math.max(1, tall - 4))), 1, 1)
+  }
+  ctx.globalAlpha = 1
+}
+
+function drawHzVent(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, y1 = geo.y1, cx = geo.cx, wide = geo.wide,
+    tall = geo.tall, live = geo.live, t = geo.t, show = geo.show
+  // A split in the sea floor letting go of what is under it. Vertical, so it
+  // is the one thing in the biome going decisively up.
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0 + 1, y1 - 3, wide - 2, 3)                 // the fissure lip
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0 + 2, y1 - 4, wide - 4, 1)
+  if (show) {
+    // The plume: bubbles widening and fading as they climb, which is the
+    // same rule the divers' own exhaust follows so the biome stays coherent.
+    for (var vb = 0; vb < 16; vb++) {
+      var vlife = (((t * (live ? 2.6 : 1.0)) + vb * 19) % 100) / 100
+      var vx = cx + Math.sin(vlife * 5 + vb) * (2 + vlife * (wide / 2))
+      var vy = y1 - 4 - vlife * tall
+      if (vy < y0) continue
+      ctx.globalAlpha = (live ? 0.85 : 0.4) * (1 - vlife * 0.8)
+      ctx.fillStyle = live ? pal.bubbleLit : pal.bubble
+      var vsz = vlife > 0.6 ? 2 : 1
+      ctx.fillRect(Math.round(vx), Math.round(vy), vsz, vsz)
+    }
+    ctx.globalAlpha = 1
+  }
+}
+
+function drawHzSpores(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, cx = geo.cx, wide = geo.wide, tall = geo.tall,
+    live = geo.live, t = geo.t, show = geo.show, hot = geo.hot
+  // A pod that splits, and a drift of spores under it.
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(cx - 4, y0, 8, 4)
+  ctx.fillStyle = show ? hot : pal.rig
+  ctx.fillRect(cx - 5, y0 + 4, 10, 2)
+  if (show) {
+    ctx.fillStyle = hot
+    for (var sp2 = 0; sp2 < 14; sp2++) {
+      var sy3 = y0 + 6 + ((t + sp2 * 9) % Math.max(1, tall - 6))
+      var sx3 = x0 + ((sp2 * 5 + Math.floor(t / 6)) % Math.max(1, wide))
+      ctx.fillRect(sx3, sy3, live ? 2 : 1, live ? 2 : 1)
+    }
+  }
+}
+
+// --- ice cave -----------------------------------------------------------
+function drawHzIcicle(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, wide = geo.wide, tall = geo.tall,
+    live = geo.live, winding = geo.winding, t = geo.t, show = geo.show,
+    hot = geo.hot
+  // Hanging, until it isn't.
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0, y0, wide, 2)
+  var drop2 = live ? tall - 10 : (winding ? 2 : 0)
+  ctx.fillStyle = show ? hot : pal.rig
+  for (var ic = 0; ic < 3; ic++) {
+    var icx = x0 + 2 + ic * Math.max(3, Math.round((wide - 4) / 3))
+    hzTri(ctx, icx, y0 + 2 + drop2, 2, 8, 1)
+  }
+}
+
+function drawHzFrostjet(ctx, w, pal, h, geo) {
+  var C = geo.C, x0 = geo.x0, y0 = geo.y0, cx = geo.cx, tall = geo.tall,
+    live = geo.live, show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0, y0 + 1, 4, tall - 2)             // the nozzle housing
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0 + 4, y0 + 3, 3, 3)
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(x0 + 1, y0 + 2, 1, tall - 4)
+  if (show) {
+    // A cone of vapour, thickening as it goes.
+    ctx.fillStyle = hot
+    for (var fj = 0; fj < (live ? 12 * C : 6); fj++) {
+      var fh = Math.round(1 + fj * (live ? 0.18 : 0.1))
+      ctx.fillRect(cx + h.dir * fj, y0 + 4 - fh / 2, 1, fh + 1)
+    }
+  }
+}
+
+// --- spaceship ----------------------------------------------------------
+function drawHzAirlock(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, y1 = geo.y1, wide = geo.wide, tall = geo.tall,
+    live = geo.live, winding = geo.winding, show = geo.show, hot = geo.hot
+  // Floor plates that part, and everything above them goes.
+  var gap2 = live ? Math.round(wide / 2) - 2 : (winding ? 2 : 0)
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0, y1 - 4, Math.max(0, wide / 2 - gap2), 4)
+  ctx.fillRect(x0 + wide / 2 + gap2, y1 - 4, Math.max(0, wide / 2 - gap2), 4)
+  ctx.fillStyle = show ? hot : pal.warn
+  ctx.fillRect(x0 + 1, y1 - 5, wide - 2, 1)
+  if (live) {
+    ctx.fillStyle = pal.fire
+    ctx.globalAlpha = 0.5
+    ctx.fillRect(x0 + wide / 2 - gap2, y0, gap2 * 2, tall - 4)
+    ctx.globalAlpha = 1
+  }
+}
+
+// --- Factory ------------------------------------------------------------
+function drawHzStamper(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, y1 = geo.y1, cx = geo.cx, wide = geo.wide,
+    tall = geo.tall, live = geo.live, show = geo.show, hot = geo.hot
+  // A press on a ram. The head sits high while it winds and is driven to the
+  // floor of its zone when it fires, so the whole cycle is in one moving part.
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0 + 1, y0, wide - 2, 3)                   // the gantry
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(cx - 2, y0 + 3, 4, live ? tall - 9 : 6)    // the ram
+  var headY = live ? y1 - 6 : y0 + 9
+  ctx.fillRect(x0 + 2, headY, wide - 4, 6)                // the head
+  ctx.fillStyle = pal.rigDark
+  for (var sb = 0; sb < wide - 6; sb += 4)                // its bolts
+    ctx.fillRect(x0 + 3 + sb, headY + 2, 2, 2)
+  if (show) {
+    ctx.fillStyle = hot
+    ctx.fillRect(x0 + 2, live ? y1 - 1 : headY + 6, wide - 4, 1)
+  }
+}
+
+function drawHzFlywheel(ctx, w, pal, h, geo) {
+  var y0 = geo.y0, cx = geo.cx, wide = geo.wide, tall = geo.tall,
+    live = geo.live, winding = geo.winding, t = geo.t, hot = geo.hot
+  // A wheel that idles and then runs up. Dormant it turns slowly, live it
+  // blurs into a disc and throws its spokes out as a ring.
+  var fr = Math.min(wide, tall) / 2 - 1
+  var fcx = cx, fcy = y0 + tall / 2
+  var rate = live ? 0.42 : (winding ? 0.16 : 0.04)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(fcx - fr - 1, fcy - 1, fr * 2 + 2, 2)      // the shaft
+  ctx.fillStyle = pal.rig
+  for (var sp = 0; sp < 6; sp++) {
+    var sa = t * rate + sp * Math.PI / 3
+    ctx.fillRect(Math.round(fcx + Math.cos(sa) * fr) - 1,
+                 Math.round(fcy + Math.sin(sa) * fr) - 1, 2, 2)
+  }
+  ctx.fillStyle = live ? hot : pal.rigDark
+  ctx.fillRect(fcx - 2, fcy - 2, 4, 4)                    // the hub
+  if (live) {
+    ctx.globalAlpha = 0.4
+    ctx.fillStyle = hot
+    for (var rg = 0; rg < 10; rg++) {
+      var ra = t * rate * 1.6 + rg * Math.PI / 5
+      ctx.fillRect(Math.round(fcx + Math.cos(ra) * (fr + 3)) - 1,
+                   Math.round(fcy + Math.sin(ra) * (fr + 3)) - 1, 2, 2)
+    }
+    ctx.globalAlpha = 1
+  }
+}
+
+function drawHzSteamvent(ctx, w, pal, h, geo) {
+  var y1 = geo.y1, cx = geo.cx, tall = geo.tall, live = geo.live, t = geo.t,
+    show = geo.show, hot = geo.hot
+  // A floor pipe that lets go upward. Nothing to see between times except
+  // the cowl, which is the point: the danger is the column, not the fitting.
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(cx - 4, y1 - 4, 8, 4)                      // the cowl
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(cx - 3, y1 - 6, 6, 2)
+  if (show) {
+    // The column, widening as it rises and thinning as it loses pressure.
+    for (var jv = 0; jv < tall - 6; jv += 2) {
+      var lift = live ? 1 : 0.45
+      var wj = 2 + Math.round(jv * 0.22 * lift)
+      ctx.globalAlpha = (live ? 0.75 : 0.35) * (1 - jv / (tall - 6))
+      ctx.fillStyle = jv % 4 === 0 ? hot : pal.decorLit
+      ctx.fillRect(cx - wj / 2 + Math.sin((t * 0.12) + jv * 0.4) * 2,
+                   y1 - 7 - jv, wj, 2)
+    }
+    ctx.globalAlpha = 1
+  }
+}
+
+function drawHzSprinkler(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, wide = geo.wide, tall = geo.tall,
+    live = geo.live, t = geo.t, show = geo.show
+  // A pipe run with heads on it. Between times it is plumbing; live, it is
+  // the reason nobody keeps paper on their desk any more.
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0, y0 + 1, wide, 3)                       // the main
+  ctx.fillStyle = pal.rig
+  for (var sk = 0; sk < 4; sk++) {
+    var skx = x0 + 4 + Math.round(sk * (wide - 8) / 3)
+    ctx.fillRect(skx - 1, y0 + 4, 3, 3)                   // and its heads
+  }
+  if (show) {
+    ctx.fillStyle = live ? pal.poolLip : pal.decorLit
+    for (var sw2 = 0; sw2 < 4; sw2++) {
+      var swx = x0 + 4 + Math.round(sw2 * (wide - 8) / 3)
+      var reach = live ? tall - 8 : 6
+      for (var sd = 0; sd < reach; sd += 3) {
+        var spread = Math.round(sd * 0.35)
+        ctx.globalAlpha = live ? 0.8 - sd / (tall * 1.6) : 0.4
+        ctx.fillRect(swx - spread + ((t + sd * 3) % 5) - 2, y0 + 7 + sd, 1, 2)
+        ctx.fillRect(swx + spread - ((t + sd * 5) % 5) + 1, y0 + 7 + sd, 1, 2)
+      }
+    }
+    ctx.globalAlpha = 1
+  }
+}
+
+function drawHzPolisher(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y1 = geo.y1, wide = geo.wide, live = geo.live, t = geo.t,
+    seed = geo.seed, show = geo.show, hot = geo.hot
+  // A floor buffer nobody switched off, running its beat up and down the
+  // same six cells for as long as the building stands.
+  var run = (Math.sin(t * 0.035 + seed) * 0.5 + 0.5)
+  var pcx = Math.round(x0 + 6 + run * (wide - 12))
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(pcx - 5, y1 - 4, 10, 4)                    // the deck
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(pcx + 3, y1 - 12, 2, 9)                    // the handle
+  ctx.fillRect(pcx + 3, y1 - 13, 5, 2)
+  ctx.fillStyle = live ? hot : pal.steelShade
+  for (var pb = 0; pb < 5; pb++)                          // the pad, spinning
+    ctx.fillRect(pcx - 5 + ((pb * 3 + t) % 10), y1 - 1, 2, 1)
+  if (show) {
+    ctx.globalAlpha = 0.5
+    ctx.fillStyle = pal.decorLit
+    for (var pf = 0; pf < 4; pf++)
+      ctx.fillRect(pcx - 7 + pf * 4, y1 - 6 - ((t + pf * 7) % 5), 2, 1)
+    ctx.globalAlpha = 1
+  }
+}
+
+function drawHzShredder(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y1 = geo.y1, wide = geo.wide, live = geo.live, t = geo.t,
+    show = geo.show, hot = geo.hot
+  // A slot in the floor with a very good appetite. Dormant it is furniture;
+  // armed, the rollers turn and you can see how far down it goes.
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0 + 1, y1 - 5, wide - 2, 5)               // the hopper
+  ctx.fillStyle = pal.hatchMouth
+  ctx.fillRect(x0 + 3, y1 - 4, wide - 6, 3)               // the slot
+  if (show) {
+    ctx.fillStyle = hot
+    for (var sr = 0; sr < 6; sr++)
+      ctx.fillRect(x0 + 4 + ((sr * 4 + Math.floor(t * (live ? 0.8 : 0.3))) % (wide - 8)),
+                   y1 - 4, 2, 3)                          // the rollers
+    if (live) for (var st5 = 0; st5 < wide - 6; st5 += 4)
+      hzTri(ctx, x0 + 4 + st5, y1 - 5, 2, 3, -1)          // and the teeth
+  }
+}
+
+function drawHzServo(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, cx = geo.cx, wide = geo.wide, tall = geo.tall,
+    live = geo.live, winding = geo.winding, show = geo.show, hot = geo.hot
+  // An arm on a rail that swings down and sweeps.
+  var swing2 = live ? 1 : (winding ? 0.5 : 0)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0, y0, wide, 3)
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(cx - 2, y0 + 3, 4, Math.round(4 + swing2 * (tall - 8)))
+  ctx.fillStyle = show ? hot : pal.warn
+  var armY = y0 + 3 + Math.round(4 + swing2 * (tall - 8))
+  ctx.fillRect(cx - Math.round(wide / 2 * swing2) - 1, armY, Math.round(wide * swing2) + 2, 2)
+}
+
+function drawHzDefault(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, wide = geo.wide, tall = geo.tall,
+    show = geo.show, hot = geo.hot
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0, y0, wide, 4)
+  if (show) { ctx.fillStyle = hot; ctx.fillRect(x0, y0, wide, tall) }
+}
+
 function drawHazard(ctx, w, pal, h, opts) {
   h = h || w.hazard
   if (!h) return

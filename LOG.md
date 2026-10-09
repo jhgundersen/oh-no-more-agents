@@ -116,3 +116,28 @@ sparse for the specials built around them, or start on a new biome.
 **Deployed** 2026-10-09 after iteration 4 (version 48d1bacf). Headless
 Chromium on `dev:agent` first: page loads, no console errors, backdrop and
 motes visible.
+
+## 5 — 2026-10-09 · Crap: drawHazardKind split up
+
+**Why.** The worst CRAP score in the codebase by a factor of ten: one
+825-line switch, CC 279, score 17,093. Every new hazard grew it.
+
+**Changed.** Mechanically split (script, not by hand) into one function per
+kind — `drawHzGun` … `drawHzServo`, `drawHzDefault` — dispatched through the
+`HAZARD_DRAW` table. `drawHazardKind` keeps its signature and works out the
+shared frame (`geo`) once; each function declares only the parts it uses.
+New test `test/hazards.test.js`: every kind in `HAZARDS` has a drawing, and
+draws something in every phase on a real raster (44 tests).
+
+**Checked.** Golden comparison: every canvas call recorded for 44 kinds + the
+default × 4 phases × 6 tick values × 2 directions × 3 biomes, hashed before
+and after — identical. `npm run check` passes.
+
+**CRAP.** Worst hazard drawing now `drawHzShark` (CC 34, 83). The function
+over 17k is gone. Next worst real code: `drawAgentTrick` (CC 70, 1.5k),
+`drawAgent` (CC 119, 1.4k), `drawAgentHeightGear` (CC 46, 843) — same switch
+shape, same treatment works.
+
+**Next.** Back to the game: a new biome is the biggest thing not yet tried.
+Before that, check hazard density — specials built around danger rarely meet
+it (log 4).
