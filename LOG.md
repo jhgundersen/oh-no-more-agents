@@ -870,3 +870,5 @@ no change — the sheet script never passed the flag; caught by looking.
 
 **Next.** Deploy (35 + 36). Then gameplay: a mechanic for one of the older
 biomes that is still only a skin (Frost, Ruins, Jungle…).
+
+**Deployed** after 36 (name="build" content="989e8998"): hero tests, finer portraits. Browser check clean.
