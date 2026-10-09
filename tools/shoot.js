@@ -8,7 +8,7 @@
 //   node tools/shoot.js biomes               one of each biome, stacked
 //   node tools/shoot.js themes 8             one level in every theme
 //
-// Options: --seed N, --ticks N, --theme NAME, --scale N, --labels, --out DIR.
+// Options: --seed N, --ticks N, --theme NAME, --res N, --scale N, --labels, --out DIR.
 //
 // `--ticks` is how far the level is played before the frame is taken; the
 // default puts the colony out on the board and some of it in trouble. Every
@@ -39,7 +39,11 @@ const level = Number(positional[0] || 8)
 const seed = opt("seed") === undefined ? undefined : Number(opt("seed"))
 const ticks = Number(opt("ticks", 240))
 const theme = String(opt("theme", "tokyo-night"))
-const scale = Number(opt("scale", 2))
+// --res draws the way the page does (2) or the way the Omarchy panel does (1,
+// the default here so old shots stay comparable). --scale multiplies the
+// output on top, so `--res 2 --scale 1` is the same size as `--scale 2`.
+const res = Number(opt("res", 1))
+const scale = Number(opt("scale", 2 / res))
 const labels = opt("labels", false) === true
 const outDir = path.resolve(ROOT, String(opt("out", "shots")))
 
@@ -47,7 +51,7 @@ const S = load("Sim.js")
 const D = load("Draw.js")
 const P = load("Palette.js")
 
-const shot = o => frame(S, D, P, { level, seed, ticks, theme, labels, ...o })
+const shot = o => frame(S, D, P, { level, seed, ticks, theme, labels, res, ...o })
 
 function report(r, note) {
   console.log(`  ${path.relative(ROOT, r.file)}  ${r.width}x${r.height}${note ? "  " + note : ""}`)
@@ -71,7 +75,7 @@ if (cmd === "level") {
   const names = []
   for (let i = 0; i < S.BIOMES.length; i++) {
     const lv = i + 1
-    const { img, world } = frame(S, D, P, { level: lv, seed, ticks, theme, labels })
+    const { img, world } = frame(S, D, P, { level: lv, seed, ticks, theme, labels, res })
     images.push(img)
     names.push(`${lv} ${world.biome}`)
   }
@@ -80,7 +84,7 @@ if (cmd === "level") {
 } else if (cmd === "themes") {
   const images = []
   for (const name of Object.keys(THEMES)) {
-    images.push(frame(S, D, P, { level, seed, ticks, theme: name, labels }).img)
+    images.push(frame(S, D, P, { level, seed, ticks, theme: name, labels, res }).img)
   }
   report(writePNG(path.join(outDir, `themes-${level}.png`), stack(images), scale),
     Object.keys(THEMES).join(", "))

@@ -21,6 +21,9 @@
   // Panel.qml's numbers, not new ones.
   var SPEED_NAMES = ["Calm", "Steady", "Brisk"]
   var SPEED_INTERVALS = [45, 33, 22]
+  // Canvas pixels per art pixel (see clearLayer in Draw.js). The board's size
+  // on screen is unchanged; the art gets twice the resolution to be drawn in.
+  var RES = 2
   var DONE_HOLD = 110      // ticks to sit on a finished level before moving on
 
   var world = null
@@ -441,6 +444,7 @@
   function newLevel(n) {
     level = Math.max(1, n)
     world = generate(level, 0)
+    world.res = RES
     completionLine = ""
     lastTerrainVersion = 0
     rebuildPalette()
@@ -700,8 +704,8 @@
 
     var terrain = document.getElementById("terrain")
     var actors = document.getElementById("actors")
-    terrain.width = actors.width = WIDTH
-    terrain.height = actors.height = HEIGHT
+    terrain.width = actors.width = WIDTH * RES
+    terrain.height = actors.height = HEIGHT * RES
     terrainCtx = terrain.getContext("2d")
     actorCtx = actors.getContext("2d")
 

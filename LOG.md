@@ -393,3 +393,26 @@ the banner wants a browser check at the next deploy.) `sim play` unchanged.
 
 **Next.** The 82 condemned-as-stuck agents: find where they get stuck before
 deciding whether the answer is the recovery, the level, or a hero.
+
+## 15 — 2026-10-09 · Finer pixels, step 1: room to draw in
+
+**Why.** Standing priority from the owner: smaller pixels, more detail, the
+same retro look.
+
+**Changed.** `w.res` — canvas pixels per art pixel, set by the host, applied
+as one transform in `clearLayer` at the start of every pass. Everything in
+Draw.js stays in art pixels. The page (`web.js` `RES = 2`) makes its canvases
+800×496 and sets `world.res`; the board's size on screen is unchanged. The
+Omarchy panel sets nothing and gets 1. `tools/render.js` `frame` takes `res`;
+`npm run shot … --res 2` draws the way the page does. AGENTS.md says how to
+draw detail into it: half-pixel coordinates, silhouette readable at res 1.
+
+**Checked.** Every level of every biome plus 22/33/44/100, at three points in
+play, res 1 vs res 2 with `Math.random` pinned (particles and spawn phases
+use it — unpinned, res 1 is not even equal to itself): worst 12 differing
+art pixels of 99,200, all fractional-coordinate shapes now landing on a real
+half-pixel. Headless Chromium: same layout, same size, no errors.
+
+**Next.** Step 2: spend the resolution. Agents first — they are on screen
+most — then terrain edges, then hazards and effects. Review each at the
+page's res, full size.

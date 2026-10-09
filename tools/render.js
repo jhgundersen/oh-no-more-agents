@@ -245,12 +245,13 @@ export function writePNG(file, img, scale) {
 }
 
 // Generate a level, run it for a while, and draw one frame of it.
-export function frame(S, D, P, { level, seed, ticks, theme, labels }) {
+export function frame(S, D, P, { level, seed, ticks, theme, labels, res }) {
   const t = themeOf(theme)
   const w = S.generate(level, 0, seed === undefined ? level * 7919 + 13 : seed)
   for (let i = 0; i < (ticks === undefined ? 240 : ticks); i++) S.step(w)
   const pal = P.build(t.theme, level)
-  const img = canvas(w.k.COLS * w.k.CELL, w.k.ROWS * w.k.CELL, t.background)
+  w.res = res || 1
+  const img = canvas(w.k.COLS * w.k.CELL * w.res, w.k.ROWS * w.k.CELL * w.res, t.background)
   D.drawTerrain(img.ctx, w, pal)
   D.drawActors(img.ctx, w, pal, { labels: !!labels })
   return { img, world: w }

@@ -26,8 +26,17 @@ function materialShade(k, pal, m) {
 }
 
 // Avoid ctx.reset(): it is missing on older Safari and has left stale pixels on iOS.
+//
+// `w.res` is how many canvas pixels the host gives each art pixel. Everything
+// in this file is drawn in art pixels — the board is COLS×CELL wide whatever
+// the canvas is — and this transform, set at the top of every pass, is the
+// only place the two meet. A host that sets nothing (the Omarchy panel) gets
+// 1, which is the board as it always was. At 2 the same art comes out the
+// same size on screen, and anything drawn at a half-pixel lands on a real one:
+// that is the room finer detail is drawn into.
 function clearLayer(ctx, w) {
-  if (typeof ctx.setTransform === "function") ctx.setTransform(1, 0, 0, 1, 0, 0)
+  var res = w.res || 1
+  if (typeof ctx.setTransform === "function") ctx.setTransform(res, 0, 0, res, 0, 0)
   ctx.globalAlpha = 1
   ctx.clearRect(0, 0, w.k.COLS * w.k.CELL, w.k.ROWS * w.k.CELL)
 }

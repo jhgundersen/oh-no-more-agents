@@ -104,6 +104,13 @@ Production is `https://oh-no-more-agents.com`.
   inside the wall, and `chargeNear` stops a queue laying the whole toolbar into
   one obstacle (level 6 spent six miners and sixteen bombers on five walls that
   needed one charge each, and the colony died of its own rescue).
+- **Art pixels and canvas pixels are different things.** Draw.js works in art
+  pixels (the board is `COLS × CELL` = 400×248 of them); `w.res`, set by the
+  host, is canvas pixels per art pixel, applied once in `clearLayer`. The page
+  sets 2, the Omarchy panel sets nothing and gets 1. Detail finer than one art
+  pixel is drawn at half-pixel coordinates (0.5 steps) and only shows at
+  res 2 — keep the silhouette readable at res 1. `npm run shot ... --res 2`
+  renders the way the page does.
 - **Animated scenery cannot live in `drawDecor`.** That runs inside
   `drawTerrain`, which only repaints on `terrainVersion`. Use `drawMachines`,
   called from `drawActors` — the per-tick pass every host already calls.
