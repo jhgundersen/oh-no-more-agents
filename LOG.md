@@ -698,3 +698,5 @@ the dark hood; kept, it costs nothing. Every enemy the colony meets on dry
 land now has res-2 detail (divers and xenos still coarse).
 
 **Deployed** with 27 (below).
+
+**Deployed** after 28 (name="build" content="cd446c8c"): umbrellas, drone/operator/sniper detail. Browser check clean.
