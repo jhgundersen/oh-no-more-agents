@@ -112,3 +112,7 @@ clears the zone, resumes at rest). CRAP: `throttleHazard` 21, rest < 20.
 **Next.** Deploy (iterations 2–4 are all visible). Then: the hero only
 matters when it meets danger — consider whether hazards per level are too
 sparse for the specials built around them, or start on a new biome.
+
+**Deployed** 2026-10-09 after iteration 4 (version 48d1bacf). Headless
+Chromium on `dev:agent` first: page loads, no console errors, backdrop and
+motes visible.
