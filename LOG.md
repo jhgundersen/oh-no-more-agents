@@ -334,3 +334,28 @@ closing, shut). `sim play` identical (2886/3334).
 it the same way. Or a hero: nineteen, and the newest one turned out to be an
 enemy-pauser; something that helps with *falls* or *bombs* (the colony's own
 recovery killing it) would answer a real cause of death.
+
+## 13 — 2026-10-09 · Mechanic: the last blockers stand down
+
+**Why.** Before picking a hero to answer a cause of death, measured the
+causes over 440 runs (220 levels × 2 colonies): boom 31%, red team 27%,
+hazard 23%, drones 7%, splat 7%. Then tagged every bomb by what lit it:
+**116 "everyone left is a blocker"**, 82 condemned-as-stuck, 7 wall charges,
+1 nuke. The single commonest death on the board was an agent that had done
+its job, blown up so the level could end.
+
+**Changed.** `finishWorldStep`: when every agent still out is a blocker (or
+a camped sniper) and the whole colony has been released, `standDown` sends
+them home — state back to walk, counters cleared — once per level
+(`w.stoodDown`). If they end up all blockers again, `bombBlockers` (the old
+rule) ends it. If agents are still to come, the old rule applies unchanged.
+
+**Checked.** Causes, same 440 runs: lost 641 → 564, boom 201 → 111, home
+5864 → 5939. Wide sweep (200 × 6, page rules), on vs off: 97.0 / 88.1% home
+vs 96.8 / 86.9 — every biome up or level, no hangs. `sim play` 98 / 88 /
+45s (was 44s: they walk home). `inert`, `gravity`, `heights` pass.
+
+**Next.** Deploy (12 + 13). The 82 condemned stuck agents are the next
+biggest self-inflicted death; and a visible cue for the stand-down (a
+"STAND DOWN" banner like the events have) would let a viewer see why the
+blockers suddenly started walking.

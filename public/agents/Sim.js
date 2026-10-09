@@ -863,6 +863,7 @@ function generate(level, attempt, colonySeed) {
 
     timeLimit: LEVEL_LIMIT,
     nuking: false,
+    stoodDown: false, // the last blockers have been sent home once; see standDown
     nukeTimer: 0
   }
 
@@ -8055,17 +8056,41 @@ function stepFreedMission(w, m) {
     t.y = nextFloor
   }
 }
+// Everybody still out is holding a position, and there is nobody left to hold
+// it for. The old answer was the Lemmings one — blow them up so the level can
+// end — and it was the commonest single death on the board: 116 of 641 over
+// 440 runs, every one of them an agent that had done its job. Now they stand
+// down once and walk home. If they end up as nothing but blockers again, the
+// level really is over for them and the old rule applies.
+function standDown(w) {
+  w.stoodDown = true
+  for (var b = 0; b < w.agents.length; b++) {
+    var B = w.agents[b]
+    if (B.state !== "block" && B.state !== "camp") continue
+    B.state = "walk"
+    B.idle = 0
+    B.still = 0
+    B.timer = 0
+  }
+  w.lastEvent = "stand down"
+}
+
+function bombBlockers(w) {
+  for (var b = 0; b < w.agents.length; b++) {
+    var B2 = w.agents[b]
+    if (B2.state === "block" || B2.state === "camp") {
+      B2.state = "bomb"
+      B2.fuse = BOMB_FUSE
+    }
+  }
+}
+
 function finishWorldStep(w, active, blockers, moving) {
   for (var red = 0; red < w.enemies.length; red++) stepEnemy(w, w.enemies[red])
 
   if (active > 0 && active === blockers) {
-    for (var b = 0; b < w.agents.length; b++) {
-      var B2 = w.agents[b]
-      if (B2.state === "block" || B2.state === "camp") {
-        B2.state = "bomb"
-        B2.fuse = BOMB_FUSE
-      }
-    }
+    if (w.released >= w.toRelease && !w.stoodDown) standDown(w)
+    else bombBlockers(w)
   }
 
   stepEvents(w)
