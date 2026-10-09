@@ -114,7 +114,7 @@ var SKILL_LABELS = {
 // putting a new one anywhere but the end would re-skin every level above it.
 // Palette.js derives the same index with the same rule and must be kept in
 // step — see the note over poolTint there.
-var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench"]
+var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert"]
 
 // A small job on the route gives each biome a premise beyond merely reaching
 // the door. These are deliberately one mechanism with different casts: an
@@ -137,7 +137,11 @@ var MISSION_SPECS = {
   // being one rule with different casts. What changes is what "freed" means:
   // a chest that has been cracked open does not then wander off down the
   // corridor, so `still` holds it where it lies (see stepFreedMission).
-  "Trench":    { id: "hoard",     verb: "RAISE THE SUNKEN HOARD", kind: "treasure", count: 2, still: true }
+  "Trench":    { id: "hoard",     verb: "RAISE THE SUNKEN HOARD", kind: "treasure", count: 2, still: true },
+  // The animal mission with a different animal. A camel is the one thing in
+  // a desert worth more than water, and it is drawn as itself rather than as
+  // the Jungle's boar in a hotter colour.
+  "Desert":    { id: "caravan",   verb: "FREE THE CAMELS",       kind: "camel", count: 2 }
 }
 
 // ---------------------------------------------------------------------------
@@ -1674,6 +1678,43 @@ function biomeSkin(w, rng) {
         if (at(w, shx + sl, shy) !== STEEL) setCell(w, shx + sl, shy, ORE)
       }
     }
+
+  } else if (w.biome === "Desert") {
+    skinDesert(w, rng)
+  }
+}
+
+// Sandstone laid down by wind: long gentle bands that rise and fall across the
+// board like the dunes that made them, rather than the Trench's flat sediment.
+// DIRT is the sand, ORE the harder bands between (lighter: Palette pulls ORE
+// toward the foreground), and the odd ROCK outcrop is cap-rock that has not
+// worn away yet. The wave is one sine per band with its own phase, so no two
+// strata are parallel and the stack reads as cross-bedded, not striped.
+function skinDesert(w, rng) {
+  var x, y
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++)
+      if (at(w, x, y) !== STEEL) setCell(w, x, y, DIRT)
+
+  for (var bed = SKY + 3; bed < ROWS - 3; bed += irand(rng, 5, 8)) {
+    var amp = 1 + rng() * 2.5, len = 14 + rng() * 18, phase = rng() * 6.28
+    var thick = rng() < 0.3 ? 2 : 1
+    for (x = 3; x < COLS - 3; x++) {
+      var top = bed + Math.round(Math.sin(x / len + phase) * amp)
+      for (y = top; y < top + thick; y++) {
+        if (y < SKY || y >= ROWS - 2 || at(w, x, y) === STEEL) continue
+        setCell(w, x, y, ORE)
+      }
+    }
+  }
+
+  // Cap-rock: flat-topped lumps, wider than tall. A mesa in miniature.
+  for (var m = 0; m < 9; m++) {
+    var mx = irand(rng, 6, COLS - 14), my = irand(rng, SKY + 3, ROWS - 6)
+    var mw = irand(rng, 4, 9), mh = irand(rng, 2, 3)
+    for (y = my; y < my + mh; y++)
+      for (x = mx + (y - my); x < mx + mw - (y - my); x++)
+        if (at(w, x, y) !== STEEL) setCell(w, x, y, ROCK)
   }
 }
 
@@ -1695,6 +1736,10 @@ function placeDecor(w, rng, corridors) {
     // character on their own, and the general scatter was competing with them.
     floorRate = 0.07; ceilRate = 0.05; gap = 7
     floorKinds = ["spire", "spire", "clump"]
+  } else if (w.biome === "Desert") {
+    // Sparse, and almost nothing hangs: there is no damp for it to grow in.
+    floorRate = 0.11; ceilRate = 0.02; gap = 5
+    floorKinds = ["spire", "clump", "clump", "tuft"]
   } else if (w.biome === "Skyscraper") {
     // Nothing grows in an office. What is on the floor was put there, so the
     // general scatter is turned right down and the fittings below do the work.
@@ -2567,6 +2612,9 @@ var HAZARDS = [
   { id: "scarab",   name: "Legacy Daemon", mech: "watch", mount: "floor", reach: 10, charge: 18, fire: 20, rest: 58, w: 5, h: 3, only: ["Ruins"] },
   { id: "snowball", name: "Cold Cache", mech: "cycle", mount: "ceiling", reach: 0, charge: 28, fire: 24, rest: 62, w: 6, h: 5, only: ["Frost"] },
   { id: "molten",   name: "Memory Leak", mech: "cycle", mount: "ceiling", reach: 0, charge: 26, fire: 26, rest: 58, w: 5, h: 6, only: ["Foundry"] },
+  // Desert only. Strikes from behind, which in this file means: the tail goes
+  // over the back and lands in front of it.
+  { id: "scorpion", name: "Tail Call", mech: "watch", mount: "floor", reach: 9, charge: 22, fire: 14, rest: 56, w: 5, h: 3, only: ["Desert"] },
   { id: "snake",    name: "Python", mech: "watch", mount: "floor", reach: 9, charge: 20, fire: 16, rest: 60, w: 4, h: 3, only: ["Jungle"] },
   { id: "spores",   name: "Cloud Distribution", mech: "cycle", mount: "ceiling", reach: 0, charge: 30, fire: 28, rest: 60, w: 6, h: 6, only: ["Jungle"] },
   { id: "vinelock", name: "Root Access", mech: "plate", mount: "floor", reach: 3, charge: 14, fire: 24, rest: 50, w: 5, h: 4, only: ["Jungle"] },
@@ -4333,7 +4381,12 @@ var EVENTS = [
   // been an event that fired and did nothing.
   { id: "openplan", name: "Open Plan",        biome: "Skyscraper", mech: "collapse", at: "ceiling", span: 9, deep: 3 },
   { id: "firedrill",name: "Fire Drill",       biome: "Skyscraper", mech: "blackout", mult: 2, ticks: 400 },
-  { id: "refurb",   name: "Refactor",         biome: "Skyscraper", mech: "growth",   span: 13, high: 2 }
+  { id: "refurb",   name: "Refactor",         biome: "Skyscraper", mech: "growth",   span: 13, high: 2 },
+
+  // --- Desert ---
+  { id: "sandstorm",name: "Model Drift",      biome: "Desert", mech: "drift",    what: "sight", ticks: 460 },
+  { id: "dunes",    name: "Sandbox",          biome: "Desert", mech: "growth",   span: 14, high: 2 },
+  { id: "sinkhole", name: "Cache Miss",       biome: "Desert", mech: "collapse", at: "floor", span: 6, deep: 3 }
 ]
 
 function eventsFor(biome) {
@@ -7925,7 +7978,7 @@ function stepFreedMission(w, m) {
     var t = m.targets[i]
     if (!t.freed) continue
     t.anim++
-    var nx = t.x + t.dir * (m.kind === "animal" ? 0.09 : 0.065)
+    var nx = t.x + t.dir * (m.kind === "animal" || m.kind === "camel" ? 0.09 : 0.065)
     if (nx < t.roamMin || nx > t.roamMax) { t.dir = -t.dir; continue }
     var cx = Math.floor(nx)
     var oldFloor = Math.floor(t.y)

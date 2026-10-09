@@ -141,3 +141,39 @@ shape, same treatment works.
 **Next.** Back to the game: a new biome is the biggest thing not yet tried.
 Before that, check hazard density — specials built around danger rarely meet
 it (log 4).
+
+## 6 — 2026-10-09 · Biome: the Desert
+
+**Why.** Ten biomes, and none hot, dry and outdoors. Biggest unexplored axis.
+
+**Changed.** Eleventh biome, appended to `BIOMES` (so every level re-skins;
+Palette's modulus moved to 11 in the same commit, AGENTS.md updated).
+- Sim: `skinDesert` — cross-bedded sandstone (sine-waved ORE bands, each with
+  its own phase) and flat-topped cap-rock in ROCK. Sparse decor, almost no
+  hangings. Dry pit. Mission "FREE THE CAMELS" (new kind `camel`, two of
+  them, walk at animal pace). Hazard `scorpion` "Tail Call" (desert-only,
+  watch). Events: "Model Drift" sandstorm (sight), "Sandbox" dunes (growth),
+  "Cache Miss" sinkhole (floor collapse).
+- Draw: camel (one or two humps by variant, legs swing when freed) under an
+  awning on a stake; saguaro cacti; a temple-pylon exit with a sun disc;
+  backdrop with a low sun, two dune ranges and mesas; blowing sand; enemy
+  hatch "SANDBOX ESCAPE"; scorpion with the tail coming over to strike.
+- Palette: `SAND`, pulled hard (0.94) so it reads pale-dusty in every theme
+  and apart from Ruins red and Factory brass.
+
+**Checked.** Rendered in all five themes. `inert`, `gravity`, `heights` pass;
+no hangs. Wider sweep, 200 levels × 6 colonies, the page's three-attempt rule,
+with Desert vs with it spliced out of `BIOMES`: 96.4% cleared / 86.6% home vs
+97.5 / 87.7. Desert itself 89% home, mid-band; the other biomes move ±6 in
+both directions purely from level reassignment, which is the catalogue
+reshuffle, not the new code. `sim play` 97 / 86 / 45s.
+Tests: `test/missions.test.js` draws every mission held and freed. The Rate
+Limiter test was pinned to a level the reshuffle moved — now sets the
+encounter up directly.
+
+**Found.** In the new catalogue the Rate Limiter met **no** fixture in 39
+runs of its levels (6 enemy throttles). Log 4's worry is real.
+
+**Next.** Make the Rate Limiter matter: it should go *to* the danger the
+colony is queuing at, not just react if it happens past one. Then deploy
+(Desert + hazard refactor + that fix).

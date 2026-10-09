@@ -187,7 +187,8 @@ function backRng(w) {
 var BACKDROPS = {
   "Cavern": backCavern, "Ruins": backRuins, "Frost": backFrost,
   "Foundry": backFoundry, "Jungle": backJungle, "Ice Cave": backIceCave,
-  "Spaceship": backSpaceship, "Factory": backFactory, "Trench": backTrench
+  "Spaceship": backSpaceship, "Factory": backFactory, "Trench": backTrench,
+  "Desert": backDesert
 }
 
 function drawBackdrop(ctx, w, pal) {
@@ -360,6 +361,34 @@ function backFactory(ctx, r, b, pal) {
   }
 }
 
+function backDesert(ctx, r, b, pal) {
+  // The one biome with a sun. It hangs in the far wall rather than in the
+  // band of sky, because that band is the special's card on most levels; low,
+  // so the dunes cut across the bottom of it.
+  var sx = 40 + Math.floor(r() * (b.w - 80)), sy = b.y + 34
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(sx - 12, sy - 16, 24, 32); ctx.fillRect(sx - 16, sy - 12, 32, 24)
+  ctx.fillRect(sx - 14, sy - 14, 28, 28)
+  // Two ranges of dunes, the near one darker; then a mesa or two standing
+  // out of them with the flat top and straight sides that sand cannot make.
+  var ridges = [{ base: 60, amp: 10, len: 37, col: pal.backDim }, { base: 95, amp: 14, len: 23, col: pal.back }]
+  for (var ri = 0; ri < ridges.length; ri++) {
+    var rg = ridges[ri], ph = r() * 6.28
+    ctx.fillStyle = rg.col
+    for (var x = b.x; x < b.x + b.w; x += 2) {
+      var top = b.y + rg.base - Math.round(Math.sin(x / rg.len + ph) * rg.amp + Math.sin(x / 9 + ph) * 2)
+      ctx.fillRect(x, top, 2, b.y + b.h - top)
+    }
+  }
+  for (var m = 0; m < 2; m++) {
+    var mx = Math.floor(r() * (b.w - 60)), mw = 30 + Math.floor(r() * 30), mt = b.y + 30 + Math.floor(r() * 30)
+    ctx.fillStyle = pal.back
+    ctx.fillRect(mx, mt, mw, b.y + b.h - mt)
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(mx - 2, mt, mw + 4, 2)
+  }
+}
+
 function backTrench(ctx, r, b, pal) {
   // Rock spires rising out of the deep; the sea is laid over them afterwards.
   for (var i = 0; i < 9; i++) {
@@ -510,6 +539,7 @@ function drawDecor(ctx, w, pal) {
     var foundry = w.biome === "Foundry" || w.biome === "Spaceship"
                || w.biome === "Factory" || w.biome === "Skyscraper"
     var jungle = w.biome === "Jungle"
+    var desert = w.biome === "Desert"
 
     if (d.kind === "spire") {
       var h = 3 + d.size * 3
@@ -526,6 +556,14 @@ function drawDecor(ctx, w, pal) {
         ctx.fillRect(px + 3, py + C - h, 2, 2)
         ctx.fillStyle = pal.decorLit
         ctx.fillRect(px, py + C - h, 3, 1)
+      } else if (desert) {
+        // A saguaro: a trunk and two arms that turn up, offset so it is never
+        // a cross. The silhouette is the whole of it.
+        ctx.fillRect(px + 2, py + C - h - 2, 3, h + 2)
+        ctx.fillRect(px - 1, py + C - h + 2, 3, 2); ctx.fillRect(px - 1, py + C - h - 1, 2, 3)
+        ctx.fillRect(px + 5, py + C - h + 4, 2, 2); ctx.fillRect(px + 6, py + C - h + 1, 2, 4)
+        ctx.fillStyle = pal.decorLit
+        ctx.fillRect(px + 3, py + C - h - 2, 1, h)
       } else if (jungle) {
         // A trunk with a canopy on top, which is the one silhouette that says
         // jungle without needing colour to do the work.
@@ -671,6 +709,20 @@ function drawExitBack(ctx, w, pal) {
     ctx.fillRect(x + ww, y - 2, 4, hh + 2)
     ctx.fillStyle = pal.rigDark
     for (var rv = 0; rv < ww + 8; rv += 5) ctx.fillRect(x - 4 + rv, y - 5, 2, 2)
+    break
+
+  case "Desert":
+    // A temple pylon: jambs that lean in as they rise, a heavy lintel, and a
+    // sun disc over the door.
+    for (var py2 = 0; py2 < hh + 4; py2++) {
+      var lean = Math.floor((hh + 4 - py2) / 6)
+      ctx.fillRect(x - 6 + (lean > 2 ? 2 : lean), y - 4 + py2, 4, 1)
+      ctx.fillRect(x + ww + 2 - (lean > 2 ? 2 : lean), y - 4 + py2, 4, 1)
+    }
+    ctx.fillRect(x - 6, y - 7, ww + 12, 3)
+    ctx.fillStyle = pal.decorLit
+    ctx.fillRect(cx3 - 2, y - 11, 5, 4); ctx.fillRect(cx3 - 3, y - 10, 7, 2)
+    ctx.fillRect(cx3 - 8, y - 9, 4, 1); ctx.fillRect(cx3 + 5, y - 9, 4, 1)
     break
 
   case "Jungle":
@@ -850,7 +902,10 @@ var AMBIENCE = {
   "Ice Cave": [{ n: 22, vx: 0, vy: 0, sway: 0, size: 1, col: "dust", alpha: 0.9, blink: 0.12 },
                { n: 24, vx: 0.03, vy: 0.08, sway: 2, size: 1, col: "dust", alpha: 0.30 }],
   "Spaceship":[{ n: 16, vx: 0.05, vy: 0.01, sway: 2, size: 1, col: "dust", alpha: 0.25 }],
-  "Factory":  [{ n: 24, vx: 0.08, vy: -0.03, sway: 3, size: 1, col: "dust", alpha: 0.22 }]
+  "Factory":  [{ n: 24, vx: 0.08, vy: -0.03, sway: 3, size: 1, col: "dust", alpha: 0.22 }],
+  // Sand on the wind: fast, nearly flat, and a few grains big enough to see.
+  "Desert":   [{ n: 50, vx: 0.55, vy: 0.03, sway: 1, size: 1, col: "decorLit", alpha: 0.45 },
+               { n: 8, vx: 0.40, vy: 0.05, sway: 2, size: 2, col: "decor", alpha: 0.35 }]
 }
 
 function drawAmbience(ctx, w, pal) {
@@ -1414,6 +1469,18 @@ function drawMission(ctx, w, pal) {
 
 function drawMissionContainer(ctx, kind, x, y, pal) {
   if (kind === "alien") return // a hunt, not a prisoner exchange
+  if (kind === "camel") {
+    // Hobbled to a stake, under a scrap of awning. Not a cage: a camel is
+    // tied up, and what freeing it means is somebody undoing a knot.
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(x - 9, y - 16, 2, 16); ctx.fillRect(x + 8, y - 13, 2, 13)
+    ctx.fillStyle = pal.decorLit
+    ctx.fillRect(x - 10, y - 17, 21, 2)
+    for (var aw = 0; aw < 21; aw += 4) ctx.fillRect(x - 10 + aw, y - 15, 2, 1 + (aw % 8 ? 1 : 0))
+    ctx.fillStyle = pal.decor
+    ctx.fillRect(x - 7, y - 3, 6, 1)
+    return
+  }
   if (kind === "treasure") {
     // Not a container at all: the silt and coral that grew over the wreck
     // while it lay here. It is what the divers are digging the chest out of,
@@ -1499,6 +1566,8 @@ function drawMissionSubject(ctx, kind, t, x, y, pal) {
   var dir = t.dir || 1
   var bob = t.freed && Math.floor(t.anim / 5) % 2 ? 1 : 0
   y -= bob
+
+  if (kind === "camel") { drawCamel(ctx, t, x, y, dir, pal); return }
 
   if (kind === "treasure") {
     // A strongbox with banded iron and a hasp. Shut it is a dark box with a
@@ -2150,6 +2219,27 @@ var SPECIAL_FACTS = {
   ]
 }
 
+// One hump or two (variant), a long neck carried forward, and legs that
+// swing in pairs once it is walking. The hump is what makes it a camel at
+// eight pixels tall; everything else is a horse.
+function drawCamel(ctx, t, x, y, dir, pal) {
+  var tan = "#c99a5b", dark = "#8a6436"
+  var stride = t.freed ? Math.floor(t.anim / 4) % 2 : 0
+  ctx.fillStyle = tan
+  ctx.fillRect(x - 5, y - 8, 10, 4)                            // body
+  if ((t.variant || 0) % 2) {
+    ctx.fillRect(x - 4, y - 10, 3, 2); ctx.fillRect(x + 1, y - 10, 3, 2)
+  } else ctx.fillRect(x - 3, y - 11, 5, 3)                     // hump
+  ctx.fillRect(x + dir * 5 - (dir < 0 ? 2 : 0), y - 12, 2, 6)   // neck
+  ctx.fillRect(x + dir * 6 - (dir < 0 ? 3 : 0), y - 13, 3, 2)   // head
+  ctx.fillStyle = dark
+  ctx.fillRect(x - 4, y - 4, 1, 4 - stride); ctx.fillRect(x - 2, y - 4, 1, 3 + stride)
+  ctx.fillRect(x + 2, y - 4, 1, 4 - stride); ctx.fillRect(x + 4, y - 4, 1, 3 + stride)
+  ctx.fillRect(x - dir * 6 - (dir > 0 ? 0 : 1), y - 8, 1, 3)    // tail
+  ctx.fillStyle = "#1c1c22"
+  ctx.fillRect(x + dir * 7 - (dir < 0 ? 1 : 0), y - 13, 1, 1)   // eye
+}
+
 // A bust of the special, drawn at double size so it reads as a portrait rather
 // than as an agent that wandered into the sky.
 function drawBust(ctx, x, y, sp, pal, submerged) {
@@ -2267,6 +2357,7 @@ function drawEnemyHatch(ctx, w, pal, opts) {
   else if (biome === "Ice Cave") { wall = pal.ore; roof = pal.rockShade; edge = pal.oreEdge; sign = "COLD STORAGE" }
   else if (biome === "Spaceship") { wall = pal.steel; roof = pal.rigDark; edge = pal.steelEdge; sign = "REMOTE OFFICE" }
   else if (biome === "Skyscraper") { wall = pal.dirt; roof = pal.rig; edge = pal.dirtEdge; sign = "MIDDLE MANAGEMENT" }
+  else if (biome === "Desert") { wall = pal.ore; roof = pal.dirtShade; edge = pal.oreEdge; sign = "SANDBOX ESCAPE" }
 
   // Barely larger than an agent: a sentry booth, not a second landmark. Its
   // materials come from the current theme; biome identity is in the roofline.
@@ -2422,7 +2513,7 @@ var HAZARD_DRAW = {
   brazier: drawHzBrazier, fence: drawHzFence, echobat: drawHzEchobat,
   scarab: drawHzScarab, snowball: drawHzSnowball, molten: drawHzMolten,
   vinelock: drawHzVinelock, blackice: drawHzBlackice, packetloss: drawHzPacketloss,
-  snake: drawHzSnake, shark: drawHzShark, current: drawHzCurrent, vent: drawHzVent,
+  snake: drawHzSnake, scorpion: drawHzScorpion, shark: drawHzShark, current: drawHzCurrent, vent: drawHzVent,
   spores: drawHzSpores, icicle: drawHzIcicle, frostjet: drawHzFrostjet,
   airlock: drawHzAirlock, stamper: drawHzStamper, flywheel: drawHzFlywheel,
   steamvent: drawHzSteamvent, sprinkler: drawHzSprinkler, polisher: drawHzPolisher,
@@ -2894,6 +2985,40 @@ function drawHzPacketloss(ctx, w, pal, h, geo) {
 }
 
 // --- jungle -------------------------------------------------------------
+// A scorpion: a flat body on the floor, claws out in front, and the tail
+// carried over the back in a hook. Winding up, the tail draws back and the
+// sting shivers; firing, it comes over and down in front of the claws — the
+// strike happens at the far end from where the tail starts, which is the joke
+// in the name.
+function drawHzScorpion(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, x1 = geo.x1, y1 = geo.y1, live = geo.live, winding = geo.winding,
+    show = geo.show, hot = geo.hot, t = geo.t
+  var sdir = h.zx0 % 2 === 0 ? 1 : -1
+  var front = sdir > 0 ? x1 - 3 : x0 + 3
+  var back = sdir > 0 ? x0 + 4 : x1 - 4
+  var floorY = y1 - 1
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(Math.min(front, back), floorY - 3, Math.abs(front - back), 3)    // body
+  for (var lg = 0; lg < 4; lg++) ctx.fillRect(Math.min(front, back) + 1 + lg * 3, floorY - 1, 1, 2)
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(front + sdir * 1 - (sdir < 0 ? 2 : 0), floorY - 4, 3, 2)        // claws
+  ctx.fillRect(front + sdir * 1 - (sdir < 0 ? 2 : 0), floorY - 1, 3, 1)
+  // The tail: four segments rising from the back. Each phase pushes the hook
+  // further forward over the body.
+  var reach = live ? 1 : (winding ? -0.3 + ((Math.floor(t / 2) % 2) * 0.1) : 0.35)
+  ctx.fillStyle = pal.rigDark
+  var tx = back, ty = floorY - 3
+  for (var sg = 0; sg < 4; sg++) {
+    tx += sdir * Math.round(reach * 2) + (sg < 2 ? -sdir : 0)
+    ty -= sg < 3 ? 2 : -1
+    ctx.fillRect(tx, ty, 2, 2)
+  }
+  var stx = live ? front + sdir * 3 : tx + sdir * 2
+  var sty = live ? floorY - 4 : ty + 1
+  ctx.fillStyle = show ? hot : pal.warn
+  ctx.fillRect(stx - (sdir < 0 ? 1 : 0), sty, 2, 2)                           // sting
+}
+
 function drawHzSnake(ctx, w, pal, h, geo) {
   var x0 = geo.x0, x1 = geo.x1, y1 = geo.y1, wide = geo.wide, live = geo.live,
     winding = geo.winding, show = geo.show, hot = geo.hot

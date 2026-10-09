@@ -20,17 +20,29 @@ test("backoff falls in four drops with growing waits", () => {
 })
 
 test("Rate Limiter freezes a fixture and the colony stops treating it as lethal", () => {
-  // Level 17 with this colony meets a hazard at about tick 300.
-  const w = S.generate(17, 0, 134636)
-  let t = 0
-  while (!w.hazards.some(h => h.throttled > 0) && t++ < 2000) S.step(w)
-  const h = w.hazards.find(h => h.throttled > 0)
-  assert.ok(h, "the special throttled something")
-  const phase = h.phase
+  // Set the encounter up directly rather than hunting the catalogue for one:
+  // the catalogue reshuffles whenever a biome or special is added.
+  let w = null
+  for (let lv = 1; lv <= 60 && !w; lv++) {
+    const cand = S.generate(lv, 0, lv * 7919 + 13)
+    if (cand.hazards.some(h => h.kind !== "current")) w = cand
+  }
+  const h = w.hazards.find(h => h.kind !== "current")
   const mid = S.hazardMid(h)
+  h.known = true
+  const ag = { special: "ratelimit", x: mid.x - 6, y: Math.floor(mid.y), dir: 1, state: "walk", cool: 0, gone: false }
+  // Line of sight is the special's own business; here the point is what a
+  // throttle does, so stand it where it can see.
+  for (let y = Math.floor(mid.y) - 3; y <= Math.floor(mid.y); y++)
+    for (let x = Math.floor(ag.x); x <= Math.round(mid.x); x++)
+      if (S.solid(w, x, y) && !(x >= h.zx0 && x <= h.zx1 && y >= h.zy0 && y <= h.zy1)) w.terrain[y * S.COLS + x] = S.EMPTY
+  assert.ok(S.throttleHazard(w, ag), "throttled")
+  assert.equal(h.throttled, S.THROTTLE_TICKS)
+  assert.ok(ag.cool > 0, "spent its cooldown")
   assert.equal(S.hazardZoneAt(w, Math.round(mid.x), Math.round(mid.y), true), null)
-  for (let i = 0; i < 50; i++) S.step(w)
+  const phase = h.phase
+  for (let i = 0; i < 50; i++) S.stepOneHazard(w, h)
   assert.equal(h.phase, phase, "frozen in place")
-  while (h.throttled > 0) S.step(w)
+  while (h.throttled > 0) S.stepOneHazard(w, h)
   assert.equal(h.phase, "rest", "comes back through rest, not mid-shot")
 })
