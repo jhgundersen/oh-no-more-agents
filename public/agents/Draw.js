@@ -3819,6 +3819,238 @@ function drawThrottleSignal(ctx, pal, ag, ox, oy, dir, robe) {
   ctx.globalAlpha = 1
 }
 
+// One pose per state, for the torso and limbs; drawAgent draws the head, the
+// collar and everything laid over them. A state not listed walks.
+var AGENT_POSES = {
+  climb: drawPoseClimb, fall: drawPoseFall, height: drawPoseFall, rappel: drawPoseRappel,
+  webup: drawPoseWebUp, slide: drawPoseSlide, stunned: drawPoseStunned, block: drawPoseBlock,
+  build: drawPoseBuild, bash: drawPoseBash, dig: drawPoseDig
+}
+
+function drawAgentBody(ctx, w, pal, ag, ox, oy, dir, robe, skin, st, bodyDrop, walkLead, squash) {
+  if (st === "height" && ag.heightMode === "cushion") return drawPoseTucked(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop)
+  if (w.submerged && (st === "walk" || st === "swim")) return drawPoseSwim(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop)
+  if (st === "saved") return drawAgentHome(ctx, w, pal, ag, ox, oy, dir, robe, skin)
+  var pose = AGENT_POSES[st]
+  if (pose) return pose(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop)
+  drawAgentWalk(ctx, ag, ox, oy, dir, robe, skin, walkLead, squash, bodyDrop, st === "walk")
+}
+
+function drawPoseClimb(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  blit(ctx, ox, oy, dir, 2, 7, 4, 6)
+  blit(ctx, ox, oy, dir, 5, 3 + (ag.anim >> 3) % 2, 2, 4)   // hand over hand
+  blit(ctx, ox, oy, dir, 3, 13, 3, 3)
+}
+
+function drawPoseTucked(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  // Tucked. The spread-eagle fall pose was being rotated a full turn, and a
+  // spread figure spinning is a diagram of a rotation; a tucked one is a
+  // salto. Arms in, knees up, nothing sticking out to catch the eye on the
+  // way round.
+  blit(ctx, ox, oy, dir, 1, 7, 6, 5)              // torso, folded
+  blit(ctx, ox, oy, dir, 0, 8, 2, 3)              // arms wrapped in
+  blit(ctx, ox, oy, dir, 6, 8, 2, 3)
+  blit(ctx, ox, oy, dir, 2, 11, 5, 4)             // knees drawn up
+}
+
+function drawPoseFall(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  blit(ctx, ox, oy, dir, 1, 7, 6, 6)
+  blit(ctx, ox, oy, dir, 0, 4, 2, 4)
+  blit(ctx, ox, oy, dir, 6, 4, 2, 4)
+  blit(ctx, ox, oy, dir, 2, 13, 2, 3)
+  blit(ctx, ox, oy, dir, 4, 13, 2, 3)
+}
+
+function drawPoseRappel(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  blit(ctx, ox, oy, dir, 1, 7, 6, 6)
+  blit(ctx, ox, oy, dir, 3, 3, 2, 5)             // hand on the web
+  blit(ctx, ox, oy, dir, 1, 12, 3, 2)            // feet braced apart
+  blit(ctx, ox, oy, dir, 5, 13, 3, 2)
+}
+
+function drawPoseWebUp(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  blit(ctx, ox, oy, dir, 1, 7, 6, 6)
+  blit(ctx, ox, oy, dir, 3, 2, 2, 7)              // both hands on the web
+  blit(ctx, ox, oy, dir, 0, 12, 3, 2)             // legs trailing in the swing
+  blit(ctx, ox, oy, dir, 5, 14, 3, 2)
+}
+
+function drawPoseSlide(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  // Coat, tucked knees and one hand forward: a compact two-cell silhouette
+  // that straightens immediately when the roof clears.
+  blit(ctx, ox, oy, dir, 1, 8 + bodyDrop, 7, 4)
+  blit(ctx, ox, oy, dir, 7, 9 + bodyDrop, 3, 2)
+  blit(ctx, ox, oy, dir, 0, 12 + bodyDrop, 4, 2)
+}
+
+function drawPoseStunned(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  blit(ctx, ox, oy, dir, 0, 9, 7, 4)
+  blit(ctx, ox, oy, dir, 1, 13, 3, 2)
+  blit(ctx, ox, oy, dir, 5, 13, 3, 2)
+}
+
+function drawPoseBlock(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  blit(ctx, ox, oy, dir, 1, 7, 6, 6)
+  blit(ctx, ox, oy, dir, -2, 8, 3, 2)
+  blit(ctx, ox, oy, dir, 7, 8, 3, 2)
+  blit(ctx, ox, oy, dir, 1, 13, 6, 3)
+}
+
+function drawPoseBuild(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  blit(ctx, ox, oy, dir, 1, 7, 6, 6)
+  blit(ctx, ox, oy, dir, 6, 8, 3, 2)
+  ctx.fillStyle = pal.dirtEdge
+  blit(ctx, ox, oy, dir, 8, 9, 5, 2)                        // the brick
+  ctx.fillStyle = robe
+  blit(ctx, ox, oy, dir, 2, 13, 2, 3)
+  blit(ctx, ox, oy, dir, 4, 13, 2, 3)
+}
+
+function drawPoseBash(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  blit(ctx, ox, oy, dir, 1, 7 + bodyDrop, 6, 6)
+  var swing = (ag.timer % 6) < 3 ? 0 : 2
+  blit(ctx, ox, oy, dir, 6, 8 + swing, 4, 2)
+  blit(ctx, ox, oy, dir, 2, 13, 2, 3)
+  blit(ctx, ox, oy, dir, 4, 13, 2, 3)
+}
+
+function drawPoseDig(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  blit(ctx, ox, oy, dir, 1, 7 + bodyDrop, 6, 5)
+  blit(ctx, ox, oy, dir, 0, 11 + bodyDrop, 2, 3)
+  blit(ctx, ox, oy, dir, 6, 11 + bodyDrop, 2, 3)
+  blit(ctx, ox, oy, dir, 2, 14, 4, 2)
+}
+
+function drawPoseSwim(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  // Finning, not striding. Two changes carry it and neither needs a new
+  // sprite: the body rides the kick, and the legs beat together instead of
+  // alternating. A walk cycle is two legs taking turns to hold the ground; a
+  // swimmer's legs never touch anything, so they move as a pair and the
+  // whole body rises and falls on the same clock.
+  var kick = Math.sin(ag.anim * 0.22)
+  var lift = Math.round(kick * 1.2)
+  var rising = st === "swim" && ag.swimUp
+
+  // Trim. Head-up kicking for the surface, head-down on the way down, level
+  // otherwise — standing a walker upright in water was most of what made the
+  // first version read as somebody strolling along the sea bed.
+  var lean = rising ? -1 : (st === "swim" ? 1 : 0)
+
+  blit(ctx, ox, oy, dir, 1, 7 + lift, 6, 6)                  // torso
+  // The trailing arm, swept back along the body. One arm, not two: the far
+  // one is behind the torso at this angle and drawing it makes a starfish.
+  blit(ctx, ox, oy, dir, 0, 8 + lift + lean, 2, 2)
+  // Both legs together, beating. One pixel between them — enough to say two
+  // legs, not enough to read as a stride.
+  blit(ctx, ox, oy, dir, 2, 13 + lift, 2, 3)
+  blit(ctx, ox, oy, dir, 4, 13 + lift + (kick > 0 ? 1 : -1), 2, 3)
+  // Fins: the one piece of kit that exists only down here, and what makes
+  // the silhouette unmistakable at this size.
+  ctx.fillStyle = pal.suit || robe
+  blit(ctx, ox, oy, dir, 0, 15 + lift + (kick > 0 ? 1 : 0), 3, 1)
+  blit(ctx, ox, oy, dir, 0, 16 + lift + (kick > 0 ? 0 : 1), 3, 1)
+  ctx.fillStyle = robe
+}
+
+// The umbrella, drawn behind nothing and above everything.
+function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
+  if (!(ag.floater && st === "fall" && ag.fall > 2)) return
+  // It breathes. A canopy that holds one shape all the way down reads as a
+  // prop being carried; one that flexes against the air reads as the thing
+  // actually holding somebody up. The centre lifts as the tips drop and back
+  // again, which is what a canopy taking a load does, and the phase is off
+  // the agent's own id so a sky full of them is not one animation repeated.
+  var puff = Math.sin(w.ticks * 0.13 + ag.id * 1.7)
+  var flex = puff > 0.3 ? 1 : (puff < -0.3 ? -1 : 0)
+
+  // Whose umbrella it is. Keyed off the agent's id so it never changes hand
+  // to hand mid-descent, and offset by the colony seed so the same id is not
+  // handed the same umbrella every playthrough — the same trick the colony
+  // itself uses, and it costs no draw from the trait stream to do it here.
+  var brolly = pal.umbrellas
+    ? pal.umbrellas[(ag.id + (w.colonySeed || 0)) % pal.umbrellas.length]
+    : pal.umbrella
+
+  if ((w.res || 1) >= 2) drawUmbrellaFine(ctx, pal, ox, oy, flex, brolly)
+  else {
+
+  ctx.fillStyle = pal.umbrellaStem
+  blit(ctx, ox, oy, 1, 4, -6, 1, 7)                    // one-pixel shaft
+  blit(ctx, ox, oy, 1, 3, -7 - flex, 3, 1)             // the spreader under it
+
+  // Only the centre flexes. Moving the tips the other way as well pulled
+  // them clean off the canopy and left three separate marks in the air.
+  ctx.fillStyle = brolly
+  blit(ctx, ox, oy, 1, -1, -9 - flex, 11, 2)           // canopy
+  blit(ctx, ox, oy, 1, -2, -7, 2, 2)                   // tips, staying put
+  blit(ctx, ox, oy, 1, 9, -7, 2, 2)
+
+  ctx.fillStyle = pal.umbrellaRim
+  blit(ctx, ox, oy, 1, -1, -10 - flex, 11, 1)          // the lit edge
+  blit(ctx, ox, oy, 1, -2, -8, 2, 1)
+  blit(ctx, ox, oy, 1, 9, -8, 2, 1)
+  }
+}
+
+function drawShieldPlate(ctx, pal, ag, ox, oy, dir, robe, hair, skin, C) {
+  if (!(ag.shieldFor > 0)) return
+  var plateX = dir > 0 ? ox + SPRITE_W + 1 : ox - 4
+  var tired = ag.shieldHeld > 260
+  ctx.fillStyle = hair
+  ctx.fillRect(plateX, oy + 1, 3, SPRITE_PX - 2)
+  ctx.fillStyle = robe
+  ctx.fillRect(plateX + (dir > 0 ? 0 : 2), oy + 2, 1, SPRITE_PX - 4)
+  // Boss in the middle, and an arm behind it.
+  ctx.fillStyle = hair
+  ctx.fillRect(plateX - dir * 1, oy + 7, 2, 3)
+  ctx.fillStyle = skin
+  ctx.fillRect(dir > 0 ? ox + SPRITE_W - 1 : ox - 1, oy + 8, 2, 2)
+
+  // The cover itself, faint, along the ground behind it.
+  ctx.globalAlpha = tired ? 0.10 : 0.20
+  ctx.fillStyle = hair
+  ctx.fillRect(dir > 0 ? ox - 4 * C : ox + SPRITE_W, oy + SPRITE_PX - 1, 4 * C, 2)
+  ctx.globalAlpha = 1
+
+  // Arms giving out: the plate starts to shake before it comes down, so a
+  // drop in cover is something you can see coming rather than something that
+  // simply happens to whoever was behind it.
+  if (tired && (ag.anim >> 1) % 2 === 0) {
+    ctx.fillStyle = pal.warn
+    ctx.fillRect(plateX, oy + 1 + ((ag.anim >> 2) % 3), 3, 1)
+  }
+}
+
+function drawShieldSpark(ctx, pal, ag, ox, oy, dir, hair) {
+  if (!(ag.blockFor > 0)) return
+  var sparkX = dir > 0 ? ox + SPRITE_W + 3 : ox - 6
+  ctx.globalAlpha = Math.min(1, ag.blockFor / 6)
+  ctx.fillStyle = pal.fireHot
+  ctx.fillRect(sparkX, oy + 6, 4, 4)
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(sparkX + 1, oy + 7, 2, 2)
+  ctx.fillStyle = hair
+  for (var shard = 0; shard < 3; shard++)
+    ctx.fillRect(sparkX + dir * (3 + shard * 3), oy + 3 + shard * 4 - (10 - ag.blockFor), 2, 1)
+  ctx.globalAlpha = 1
+}
+
+function drawCampShot(ctx, w, pal, ag, ox, oy, dir, st, C) {
+  if (!(st === "camp" && ag.shotFor > 0 && ag.special)) return
+  var csp = w.specialSpec
+  ctx.globalAlpha = Math.min(1, ag.shotFor / 6)
+  ctx.fillStyle = csp ? csp.hair : pal.fireHot
+  var sx0 = ox + (dir > 0 ? SPRITE_W : 0)
+  var sy0 = oy + 9
+  var ex0 = ag.shotTo * C
+  var ey0 = ag.shotY * C
+  var steps2 = Math.max(1, Math.round(Math.abs(ex0 - sx0) / 3))
+  for (var q2 = 0; q2 <= steps2; q2++)
+    ctx.fillRect(Math.round(sx0 + (ex0 - sx0) * q2 / steps2),
+                 Math.round(sy0 + (ey0 - sy0) * q2 / steps2), 2, 1)
+  ctx.globalAlpha = 1
+}
+
 // Walking. The torso stretches down to the hips whatever the bob, so the
 // legs stay planted while the chest rises and falls above them.
 function drawAgentWalk(ctx, ag, ox, oy, dir, robe, skin, walkLead, squash, bodyDrop, walking) {
@@ -5192,93 +5424,19 @@ function drawAgent(ctx, w, pal, ag, opts) {
                    Math.round(webHandY + (webAnchorY - webHandY) * ws / webSteps), 1, 1)
   }
 
-  // --- umbrella, drawn behind nothing and above everything --------------
-  if (ag.floater && st === "fall" && ag.fall > 2) {
-    // It breathes. A canopy that holds one shape all the way down reads as a
-    // prop being carried; one that flexes against the air reads as the thing
-    // actually holding somebody up. The centre lifts as the tips drop and back
-    // again, which is what a canopy taking a load does, and the phase is off
-    // the agent's own id so a sky full of them is not one animation repeated.
-    var puff = Math.sin(w.ticks * 0.13 + ag.id * 1.7)
-    var flex = puff > 0.3 ? 1 : (puff < -0.3 ? -1 : 0)
-
-    // Whose umbrella it is. Keyed off the agent's id so it never changes hand
-    // to hand mid-descent, and offset by the colony seed so the same id is not
-    // handed the same umbrella every playthrough — the same trick the colony
-    // itself uses, and it costs no draw from the trait stream to do it here.
-    var brolly = pal.umbrellas
-      ? pal.umbrellas[(ag.id + (w.colonySeed || 0)) % pal.umbrellas.length]
-      : pal.umbrella
-
-    if ((w.res || 1) >= 2) drawUmbrellaFine(ctx, pal, ox, oy, flex, brolly)
-    else {
-
-    ctx.fillStyle = pal.umbrellaStem
-    blit(ctx, ox, oy, 1, 4, -6, 1, 7)                    // one-pixel shaft
-    blit(ctx, ox, oy, 1, 3, -7 - flex, 3, 1)             // the spreader under it
-
-    // Only the centre flexes. Moving the tips the other way as well pulled
-    // them clean off the canopy and left three separate marks in the air.
-    ctx.fillStyle = brolly
-    blit(ctx, ox, oy, 1, -1, -9 - flex, 11, 2)           // canopy
-    blit(ctx, ox, oy, 1, -2, -7, 2, 2)                   // tips, staying put
-    blit(ctx, ox, oy, 1, 9, -7, 2, 2)
-
-    ctx.fillStyle = pal.umbrellaRim
-    blit(ctx, ox, oy, 1, -1, -10 - flex, 11, 1)          // the lit edge
-    blit(ctx, ox, oy, 1, -2, -8, 2, 1)
-    blit(ctx, ox, oy, 1, 9, -8, 2, 1)
-    }
-  }
+  drawUmbrella(ctx, w, pal, ag, ox, oy, st)
 
   // Ada Blocker's plate. Drawn in front of the body on the side it is facing,
   // tall enough to cover an agent standing behind it, with the lee it protects
   // marked by a faint bar along the floor — otherwise the one thing the shield
   // does for everybody else is invisible, and looks like an agent carrying a
   // door for its own reasons.
-  if (ag.shieldFor > 0) {
-    var plateX = dir > 0 ? ox + SPRITE_W + 1 : ox - 4
-    var tired = ag.shieldHeld > 260
-    ctx.fillStyle = hair
-    ctx.fillRect(plateX, oy + 1, 3, SPRITE_PX - 2)
-    ctx.fillStyle = robe
-    ctx.fillRect(plateX + (dir > 0 ? 0 : 2), oy + 2, 1, SPRITE_PX - 4)
-    // Boss in the middle, and an arm behind it.
-    ctx.fillStyle = hair
-    ctx.fillRect(plateX - dir * 1, oy + 7, 2, 3)
-    ctx.fillStyle = skin
-    ctx.fillRect(dir > 0 ? ox + SPRITE_W - 1 : ox - 1, oy + 8, 2, 2)
-
-    // The cover itself, faint, along the ground behind it.
-    ctx.globalAlpha = tired ? 0.10 : 0.20
-    ctx.fillStyle = hair
-    ctx.fillRect(dir > 0 ? ox - 4 * C : ox + SPRITE_W, oy + SPRITE_PX - 1, 4 * C, 2)
-    ctx.globalAlpha = 1
-
-    // Arms giving out: the plate starts to shake before it comes down, so a
-    // drop in cover is something you can see coming rather than something that
-    // simply happens to whoever was behind it.
-    if (tired && (ag.anim >> 1) % 2 === 0) {
-      ctx.fillStyle = pal.warn
-      ctx.fillRect(plateX, oy + 1 + ((ag.anim >> 2) % 3), 3, 1)
-    }
-  }
+  drawShieldPlate(ctx, pal, ag, ox, oy, dir, robe, hair, skin, w.k.CELL)
 
   // Something stopped on the plate: a hard spark at the point of impact, and
   // three shards coming off it. This is the only feedback that the shield did
   // anything at all, so it is deliberately louder than the plate itself.
-  if (ag.blockFor > 0) {
-    var sparkX = dir > 0 ? ox + SPRITE_W + 3 : ox - 6
-    ctx.globalAlpha = Math.min(1, ag.blockFor / 6)
-    ctx.fillStyle = pal.fireHot
-    ctx.fillRect(sparkX, oy + 6, 4, 4)
-    ctx.fillStyle = "#ffffff"
-    ctx.fillRect(sparkX + 1, oy + 7, 2, 2)
-    ctx.fillStyle = hair
-    for (var shard = 0; shard < 3; shard++)
-      ctx.fillRect(sparkX + dir * (3 + shard * 3), oy + 3 + shard * 4 - (10 - ag.blockFor), 2, 1)
-    ctx.globalAlpha = 1
-  }
+  drawShieldSpark(ctx, pal, ag, ox, oy, dir, hair)
 
   // The trick: a flash of whatever it is doing, thrown out in front. Each act
   // gets its own shape for the same reason each danger does — a special you
@@ -5287,20 +5445,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   if (ag.throttleFor > 0) drawThrottleSignal(ctx, pal, ag, ox, oy, dir, robe)
   drawReleaseRing(ctx, pal, ag, ox, oy, w.ticks)
   if (ag.netFor > 0) drawNetThrow(ctx, w, ag, ox, oy, dir, hair)
-  if (st === "camp" && ag.shotFor > 0 && ag.special) {
-    var csp = w.specialSpec
-    ctx.globalAlpha = Math.min(1, ag.shotFor / 6)
-    ctx.fillStyle = csp ? csp.hair : pal.fireHot
-    var sx0 = ox + (dir > 0 ? SPRITE_W : 0)
-    var sy0 = oy + 9
-    var ex0 = ag.shotTo * C
-    var ey0 = ag.shotY * C
-    var steps2 = Math.max(1, Math.round(Math.abs(ex0 - sx0) / 3))
-    for (var q2 = 0; q2 <= steps2; q2++)
-      ctx.fillRect(Math.round(sx0 + (ex0 - sx0) * q2 / steps2),
-                   Math.round(sy0 + (ey0 - sy0) * q2 / steps2), 2, 1)
-    ctx.globalAlpha = 1
-  }
+  drawCampShot(ctx, w, pal, ag, ox, oy, dir, st, w.k.CELL)
 
   // No special borrows the colony's umbrella. At a lethal height each carries
   // a device with its own silhouette; the movement is deliberately readable
@@ -5397,116 +5542,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   ctx.fillStyle = robe
   // (the shoulder line is laid over the torso once it is drawn, below)
 
-  if (st === "climb") {
-    blit(ctx, ox, oy, dir, 2, 7, 4, 6)
-    blit(ctx, ox, oy, dir, 5, 3 + (ag.anim >> 3) % 2, 2, 4)   // hand over hand
-    blit(ctx, ox, oy, dir, 3, 13, 3, 3)
-
-  } else if (st === "height" && ag.heightMode === "cushion") {
-    // Tucked. The spread-eagle fall pose was being rotated a full turn, and a
-    // spread figure spinning is a diagram of a rotation; a tucked one is a
-    // salto. Arms in, knees up, nothing sticking out to catch the eye on the
-    // way round.
-    blit(ctx, ox, oy, dir, 1, 7, 6, 5)              // torso, folded
-    blit(ctx, ox, oy, dir, 0, 8, 2, 3)              // arms wrapped in
-    blit(ctx, ox, oy, dir, 6, 8, 2, 3)
-    blit(ctx, ox, oy, dir, 2, 11, 5, 4)             // knees drawn up
-
-  } else if (st === "fall" || st === "height") {
-    blit(ctx, ox, oy, dir, 1, 7, 6, 6)
-    blit(ctx, ox, oy, dir, 0, 4, 2, 4)
-    blit(ctx, ox, oy, dir, 6, 4, 2, 4)
-    blit(ctx, ox, oy, dir, 2, 13, 2, 3)
-    blit(ctx, ox, oy, dir, 4, 13, 2, 3)
-
-  } else if (st === "rappel") {
-    blit(ctx, ox, oy, dir, 1, 7, 6, 6)
-    blit(ctx, ox, oy, dir, 3, 3, 2, 5)             // hand on the web
-    blit(ctx, ox, oy, dir, 1, 12, 3, 2)            // feet braced apart
-    blit(ctx, ox, oy, dir, 5, 13, 3, 2)
-
-  } else if (st === "webup") {
-    blit(ctx, ox, oy, dir, 1, 7, 6, 6)
-    blit(ctx, ox, oy, dir, 3, 2, 2, 7)              // both hands on the web
-    blit(ctx, ox, oy, dir, 0, 12, 3, 2)             // legs trailing in the swing
-    blit(ctx, ox, oy, dir, 5, 14, 3, 2)
-
-  } else if (st === "slide") {
-    // Coat, tucked knees and one hand forward: a compact two-cell silhouette
-    // that straightens immediately when the roof clears.
-    blit(ctx, ox, oy, dir, 1, 8 + bodyDrop, 7, 4)
-    blit(ctx, ox, oy, dir, 7, 9 + bodyDrop, 3, 2)
-    blit(ctx, ox, oy, dir, 0, 12 + bodyDrop, 4, 2)
-
-  } else if (st === "stunned") {
-    blit(ctx, ox, oy, dir, 0, 9, 7, 4)
-    blit(ctx, ox, oy, dir, 1, 13, 3, 2)
-    blit(ctx, ox, oy, dir, 5, 13, 3, 2)
-
-  } else if (st === "block") {
-    blit(ctx, ox, oy, dir, 1, 7, 6, 6)
-    blit(ctx, ox, oy, dir, -2, 8, 3, 2)
-    blit(ctx, ox, oy, dir, 7, 8, 3, 2)
-    blit(ctx, ox, oy, dir, 1, 13, 6, 3)
-
-  } else if (st === "build") {
-    blit(ctx, ox, oy, dir, 1, 7, 6, 6)
-    blit(ctx, ox, oy, dir, 6, 8, 3, 2)
-    ctx.fillStyle = pal.dirtEdge
-    blit(ctx, ox, oy, dir, 8, 9, 5, 2)                        // the brick
-    ctx.fillStyle = robe
-    blit(ctx, ox, oy, dir, 2, 13, 2, 3)
-    blit(ctx, ox, oy, dir, 4, 13, 2, 3)
-
-  } else if (st === "bash") {
-    blit(ctx, ox, oy, dir, 1, 7 + bodyDrop, 6, 6)
-    var swing = (ag.timer % 6) < 3 ? 0 : 2
-    blit(ctx, ox, oy, dir, 6, 8 + swing, 4, 2)
-    blit(ctx, ox, oy, dir, 2, 13, 2, 3)
-    blit(ctx, ox, oy, dir, 4, 13, 2, 3)
-
-  } else if (st === "dig") {
-    blit(ctx, ox, oy, dir, 1, 7 + bodyDrop, 6, 5)
-    blit(ctx, ox, oy, dir, 0, 11 + bodyDrop, 2, 3)
-    blit(ctx, ox, oy, dir, 6, 11 + bodyDrop, 2, 3)
-    blit(ctx, ox, oy, dir, 2, 14, 4, 2)
-
-  } else if (w.submerged && (st === "walk" || st === "swim")) {
-    // Finning, not striding. Two changes carry it and neither needs a new
-    // sprite: the body rides the kick, and the legs beat together instead of
-    // alternating. A walk cycle is two legs taking turns to hold the ground; a
-    // swimmer's legs never touch anything, so they move as a pair and the
-    // whole body rises and falls on the same clock.
-    var kick = Math.sin(ag.anim * 0.22)
-    var lift = Math.round(kick * 1.2)
-    var rising = st === "swim" && ag.swimUp
-
-    // Trim. Head-up kicking for the surface, head-down on the way down, level
-    // otherwise — standing a walker upright in water was most of what made the
-    // first version read as somebody strolling along the sea bed.
-    var lean = rising ? -1 : (st === "swim" ? 1 : 0)
-
-    blit(ctx, ox, oy, dir, 1, 7 + lift, 6, 6)                  // torso
-    // The trailing arm, swept back along the body. One arm, not two: the far
-    // one is behind the torso at this angle and drawing it makes a starfish.
-    blit(ctx, ox, oy, dir, 0, 8 + lift + lean, 2, 2)
-    // Both legs together, beating. One pixel between them — enough to say two
-    // legs, not enough to read as a stride.
-    blit(ctx, ox, oy, dir, 2, 13 + lift, 2, 3)
-    blit(ctx, ox, oy, dir, 4, 13 + lift + (kick > 0 ? 1 : -1), 2, 3)
-    // Fins: the one piece of kit that exists only down here, and what makes
-    // the silhouette unmistakable at this size.
-    ctx.fillStyle = pal.suit || robe
-    blit(ctx, ox, oy, dir, 0, 15 + lift + (kick > 0 ? 1 : 0), 3, 1)
-    blit(ctx, ox, oy, dir, 0, 16 + lift + (kick > 0 ? 0 : 1), 3, 1)
-    ctx.fillStyle = robe
-
-  } else if (st === "saved") {
-    drawAgentHome(ctx, w, pal, ag, ox, oy, dir, robe, skin)
-
-  } else {
-    drawAgentWalk(ctx, ag, ox, oy, dir, robe, skin, walkLead, squash, bodyDrop, st === "walk")
-  }
+  drawAgentBody(ctx, w, pal, ag, ox, oy, dir, robe, skin, st, bodyDrop, walkLead, squash)
 
   // --- bomber countdown --------------------------------------------------
   if (st === "bomb") {

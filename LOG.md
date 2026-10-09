@@ -700,3 +700,27 @@ land now has res-2 detail (divers and xenos still coarse).
 **Deployed** with 27 (below).
 
 **Deployed** after 28 (name="build" content="cd446c8c"): umbrellas, drone/operator/sniper detail. Browser check clean.
+
+## 29 — 2026-10-09 · Crap: drawAgent split and covered
+
+**Why.** The worst real code: `drawAgent`, CC 129, CRAP 1,065 — and the
+finer-pixel work had been adding to it.
+
+**Changed.** By script, verified by golden: the 13-branch torso-and-limbs
+chain became `AGENT_POSES` (one `drawPose…` per state, `drawAgentBody`
+dispatching, with tucked/swim/home/walk as its special cases); the umbrella,
+Ada Blocker's plate and spark, and Beam Search's shot line moved out into
+`drawUmbrella`, `drawShieldPlate`, `drawShieldSpark`, `drawCampShot`.
+Golden: every canvas call for 20 states × 2 facings × 2 variants × every
+special and none × res 1/2 × dry/submerged (84 combinations, all distinct),
+hashed before and after — identical.
+
+**Tests.** `test/agents.test.js`: the agent in every state with every overlay
+(plate, spark, throttle signal, net, wounds, infection, a collapse copy), as
+each special, dry and wet, at both res — nothing throws, every pose draws.
+
+**CRAP.** `drawAgent` 1,065 → 81 (CC 81, coverage 61% → 98%). Functions
+over 30: 57 → 55 of 485. Worst real code now `startSpecialAscent` (355) and
+`specialTraverse` (316), both barely covered.
+
+**Next.** Something new to look at: a twelfth biome, or a hero. Deploy after.
