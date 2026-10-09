@@ -3185,6 +3185,28 @@ function hazardStrike(w, h) {
   }
 }
 
+// The way out of a winding-up danger this agent is standing in, or 0: the
+// nearer edge first, the far one if the near side is a wall or a drop. Used
+// by the inside-the-zone branch of stepWalk.
+function fleeHazard(w, ag) {
+  var ax = Math.floor(ag.x), footY = Math.floor(ag.y)
+  for (var i = 0; i < w.hazards.length; i++) {
+    var h = w.hazards[i]
+    if (h.wrecked || h.throttled > 0 || h.phase !== "charge") continue
+    if (!h.known && !hazardPerceptive(ag)) continue
+    if (!hazardCovers(w, h, ax, footY)) continue
+    var near = ax - h.zx0 <= h.zx1 - ax ? -1 : 1
+    if (fleeOpen(w, near > 0 ? h.zx1 + 1 : h.zx0 - 1, footY)) return near
+    if (fleeOpen(w, near > 0 ? h.zx0 - 1 : h.zx1 + 1, footY)) return -near
+    return 0
+  }
+  return 0
+}
+
+function fleeOpen(w, x, footY) {
+  return solid(w, x, footY + 1) && !solid(w, x, footY) && !solid(w, x, footY - 1)
+}
+
 function hazardCovers(w, h, ax, footY) {
   var hspec = hazardSpec(h.kind)
   // The sniper's dangerous ground is its current sight line.
@@ -4788,7 +4810,12 @@ function stepWalk(w, ag) {
       var lipBack = inside.dir > 0 ? hmid - 1 : hmid + 1
       var lipOn = inside.dir > 0 ? hmid + hspec.reach + 1 : hmid - hspec.reach - 1
       var out = Math.abs(lipOn - ag.x) < Math.abs(lipBack - ag.x) ? lipOn : lipBack
-      var away = out > ag.x ? 1 : -1
+      // Unless that side is a wall or a drop. The lips above are measured from
+      // the fixture's reach, which means nothing for a plate; on level 96 it
+      // sent a queue on a grinder at a chasm toward the edge, the edge rule
+      // turned them back, and they paced mid-plate through the wind-up until
+      // eight died at once (log 25). fleeHazard picks a side that is open.
+      var away = fleeHazard(w, ag) || (out > ag.x ? 1 : -1)
       if (ag.dir !== away) { ag.dir = away; ag.turns++ }
       var outX = ag.x + ag.dir * walkStep(ag, w)
       return advanceWalk(w, ag, outX, Math.floor(outX), footY)

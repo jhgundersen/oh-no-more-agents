@@ -638,3 +638,28 @@ placement rule is not tried again blind. `sim play` unchanged.
 plate wind up under it should scatter, not stand) — bigger, and worth its
 own iteration. Or something visible for a while: animals/alien/treasure at
 the finer res.
+
+## 26 — 2026-10-09 · Getting off a plate that is winding up
+
+**Why.** Log 25: the placement fix moved deaths around; the real problem was
+behaviour on the spot.
+
+**Found.** Traced level 96's grinder through its wind-up: agents land on the
+plate from the shaft above and are told to leave by the "already inside its
+reach" branch of `stepWalk` — which picks a side from the fixture's `reach`
+and facing. For a floor plate that number means nothing; it pointed at the
+chasm lip, the edge rule turned them back, and they paced mid-plate until it
+fired. (A first attempt added a separate flee rule ahead of the branch: no
+effect at all, because the branch overrode it every tick.)
+
+**Changed.** `fleeHazard`: the nearer edge of the zone if the cell beyond it
+can be stood on, else the far one, else nothing — used by that branch before
+its old reach-based guess. One rule, not two.
+
+**Checked.** `sim hazards`: kills 406 → 206 over 759 placements (0.53 →
+0.27), grinder 49 → 30. Wide sweep on vs off: 97.7 / 90.13% vs 97.0 /
+88.84%, every biome up or level, no hangs. Causes: hazards 23% → 16% of
+deaths; red team is now 35%. `sim play` 99 / 90 / 46s (AGENTS.md baselines
+updated); `inert`, `gravity`, `heights` pass. CRAP 13.7 / 3.
+
+**Next.** Red team is the biggest killer now. Deploy first.

@@ -557,11 +557,14 @@ npm run sim spread    # the same level played by several different colonies
 npm run sim hazards   # kills per placement for every fixture kind
 ```
 
-`hazards` averages about 0.5. A kind far above it is usually one level where
+`hazards` averages about 0.27. A kind far above it is usually one level where
 it landed on a spot the queue cannot leave — a lip, or in front of a wall —
 not a bad spec; read that level before touching the numbers. Keeping fixtures
 off such spots in `placeHazard` was tried and measured: it removed a fifth of
-all hazards and left kills per placement where they were.
+all hazards and left kills per placement where they were. What fixed it was
+behaviour: an agent inside a known zone while it winds up leaves by an open
+side (`fleeHazard`), where the old rule picked a side from the fixture's
+reach, walked a plate's queue at a lip, and the edge rule walked it back.
 
 Every one pins the colony seed, so the numbers are repeatable and comparable
 with the baselines below. A run that varies between invocations means something
@@ -574,7 +577,7 @@ so `cleared` is measured against `CLEAR_SHARE`, a fixed fraction of the colony
 defined in `simcheck.js`.
 
 Baselines, 200 levels (as of the eleven-biome catalogue, October 2026):
-**98% of levels cleared, 89% of agents home, 46s per attempt, no hangs.**
+**99% of levels cleared, 90% of agents home, 46s per attempt, no hangs.**
 Earlier figures below are from the ten-biome catalogue and are kept as they
 were measured. Per biome nothing is an outlier — 95–100% cleared and 77–93%
 home across all ten, with the Trench at 100/92 and the Skyscraper at 95/77. On
