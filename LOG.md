@@ -35,3 +35,28 @@ commands score high only because nothing tests the tester — ignore those.
 it — there is no depth. A back wall / parallax layer per biome, drawn behind
 terrain, would lift every level at once. Then split `drawHazardKind` (one
 function per hazard kind) when next touching hazards.
+
+## 2 — 2026-10-09 · Graphics: a far wall behind every biome
+
+**Why.** Every board was terrain on a flat colour; nothing said "place".
+
+**Changed.** `drawBackdrop` in `Draw.js`, called from `drawTerrain` before
+the earth, with one small function per biome in `BACKDROPS`: cave pillars and
+strata, ruined colonnade with arches, a mountain ridge (Frost), girders and
+chains (Foundry), trunks and foliage (Jungle), crystals (Ice Cave), hull ribs
+and portholes with stars (Spaceship), brick and gridded windows (Factory), rock
+spires and kelp (Trench). Skyscraper already has its skyline and is left alone.
+Three new palette shades `backDim/back/backLit` sit between the sky and
+`dirtShade`. Props are placed with `backSpot`, which looks for open air — the
+first pass put them at fixed heights and most landed behind solid earth.
+
+**Checked.** Rendered every biome and level 7 in all five themes: the wall is
+visible but darker than any walkable ground, agents read as before. Draw-only;
+static, terrain layer, seeded from the level. New functions all CRAP < 10.
+The Omarchy plugin copy now drifts (`npm run sync:check`); not synced — the
+sync is the user's call.
+
+**Next.** Animation: the backdrop is static. Cheap, stateless ambient motion
+on the actor pass (drawMachines) — dust motes in caves, falling leaves in the
+Jungle, snow in Frost, sparks in the Foundry — as pure functions of `w.ticks`
+like the Trench's fish.

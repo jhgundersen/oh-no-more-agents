@@ -86,6 +86,8 @@ function drawTerrain(ctx, w, pal) {
     }
   }
 
+  drawBackdrop(ctx, w, pal)
+
   // Batch horizontal material runs instead of drawing thousands of cells.
   for (var y = 0; y < rows; y++) {
     var x = 0
@@ -163,6 +165,217 @@ function drawTerrain(ctx, w, pal) {
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
   drawSea(ctx, w, pal)
+}
+
+// ---------------------------------------------------------------------------
+// Backdrop
+// ---------------------------------------------------------------------------
+//
+// The far wall of the place, drawn behind the terrain so the corridors read as
+// carved out of something rather than floating on a flat colour. Three shades
+// only (pal.backDim/back/backLit), all darker than any ground the colony can
+// stand on: the backdrop is depth, never a surface. It is static, so it lives
+// on the terrain layer and costs nothing per tick; it is seeded from the level
+// like the stars and the skyline, so a level always has the same wall behind
+// it. One small function per biome — a new biome adds a row to BACKDROPS.
+
+function backRng(w) {
+  var s = (w.level * 2654435761 + 977) % 2147483647
+  return function () { s = (s * 1103515245 + 12345) % 2147483648; return (s >> 8) / 8388608 }
+}
+
+var BACKDROPS = {
+  "Cavern": backCavern, "Ruins": backRuins, "Frost": backFrost,
+  "Foundry": backFoundry, "Jungle": backJungle, "Ice Cave": backIceCave,
+  "Spaceship": backSpaceship, "Factory": backFactory, "Trench": backTrench
+}
+
+function drawBackdrop(ctx, w, pal) {
+  var fn = BACKDROPS[w.biome]
+  if (!fn) return
+  var top = w.k.SKY * w.k.CELL
+  fn(ctx, backRng(w), { x: 0, y: top, w: w.k.COLS * w.k.CELL, h: w.k.ROWS * w.k.CELL - top, world: w }, pal)
+}
+
+// A pixel position in open air, so a prop is hung where it can be seen rather
+// than behind the earth. Most of the board is fill; the corridors are where a
+// player's eye is, and a backdrop that only shows in the gaps between them is
+// a backdrop nobody sees.
+function backSpot(r, b) {
+  var w = b.world, C = w.k.CELL
+  for (var tries = 0; tries < 40; tries++) {
+    var x = Math.floor(r() * b.w), y = b.y + Math.floor(r() * b.h)
+    if (w.terrain[Math.floor(y / C) * w.k.COLS + Math.floor(x / C)] === w.k.EMPTY) return { x: x, y: y }
+  }
+  return { x: Math.floor(r() * b.w), y: b.y + Math.floor(r() * b.h) }
+}
+
+// A wobbling column of rock: a pillar for a cave, a trunk for a jungle.
+function backColumn(ctx, r, x, top, bot, wid, colour) {
+  ctx.fillStyle = colour
+  for (var y = top; y < bot; y += 3) {
+    var dx = Math.floor(r() * 3) - 1
+    ctx.fillRect(x + dx, y, wid, 3)
+  }
+}
+
+// A ragged horizontal band, the strata a long way back.
+function backBand(ctx, r, b, y, thick, colour) {
+  ctx.fillStyle = colour
+  for (var x = b.x; x < b.x + b.w; x += 4) {
+    var t = thick + Math.floor(r() * 3) - 1
+    ctx.fillRect(x, y - Math.floor(t / 2), 4, t)
+  }
+}
+
+function backCavern(ctx, r, b, pal) {
+  for (var i = 0; i < 4; i++) backBand(ctx, r, b, b.y + 20 + i * 52 + Math.floor(r() * 16), 3 + Math.floor(r() * 4), pal.backDim)
+  for (var c = 0; c < 7; c++) {
+    var x = Math.floor(r() * b.w)
+    var wid = 6 + Math.floor(r() * 10)
+    backColumn(ctx, r, x, b.y, b.y + b.h, wid, pal.back)
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(x, b.y, 1, b.h)
+  }
+}
+
+function backRuins(ctx, r, b, pal) {
+  var span = 44 + Math.floor(r() * 12)
+  for (var x = b.x + Math.floor(r() * span); x < b.x + b.w; x += span) {
+    var broken = r() < 0.35
+    var top = b.y + 14 + (broken ? 30 + Math.floor(r() * 80) : 0)
+    ctx.fillStyle = pal.back
+    ctx.fillRect(x, top, 7, b.y + b.h - top)
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(x - 2, top, 11, 3)
+    ctx.fillRect(x + 1, top + 3, 1, b.y + b.h - top - 3)
+    if (broken || x + span >= b.x + b.w) continue
+    // The arch to the next column, stepped like the rest of the pixel art.
+    ctx.fillStyle = pal.backDim
+    for (var s = 0; s < 6; s++) ctx.fillRect(x + 7 + s * 2, b.y + 14 + s, span - 7 - s * 4, 2)
+  }
+}
+
+function backFrost(ctx, r, b, pal) {
+  // A ridge of peaks far off, the one biome that is outdoors.
+  var x = b.x, h = 30
+  while (x < b.x + b.w) {
+    h = Math.max(10, Math.min(70, h + Math.floor(r() * 13) - 6))
+    ctx.fillStyle = pal.back
+    ctx.fillRect(x, b.y + 70 - h, 3, b.h)
+    ctx.fillStyle = pal.backLit
+    if (h > 40) ctx.fillRect(x, b.y + 70 - h, 3, 2)
+    x += 3
+  }
+  backBand(ctx, r, b, b.y + 120, 4, pal.backDim)
+}
+
+function backFoundry(ctx, r, b, pal) {
+  for (var x = b.x + 10 + Math.floor(r() * 30); x < b.x + b.w; x += 60 + Math.floor(r() * 30)) {
+    ctx.fillStyle = pal.back
+    ctx.fillRect(x, b.y, 5, b.h)
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(x - 1, b.y, 1, b.h)
+    ctx.fillRect(x + 5, b.y, 1, b.h)
+    // A chain hanging off the girder, links alternating.
+    var cx = x + 14 + Math.floor(r() * 20), len = 30 + Math.floor(r() * 90)
+    for (var y = b.y; y < b.y + len; y += 2) {
+      ctx.fillStyle = (y >> 1) % 2 ? pal.back : pal.backDim
+      ctx.fillRect(cx, y, (y >> 1) % 2 ? 1 : 2, 2)
+    }
+  }
+  backBand(ctx, r, b, b.y + 8, 3, pal.back)
+}
+
+function backJungle(ctx, r, b, pal) {
+  for (var t = 0; t < 6; t++) {
+    var x = Math.floor(r() * b.w)
+    backColumn(ctx, r, x, b.y + 10, b.y + b.h, 4 + Math.floor(r() * 4), pal.backDim)
+  }
+  // Foliage: clusters of blocks, which is all a leaf is at this scale.
+  for (var f = 0; f < 22; f++) {
+    var p = backSpot(r, b)
+    for (var l = 0; l < 6; l++) {
+      ctx.fillStyle = l % 3 ? pal.back : pal.backLit
+      ctx.fillRect(p.x - 8 + Math.floor(r() * 16), p.y - 4 + Math.floor(r() * 8), 3 + Math.floor(r() * 5), 2 + Math.floor(r() * 3))
+    }
+  }
+  for (var v = 0; v < 18; v++) {
+    var vx = Math.floor(r() * b.w), vl = 10 + Math.floor(r() * 60)
+    ctx.fillStyle = pal.back
+    for (var y = 0; y < vl; y += 2) ctx.fillRect(vx + ((y >> 3) % 2), b.y + y, 1, 2)
+  }
+}
+
+function backIceCave(ctx, r, b, pal) {
+  for (var i = 0; i < 26; i++) {
+    var p = backSpot(r, b), x = p.x, y = p.y + 8
+    var h = 6 + Math.floor(r() * 14)
+    // A crystal: a column that narrows to a point, lit down one face.
+    for (var s = 0; s < h; s++) {
+      var half = Math.max(0, Math.floor((h - s) / 4))
+      ctx.fillStyle = pal.back
+      ctx.fillRect(x - half, y - s, half * 2 + 1, 1)
+      ctx.fillStyle = pal.backLit
+      ctx.fillRect(x - half, y - s, 1, 1)
+    }
+  }
+  backBand(ctx, r, b, b.y + 6, 5, pal.backDim)
+}
+
+function backSpaceship(ctx, r, b, pal) {
+  var rib = 50
+  for (var x = b.x + 20; x < b.x + b.w; x += rib) {
+    ctx.fillStyle = pal.back
+    ctx.fillRect(x, b.y, 4, b.h)
+    ctx.fillStyle = pal.backDim
+    ctx.fillRect(x + 4, b.y, 1, b.h)
+  }
+  // Portholes, with a star or two in them.
+  for (var n = 0; n < 12; n++) {
+    var p = backSpot(r, b), px = p.x - 3, y = p.y - 3
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(px - 1, y, 8, 6); ctx.fillRect(px, y - 1, 6, 8)
+    ctx.fillStyle = pal.skyTop
+    ctx.fillRect(px, y, 6, 6)
+    ctx.fillStyle = pal.dust
+    ctx.fillRect(px + 1 + Math.floor(r() * 4), y + 1 + Math.floor(r() * 4), 1, 1)
+  }
+}
+
+function backFactory(ctx, r, b, pal) {
+  // Brick courses, offset every other row; then windows knocked out of them.
+  ctx.fillStyle = pal.backDim
+  for (var y = b.y; y < b.y + b.h; y += 6) {
+    ctx.fillRect(b.x, y, b.w, 1)
+    for (var x = b.x + ((y / 6) % 2 ? 6 : 0); x < b.x + b.w; x += 12) ctx.fillRect(x, y, 1, 6)
+  }
+  for (var n = 0; n < 9; n++) {
+    var p = backSpot(r, b), wx = p.x - 10, wy = p.y - 8, wh = 16
+    ctx.fillStyle = pal.back
+    ctx.fillRect(wx, wy, 20, wh)
+    ctx.fillStyle = pal.backLit
+    for (var gx = 0; gx <= 20; gx += 5) ctx.fillRect(wx + gx, wy, 1, wh)
+    for (var gy = 0; gy <= wh; gy += 8) ctx.fillRect(wx, wy + gy, 20, 1)
+  }
+}
+
+function backTrench(ctx, r, b, pal) {
+  // Rock spires rising out of the deep; the sea is laid over them afterwards.
+  for (var i = 0; i < 9; i++) {
+    var x = Math.floor(r() * b.w), h = 40 + Math.floor(r() * (b.h - 50)), wid = 8 + Math.floor(r() * 14)
+    for (var s = 0; s < h; s += 3) {
+      var taper = Math.floor(wid * (1 - s / h) * 0.5) + 1
+      ctx.fillStyle = pal.back
+      ctx.fillRect(x - taper + Math.floor(r() * 2), b.y + b.h - s, taper * 2, 3)
+    }
+  }
+  // Kelp: a stalk that drifts sideways a pixel at a time.
+  for (var k = 0; k < 16; k++) {
+    var kx = Math.floor(r() * b.w), kh = 20 + Math.floor(r() * 60)
+    ctx.fillStyle = pal.backLit
+    for (var y = 0; y < kh; y += 2) ctx.fillRect(kx + Math.round(Math.sin(y / 7 + k) * 2), b.y + b.h - y, 1, 2)
+  }
 }
 
 // The Trench's water, laid over the finished terrain rather than behind it.

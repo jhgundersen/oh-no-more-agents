@@ -141,6 +141,12 @@ function build(theme, level) {
   return {
     skyTop: css(mix(bg, tint, 0.02)),
     skyLow: css(mix(bg, tint, 0.10)),
+    // The far wall behind the corridors (drawBackdrop). It has to sit between
+    // the sky and dirtShade: any brighter and it competes with the ground the
+    // colony actually walks on, any darker and there is no depth to see.
+    back: css(mix(bg, tint, 0.17)),
+    backLit: css(mix(bg, tint, 0.24)),
+    backDim: css(mix(bg, tint, 0.12)),
 
     dirt: css(mix(bg, tint, 0.46)),
     dirtEdge: css(mix(bg, tint, 0.86)),
