@@ -452,3 +452,5 @@ the edges but no grain. CRAP: 14 and 3.
 
 **Next.** Hazards and the exit at the finer res, or step back to gameplay
 for an iteration (the 82 condemned agents are still waiting).
+
+**Deployed** after 17 (version c011eb88, build d8ad9af6): stand-down cue, res 2, finer agents and earth. Browser check on level 5: suits and lips visible, no errors.
