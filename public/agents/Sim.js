@@ -2514,189 +2514,192 @@ function specialShapeCut(w, ag, act, dry) {
   return moved
 }
 
+// What a special does to the wall in front of it, one function per act in
+// SPECIAL_CUTS. Each returns whether the world changed (a dry run only asks
+// whether it would); the ones that carve finish through cutTail, which marks
+// the terrain changed and throws the dust.
 function specialCut(w, ag, act, dry) {
-  var fx = Math.floor(ag.x)
-  var fy = Math.floor(ag.y)
-  var d = ag.dir
-  var moved = false
-  var i, j
+  var cut = SPECIAL_CUTS[act]
+  return cut ? cut(w, ag, act, dry) : false
+}
 
-  if (act === "blast") {
-    // A basher's tunnel, opened in one shot instead of over ten seconds.
-    for (i = 1; i <= 8; i++)
-      for (j = -AGENT_H; j <= 0; j++)
-        if (dry ? workable(w, fx + d * i, fy + j) : clearCell(w, fx + d * i, fy + j)) {
-          if (dry) return true
-          moved = true
-        }
-
-  } else if (act === "complete") {
-    // A tunnel completed from the first blocked token through the wall and a
-    // few cells past the far side. The extra cursor travel is deliberate: the
-    // joke has to survive even when there was only one cell left to remove.
-    var seenWall = false
-    var seenAirAfter = 0
-    for (i = 1; i <= 16; i++) {
-      var completeX = fx + d * i
-      for (j = -AGENT_H; j <= 0; j++) {
-        if (at(w, completeX, fy + j) === STEEL) return moved
-        if (dry && workable(w, completeX, fy + j)) return true
-        if (!dry && clearCell(w, completeX, fy + j)) { moved = true; seenWall = true }
-      }
-      if (!dry && seenWall) {
-        if (!solid(w, completeX, fy) && !solid(w, completeX, fy - 1)) seenAirAfter++
-        else seenAirAfter = 0
-        if (seenAirAfter >= 4) break
-      }
-    }
-    if (!dry && moved) {
-      ag.specialX = fx + d * Math.min(i, 16)
-      ag.specialY = fy
-      ag.shotFor = 12
-    }
-
-  } else if (act === "chain" || act === "speculate" || act === "collapse") {
-    return specialTraverse(w, ag, act, dry)
-
-  } else if (act === "kick") {
-    var W = 3
-    var block = []
-    for (i = 0; i < W; i++) {
-      block[i] = []
-      for (j = 0; j <= AGENT_H; j++) {
-        var m = at(w, fx + d * (1 + i), fy - AGENT_H + j)
-        if (m === STEEL) return false          // steel is nobody's to move
-        block[i][j] = m
-      }
-    }
-
-    var shove = 0
-    for (var trySh = 4; trySh >= 1; trySh--) {
-      var fits = true
-      for (i = 0; i < W && fits; i++)
-        for (j = 0; j <= AGENT_H; j++) {
-          if (block[i][j] === EMPTY) continue
-          var dx = fx + d * (1 + i + trySh)
-          // Landing on itself is fine; landing on anything else is not.
-          if (i + trySh < W) continue
-          if (at(w, dx, fy - AGENT_H + j) !== EMPTY) { fits = false; break }
-        }
-      if (fits) { shove = trySh; break }
-    }
-    if (shove === 0) return false
-    if (dry) return true
-
-    for (i = W - 1; i >= 0; i--)
-      for (j = 0; j <= AGENT_H; j++) {
-        var m2 = block[i][j]
-        if (m2 === EMPTY) continue
-        clearCell(w, fx + d * (1 + i), fy - AGENT_H + j)
-        setCell(w, fx + d * (1 + i + shove), fy - AGENT_H + j, m2)
-        moved = true
-      }
-
-  } else if (act === "topple") {
-    var thick = 0
-    while (thick < 8 && solid(w, fx + d * (1 + thick), fy)) thick++
-    if (thick === 0) return false
-
-    var tallest = 0
-    for (i = 0; i < thick; i++) {
-      var col = 0
-      while (col < 14 && solid(w, fx + d * (1 + i), fy - col)) col++
-      if (col > tallest) tallest = col
-    }
-    if (tallest < 3) return false                 // already a stride
-
-    // Steel does not come down for anybody.
-    for (i = 0; i < thick; i++)
-      for (j = 0; j < tallest; j++)
-        if (at(w, fx + d * (1 + i), fy - j) === STEEL) return false
-    if (dry) return true
-
-    for (i = 0; i < thick; i++)
-      for (j = 2; j < tallest; j++)
-        if (clearCell(w, fx + d * (1 + i), fy - j)) moved = true
-
-    // The rubble it leaves, on the near side and the far.
-    setCell(w, fx, fy, ROCK)
-    setCell(w, fx + d * (1 + thick), fy, ROCK)
-
-  } else if (act === "rocket" || act === "stomp" || act === "quarry" || act === "slab"
-             || act === "ballast") {
-    return specialShapeCut(w, ag, act, dry)
-
-  } else if (act === "sap") {
-    for (i = -BOMB_RADIUS; i <= BOMB_RADIUS; i++)
-      for (j = -BOMB_RADIUS; j <= BOMB_RADIUS; j++) {
-        if (i * i + j * j > BOMB_RADIUS * BOMB_RADIUS) continue
-        var sapY = fy - 2 + j
-        if (sapY > fy) continue
-        if (dry ? workable(w, fx + d * 5 + i, sapY) : clearCell(w, fx + d * 5 + i, sapY)) {
-          if (dry) return true
-          moved = true
-        }
-      }
-    addDust(w, fx + d * 5, fy - 2, 18)
-    if (!dry && moved) noteBlast(w, fx + d * 5, fy - 2, BOMB_RADIUS)
-    if (!dry && moved) {
-      // The payload is an instruction, not merely a charge: everyone close
-      // enough to read it adopts the injector's direction with total confidence.
-      for (var pi = 0; pi < w.agents.length; pi++) {
-        var prompted = w.agents[pi]
-        if (prompted === ag || prompted.gone || prompted.state !== "walk") continue
-        if (Math.abs(prompted.x - ag.x) <= 11 && Math.abs(prompted.y - ag.y) <= 3)
-          prompted.dir = d
-      }
-    }
-
-  } else if (act === "stack") {
-    // Adds nothing to the level and takes nothing out of it. The wall is left
-    // standing; what it leaves is a way up the outside of it, which is the one
-    // thing here that is worth more to the colony than to the special.
-    var ladX = fx + d
-    if (!solid(w, ladX, fy)) return false
-    var ladH = wallHeight(w, ladX, fy)
-    // Under two courses is a stride, not a climb. Over LADDER_MAX — or 99,
-    // which is wallHeight's way of saying it never found a top with room to
-    // stand on — is a wall that wants a different answer.
-    if (ladH < 2 || ladH > LADDER_MAX) return false
-    if (fy - ladH < SKY) return false
-    if (ladderAt(w, ladX, d, fy)) return false
-    if (dry) return true
-    w.ladders.push({ x: ladX, side: d, bottom: fy, top: fy - ladH, t: 0 })
-    w.lastEvent = "ladder up"
-    return true
-
-  } else if (act === "spray") {
-    var hit = false
-    for (i = 0; i < SPRAY_BURST; i++) {
-      if (sprayBullet(w, ag, i, dry)) {
-        if (dry) return true
-        hit = true
-      }
-    }
-    return hit
-
-  } else if (act === "phase") {
-    // Steps through instead of removing. It gets itself past and leaves the
-    // level exactly as it found it, which helps precisely nobody else.
-    for (i = 1; i <= 10; i++) {
-      var tx = fx + d * i
-      if (at(w, tx, fy) === STEEL) return false
-      if (!solid(w, tx, fy) && !solid(w, tx, fy - 1) && solid(w, tx, fy + 1)) {
-        if (!dry) ag.x = tx + 0.5
-        return true
-      }
-    }
-    return false
-  }
-
+function cutTail(w, fx, fy, d, moved) {
   if (moved) {
     w.terrainVersion++
     addDust(w, fx + d * 2, fy - 2, 8)
   }
   return moved
+}
+
+var SPECIAL_CUTS = {
+  blast: cutBlast, complete: cutComplete, chain: cutTraverse, speculate: cutTraverse,
+  collapse: cutTraverse, kick: cutKick, rocket: cutShape,
+  stomp: cutShape, quarry: cutShape, slab: cutShape, ballast: cutShape,
+  sap: cutSap, stack: cutStack, spray: cutSpray, phase: cutPhase
+}
+
+function cutBlast(w, ag, act, dry) {
+  var fx = Math.floor(ag.x), fy = Math.floor(ag.y), d = ag.dir, moved = false, i, j
+  // A basher's tunnel, opened in one shot instead of over ten seconds.
+  for (i = 1; i <= 8; i++)
+    for (j = -AGENT_H; j <= 0; j++)
+      if (dry ? workable(w, fx + d * i, fy + j) : clearCell(w, fx + d * i, fy + j)) {
+        if (dry) return true
+        moved = true
+      }
+  return cutTail(w, fx, fy, d, moved)
+}
+
+function cutComplete(w, ag, act, dry) {
+  var fx = Math.floor(ag.x), fy = Math.floor(ag.y), d = ag.dir, moved = false, i, j
+  // A tunnel completed from the first blocked token through the wall and a
+  // few cells past the far side. The extra cursor travel is deliberate: the
+  // joke has to survive even when there was only one cell left to remove.
+  var seenWall = false
+  var seenAirAfter = 0
+  for (i = 1; i <= 16; i++) {
+    var completeX = fx + d * i
+    for (j = -AGENT_H; j <= 0; j++) {
+      if (at(w, completeX, fy + j) === STEEL) return moved
+      if (dry && workable(w, completeX, fy + j)) return true
+      if (!dry && clearCell(w, completeX, fy + j)) { moved = true; seenWall = true }
+    }
+    if (!dry && seenWall) {
+      if (!solid(w, completeX, fy) && !solid(w, completeX, fy - 1)) seenAirAfter++
+      else seenAirAfter = 0
+      if (seenAirAfter >= 4) break
+    }
+  }
+  if (!dry && moved) {
+    ag.specialX = fx + d * Math.min(i, 16)
+    ag.specialY = fy
+    ag.shotFor = 12
+  }
+  return cutTail(w, fx, fy, d, moved)
+}
+
+function cutTraverse(w, ag, act, dry) {
+  var fx = Math.floor(ag.x), fy = Math.floor(ag.y), d = ag.dir, moved = false, i, j
+  return specialTraverse(w, ag, act, dry)
+}
+
+function cutKick(w, ag, act, dry) {
+  var fx = Math.floor(ag.x), fy = Math.floor(ag.y), d = ag.dir, moved = false, i, j
+  var W = 3
+  var block = []
+  for (i = 0; i < W; i++) {
+    block[i] = []
+    for (j = 0; j <= AGENT_H; j++) {
+      var m = at(w, fx + d * (1 + i), fy - AGENT_H + j)
+      if (m === STEEL) return false          // steel is nobody's to move
+      block[i][j] = m
+    }
+  }
+
+  var shove = 0
+  for (var trySh = 4; trySh >= 1; trySh--) {
+    var fits = true
+    for (i = 0; i < W && fits; i++)
+      for (j = 0; j <= AGENT_H; j++) {
+        if (block[i][j] === EMPTY) continue
+        var dx = fx + d * (1 + i + trySh)
+        // Landing on itself is fine; landing on anything else is not.
+        if (i + trySh < W) continue
+        if (at(w, dx, fy - AGENT_H + j) !== EMPTY) { fits = false; break }
+      }
+    if (fits) { shove = trySh; break }
+  }
+  if (shove === 0) return false
+  if (dry) return true
+
+  for (i = W - 1; i >= 0; i--)
+    for (j = 0; j <= AGENT_H; j++) {
+      var m2 = block[i][j]
+      if (m2 === EMPTY) continue
+      clearCell(w, fx + d * (1 + i), fy - AGENT_H + j)
+      setCell(w, fx + d * (1 + i + shove), fy - AGENT_H + j, m2)
+      moved = true
+    }
+  return cutTail(w, fx, fy, d, moved)
+}
+
+function cutShape(w, ag, act, dry) {
+  var fx = Math.floor(ag.x), fy = Math.floor(ag.y), d = ag.dir, moved = false, i, j
+  return specialShapeCut(w, ag, act, dry)
+}
+
+function cutSap(w, ag, act, dry) {
+  var fx = Math.floor(ag.x), fy = Math.floor(ag.y), d = ag.dir, moved = false, i, j
+  for (i = -BOMB_RADIUS; i <= BOMB_RADIUS; i++)
+    for (j = -BOMB_RADIUS; j <= BOMB_RADIUS; j++) {
+      if (i * i + j * j > BOMB_RADIUS * BOMB_RADIUS) continue
+      var sapY = fy - 2 + j
+      if (sapY > fy) continue
+      if (dry ? workable(w, fx + d * 5 + i, sapY) : clearCell(w, fx + d * 5 + i, sapY)) {
+        if (dry) return true
+        moved = true
+      }
+    }
+  addDust(w, fx + d * 5, fy - 2, 18)
+  if (!dry && moved) noteBlast(w, fx + d * 5, fy - 2, BOMB_RADIUS)
+  if (!dry && moved) {
+    // The payload is an instruction, not merely a charge: everyone close
+    // enough to read it adopts the injector's direction with total confidence.
+    for (var pi = 0; pi < w.agents.length; pi++) {
+      var prompted = w.agents[pi]
+      if (prompted === ag || prompted.gone || prompted.state !== "walk") continue
+      if (Math.abs(prompted.x - ag.x) <= 11 && Math.abs(prompted.y - ag.y) <= 3)
+        prompted.dir = d
+    }
+  }
+  return cutTail(w, fx, fy, d, moved)
+}
+
+function cutStack(w, ag, act, dry) {
+  var fx = Math.floor(ag.x), fy = Math.floor(ag.y), d = ag.dir, moved = false, i, j
+  // Adds nothing to the level and takes nothing out of it. The wall is left
+  // standing; what it leaves is a way up the outside of it, which is the one
+  // thing here that is worth more to the colony than to the special.
+  var ladX = fx + d
+  if (!solid(w, ladX, fy)) return false
+  var ladH = wallHeight(w, ladX, fy)
+  // Under two courses is a stride, not a climb. Over LADDER_MAX — or 99,
+  // which is wallHeight's way of saying it never found a top with room to
+  // stand on — is a wall that wants a different answer.
+  if (ladH < 2 || ladH > LADDER_MAX) return false
+  if (fy - ladH < SKY) return false
+  if (ladderAt(w, ladX, d, fy)) return false
+  if (dry) return true
+  w.ladders.push({ x: ladX, side: d, bottom: fy, top: fy - ladH, t: 0 })
+  w.lastEvent = "ladder up"
+  return true
+}
+
+function cutSpray(w, ag, act, dry) {
+  var fx = Math.floor(ag.x), fy = Math.floor(ag.y), d = ag.dir, moved = false, i, j
+  var hit = false
+  for (i = 0; i < SPRAY_BURST; i++) {
+    if (sprayBullet(w, ag, i, dry)) {
+      if (dry) return true
+      hit = true
+    }
+  }
+  return hit
+}
+
+function cutPhase(w, ag, act, dry) {
+  var fx = Math.floor(ag.x), fy = Math.floor(ag.y), d = ag.dir, moved = false, i, j
+  // Steps through instead of removing. It gets itself past and leaves the
+  // level exactly as it found it, which helps precisely nobody else.
+  for (i = 1; i <= 10; i++) {
+    var tx = fx + d * i
+    if (at(w, tx, fy) === STEEL) return false
+    if (!solid(w, tx, fy) && !solid(w, tx, fy - 1) && solid(w, tx, fy + 1)) {
+      if (!dry) ag.x = tx + 0.5
+      return true
+    }
+  }
+  return false
 }
 
 

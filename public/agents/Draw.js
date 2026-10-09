@@ -5024,7 +5024,7 @@ function drawAgentTrick(ctx, w, pal, ag, ox, oy, dir, robe, hair) {
 }
 
 var TRICK_DRAW = {
-  blast: drawTrickBlast, kick: drawTrickKick, topple: drawTrickTopple,
+  blast: drawTrickBlast, kick: drawTrickKick,
   rocket: drawTrickRocket, sap: drawTrickSap, stomp: drawTrickStomp,
   ballast: drawTrickBallast, quarry: drawTrickQuarry, spray: drawTrickSpray,
   slab: drawTrickSlab, phase: drawTrickPhase, complete: drawTrickComplete,
@@ -5048,13 +5048,6 @@ function drawTrickBlast(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
 function drawTrickKick(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
   var reach = fr.reach, tx = fr.tx, mid = fr.mid
   ctx.fillRect(dir > 0 ? tx : tx - Math.round(18 * reach), mid - 6, Math.round(18 * reach), 12)
-}
-
-// A tall thin slice.
-function drawTrickTopple(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
-  var reach = fr.reach, tx = fr.tx
-  ctx.fillRect(tx + dir * 4 - 1, oy - Math.round(26 * reach), 3, Math.round(30 * reach))
-  ctx.fillRect(tx + dir * 4, oy + 14, Math.round(24 * reach), 2)
 }
 
 // Launched, not swung.

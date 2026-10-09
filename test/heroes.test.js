@@ -118,3 +118,33 @@ test("a Jungle vine is a ladder anybody climbs", () => {
   assert.equal(w.biome, "Jungle")
   assert.ok(S.ladderAt(w, v.x, v.side, v.bottom), "the climb rule sees it")
 })
+
+// Every wall move on the roster against the same wall: a dry run sees work to
+// do, the real one changes the world, and steel stops all of them.
+for (const spec of S.SPECIALS.filter(s => S.SPECIAL_CUTS[s.act])) {
+  test(`${spec.name}'s ${spec.act} works a wall and respects steel`, () => {
+    const scene = mat => {
+      const w = fresh()
+      w.agents = []; w.enemies = []; w.hazards = []
+      clear(w, 6, 70, 20, 42); floor(w, 6, 70, 43)
+      for (let y = 34; y <= 42; y++) for (let x = 24; x <= 27; x++) w.terrain[y * S.COLS + x] = mat
+      const ag = { id: 1, special: spec.id, x: 22.5, y: 42, dir: 1, state: "walk", anim: 0, timer: 0, modelGen: 0, cool: 0 }
+      w.agents.push(ag)
+      return { w, ag }
+    }
+    const { w, ag } = scene(S.DIRT)
+    const before = w.terrain.slice()
+    const dry = S.specialCut(w, ag, spec.act, true)
+    assert.deepEqual(w.terrain, before, "a dry run changes nothing")
+    if (dry) {
+      const did = S.specialCut(w, ag, spec.act, false)
+      const changed = did && (w.terrain.some((v, i) => v !== before[i]) || ag.x !== 22.5 || w.ladders.length > 0 || w.mines.length > 0)
+      assert.ok(changed || spec.act === "spray", `${spec.act} did something`)
+    }
+    const steel = scene(S.STEEL)
+    const before2 = steel.w.terrain.slice()
+    S.specialCut(steel.w, steel.ag, spec.act, false)
+    for (let y = 34; y <= 42; y++) for (let x = 24; x <= 27; x++)
+      assert.equal(steel.w.terrain[y * S.COLS + x], S.STEEL, `${spec.act} left steel alone`)
+  })
+}

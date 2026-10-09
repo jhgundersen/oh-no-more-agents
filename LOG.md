@@ -911,3 +911,24 @@ a vine and the climb rule sees it.
 **Deployed** with 37 (below).
 
 **Deployed** after 38 (name="build" content="ffd57772"): footprints, Jungle vines. Browser check on level 5 clean.
+
+## 39 — 2026-10-09 · Crap: specialCut split, a dead move removed
+
+**Changed.** `specialCut` (CC 100) became a two-line dispatcher over
+`SPECIAL_CUTS` — one function per act (`cutBlast`, `cutComplete`, `cutKick`,
+`cutSap`, `cutStack`, `cutSpray`, `cutPhase`, and `cutTraverse`/`cutShape`
+for the acts that already delegated), with the old shared tail as
+`cutTail`. Split by script. Found on the way: no special on the roster has
+the act `topple` — the cut and its trick drawing were dead code. Removed.
+
+**Checked.** A deterministic golden: 300 levels × 2 colonies played to the
+end, hashing saved / lost / ticks / terrainVersion / special per run —
+identical before, after the split, after the renames and after the removal.
+New tests: every hero's wall move on the same constructed wall (a dry run
+changes nothing, the real one changes the world, steel stops all of them).
+
+**CRAP.** Over 30: 48 → 45 of 509. `specialShapeCut` 135 → 55 (now
+covered). Tests 161 → 176.
+
+**Next.** Something visible again — xenos at the finer res, or an event that
+has never been looked at closely.
