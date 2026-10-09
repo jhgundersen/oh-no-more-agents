@@ -864,6 +864,7 @@ function generate(level, attempt, colonySeed) {
     timeLimit: LEVEL_LIMIT,
     nuking: false,
     stoodDown: false, // the last blockers have been sent home once; see standDown
+    stoodDownAt: -1,  // and when, for Draw's banner
     nukeTimer: 0
   }
 
@@ -8064,9 +8065,11 @@ function stepFreedMission(w, m) {
 // level really is over for them and the old rule applies.
 function standDown(w) {
   w.stoodDown = true
+  w.stoodDownAt = w.ticks
   for (var b = 0; b < w.agents.length; b++) {
     var B = w.agents[b]
     if (B.state !== "block" && B.state !== "camp") continue
+    B.stoodDownAt = w.ticks
     B.state = "walk"
     B.idle = 0
     B.still = 0

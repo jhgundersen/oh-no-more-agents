@@ -1347,7 +1347,41 @@ function drawLifts(ctx, w, pal) {
   }
 }
 
+// The end of a level held by blockers: they put their arms down and go home
+// (Sim's `standDown`). Said in words across the top for a few seconds, the way
+// an event is, because a row of blockers all walking off at once with no
+// reason given looks like the game forgot what they were for.
+function drawStandDown(ctx, w, pal) {
+  var since = w.ticks - w.stoodDownAt
+  if (!(w.stoodDownAt >= 0) || since > 90) return
+  var k = w.k
+  ctx.save()
+  ctx.font = "9px monospace"
+  ctx.textAlign = "center"
+  ctx.globalAlpha = since < 60 ? 0.95 : 0.95 * (90 - since) / 30
+  ctx.fillStyle = pal.exitLight
+  ctx.fillText("STAND DOWN \u2014 EVERYBODY HOME", (k.COLS * k.CELL) / 2, (k.SKY + 1) * k.CELL)
+  ctx.restore()
+  ctx.globalAlpha = 1
+}
+
+// The moment one blocker stands down: a ring going out from it, so each of
+// them is seen to have been released rather than to have wandered off.
+function drawReleaseRing(ctx, pal, ag, ox, oy, now) {
+  var since = now - ag.stoodDownAt
+  if (!(ag.stoodDownAt >= 0) || since > 20) return
+  ctx.fillStyle = pal.exitLight
+  ctx.globalAlpha = 0.8 * (1 - since / 20)
+  var r = 4 + since
+  for (var s = 0; s < 12; s++) {
+    var a = s / 12 * Math.PI * 2
+    ctx.fillRect(Math.round(ox + 4 + Math.cos(a) * r), Math.round(oy + 8 + Math.sin(a) * r * 0.8), 1, 1)
+  }
+  ctx.globalAlpha = 1
+}
+
 function drawEventBanner(ctx, w, pal) {
+  drawStandDown(ctx, w, pal)
   var warn = w.eventWarnFor > 0
   var flash = w.eventFlash > 0
   if (!warn && !flash) return
@@ -4884,6 +4918,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   // cannot tell from the last one is the same special.
   drawAgentTrick(ctx, w, pal, ag, ox, oy, dir, robe, hair)
   if (ag.throttleFor > 0) drawThrottleSignal(ctx, pal, ag, ox, oy, dir, robe)
+  drawReleaseRing(ctx, pal, ag, ox, oy, w.ticks)
   if (st === "camp" && ag.shotFor > 0 && ag.special) {
     var csp = w.specialSpec
     ctx.globalAlpha = Math.min(1, ag.shotFor / 6)

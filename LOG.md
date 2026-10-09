@@ -361,3 +361,18 @@ biggest self-inflicted death; and a visible cue for the stand-down (a
 blockers suddenly started walking.
 
 **Deployed** after 13 (version 8f354663, build 57059384): hatch + stand-down. Browser check clean.
+
+## 14 — 2026-10-09 · The stand-down, made visible
+
+**Changed.** `standDown` stamps `w.stoodDownAt` and each released agent's
+`stoodDownAt`. Draw: "STAND DOWN — EVERYBODY HOME" across the sky band for
+three seconds, fading over the last one (`drawStandDown`, from the event
+banner); a ring going out from each released blocker for 20 ticks
+(`drawReleaseRing`).
+
+**Checked.** Rendered level 3 eight ticks after a stand-down: the ring reads
+on the one blocker left at the lip of the pit. (`tools/render.js` skips text;
+the banner wants a browser check at the next deploy.) `sim play` unchanged.
+
+**Next.** The 82 condemned-as-stuck agents: find where they get stuck before
+deciding whether the answer is the recovery, the level, or a hero.
