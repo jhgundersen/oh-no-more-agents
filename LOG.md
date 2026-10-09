@@ -311,3 +311,26 @@ is as thin as the bombs were; check before assuming.
 **Deployed** after 11 (version 90cb98c7, build 0b8fce95): wind and
 explosions. Browser check clean. The stats endpoint answered the old build
 for ~20s after the deploy before catching up — propagation, not a failure.
+
+## 12 — 2026-10-09 · Graphics: the hatch opens
+
+**Looked first at** enemy gunfire (log 11's lead): already a muzzle flash,
+tracer and blood — not thin like the bombs were. Left alone.
+
+**Why the hatch.** It is on screen the whole level and was three flat
+rectangles that never moved.
+
+**Changed.** `drawHatch`: a panelled, riveted housing with a roof band; a
+lamp that blinks while agents are still to come and goes dark after; a flash
+across the mouth on each drop; two doors hinged at the sides of the mouth
+that swing down over `HATCH_SWING` (18) ticks before the first drop and
+come back up 30 ticks after the last (`hatchOpen`). Sim records
+`lastReleaseAt` — bookkeeping only.
+
+**Checked.** Eight-frame sequence at 4× (shut, swinging, open, dropping,
+closing, shut). `sim play` identical (2886/3334).
+
+**Next.** The exit portal is the other fixture on screen all level — check
+it the same way. Or a hero: nineteen, and the newest one turned out to be an
+enemy-pauser; something that helps with *falls* or *bombs* (the colony's own
+recovery killing it) would answer a real cause of death.

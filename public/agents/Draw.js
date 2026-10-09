@@ -2370,17 +2370,58 @@ function drawSpecialCard(ctx, w, pal) {
   ctx.textAlign = "left"
 }
 
+// The trapdoor the colony comes out of. Panelled and riveted so it reads as
+// a machine and not a slab; two doors that swing down before the first drop
+// and come back up once the last agent is through; a lamp that blinks while
+// it is releasing; and a flash in the mouth on each drop. It is open exactly
+// as long as it is doing something, which is the whole of its story.
+var HATCH_SWING = 18      // ticks for a door to swing fully open or shut
+function hatchOpen(w) {
+  var opening = Math.min(1, w.ticks / HATCH_SWING)
+  if (w.released < w.toRelease || w.lastReleaseAt < 0) return opening
+  var since = w.ticks - w.lastReleaseAt - 30
+  return since <= 0 ? opening : Math.max(0, 1 - since / HATCH_SWING)
+}
+
 function drawHatch(ctx, w, pal) {
   var k = w.k
   var C = k.CELL
-  var x = w.hatch.x * C
+  var x = Math.round(w.hatch.x * C)
   var y = w.hatch.y * C
+  var open = hatchOpen(w)
+  var releasing = w.released < w.toRelease
+
   ctx.fillStyle = pal.hatchBody
   ctx.fillRect(x - 14, y - 10, 28, 10)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 14, y - 10, 28, 2)                  // the roof of the housing
+  for (var seam = -7; seam <= 7; seam += 7) ctx.fillRect(x + seam, y - 8, 1, 6)
   ctx.fillStyle = pal.hatchLip
+  for (var rv = -12; rv <= 12; rv += 24) { ctx.fillRect(x + rv, y - 7, 1, 1); ctx.fillRect(x + rv, y - 4, 1, 1) }
   ctx.fillRect(x - 16, y - 2, 32, 4)
+
+  // The lamp: blinking while there are agents still to come, dark after.
+  ctx.fillStyle = releasing && Math.floor(w.ticks / 8) % 2 === 0 ? pal.exitLight : pal.rigDark
+  ctx.fillRect(x - 1, y - 13, 3, 3)
+
+  // The mouth, and the light of a drop going through it.
   ctx.fillStyle = pal.hatchMouth
   ctx.fillRect(x - 9, y + 2, 18, 3)
+  if (releasing && w.ticks - w.lastReleaseAt < 4 && w.lastReleaseAt >= 0) {
+    ctx.fillStyle = pal.exitLight
+    ctx.globalAlpha = 0.6
+    ctx.fillRect(x - 8, y + 2, 16, 2)
+    ctx.globalAlpha = 1
+  }
+
+  // Two doors hinged at the sides of the mouth, swinging down and out.
+  var ang = open * Math.PI * 0.5
+  ctx.fillStyle = pal.hatchBody
+  for (var i = 0; i < 9; i++) {
+    var dx = Math.round(i * Math.cos(ang)), dy = Math.round(i * Math.sin(ang))
+    ctx.fillRect(x - 9 + dx, y + 2 + dy, 1, 2)
+    ctx.fillRect(x + 8 - dx, y + 2 + dy, 1, 2)
+  }
 }
 
 function drawEnemyHatch(ctx, w, pal, opts) {

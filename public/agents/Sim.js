@@ -811,6 +811,7 @@ function generate(level, attempt, colonySeed) {
     lost: 0,
     releaseInterval: 0,
     releaseTimer: 0,
+    lastReleaseAt: -1, // tick of the latest drop through the hatch, for its doors
 
     skills: {},
     granted: {},         // director top-ups, shown apart from the level's own
@@ -8114,6 +8115,7 @@ function step(w) {
     if (w.releaseTimer >= w.releaseInterval) {
       w.releaseTimer = 0
       w.released++
+      w.lastReleaseAt = w.ticks
       w.agents.push(spawn(w))
     }
   }
