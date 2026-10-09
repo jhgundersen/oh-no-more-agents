@@ -564,3 +564,5 @@ not at one out of range, and reloads.
 **Next.** Mission pens at the finer res, or the operator itself (it survives
 38 of 42 runs) — but check whether killing it more often makes the levels too
 easy before trying.
+
+**Deployed** after 22 (name="build" content="6e2971a1"): Fallback, drone fire. Browser check clean.
