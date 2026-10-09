@@ -754,3 +754,23 @@ biomes swing ±10 both ways from reassignment alone. `sim play` 95 / 89 / 44s
 **Next.** A mechanic of its own, the way the Desert got wind. Deploy now.
 
 **Deployed** after 30 (name="build" content="ad2f1f52"): drawAgent split, Data Center. Browser check on level 12 clean.
+
+## 31 — 2026-10-09 · Mechanic: the Data Center's updrafts
+
+**Changed.** `w.updraft`, set by `skinDataCenter`: the air column beside
+every rack rises. `stepFall` caps speed to `FLOAT_SPEED` there and a landing
+after a fall through it is safe (`ag.drafted`), without spending a floater.
+Draw: a faint wash down each column in open air and streaks climbing it.
+
+**Found on the way.** The fall rule alone changed nothing — floaters spent
+identical to the tick — because the colony opens its umbrella at the lip,
+before it is ever in the column. The lip decision now asks too
+(`wantsChute` is false over an updraft). AGENTS.md has a Data Center
+section saying so.
+
+**Checked.** Data Center levels, 240 runs, on vs off: floaters spent 2159
+→ 1957, splats 17 → 15, home 94.0 vs 94.3 (noise at that size). First
+streaks read as rain; a column wash and denser streaks fixed it. Suites pass.
+
+**Next.** Deploy with the next one. Candidates: a hero (twenty now; one that
+uses the board's new pieces?), hazards at the finer res, or divers/xenos.

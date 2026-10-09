@@ -773,6 +773,7 @@ function generate(level, attempt, colonySeed) {
     // thousand string compares a second. See the Water block above.
     submerged: BIOMES[(level - 1) % BIOMES.length] === "Trench",
     wind: 0,          // the Desert's gust, -1..1 along x; set every tick by windAt
+    updraft: null,    // the Data Center's rising columns, per x; see skinDataCenter
     k: K,
     decor: [],
     corrGap: CORR_GAP,
@@ -1752,6 +1753,12 @@ function skinDataCenter(w, rng) {
   for (y = SKY + irand(rng, 2, 4); y < ROWS - 3; y += irand(rng, 9, 13))
     for (x = 3; x < COLS - 3; x++)
       if (at(w, x, y) !== STEEL) setCell(w, x, y, ROCK)
+
+  // The updrafts: the column of air beside every rack, where its fans push
+  // the cold aisle's air up the hall. Taken from the same pitch as the racks
+  // so they always stand beside one, and from no further draw on `rng`.
+  w.updraft = new Uint8Array(COLS)
+  for (x = 3; x < COLS - 3; x++) if ((x + offset) % pitch === 2) w.updraft[x] = 1
 }
 
 // Sandstone laid down by wind: long gentle bands that rise and fall across the
@@ -4068,7 +4075,10 @@ function edgeAhead(w, ag, nx) {
   if (trait.noFloat && far > 2 && depth > killingFall(w) - trait.fallMargin
       && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return }
 
-  var wantsChute = depth > killingFall(w) - trait.fallMargin
+  // A drop in a Data Center updraft is no drop at all (see stepFall): the
+  // colony steps off and lets the cold aisle carry it, and keeps its umbrella.
+  var drafted = w.updraft && w.updraft[Math.floor(nx)] && depth !== Infinity
+  var wantsChute = !drafted && depth > killingFall(w) - trait.fallMargin
 
   if (!wantsChute) { ag.x = nx; startFall(w, ag); return }
 
@@ -4966,6 +4976,11 @@ function stepFall(w, ag) {
   // — but does change how long everybody spends in the air deciding.
   if (w.driftWhat === "fall" && w.eventDrift > 0) speed = Math.min(speed, FLOAT_SPEED)
   var cx = Math.floor(ag.x)
+  // The Data Center's updraft (see skinDataCenter): a body falling in a rack's
+  // column of rising air comes down at umbrella speed and lands like it had
+  // one, without spending one. The Desert's wind and the Trench's water follow
+  // the same rule — one field, read in one place.
+  if (w.updraft && w.updraft[cx]) { speed = Math.min(speed, FLOAT_SPEED); ag.drafted = true }
   var ny = ag.y + speed
 
   // Several agents can already be in the air when the first one lands in a
@@ -5018,7 +5033,7 @@ function stepFall(w, ag) {
     return
   }
 
-  if (!ag.floater && ag.fall > killingFall(w) - 6) {
+  if (!ag.floater && !ag.drafted && ag.fall > killingFall(w) - 6) {
     var remaining = dropDepth(w, cx, Math.floor(ny))
     if (ag.fall + remaining > killingFall(w) && take(w, "floater")) ag.floater = true
   }
@@ -5032,7 +5047,8 @@ function stepFall(w, ag) {
       ag.y = yy - 1
       var net = ag.fall > killingFall(w) && !ag.floater ? netAt(w, cx, ag.y) : null
       if (net) net.caught = w.ticks
-      else if (ag.fall > killingFall(w) && !ag.floater) { splat(w, ag); return }
+      else if (ag.fall > killingFall(w) && !ag.floater && !ag.drafted) { splat(w, ag); return }
+      ag.drafted = false
       ag.state = "walk"
       ag.landedAt = w.ticks
       ag.landedFrom = ag.fall

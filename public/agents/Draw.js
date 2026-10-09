@@ -1090,9 +1090,31 @@ function drawRackLights(ctx, w) {
   }
 }
 
+// The Data Center's updrafts (Sim's `w.updraft`): pale streaks climbing each
+// column of rising air, in open air only. A safe way down that the audience
+// cannot see is a safe way down that looks like luck.
+function drawUpdrafts(ctx, w, pal) {
+  var k = w.k, C = k.CELL, T = w.terrain, top = k.SKY * C, tall = k.ROWS * C - top
+  ctx.fillStyle = pal.dust
+  for (var x = 0; x < k.COLS; x++) {
+    if (!w.updraft[x]) continue
+    ctx.globalAlpha = 0.06                                  // the column itself
+    for (var cy = k.SKY; cy < k.ROWS; cy++)
+      if (T[cy * k.COLS + x] === k.EMPTY) ctx.fillRect(x * C, cy * C, C, C)
+    ctx.globalAlpha = 0.4
+    for (var s = 0; s < 12; s++) {
+      var y = top + tall - ((w.ticks * 0.9 + s * tall / 12 + x * 13) % tall)
+      if (T[Math.floor(y / C) * k.COLS + x] !== k.EMPTY) continue
+      ctx.fillRect(x * C + 0.5 + (s % 3) * 1, y, 0.5, 3)
+    }
+  }
+  ctx.globalAlpha = 1
+}
+
 function drawMachines(ctx, w, pal) {
   drawWaterLife(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
+  if (w.updraft) drawUpdrafts(ctx, w, pal)
   drawAmbience(ctx, w, pal)
   if (w.biome !== "Factory") return
   var k = w.k
