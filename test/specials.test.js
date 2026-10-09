@@ -116,3 +116,18 @@ test("without the net the same fall kills", () => {
   for (let i = 0; i < 400 && faller.state === "fall"; i++) S.stepFall(w, faller)
   assert.ok(faller.gone)
 })
+
+test("an agent fires at a drone in range whichever way it is facing", () => {
+  const w = S.generate(1, 0, 99)
+  w.agents = []; w.enemies = []
+  for (let y = 10; y < 40; y++) for (let x = 20; x < 40; x++) w.terrain[y * S.COLS + x] = S.EMPTY
+  for (let x = 20; x < 40; x++) w.terrain[40 * S.COLS + x] = S.DIRT
+  const ag = { id: 1, x: 30.5, y: 39, dir: 1, state: "walk", gunCool: 0, shotFor: 0, special: null, gone: false }
+  const drone = { id: 9, kind: "drone", x: 24, y: 33, gone: false, state: "fly" }   // behind and above
+  w.agents.push(ag); w.enemies.push(drone)
+  assert.ok(S.shootDrone(w, ag), "it fires")
+  assert.ok(ag.gunCool > 0, "and has to reload")
+  drone.x = 5; drone.gone = false
+  ag.gunCool = 0
+  assert.ok(!S.shootDrone(w, ag), "not at one out of range")
+})

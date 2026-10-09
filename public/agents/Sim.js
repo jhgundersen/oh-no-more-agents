@@ -75,6 +75,12 @@ var SIDEARM_RELOAD = 600  // ordinary agents get one hurried shot, not a firing 
 var SIDEARM_RANGE = 20
 var SIDEARM_ENEMY_HIT = 1
 var SIDEARM_HAZARD_HIT = 1
+// A drone is the one hostile a hurried shot has a chance against: small, slow
+// and coming straight at you. 118 launched over 42 operator runs killed 92 and
+// one was shot down, because the sidearm only looked ahead and hit 1% of the
+// time. A drone in range is fired at whichever way it is, and hit far more.
+var SIDEARM_DRONE_RANGE = 14
+var SIDEARM_DRONE_HIT = 35
 var ENEMY_JET_SPEED = 0.30
 var ENEMY_JET_SINK = 0.10
 
@@ -5756,6 +5762,7 @@ function sightsHazard(w, ag) {
 // colony RNG, so adding the gun does not reshuffle maps or personalities.
 function regularSidearm(w, ag) {
   if (ag.special || ag.state !== "walk" || ag.gunCool > 0 || ag.shotFor > 0) return
+  if (shootDrone(w, ag)) return
   var fx = Math.floor(ag.x), fy = Math.floor(ag.y)
   var target = null, targetKind = "", targetDist = Infinity, tx = 0, ty = 0
 
@@ -5789,6 +5796,29 @@ function regularSidearm(w, ag) {
     if (targetKind === "enemy") killEnemy(w, target)
     else wreckHazard(w, target)
   }
+}
+
+// The nearest drone in range with a clear line, front or back. Same reload as
+// any sidearm shot, and a miss is drawn as a miss.
+function shootDrone(w, ag) {
+  var fx = Math.floor(ag.x), fy = Math.floor(ag.y) - 2
+  var target = null, best = SIDEARM_DRONE_RANGE * SIDEARM_DRONE_RANGE
+  for (var i = 0; i < w.enemies.length; i++) {
+    var en = w.enemies[i]
+    if (en.gone || en.kind !== "drone") continue
+    var dx = en.x - ag.x, dy = en.y - (ag.y - 2), d = dx * dx + dy * dy
+    if (d > best || !lineClear(w, fx, fy, Math.floor(en.x), Math.floor(en.y))) continue
+    target = en; best = d
+  }
+  if (!target) return false
+  var roll = (w.ticks * 37 + ag.id * 61 + Math.floor(target.x) * 17) % 100
+  var hit = roll < SIDEARM_DRONE_HIT
+  ag.shotTo = hit ? target.x : target.x + (roll % 2 ? 2 : -2)
+  ag.shotY = hit ? target.y : target.y - 2 + roll % 4
+  ag.shotFor = 8
+  ag.gunCool = SIDEARM_RELOAD + (ag.id % 5) * 7
+  if (hit) { target.gone = true; target.state = "dead"; addDust(w, target.x, target.y, 10); noteBlast(w, target.x, target.y, 2); w.lastEvent = "drone down" }
+  return true
 }
 
 // Is the danger in front of it, within range?

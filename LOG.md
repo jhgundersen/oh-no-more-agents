@@ -539,3 +539,28 @@ lethal shaft — netted, the faller walks away; without the net, it dies.
 
 **Next.** Deploy with 22. Candidates: mission pens at the finer res; the
 drone (9% of deaths) has no counter at all.
+
+## 22 — 2026-10-09 · The colony shoots back at drones
+
+**Why.** Drones are 9% of deaths and nothing answered them. Over 42 operator
+runs: 118 drones launched, 92 killed somebody, one was shot down, and 38 of
+42 operators survived to launch again. The sidearm only looked ahead, and
+hit 1% of the time — a drone homes in from behind or above.
+
+**Changed.** `shootDrone`, tried first in `regularSidearm`: the nearest drone
+within `SIDEARM_DRONE_RANGE` (14) with a clear line, front or back, is fired
+at with a `SIDEARM_DRONE_HIT` 35% chance (deterministic roll, like the rest of
+the sidearm). Same reload as any sidearm shot; a hit pops the drone with a
+small blast ("drone down").
+
+**Checked.** Same 42 runs: strikes 92 → 80, shot down 1 → 18. Wide sweep,
+on vs off: 88.39 vs 88.32% home, cleared equal, no hangs — operators are in
+~7% of runs, so the aggregate barely moves; on those levels the colony now
+fights back. Rendered a kill on level 78. Test: fires at a drone behind it,
+not at one out of range, and reloads.
+
+**Deployed** with 21 (below).
+
+**Next.** Mission pens at the finer res, or the operator itself (it survives
+38 of 42 runs) — but check whether killing it more often makes the levels too
+easy before trying.
