@@ -2134,10 +2134,12 @@ var SPECIALS = [
   ,{ id: "bulwark", name: "Ada Blocker", act: "shield", height: "shieldglider", cool: 150, robe: "#7b8794", hair: "#ffd23f" }
 
   // Neither breaks the danger nor stands in front of it: tells it to slow
-  // down. Any fixture on the board, electronic or not, stops for THROTTLE_TICKS
-  // and then comes back exactly as it was — so the move is only worth anything
-  // to whoever is close enough to walk through the window, and the special
-  // spends most of its life waiting for the queue to catch up.
+  // down. Anything hostile in reach, fixture or red team, stops for
+  // THROTTLE_TICKS and then comes back exactly as it was. Measured, it is the
+  // red team it meets — 28 of 29 throttles over its levels — because it falls
+  // past most storeys and is home in a few hundred ticks, and fixtures stay
+  // where they were built while hostiles come looking. Worth about three
+  // points of home on its levels against the same levels without the move.
   ,{ id: "ratelimit", name: "Rate Limiter", act: "throttle", height: "backoff", cool: 180, robe: "#c9821a", hair: "#2a2a30" }
 ]
 
@@ -7762,7 +7764,10 @@ function stepAgents(w) {
       // one: same answer either way, and the last of those is the one that
       // matters — cover is worth nothing raised after the first shot.
       if (sact === "shield" && (seesDanger || seesRed || threatAhead(w, ag, 14))) raiseShield(w, ag)
-      if (sact === "throttle" && ag.cool <= 0 && (seesDanger || seesRed)) throttleHazard(w, ag)
+      // Not gated on sightsHazard or visibleEnemyAhead, which look one way or
+      // at fixtures only: inReach already asks for a clear line, both ways,
+      // and waiting to be facing the thing meant it acted on almost nothing.
+      if (sact === "throttle" && ag.cool <= 0) throttleHazard(w, ag)
 
       if (sact === "camp" && (seesDanger || seesRed)) {
         ag.state = "camp"

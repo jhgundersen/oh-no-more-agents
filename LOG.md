@@ -177,3 +177,32 @@ runs of its levels (6 enemy throttles). Log 4's worry is real.
 **Next.** Make the Rate Limiter matter: it should go *to* the danger the
 colony is queuing at, not just react if it happens past one. Then deploy
 (Desert + hazard refactor + that fix).
+
+## 7 — 2026-10-09 · Rate Limiter made to matter
+
+**Why.** Log 6: zero fixtures throttled in 39 runs of its own levels.
+
+**Found.** Not a reach problem. Traced on every hazard level it played: the
+special falls past most storeys and is home in ~400 ticks; it passed the
+shark on level 54 at zero cells — one storey up. And the trigger waited on
+`sightsHazard`/`visibleEnemyAhead`, which look one way, at one storey.
+Tried and dropped: throttling a fixture from anywhere when the colony is
+queued at it. Queues of two at a fixture exist in 418 of 126k ticks, and in
+78 runs not one coincided with the special being alive — so it never fired,
+and the code went back out rather than stay as a feature that does nothing.
+
+**Changed.** The trigger is now just "cooldown ready": `throttleHazard`'s own
+`inReach` (34 cells both ways, a storey, clear line) decides. Comment on the
+special rewritten to say what it actually is.
+
+**Checked.** Its levels, 78 runs, move on vs off: **92.7% vs 89.7% home**
+(was 91.2 vs 91.3). 29 throttles — 28 of them the red team, 1 a fixture.
+`sim play` 98 / 87 / 45s / 0 hangs. Tests pass.
+
+**Deployed** (version 3c359b2b, build d760a634): Desert, hazard-drawing
+split, this. Headless Chromium on level 11 first — no errors, Desert reads.
+
+**Next.** The Desert sun reads as a boulder in the browser — give it rays or
+a halo. Then the agent-drawing switches (`drawAgentTrick` CC 70,
+`drawAgentHeightGear` CC 46) are the next crap to split, same method as
+log 5.
