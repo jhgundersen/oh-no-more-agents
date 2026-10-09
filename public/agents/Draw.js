@@ -2515,7 +2515,7 @@ function drawCamel(ctx, t, x, y, dir, pal) {
 
 // A bust of the special, drawn at double size so it reads as a portrait rather
 // than as an agent that wandered into the sky.
-function drawBust(ctx, x, y, sp, pal, submerged) {
+function drawBust(ctx, x, y, sp, pal, submerged, fine) {
   var P = 2
   function px(bx, by, bw, bh, fill) { ctx.fillStyle = fill; ctx.fillRect(x + bx * P, y + by * P, bw * P, bh * P) }
   // Dressed like the colony it came out of. This was still wearing the old
@@ -2550,6 +2550,28 @@ function drawBust(ctx, x, y, sp, pal, submerged) {
   px(7, 7, 1, 4, sp.robe)
   px(3, 6, 2, 2, pal.shirt)        // collar and shirt front
   px(1, 8, 2, 2, sp.hair)          // the shoulder pip, same as on the board
+  if (fine) drawBustFine(px, sp, pal)
+}
+
+// The portrait at res 2: quarter-block detail on the face and the suit. The
+// card is up all level on nearly every level, and the agents under it got
+// their ties and glints long before the picture of their hero did.
+function drawBustFine(px, sp, pal) {
+  px(1.5, 0.5, 4, 0.25, "#ffffff22")                 // light on the hair
+  px(2, 1.75, 0.25, 1.25, "#00000033")               // strands
+  px(3.5, 1.5, 0.25, 1.5, "#00000033")
+  px(1.5, 3.25, 0.5, 1, pal.skin)                    // ear
+  px(1.5, 4, 0.75, 0.25, pal.eye)                    // glasses arm
+  px(5.25, 4, 0.25, 0.25, "#ffffff")                 // glint
+  px(3.25, 5.25, 1.5, 0.25, "#00000055")             // the smirk
+  px(4.5, 5, 0.25, 0.25, "#00000055")
+  px(2, 5.75, 4, 0.25, "#00000033")                  // chin shadow
+  px(3.75, 6, 0.5, 2.5, pal.eye)                     // tie
+  px(3.5, 6, 1, 0.5, pal.eye)
+  px(2.5, 6, 0.25, 2, "#ffffff33")                   // lapels
+  px(5.25, 6, 0.25, 2, "#ffffff33")
+  px(1.25, 8, 1.5, 0.25, "#ffffff55")                // light on the pip
+  px(0.75, 7, 0.25, 4, "#00000033")                  // shoulder seam
 }
 
 function drawSpecialCard(ctx, w, pal) {
@@ -2577,7 +2599,7 @@ function drawSpecialCard(ctx, w, pal) {
   ctx.fillStyle = sp.robe
   ctx.fillRect(onRight ? boardW - 2 : 0, 0, 2, skyH)   // spine, on the outside
 
-  drawBust(ctx, bustX, 3, sp, pal, w.submerged)
+  drawBust(ctx, bustX, 3, sp, pal, w.submerged, (w.res || 1) >= 2)
 
   var tx = onRight ? bustX - 8 : bustX + bustW + 8
   ctx.textAlign = onRight ? "right" : "left"

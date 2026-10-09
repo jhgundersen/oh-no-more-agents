@@ -854,3 +854,19 @@ and comes down whole, and refuses a roof too short to walk.
 **Next.** Back to the game. The specials' trick poses haven't had the finer
 res; or a look at what the newest pieces (Data Center, Hot Reload) look like
 in a full browser session.
+
+## 36 — 2026-10-09 · Finer pixels: the hero's portrait
+
+**Changed.** `drawBustFine` (res ≥ 2), quarter-block detail on the
+portrait in the sky card — up all level on nearly every level, and still
+flat blocks while the agents under it wore ties: light on the hair and two
+strands, an ear, the glasses' arm and a glint, a smirk, a chin shadow, a
+black tie, lapels, light on the shoulder pip, a shoulder seam.
+`tools/render.js` now reads `#rrggbbaa` colours (browsers do; the renderer
+turned them grey).
+
+**Checked.** Twelve portraits at 6× before/after. The first "after" showed
+no change — the sheet script never passed the flag; caught by looking.
+
+**Next.** Deploy (35 + 36). Then gameplay: a mechanic for one of the older
+biomes that is still only a skin (Frost, Ruins, Jungle…).

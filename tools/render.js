@@ -60,7 +60,9 @@ function parseColor(c) {
     return s.length ? parseColor(s[Math.floor(s.length / 2)]) : [136, 136, 136, 1]
   }
   if (typeof c !== "string") return [136, 136, 136, 1]
-  let m = c.match(/^#([0-9a-fA-F]{6})$/)
+  let m = c.match(/^#([0-9a-fA-F]{6})([0-9a-fA-F]{2})$/)       // #rrggbbaa, as browsers take it
+  if (m) { const n = parseInt(m[1], 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255, parseInt(m[2], 16) / 255] }
+  m = c.match(/^#([0-9a-fA-F]{6})$/)
   if (m) { const n = parseInt(m[1], 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255, 1] }
   m = c.match(/^#([0-9a-fA-F]{3})$/)
   if (m) { const h = m[1]; return [parseInt(h[0] + h[0], 16), parseInt(h[1] + h[1], 16), parseInt(h[2] + h[2], 16), 1] }
