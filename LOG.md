@@ -609,3 +609,5 @@ AGENTS.md baselines brought up to date (89%).
 
 **Next.** Deploy (23 + 24). Same audit for the other biome-only fixtures —
 a local fixture is drawn 45% of the time, so one bad one dominates a biome.
+
+**Deployed** after 24 (name="build" content="05ddc8ce"): prisoner faces, echo bat. Browser check clean.
