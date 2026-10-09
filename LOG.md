@@ -831,3 +831,26 @@ helmet now. `test/agents.test.js` already draws every pose wet at res 2.
 **Deployed** with 33 (below).
 
 **Deployed** after 34 (name="build" content="64289d66"): Hot Reload, finer divers. Browser check on level 10 clean.
+
+## 35 — 2026-10-09 · Crap: the heroes' moves under test
+
+**Why.** The worst real code was the heroes' movement — `startSpecialAscent`
+(355) and `specialTraverse` (316) — high only because no test reached it.
+`npm run sim heights` checked the roster, but nothing made it fail a build.
+
+**Changed.** Tests only. `test/heroes.test.js`: every hero survives a lethal
+drop by its own device (21 tests), no two share a device, every powered
+device reaches an upper ledge and none goes up without one; chain, speculate
+and collapse cross a wall to standing room (bringing a colleague, leaving a
+copy) and never into steel; Web Crawler climbs, walks the ceiling past a wall
+and comes down whole, and refuses a roof too short to walk.
+`test/outcome.test.js`: every end-of-level branch hands back a line.
+
+**CRAP.** `startSpecialAscent` 355 → 20, `specialTraverse` 316 → 18,
+`startCeiling` 195 → 17, `outcomeLine` 182 → 13. Functions over 30: 55 →
+46 of 495. Tests 118 → 159. Worst real code now `specialShapeCut` (135),
+`generate` (124, CC 124 — the generator), `specialCut` (120).
+
+**Next.** Back to the game. The specials' trick poses haven't had the finer
+res; or a look at what the newest pieces (Data Center, Hot Reload) look like
+in a full browser session.
