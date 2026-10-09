@@ -956,3 +956,5 @@ Choosing the spot earlier draws the event stream in a different order, so
 runs differ slightly: `sim play` 95 / 88 (was 95 / 88), `inert` passes.
 
 **Next.** Deploy (39 + 40).
+
+**Deployed** after 40 (name="build" content="671240dd"): specialCut split, event sites. Browser check clean.
