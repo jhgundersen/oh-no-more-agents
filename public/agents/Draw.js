@@ -3870,6 +3870,33 @@ function drawAgentHome(ctx, w, pal, ag, ox, oy, dir, robe, skin) {
   ctx.fillStyle = robe
 }
 
+// The umbrella at res 2: a dome built in half-pixel rows instead of a slab,
+// in two-tone panels with the ribs running out to the tips, a lit rim, a
+// ferrule on top. `flex` lifts the crown the way the
+// coarse canopy's centre lifts, so it still breathes.
+function drawUmbrellaFine(ctx, pal, ox, oy, flex, brolly) {
+  var cx = ox + 4.5, top = oy - 11 - flex * 0.5, base = oy - 7
+  var rows = Math.round((base - top) * 2)
+  for (var r = 0; r <= rows; r++) {
+    var y = top + r * 0.5, q = (r + 1) / (rows + 1)
+    var half = Math.round(6.5 * Math.sqrt(1 - (1 - q) * (1 - q)) * 2) / 2
+    ctx.fillStyle = brolly
+    ctx.fillRect(cx - half, y, half * 2, 0.5)
+    ctx.globalAlpha = 0.28                                  // every other panel in shade
+    ctx.fillStyle = "#000000"
+    ctx.fillRect(cx - half * 0.5, y, half * 0.5, 0.5)
+    ctx.fillRect(cx + half * 0.5, y, half * 0.5, 0.5)
+    ctx.globalAlpha = 1
+  }
+  ctx.fillStyle = pal.umbrellaRim
+  ctx.fillRect(cx - 6.5, base, 13, 0.5)                     // the rim
+  for (var rib = -1; rib <= 1; rib += 2)                    // tips hanging off it
+    ctx.fillRect(cx + rib * 6.5 - (rib > 0 ? 0.5 : 0), base + 0.5, 0.5, 1)
+  ctx.fillRect(cx - 0.5, top - 1, 1, 1)                     // ferrule
+  ctx.fillStyle = pal.umbrellaStem
+  ctx.fillRect(cx - 0.5, base + 0.5, 1, 6.5)                // shaft
+}
+
 // The throw: both arms out toward where the net went, and a line of cord
 // arcing from the hands to it for the first few ticks.
 function drawNetThrow(ctx, w, ag, ox, oy, dir, hair) {
@@ -5129,6 +5156,9 @@ function drawAgent(ctx, w, pal, ag, opts) {
       ? pal.umbrellas[(ag.id + (w.colonySeed || 0)) % pal.umbrellas.length]
       : pal.umbrella
 
+    if ((w.res || 1) >= 2) drawUmbrellaFine(ctx, pal, ox, oy, flex, brolly)
+    else {
+
     ctx.fillStyle = pal.umbrellaStem
     blit(ctx, ox, oy, 1, 4, -6, 1, 7)                    // one-pixel shaft
     blit(ctx, ox, oy, 1, 3, -7 - flex, 3, 1)             // the spreader under it
@@ -5144,6 +5174,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
     blit(ctx, ox, oy, 1, -1, -10 - flex, 11, 1)          // the lit edge
     blit(ctx, ox, oy, 1, -2, -8, 2, 1)
     blit(ctx, ox, oy, 1, 9, -8, 2, 1)
+    }
   }
 
   // Ada Blocker's plate. Drawn in front of the body on the side it is facing,

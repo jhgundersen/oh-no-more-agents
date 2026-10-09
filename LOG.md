@@ -665,3 +665,22 @@ updated); `inert`, `gravity`, `heights` pass. CRAP 13.7 / 3.
 **Next.** Red team is the biggest killer now. Deploy first.
 
 **Deployed** after 26 (name="build" content="85519e16"): hazard audit tool, flee fix. Browser check clean.
+
+## 27 — 2026-10-09 · Red team checked; umbrellas at the finer res
+
+**Red team (35% of deaths).** Profiled every enemy kill over 600 runs by
+shooter kind, range, time on the board and whether the victim was already
+wounded: gunners one-shot by design (`woundFriendly(…, lethal)` for gun and
+harpoon, after an 8-tick aim), at ranges spread evenly from point-blank to 20,
+with no cluster at the hatch or anywhere unfair. Not a bug like the bat or
+the plate. Weakening the commonest enemy in a game at 90% home would only
+take drama out. Left alone.
+
+**Umbrellas.** `drawUmbrellaFine` (res ≥ 2): a dome built in half-pixel rows
+instead of a slab, every other panel shaded, a lit rim with the tips hanging
+off it, a ferrule on top, a slimmer shaft; the crown still lifts with the
+canopy's breathing (`flex`). Six floaters at 5× before/after. A hand on the
+shaft was drawn and sat hidden behind the head — removed.
+
+**Next.** Deploy soon (27 + whatever comes next). Remaining coarse pieces in
+order of screen time: drones/operators, sniper, divers, then hazards.
