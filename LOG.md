@@ -890,3 +890,22 @@ Frost, none in the Cavern, none older than their life. `sim play` unchanged.
 
 **Next.** Deploy with the next. Ideas still open: a mechanic for Ruins or
 Jungle; specials' trick poses at the finer res; xeno at the finer res.
+
+## 38 — 2026-10-09 · Jungle vines
+
+**Changed.** `placeVines` (end of `generate`, Jungle only): half the wall
+faces the colony meets coming along a corridor — with a top to stand on and
+a floor in front — get a vine, which is a `w.ladders` entry with `vine: true`.
+A ladder is the one rule every agent treats the same (hitWall climbs it
+before anything else), so a vine needs no new mechanism. Own random stream,
+so Jungle terrain and every other roll are unchanged. Drawn as a wavering
+stem with leaves on alternate sides (`drawVine`) instead of timber.
+
+**Checked — honestly modest.** 132 vines over 75 Jungle runs; 32 climbed.
+Most sit on tall faces the colony rarely has to cross, and where one is
+climbed it replaces a bash, not a climber: climbers spent 1532 vs 1526,
+home 89.3 vs 89.1. It is visible and used about once every two or three
+Jungle levels, not a balance change. Kept for that. Test: a Jungle level has
+a vine and the climb rule sees it.
+
+**Deployed** with 37 (below).

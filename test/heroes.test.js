@@ -105,3 +105,16 @@ test("no ceiling walk without five cells of ceiling to walk", () => {
   S.startCeiling(w, ag)
   assert.notEqual(ag.state, "ceil")
 })
+
+test("a Jungle vine is a ladder anybody climbs", () => {
+  let found = null
+  for (let lv = 5; lv <= 200 && !found; lv += 12) {
+    const w = S.generate(lv, 0, 99)
+    const v = w.ladders.find(l => l.vine)
+    if (v) found = { w, v }
+  }
+  assert.ok(found, "some Jungle level has a vine")
+  const { w, v } = found
+  assert.equal(w.biome, "Jungle")
+  assert.ok(S.ladderAt(w, v.x, v.side, v.bottom), "the climb rule sees it")
+})

@@ -1595,6 +1595,7 @@ function drawActors(ctx, w, pal, opts) {
     var lbot = Math.round((lad.bottom + 1) * k.CELL)
     var lspan = Math.round((lad.bottom - lad.top + 1) * k.CELL * lgrow)
     var stile = lad.side > 0 ? lx - 3 : lx + 1
+    if (lad.vine) { drawVine(ctx, pal, stile, lbot, lspan, lad.x); continue }
 
     ctx.fillStyle = pal.rigDark
     ctx.fillRect(stile, lbot - lspan, 2, lspan)
@@ -4382,6 +4383,21 @@ function drawPrints(ctx, w, pal) {
     } else ctx.fillRect(px - 1, py, 2, 1)
   }
   ctx.globalAlpha = 1
+}
+
+// A Jungle vine down a wall face (a ladder in everything but looks): a
+// wavering stem with leaves off it on alternate sides, so it reads as
+// something that grew there and not as something somebody brought.
+function drawVine(ctx, pal, stile, lbot, lspan, seed) {
+  for (var y = 0; y < lspan; y++) {
+    var wob = Math.round(Math.sin((y + seed * 3) * 0.35))
+    ctx.fillStyle = pal.decor
+    ctx.fillRect(stile + 1 + wob, lbot - y - 1, 1, 1)
+    if (y % 4 === seed % 4) {
+      ctx.fillStyle = pal.decorLit
+      ctx.fillRect(stile + 1 + wob + ((y >> 2) % 2 ? 1 : -2), lbot - y - 1, 2, 1)
+    }
+  }
 }
 
 // Fallback's net: two posts and a mesh slung between them on the landing

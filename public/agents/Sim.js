@@ -1299,10 +1299,35 @@ function generate(level, attempt, colonySeed) {
       for (var epadX = enemyX - 2; epadX <= enemyX + 2; epadX++) setCell(w, epadX, epadY, STEEL)
   }
 
+  if (w.biome === "Jungle") placeVines(w, corridors)
+
   // Last, so that everything above this line still cuts freely (see clearCell).
   w.bedFloor = corridors[corridors.length - 1].floorY
 
   return w
+}
+
+// The Jungle's own mechanism: some walls have a vine down their face, and a
+// vine is a ladder — the one rule every agent already treats identically,
+// special or not, climbers left or none (see hitWall). Rolled from a stream of
+// its own keyed on the level, so the terrain and every other roll on a Jungle
+// level are exactly what they were. Only walls with a top to stand on and a
+// floor in front of them, and only the face the colony meets coming along
+// the corridor.
+var VINE_CHANCE = 0.5
+function placeVines(w, corridors) {
+  var vrng = makeRng(w.level * 2654435 + 7741)
+  for (var ci = 0; ci < corridors.length; ci++) {
+    var c = corridors[ci], fy = c.floorY - 1
+    var lo = Math.min(c.startX, c.handoffX), hi = Math.max(c.startX, c.handoffX)
+    for (var x = lo + 2; x < hi - 1; x++) {
+      if (!solid(w, x, fy) || solid(w, x - c.dir, fy) || !solid(w, x - c.dir, fy + 1)) continue
+      var h = wallHeight(w, x, fy)
+      if (h < 2 || h > LADDER_MAX || fy - h < SKY) continue
+      if (vrng() >= VINE_CHANCE || ladderAt(w, x, c.dir, fy)) continue
+      w.ladders.push({ x: x, side: c.dir, bottom: fy, top: fy - h, t: 14, vine: true })
+    }
+  }
 }
 
 function placeMission(w, corridors) {
