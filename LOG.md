@@ -909,3 +909,5 @@ Jungle levels, not a balance change. Kept for that. Test: a Jungle level has
 a vine and the climb rule sees it.
 
 **Deployed** with 37 (below).
+
+**Deployed** after 38 (name="build" content="ffd57772"): footprints, Jungle vines. Browser check on level 5 clean.
