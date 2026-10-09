@@ -84,6 +84,7 @@ var WATER = { r: 0.13, g: 0.42, b: 0.52 }
 // light has never reached.
 var SEA = { r: 0.06, g: 0.34, b: 0.40 }
 var SAND = { r: 0.95, g: 0.76, b: 0.48 }
+var TERMINAL = { r: 0.20, g: 0.82, b: 0.66 }
 var ABYSS = { r: 0.01, g: 0.05, b: 0.09 }
 var LAVA = { r: 0.88, g: 0.26, b: 0.06 }
 var COOLANT = { r: 0.20, g: 0.80, b: 0.76 }
@@ -97,7 +98,7 @@ var VOID = { r: 0, g: 0, b: 0 }
 // number by the same rule, which is how every other per-biome difference in
 // this game stays in step across two files that cannot call each other.
 function poolTint(level) {
-  switch ((level - 1) % 11) {
+  switch ((level - 1) % 12) {
     case 1: return WATER      // Ruins: a flooded cistern
     case 3: return LAVA       // Foundry: what the place is for
     case 4: return WATER      // Jungle: the swamp, and what lives in it
@@ -107,12 +108,13 @@ function poolTint(level) {
     // nothing at the bottom of one of those but the lobby floor.
     case 9: return ABYSS      // Trench: a hole in the floor of the sea
     // 10, the Desert, is dry: a sinkhole, and sand all the way down.
+    // 11, the Data Center, is dry: a floor tile lifted, and the void under it.
     default: return WATER     // dry biomes; unused, but never undefined
   }
 }
 
 function biomeTint(theme, level) {
-  switch ((level - 1) % 11) {
+  switch ((level - 1) % 12) {
     case 0: return theme.accent                              // Cavern
     case 1: return theme.urgent                              // Ruins
     case 2: return lighter(theme.accent, 1.7)                // Frost
@@ -132,7 +134,10 @@ function biomeTint(theme, level) {
     case 9: return toward(lighter(theme.accent, 1.25), SEA, 0.78)   // Trench
     // Pale and dusty, where the Factory is saturated brass and the Ruins are
     // the theme's own red: sandstone has had the colour bleached out of it.
-    default: return toward(lighter(theme.accent, 1.3), SAND, 0.94)  // Desert
+    case 10: return toward(lighter(theme.accent, 1.3), SAND, 0.94)  // Desert
+    // Terminal green, the one colour every machine room in fiction is lit by,
+    // pulled well away from the Jungle's leaf green by its blue.
+    default: return toward(theme.accent, TERMINAL, 0.80)          // Data Center
   }
 }
 

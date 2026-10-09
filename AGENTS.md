@@ -75,7 +75,7 @@ Production is `https://oh-no-more-agents.com`.
   side gets bricks, and the blocker is kept for the drop with no far side.
 - **Biomes are picked by level number, so a new one goes on the end of `BIOMES`**
   — inserting re-skins every level above it. `Palette.js` derives the same index
-  with its own copy of the rule (`(level - 1) % 11` in `poolTint` and `biomeTint`)
+  with its own copy of the rule (`(level - 1) % 12` in `poolTint` and `biomeTint`)
   and must change in the same commit. `rock` is mixed from the theme foreground and is **not** tinted, so a
   skin built mostly of `ROCK` comes out the same grey everywhere.
 - **Events change a level's premise while it is played** (see the block above
@@ -576,8 +576,10 @@ gameplay, intended or not. `hangs` must stay at zero. The game has no pass mark,
 so `cleared` is measured against `CLEAR_SHARE`, a fixed fraction of the colony
 defined in `simcheck.js`.
 
-Baselines, 200 levels (as of the eleven-biome catalogue, October 2026):
-**99% of levels cleared, 90% of agents home, 46s per attempt, no hangs.**
+Baselines, 200 levels (as of the twelve-biome catalogue, October 2026):
+**95% of levels cleared, 89% of agents home, 44s per attempt, no hangs.** The
+pinned 200 are a small sample: adding the twelfth biome moved them from 99% to
+95% with the failures spread over seven biomes, while the wide sweep moved 1.4.
 Earlier figures below are from the ten-biome catalogue and are kept as they
 were measured. Per biome nothing is an outlier — 95–100% cleared and 77–93%
 home across all ten, with the Trench at 100/92 and the Skyscraper at 95/77. On

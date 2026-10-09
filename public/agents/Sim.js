@@ -120,7 +120,7 @@ var SKILL_LABELS = {
 // putting a new one anywhere but the end would re-skin every level above it.
 // Palette.js derives the same index with the same rule and must be kept in
 // step — see the note over poolTint there.
-var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert"]
+var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center"]
 
 // A small job on the route gives each biome a premise beyond merely reaching
 // the door. These are deliberately one mechanism with different casts: an
@@ -147,7 +147,10 @@ var MISSION_SPECS = {
   // The animal mission with a different animal. A camel is the one thing in
   // a desert worth more than water, and it is drawn as itself rather than as
   // the Jungle's boar in a hotter colour.
-  "Desert":    { id: "caravan",   verb: "FREE THE CAMELS",       kind: "camel", count: 2 }
+  "Desert":    { id: "caravan",   verb: "FREE THE CAMELS",       kind: "camel", count: 2 },
+  // The colony's own habitat. Somebody is always still in here at three in
+  // the morning, and getting them out is the job.
+  "Data Center": { id: "oncall",  verb: "RELIEVE THE ON-CALL",   kind: "civilian", count: 2 }
 }
 
 // ---------------------------------------------------------------------------
@@ -1722,7 +1725,33 @@ function biomeSkin(w, rng) {
 
   } else if (w.biome === "Desert") {
     skinDesert(w, rng)
+  } else if (w.biome === "Data Center") {
+    skinDataCenter(w, rng)
   }
+}
+
+// Rows of racks in a raised-floor hall. The hall is DIRT (the tinted
+// material, so it carries the biome's colour); the racks are ORE, full-height
+// columns two cells wide at a fixed pitch with a gap between pairs — the cold
+// aisle — and every few rows a ROCK cable tray runs across. Nothing here grew
+// and nothing was dropped: it was installed, so the regularity is total, and
+// the racks run vertically where the Skyscraper's bays do and the Spaceship's
+// plates tile. Draw puts the status lights on them (drawRackLights).
+function skinDataCenter(w, rng) {
+  var x, y
+  var pitch = irand(rng, 7, 9), offset = irand(rng, 0, pitch - 1)
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++) {
+      if (at(w, x, y) === STEEL) continue
+      // Racks are stacked units: every other row of a rack column is the
+      // untinted grey of a server's faceplate, so a rack reads as a stack of
+      // machines and not as a stripe in the wall.
+      var col = (x + offset) % pitch
+      setCell(w, x, y, col >= 2 ? DIRT : (y % 2 ? ROCK : ORE))
+    }
+  for (y = SKY + irand(rng, 2, 4); y < ROWS - 3; y += irand(rng, 9, 13))
+    for (x = 3; x < COLS - 3; x++)
+      if (at(w, x, y) !== STEEL) setCell(w, x, y, ROCK)
 }
 
 // Sandstone laid down by wind: long gentle bands that rise and fall across the
@@ -1777,6 +1806,10 @@ function placeDecor(w, rng, corridors) {
     // character on their own, and the general scatter was competing with them.
     floorRate = 0.07; ceilRate = 0.05; gap = 7
     floorKinds = ["spire", "spire", "clump"]
+  } else if (w.biome === "Data Center") {
+    // Cable runs off the ceiling, almost nothing on the floor: it is swept.
+    floorRate = 0.05; ceilRate = 0.10; gap = 6
+    floorKinds = ["clump", "spire"]
   } else if (w.biome === "Desert") {
     // Sparse, and almost nothing hangs: there is no damp for it to grow in.
     floorRate = 0.11; ceilRate = 0.02; gap = 5
@@ -2672,6 +2705,9 @@ var HAZARDS = [
   { id: "molten",   name: "Memory Leak", mech: "cycle", mount: "ceiling", reach: 0, charge: 26, fire: 26, rest: 58, w: 5, h: 6, only: ["Foundry"] },
   // Desert only. Strikes from behind, which in this file means: the tail goes
   // over the back and lands in front of it.
+  // Data Center only. A rack fan that spins up when somebody walks past and
+  // blows hot exhaust down the aisle — the hot aisle, made literal.
+  { id: "hotaisle", name: "Hot Aisle", mech: "watch", mount: "wall", reach: 10, charge: 26, fire: 18, rest: 60, w: 3, h: 4, only: ["Data Center"] },
   { id: "scorpion", name: "Tail Call", mech: "watch", mount: "floor", reach: 9, charge: 22, fire: 14, rest: 56, w: 5, h: 3, only: ["Desert"] },
   { id: "snake",    name: "Python", mech: "watch", mount: "floor", reach: 9, charge: 20, fire: 16, rest: 60, w: 4, h: 3, only: ["Jungle"] },
   { id: "spores",   name: "Cloud Distribution", mech: "cycle", mount: "ceiling", reach: 0, charge: 30, fire: 28, rest: 60, w: 6, h: 6, only: ["Jungle"] },
@@ -2882,7 +2918,7 @@ function hazardCatches(w, h, ag) {
   var sameCorridor = Math.abs(ay - h.floorY) <= CORR_H
 
   // These attacks leave the fixture instead of magically filling its box.
-  if (h.kind === "sentry" || h.kind === "frostjet")
+  if (h.kind === "sentry" || h.kind === "frostjet" || h.kind === "hotaisle")
     return sameCorridor && (ag.x - mid) * h.dir >= 0 && (ag.x - mid) * h.dir <= spec.reach
   if (h.kind === "darts" || h.kind === "scarab") {
     var projectileCount = h.kind === "scarab" ? 5 : 3
@@ -3217,7 +3253,7 @@ function hazardCovers(w, h, ax, footY) {
     return ax >= a - 1 && ax <= b + 1
   }
   if (h.kind === "sentry" || h.kind === "darts" || h.kind === "frostjet"
-      || h.kind === "scarab" || h.kind === "snake") {
+      || h.kind === "scarab" || h.kind === "snake" || h.kind === "hotaisle") {
     var along = (ax - hazardMid(h).x) * h.dir
     return Math.abs(footY - h.floorY) <= CORR_H && along >= -1 && along <= hspec.reach + 1
   }
@@ -4486,7 +4522,12 @@ var EVENTS = [
   // --- Desert ---
   { id: "sandstorm",name: "Model Drift",      biome: "Desert", mech: "drift",    what: "sight", ticks: 460 },
   { id: "dunes",    name: "Sandbox",          biome: "Desert", mech: "growth",   span: 14, high: 2 },
-  { id: "sinkhole", name: "Cache Miss",       biome: "Desert", mech: "collapse", at: "floor", span: 6, deep: 3 }
+  { id: "sinkhole", name: "Cache Miss",       biome: "Desert", mech: "collapse", at: "floor", span: 6, deep: 3 },
+
+  // --- Data Center ---
+  { id: "failover", name: "Failover",         biome: "Data Center", mech: "blackout", mult: 0, ticks: 300 },
+  { id: "hotfix",   name: "Hot Swap",         biome: "Data Center", mech: "collapse", at: "ceiling", span: 6, deep: 3 },
+  { id: "rackgrow", name: "Capacity Planning",biome: "Data Center", mech: "growth",   span: 12, high: 2 }
 ]
 
 function eventsFor(biome) {

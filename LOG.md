@@ -724,3 +724,31 @@ over 30: 57 → 55 of 485. Worst real code now `startSpecialAscent` (355) and
 `specialTraverse` (316), both barely covered.
 
 **Next.** Something new to look at: a twelfth biome, or a hero. Deploy after.
+
+## 30 — 2026-10-09 · Biome: the Data Center
+
+**Why.** Eleven biomes and none of them is where the agents come from.
+
+**Changed.** Twelfth biome, appended (catalogue reshuffles; Palette modulus
+12, AGENTS.md updated). Sim: `skinDataCenter` — a raised-floor hall of racks
+at a fixed pitch, each rack a stack of units (ORE and grey ROCK on alternate
+rows), cable trays across in ROCK; cable runs off the ceiling, almost nothing
+on the floor. Mission "RELIEVE THE ON-CALL" (civilians, two). Hazard
+`hotaisle` "Hot Aisle" (Data Center only): a rack fan that spins up and blows
+hot air down the aisle, a directional reach like the sentry's. Events
+"Failover" (every fixture stops for 300 ticks), "Hot Swap" (ceiling
+collapse), "Capacity Planning" (growth). Palette `TERMINAL` green, pulled
+toward the accent. Draw: `drawRackLights` — status lights on rack faces that
+blink on their own phases, a few amber (pure function of tick and cell);
+`backDataCenter` — two receding rows of racks with dim dots; a rack-door
+exit with a light strip and badge reader; the fan; "SHADOW IT" over the
+enemy hatch; floor-vent dust rising; no terrain grain (`BUILT`).
+
+**Checked.** First skin read as a teal cave — racks were faint bands; units
+on alternate rows fixed it. Wide sweep with vs without it in `BIOMES`:
+89.58 / 96.3 vs 90.13 / 97.7 — the Data Center itself 92% home; the other
+biomes swing ±10 both ways from reassignment alone. `sim play` 95 / 89 / 44s
+(failures across seven biomes, one in the Data Center). `inert`, `gravity`,
+`heights` pass. New functions CRAP ≤ 10.
+
+**Next.** A mechanic of its own, the way the Desert got wind. Deploy now.

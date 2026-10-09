@@ -187,7 +187,7 @@ function drawTerrain(ctx, w, pal) {
 // while the colony digs around it.
 // Built places get no grain: on hull plate, office wall and machine housing it
 // read as dirt, and those biomes carry their own pattern (panels, bays, rivets).
-var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true }
+var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true }
 
 // One cell's grain: a dark fleck in a quarter of cells, a pale one in an
 // eighth, placed inside the cell by the hash.
@@ -255,7 +255,7 @@ var BACKDROPS = {
   "Cavern": backCavern, "Ruins": backRuins, "Frost": backFrost,
   "Foundry": backFoundry, "Jungle": backJungle, "Ice Cave": backIceCave,
   "Spaceship": backSpaceship, "Factory": backFactory, "Trench": backTrench,
-  "Desert": backDesert
+  "Desert": backDesert, "Data Center": backDataCenter
 }
 
 function drawBackdrop(ctx, w, pal) {
@@ -473,6 +473,21 @@ function backDesert(ctx, r, b, pal) {
   }
 }
 
+// Far rows of racks: tall columns in the back shades, each with a few dim
+// status dots, receding in two rows so the hall reads as deep.
+function backDataCenter(ctx, r, b, pal) {
+  for (var row = 0; row < 2; row++) {
+    var pitch = row ? 14 : 22, wide = row ? 8 : 12
+    ctx.fillStyle = row ? pal.backDim : pal.back
+    for (var x = b.x + Math.floor(r() * pitch); x < b.x + b.w; x += pitch) {
+      ctx.fillRect(x, b.y, wide, b.h)
+      ctx.fillStyle = pal.backLit
+      for (var y = b.y + 4; y < b.y + b.h; y += 6 + Math.floor(r() * 6)) ctx.fillRect(x + 2 + Math.floor(r() * (wide - 4)), y, 1, 1)
+      ctx.fillStyle = row ? pal.backDim : pal.back
+    }
+  }
+}
+
 function backTrench(ctx, r, b, pal) {
   // Rock spires rising out of the deep; the sea is laid over them afterwards.
   for (var i = 0; i < 9; i++) {
@@ -621,7 +636,7 @@ function drawDecor(ctx, w, pal) {
     var ruins = w.biome === "Ruins"
     var frost = w.biome === "Frost" || w.biome === "Ice Cave"
     var foundry = w.biome === "Foundry" || w.biome === "Spaceship"
-               || w.biome === "Factory" || w.biome === "Skyscraper"
+               || w.biome === "Factory" || w.biome === "Skyscraper" || w.biome === "Data Center"
     var jungle = w.biome === "Jungle"
     var desert = w.biome === "Desert"
 
@@ -793,6 +808,18 @@ function drawExitBack(ctx, w, pal) {
     ctx.fillRect(x + ww, y - 2, 4, hh + 2)
     ctx.fillStyle = pal.rigDark
     for (var rv = 0; rv < ww + 8; rv += 5) ctx.fillRect(x - 4 + rv, y - 5, 2, 2)
+    break
+
+  case "Data Center":
+    // A rack door: a heavy frame, a strip of status lights across the top,
+    // and a badge reader by the handle.
+    ctx.fillRect(x - 4, y - 6, ww + 8, 4)
+    ctx.fillRect(x - 4, y - 2, 3, hh + 2)
+    ctx.fillRect(x + ww + 1, y - 2, 3, hh + 2)
+    ctx.fillStyle = pal.decorLit
+    for (var sl = 0; sl < ww + 4; sl += 3) ctx.fillRect(x - 2 + sl, y - 5, 1, 1)
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(x + ww + 1, y + hh / 2 - 2, 3, 4)
     break
 
   case "Desert":
@@ -988,6 +1015,8 @@ var AMBIENCE = {
   "Spaceship":[{ n: 16, vx: 0.05, vy: 0.01, sway: 2, size: 1, col: "dust", alpha: 0.25 }],
   "Factory":  [{ n: 24, vx: 0.08, vy: -0.03, sway: 3, size: 1, col: "dust", alpha: 0.22 }],
   // Sand on the wind: fast, nearly flat, and a few grains big enough to see.
+  // Cold air off the floor vents: a slow upward drift of dust in the aisles.
+  "Data Center": [{ n: 22, vx: 0.01, vy: -0.10, sway: 1, size: 1, col: "dust", alpha: 0.22 }],
   "Desert":   [{ n: 50, vx: 0.55, vy: 0.03, sway: 1, size: 1, col: "decorLit", alpha: 0.45 },
                { n: 8, vx: 0.40, vy: 0.05, sway: 2, size: 2, col: "decor", alpha: 0.35 }]
 }
@@ -1041,8 +1070,29 @@ function drawMotes(ctx, w, pal, spec, salt) {
   }
 }
 
+// Status lights on every rack face in the Data Center: one in five rack cells
+// that face the open air carries a light, which blinks on a phase of its own
+// and now and then goes amber. A pure function of the tick and the cell, so
+// it costs nothing to keep and cannot drift between hosts; on the actor pass
+// because it moves (see the drawDecor note in AGENTS.md).
+function drawRackLights(ctx, w) {
+  var k = w.k, C = k.CELL, T = w.terrain, cols = k.COLS
+  for (var y = k.SKY; y < k.ROWS - 1; y++) for (var x = 1; x < cols - 1; x++) {
+    var i = y * cols + x
+    if (T[i] !== k.ORE || (T[i - 1] !== k.EMPTY && T[i + 1] !== k.EMPTY)) continue
+    var h = ((x * 73856093) ^ (y * 19349663)) >>> 0
+    if (h % 5) continue
+    var on = Math.floor((w.ticks + (h >> 4) % 97) / (12 + (h >> 9) % 20)) % 3
+    if (on === 0) continue
+    ctx.fillStyle = (h >> 13) % 7 === 0 ? "#ffb13b" : "#5dffa0"
+    var lx = T[i - 1] === k.EMPTY ? x * C : x * C + C - 1
+    ctx.fillRect(lx, y * C + 1 + (h >> 6) % 2, 1, 1)
+  }
+}
+
 function drawMachines(ctx, w, pal) {
   drawWaterLife(ctx, w, pal)
+  if (w.biome === "Data Center") drawRackLights(ctx, w)
   drawAmbience(ctx, w, pal)
   if (w.biome !== "Factory") return
   var k = w.k
@@ -2587,6 +2637,7 @@ function drawEnemyHatch(ctx, w, pal, opts) {
   else if (biome === "Spaceship") { wall = pal.steel; roof = pal.rigDark; edge = pal.steelEdge; sign = "REMOTE OFFICE" }
   else if (biome === "Skyscraper") { wall = pal.dirt; roof = pal.rig; edge = pal.dirtEdge; sign = "MIDDLE MANAGEMENT" }
   else if (biome === "Desert") { wall = pal.ore; roof = pal.dirtShade; edge = pal.oreEdge; sign = "SANDBOX ESCAPE" }
+  else if (biome === "Data Center") { wall = pal.steel; roof = pal.rigDark; edge = pal.oreEdge; sign = "SHADOW IT" }
 
   // Barely larger than an agent: a sentry booth, not a second landmark. Its
   // materials come from the current theme; biome identity is in the roofline.
@@ -2770,7 +2821,7 @@ var HAZARD_DRAW = {
   brazier: drawHzBrazier, fence: drawHzFence, echobat: drawHzEchobat,
   scarab: drawHzScarab, snowball: drawHzSnowball, molten: drawHzMolten,
   vinelock: drawHzVinelock, blackice: drawHzBlackice, packetloss: drawHzPacketloss,
-  snake: drawHzSnake, scorpion: drawHzScorpion, shark: drawHzShark, current: drawHzCurrent, vent: drawHzVent,
+  snake: drawHzSnake, scorpion: drawHzScorpion, hotaisle: drawHzHotaisle, shark: drawHzShark, current: drawHzCurrent, vent: drawHzVent,
   spores: drawHzSpores, icicle: drawHzIcicle, frostjet: drawHzFrostjet,
   airlock: drawHzAirlock, stamper: drawHzStamper, flywheel: drawHzFlywheel,
   steamvent: drawHzSteamvent, sprinkler: drawHzSprinkler, polisher: drawHzPolisher,
@@ -3282,6 +3333,35 @@ function drawHzScorpion(ctx, w, pal, h, geo) {
   var sty = live ? floorY - 4 : ty + 1
   ctx.fillStyle = show ? hot : pal.warn
   ctx.fillRect(stx - (sdir < 0 ? 1 : 0), sty, 2, 2)                           // sting
+}
+
+// A rack fan on the wall: a round grille with blades that turn slowly at
+// rest, spin up through the wind-up, and then blow a shimmer of hot air down
+// the aisle as far as it reaches.
+function drawHzHotaisle(ctx, w, pal, h, geo) {
+  var C = geo.C, x0 = geo.x0, y0 = geo.y0, cx = geo.cx, wide = geo.wide,
+    live = geo.live, winding = geo.winding, show = geo.show, hot = geo.hot, t = geo.t
+  var cy = y0 + 7
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x0, y0 + 2, wide, 10)
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0 + 1, y0 + 3, wide - 2, 8)
+  var spin = t * (live ? 0.9 : (winding ? 0.5 : 0.08))
+  ctx.fillStyle = show ? hot : pal.rigDark
+  for (var b = 0; b < 3; b++) {
+    var a = spin + b * 2.094
+    ctx.fillRect(Math.round(cx + Math.cos(a) * 3) - 1, Math.round(cy + Math.sin(a) * 3) - 1, 2, 2)
+  }
+  ctx.fillRect(cx - 1, cy - 1, 2, 2)
+  if (!live) return
+  ctx.fillStyle = hot
+  var reach = (h.reach || 10) * C
+  for (var s = 0; s < 4; s++) {
+    var sx = cx + h.dir * (((t * 3 + s * reach / 4) % reach) + 4)
+    ctx.globalAlpha = 0.7 * (1 - s / 5)
+    ctx.fillRect(Math.min(sx, sx + h.dir * 6), cy - 3 + (s % 2) * 4, 6, 1)
+  }
+  ctx.globalAlpha = 1
 }
 
 function drawHzSnake(ctx, w, pal, h, geo) {
