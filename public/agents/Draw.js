@@ -4175,6 +4175,7 @@ function drawEnemy(ctx, w, pal, en, opts) {
   var stride = (en.anim >> 2) % 2
   blit(ctx, ox, oy, dir, 1 + stride, 13, 2, 3)
   blit(ctx, ox, oy, dir, 5 - stride, 13, 2, 3)
+  if ((w.res || 1) >= 2) drawGunnerFine(ctx, ox, oy, dir, stride, en.state === "jet")
 
   if (opts && opts.labels) {
     ctx.fillStyle = redLit
@@ -4186,6 +4187,36 @@ function drawEnemy(ctx, w, pal, en, opts) {
     ctx.fillText(enemyLabel, ox + 4, oy - 4)
   }
   ctx.globalAlpha = 1
+}
+
+// The gunner's half-pixel detail at res 2 (see drawAgentFine for the colony's
+// own): the same rule — all of it inside the coarse silhouette. Where the
+// agents got a suit, the red team gets kit: a scarred brow over an eye with a
+// hot core, a shadowed crest, a vest with straps and a buckled belt, vents on
+// the pack, a lit edge along the pistol's slide, and boots.
+function drawGunnerFine(ctx, ox, oy, dir, stride, jet) {
+  ctx.fillStyle = "#8a8378"
+  blitFine(ctx, ox, oy, dir, 1, 2.5, 6, 0.5)                    // the crest's shadow
+  blitFine(ctx, ox, oy, dir, 1, 0, 1.5, 0.5)                    // swept back
+  ctx.fillStyle = "#6e5a52"
+  blitFine(ctx, ox, oy, dir, 4, 3.5, 2, 0.5)                    // brow
+  blitFine(ctx, ox, oy, dir, 3, 5, 0.5, 1.5)                    // scar
+  ctx.fillStyle = "#ffd0d6"
+  blitFine(ctx, ox, oy, dir, 5.5, 4, 0.5, 0.5)                  // the eye's core
+  ctx.fillStyle = "#5c1424"
+  blitFine(ctx, ox, oy, dir, 2, 7, 0.5, 5)                      // vest straps
+  blitFine(ctx, ox, oy, dir, 5, 7, 0.5, 5)
+  blitFine(ctx, ox, oy, dir, 1, 12, 6, 0.5)                     // belt
+  ctx.fillStyle = "#e0b649"
+  blitFine(ctx, ox, oy, dir, 3.5, 12, 1, 0.5)                   // buckle
+  ctx.fillStyle = "#4a4a55"
+  blitFine(ctx, ox, oy, dir, 0.5, 8.5, 1, 0.5)                  // pack vents
+  blitFine(ctx, ox, oy, dir, 0.5, 10, 1, 0.5)
+  blitFine(ctx, ox, oy, dir, 6.5, 7, 4.5, 0.5)                  // the slide's lit edge
+  if (jet) return
+  ctx.fillStyle = "#16161b"
+  blitFine(ctx, ox, oy, dir, 1 + stride, 15, 2.5, 1)            // boots
+  blitFine(ctx, ox, oy, dir, 5 - stride, 15, 2.5, 1)
 }
 
 // The rival salvage crew, in the same period dress as the colony — that is the

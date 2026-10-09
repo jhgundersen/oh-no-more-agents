@@ -482,3 +482,19 @@ AGENTS.md's level 100 fixes. `sim play` 98 / 88 / 45s; `inert`, `gravity`.
 **Next.** The rest of the condemned are "open corridor, tools left" — agents
 pacing in the open, not at a wall. Worth one look at a sample before deciding.
 Graphics alternative: hazards at the finer res.
+
+## 19 — 2026-10-09 · Finer pixels, step 4: the red team
+
+**Changed.** `drawGunnerFine` (res ≥ 2), the ordinary gunner's half-pixel
+detail, inside its coarse silhouette like the agents': a shadow under the
+crest and a swept-back tuft, a scarred brow over the red eye with a pale hot
+core, a vest with two straps, a belt with a brass buckle, vents on the pack,
+a lit edge along the pistol slide, and boots (not while jetting).
+
+**Checked.** Eight-pose sheet at 8× (walk, both facings, firing, jet). First
+crest texture was vertical lines — read as a chef's hat; now a shadow line
+along its base. Divers, snipers, drones, operators and xenos untouched.
+
+**Next.** Deploy soon (18 + 19). Remaining finer-res candidates: the exit
+portal, the mission pens, the commonest hazards (gun, sentry, spikes,
+crusher). Or gameplay: the open-corridor condemnations.
