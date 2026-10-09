@@ -926,9 +926,32 @@ var AMBIENCE = {
 }
 
 function drawAmbience(ctx, w, pal) {
+  if (w.wind) drawGust(ctx, w, pal)
   var fields = AMBIENCE[w.biome]
   if (!fields) return
   for (var f = 0; f < fields.length; f++) drawMotes(ctx, w, pal, fields[f], f)
+  ctx.globalAlpha = 1
+}
+
+// A gust in the Desert (see `windAt` in Sim.js): streaks of sand down every
+// open corridor, more and longer the harder it blows, travelling the way it
+// blows. The wind slows and carries the colony, and a force nobody can see is
+// a force the audience reads as agents dawdling for no reason.
+function drawGust(ctx, w, pal) {
+  var k = w.k, C = k.CELL
+  var wide = k.COLS * C, top = k.SKY * C, tall = k.ROWS * C - top
+  var force = Math.abs(w.wind), sign = w.wind > 0 ? 1 : -1
+  var n = Math.round(130 * force), len = 4 + Math.round(force * 6)
+  var seed = (w.level * 7121) % 65536
+  var next = function () { seed = (seed * 1103515245 + 12345) % 2147483648; return (seed >> 6) / 33554432 }
+  ctx.fillStyle = pal.dust
+  for (var i = 0; i < n; i++) {
+    var x0 = next() * wide, y = Math.floor(top + next() * tall), pace = 2.2 + next() * 1.6
+    var x = Math.floor(((x0 + sign * w.ticks * pace) % wide + wide) % wide)
+    if (w.terrain[Math.floor(y / C) * k.COLS + Math.floor(x / C)] !== k.EMPTY) continue
+    ctx.globalAlpha = 0.25 + 0.4 * force
+    ctx.fillRect(sign > 0 ? x - len : x, y, len, 1)
+  }
   ctx.globalAlpha = 1
 }
 

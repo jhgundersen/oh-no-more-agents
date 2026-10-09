@@ -344,7 +344,36 @@ function traitOf(ag) { return TRAITS[ag.trait] || TRAITS.steady }
 // correctly refuses.
 function walkStep(ag, w) {
   var swim = w && w.submerged ? SWIM_PACE : 1
-  return WALK_SPEED * (traitOf(ag).pace || 1) * (ag.chilledFor > 0 ? 0.48 : 1) * swim
+  var wind = w && w.wind ? 1 + w.wind * ag.dir * WIND_PUSH : 1
+  return WALK_SPEED * (traitOf(ag).pace || 1) * (ag.chilledFor > 0 ? 0.48 : 1) * swim * wind
+}
+
+// ---------------------------------------------------------------------------
+// Wind
+// ---------------------------------------------------------------------------
+//
+// The Desert's own mechanism, the way the Trench has water and the tower has
+// lifts. Gusts come down the corridors every so often and blow one way for a
+// few seconds: a walker heading into one slows to half pace, one going with it
+// strides out, and an open umbrella is carried sideways. Like the water it is
+// a single number (`w.wind`) read by exactly two things — `walkStep` and the
+// floater's drift in `stepFall` — and everything else about the level is left
+// alone. It is a pure function of the tick and the level, so it takes nothing
+// from either random stream and a level plays the same wind every time.
+var WIND_PUSH = 0.45      // pace change at full gust: 0.55x into it, 1.45x with it
+var WIND_DRIFT = 0.10     // cells per tick an umbrella is carried at full gust
+var WIND_PERIOD = 640     // ticks from the start of one gust to the next
+var WIND_GUST = 220       // and how long one blows, rise and fall included
+
+function windAt(w) {
+  if (w.biome !== "Desert") return 0
+  var t = w.ticks + (w.level * 211) % WIND_PERIOD
+  var into = t % WIND_PERIOD
+  if (into >= WIND_GUST) return 0
+  // Which way this gust blows alternates, starting from a side set by the
+  // level, so a corridor is helped by one gust and fought by the next.
+  var dir = (Math.floor(t / WIND_PERIOD) + w.level) % 2 === 0 ? 1 : -1
+  return dir * Math.sin(into / WIND_GUST * Math.PI)
 }
 
 // Out of bounds reads as STEEL to the sides and below, EMPTY above. That way
@@ -734,6 +763,7 @@ function generate(level, attempt, colonySeed) {
     // agent on every tick, and one biome comparison per world beats sixty
     // thousand string compares a second. See the Water block above.
     submerged: BIOMES[(level - 1) % BIOMES.length] === "Trench",
+    wind: 0,          // the Desert's gust, -1..1 along x; set every tick by windAt
     k: K,
     decor: [],
     corrGap: CORR_GAP,
@@ -4830,6 +4860,10 @@ function stepFall(w, ag) {
   // trap and teaches the colony about it. An ordinary fall is committed, but
   // an open umbrella is steerable: drift out of newly-known reach instead of
   // serenely floating into the same place after the warning has arrived.
+  if (ag.floater && w.wind) {
+    var blownX = ag.x + w.wind * WIND_DRIFT
+    if (!solid(w, Math.floor(blownX), Math.floor(ag.y)) && !solid(w, Math.floor(blownX), Math.floor(ag.y) - 1)) ag.x = blownX
+  }
   if (ag.floater) {
     var airDanger = hazardZoneAt(w, cx, Math.floor(ny), false)
     if (airDanger) {
@@ -8096,6 +8130,7 @@ function step(w) {
     w.released = w.toRelease
   }
 
+  w.wind = windAt(w)
   var counts = stepAgents(w)
   var active = counts.active
   var blockers = counts.blockers

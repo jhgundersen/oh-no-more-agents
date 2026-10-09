@@ -258,7 +258,21 @@ block above `submerged()`.
   a long shallow arch for the back, a deep one for the belly, a peduncle that
   pinches to nothing, and a crescent tail with the upper lobe longer.
 
-## The Skyscraper
+## The Desert
+
+The third biome with a mechanism. The rules live in the Wind block under
+`walkStep`.
+
+- **`w.wind` is a number, not a system** — the Trench's rule again. `windAt`
+  sets it every tick from the tick and the level (no RNG, so nothing
+  reshuffles), and exactly two things read it: `walkStep` (0.55x into a full
+  gust, 1.45x with it) and the floater's drift in `stepFall`. `Draw.js` reads
+  the same field for `drawGust`; it cannot call `windAt`.
+- **Gusts alternate direction**, so a corridor is fought by one and helped by
+  the next. Measured over 240 Desert levels × 6 colonies: 89.3% home with wind
+  against 90.0% without, timeouts 5 against 1 — a mild tax on what was one of
+  the easier biomes, not a wall.
+
 
 The one biome with a mechanism rather than a skin. The rules it needs are
 gathered above `cutHoistway`.

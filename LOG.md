@@ -260,3 +260,26 @@ way the Trench and Skyscraper have one (sand that drifts and buries?).
 
 **Deployed** after 9 (version d0931e83, build c011326e). Browser check on
 level 11 first: no errors; the sun reads as a sun behind haze.
+
+## 10 — 2026-10-09 · Mechanic: Desert wind
+
+**Why.** The Trench has water and the tower has lifts; the Desert was a skin.
+
+**Changed.** `windAt` (Sim): a gust every 640 ticks lasting 220, sine rise
+and fall, direction alternating per gust from a level-set start — a pure
+function of tick and level, so no RNG and no reshuffle. Stored as `w.wind`,
+read by `walkStep` (`WIND_PUSH` 0.45: half pace into a full gust, 1.45x with
+it) and by umbrellas in `stepFall` (`WIND_DRIFT` 0.10 cells/tick sideways,
+never into rock). Draw: `drawGust` — sand streaks down open corridors, count
+and length growing with the gust, travelling with it. AGENTS.md has a Desert
+section next to the Trench and Skyscraper.
+
+**Checked.** Desert only, 240 levels × 6 colonies, page rules, on vs off:
+98.3 / 89.3% home / 46s / 5 timeouts vs 98.8 / 90.0 / 45s / 1. A mild tax
+on an easy biome. First streaks (decorLit, ≤70) were invisible on screen; now
+`dust`, up to 130, alpha up to 0.65 — reads as wind at 4× and full size.
+`sim play` 98 / 87 / 44s, `inert`, `heights` pass.
+
+**Next.** Agents could lean into the wind (a pixel of head forward) — small.
+Bigger: a new hero, or a second look at what kills most (`red team`,
+`hazard`, `boom` — see log 4's tally) for a mechanic that answers it.
