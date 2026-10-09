@@ -4708,6 +4708,7 @@ function drawEnemy(ctx, w, pal, en, opts) {
     ctx.fillStyle = "#2c5a35"
     blit(ctx, ox, oy, dir, 2, 15 + bob, 2, 3 - bob)
     blit(ctx, ox, oy, dir, 6, 15 + (1 - bob), 2, 3 - (1 - bob))
+    if ((w.res || 1) >= 2) drawXenoFine(ctx, ox, oy, dir, bob, sway)
 
     if (en.touchCool > 0) {
       // Sated, briefly. The one moment it is not a threat, and it says so.
@@ -4936,6 +4937,21 @@ function drawSniperFine(ctx, ox, oy, dir, rifleX, posted) {
   } else {
     ctx.fillRect(ox + 2, oy + 5.5, 5, 0.5)                          // hood rim
   }
+}
+
+// The xenomorph at res 2: ribs across the body, spines along the back, a
+// gloss along the length of the head, teeth at the front of it and a barb on
+// the end of the tail. Still nothing square about it.
+function drawXenoFine(ctx, ox, oy, dir, bob, sway) {
+  ctx.fillStyle = "#24472b"
+  for (var r = 2; r < 9; r += 1.5) blitFine(ctx, ox, oy, dir, r, 11.5 + bob, 0.5, 3)    // ribs
+  ctx.fillStyle = "#9df59a"
+  for (var sp = 1.5; sp < 9; sp += 2) blitFine(ctx, ox, oy, dir, sp, 10.5 + bob, 0.5, 0.5)  // spines
+  blitFine(ctx, ox, oy, dir, 9.5, 7 + bob, 3.5, 0.5)                                    // gloss
+  ctx.fillStyle = "#f2f2e6"
+  blitFine(ctx, ox, oy, dir, 13, 9 + bob, 0.5, 0.5); blitFine(ctx, ox, oy, dir, 12.5, 9.5 + bob, 0.5, 0.5)  // teeth
+  ctx.fillStyle = "#7de37a"
+  blitFine(ctx, ox, oy, dir, -6.5, 8.5 + sway * 2, 1, 0.5)                              // the barb
 }
 
 // The gunner's half-pixel detail at res 2 (see drawAgentFine for the colony's

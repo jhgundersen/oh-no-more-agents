@@ -958,3 +958,20 @@ runs differ slightly: `sim play` 95 / 88 (was 95 / 88), `inert` passes.
 **Next.** Deploy (39 + 40).
 
 **Deployed** after 40 (name="build" content="671240dd"): specialCut split, event sites. Browser check clean.
+
+## 41 — 2026-10-09 · Review pass, and the xeno
+
+**Review.** All twelve biomes rendered at the page's res, 500 ticks in, after
+twenty-odd iterations of art changes. Agents, umbrellas, gunners, prisoners,
+fixtures and backdrops sit together; nothing broken, nothing clashing.
+
+**Changed.** `drawXenoFine` (res ≥ 2): ribs across the body, spines along
+the back, a gloss down the head, teeth, a barb on the tail — the Spaceship's
+infecting alien was the coarsest thing left in view. Every hostile on the
+board now has res-2 detail.
+
+**Checked.** Three poses (walking both ways, sated) at 4×. Tests pass (the
+enemy test already draws the xeno at res 2).
+
+**Next.** Ideas still open: a mechanic for Ruins; mission animals/treasure
+at the finer res; deploy after the next iteration.
