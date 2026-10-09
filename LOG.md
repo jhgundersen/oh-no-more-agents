@@ -791,3 +791,28 @@ fifth of all placements).
 **Next.** Deploy (31 + 32).
 
 **Deployed** after 32 (name="build" content="14727faa"): updrafts, finer fixtures. Browser check clean.
+
+## 33 — 2026-10-09 · Hero: Hot Reload
+
+**Why.** Every hero so far prevents a kind of death. One that answers all of
+them after the fact — sparingly — is a different kind of special.
+
+**Changed.** Special #21, *Hot Reload* (`hotreload`, act `reload`, height
+`teleport`, white with pink). Walking, cooldown ready (420), under
+`RELOAD_MAX` (2) this level: the colleague lost most recently within
+`RELOAD_WINDOW` (300 ticks) comes back — a fresh spawn at the hatch with the
+dead one's trait, `w.lost` decremented, the dead marked `revived`. The sim
+now stamps `diedAt` on every loss (one loop after `stepAgents`; there are a
+dozen death sites and none recorded the moment). At a wall it turns. Its
+fall: gone at the top, there at the bottom. Drawn: a trail of light arcing
+from the death spot to the hatch over a second, a ring as it drops back
+through; a turning arrow over the hero's head; the teleport scatters into
+pixels and assembles. Ten lines.
+
+**Checked.** Its levels, 152 runs, on vs off: 95.4 vs 93.9% home, 45
+reloads (about one in three levels). Rendered a real one (level 61): blood
+at the fixture, the arrow, the trail to the hatch. `heights` 21/21, `inert`,
+`sim play` 88%. Tests: the cap, the trait carried over, a death outside the
+window staying dead; the trail drawn through its life and gone after.
+
+**Next.** Deploy with the next iteration.

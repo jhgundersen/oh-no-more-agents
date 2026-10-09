@@ -800,6 +800,8 @@ function generate(level, attempt, colonySeed) {
     mines: [],
     ladders: [],
     nets: [],         // Fallback's catch nets; see deployNet
+    reloads: 0,       // Hot Reload's revivals this level; see reloadColleague
+    reloadFx: null,   // and the last one, for Draw: { fromX, fromY, t }
     // The Skyscraper's two cars, and which way this tower is played. Empty and
     // false everywhere else; see the block above cutHoistway.
     lifts: [],
@@ -2230,6 +2232,13 @@ var SPECIALS = [
   // tenth of the colony's deaths, and every one of them happens after the
   // floaters have run out.
   ,{ id: "fallback", name: "Fallback", act: "net", height: "bungee", cool: 160, robe: "#3a8f8f", hair: "#ffd6e0" }
+
+  // Does not prevent anything. Undoes it: a colleague lost in the last few
+  // seconds comes back through the hatch, trait and all, as if the process had
+  // been restarted. Twice a level at most, on a long cooldown — a special that
+  // reverses deaths without a cap is a special that makes the level pointless.
+  // Its own way down is to stop existing at the top and resume at the bottom.
+  ,{ id: "hotreload", name: "Hot Reload", act: "reload", height: "teleport", cool: 420, robe: "#e8e8ef", hair: "#ff5b8a" }
 ]
 
 function specialSpec(id) {
@@ -5949,6 +5958,34 @@ function specialCountersHazard(w, ag, act) {
   return false
 }
 
+// Hot Reload. A colleague counts if it died within the window and was never
+// reloaded before; the newest such death is the one brought back.
+var RELOAD_WINDOW = 300
+var RELOAD_MAX = 2
+
+function reloadColleague(w, ag) {
+  if (w.reloads >= RELOAD_MAX || !w.hatch) return false
+  var dead = null
+  for (var i = 0; i < w.agents.length; i++) {
+    var a = w.agents[i]
+    if (a === ag || a.special || a.revived || a.diedAt === undefined) continue
+    if (w.ticks - a.diedAt > RELOAD_WINDOW) continue
+    if (!dead || a.diedAt > dead.diedAt) dead = a
+  }
+  if (!dead) return false
+  dead.revived = true
+  var back = spawn(w)
+  back.trait = dead.trait
+  w.agents.push(back)
+  w.lost--
+  w.reloads++
+  w.reloadFx = { fromX: dead.x, fromY: dead.y, t: w.ticks }
+  ag.cool = specOf(ag).cool
+  ag.reloadFor = 24
+  w.lastEvent = "hot reload"
+  return true
+}
+
 // Fallback. Reach is a corridor's worth either side, measured to where the
 // faller is now; the net lasts long enough for a drop of a whole storey and
 // is gone soon after, so it is a catch and not a new floor.
@@ -6116,7 +6153,7 @@ function specialAtWall(w, ag) {
   // Ada Blocker has no move for a wall — its move is for what a wall cannot
   // help with. Turning at one must not spend the cooldown, or it arrives at
   // the danger it exists for with the plate still on its back.
-  if (spec.act === "shield" || spec.act === "throttle" || spec.act === "net") { turnAround(w, ag); return }
+  if (spec.act === "shield" || spec.act === "throttle" || spec.act === "net" || spec.act === "reload") { turnAround(w, ag); return }
 
   if (spec.act === "ceiling") { startCeiling(w, ag); return }
 
@@ -6350,7 +6387,7 @@ function specialDropLanding(w, ag, nx, depth, mode) {
     recoil: -3, cyclone: 4, web: 0, logchute: 3, balloon: -4,
     promptchute: 2, piledrive: 0, helicopter: 7, glasswing: 5,
     ghost: -3, gunwing: 4, tractor: 1, steps: 3, chain: 5,
-    jetpack: 7, cushion: 2, extender: 0, shieldglider: 5, backoff: 1, bungee: 0
+    jetpack: 7, cushion: 2, extender: 0, shieldglider: 5, backoff: 1, bungee: 0, teleport: 0
   }[mode] || 0
   var footY = Math.floor(ag.y) + depth
   var baseX = Math.floor(nx)
@@ -6485,6 +6522,8 @@ function stepSpecialHeight(w, ag) {
   // pause twice the last, and every drop the same height.
   if (ag.heightMode === "backoff") moveP = backoffCurve(p)
   if (ag.heightMode === "bungee") moveP = bungeeCurve(p)
+  // Teleport: there, and then here. No path between at all.
+  if (ag.heightMode === "teleport") moveP = p < 0.5 ? 0 : 1
 
   ag.x = ag.heightFromX + (ag.heightToX - ag.heightFromX) * moveP
   ag.y = ag.heightFromY + (ag.heightToY - ag.heightFromY) * moveP
@@ -8004,6 +8043,7 @@ function stepAgents(w) {
     if (ag.shotFor > 0) ag.shotFor--
     if (ag.throttleFor > 0) ag.throttleFor--
     if (ag.netFor > 0) ag.netFor--
+    if (ag.reloadFor > 0) ag.reloadFor--
     if (ag.gunCool > 0) ag.gunCool--
     if (ag.shoveCool > 0) ag.shoveCool--
     if (ag.hazardGrace > 0) ag.hazardGrace--
@@ -8027,6 +8067,7 @@ function stepAgents(w) {
       // and waiting to be facing the thing meant it acted on almost nothing.
       if (sact === "throttle" && ag.cool <= 0) throttleHazard(w, ag)
       if (sact === "net" && ag.cool <= 0) deployNet(w, ag)
+      if (sact === "reload" && ag.cool <= 0) reloadColleague(w, ag)
 
       if (sact === "camp" && (seesDanger || seesRed)) {
         ag.state = "camp"
@@ -8380,6 +8421,12 @@ function step(w) {
 
   w.wind = windAt(w)
   var counts = stepAgents(w)
+  // When each agent was lost, for Hot Reload. Everything that kills sets
+  // `gone`; nothing else records the moment, and there are a dozen of them.
+  for (var di = 0; di < w.agents.length; di++) {
+    var dag = w.agents[di]
+    if (dag.gone && dag.diedAt === undefined && dag.state !== "saved") dag.diedAt = w.ticks
+  }
   var active = counts.active
   var blockers = counts.blockers
   var moving = counts.moving

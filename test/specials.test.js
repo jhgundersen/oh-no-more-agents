@@ -50,7 +50,7 @@ test("Rate Limiter freezes a fixture and the colony stops treating it as lethal"
 test("every special has its own flight gear, and a trick unless it never does one", () => {
   const D = loadCore("Draw.js")
   // These never enter the `trick` state: they act while walking, or camp.
-  const noTrick = new Set(["ceiling", "camp", "shield", "throttle", "net"])
+  const noTrick = new Set(["ceiling", "camp", "shield", "throttle", "net", "reload"])
   for (const spec of S.SPECIALS) {
     assert.ok(D.GEAR_DRAW[spec.height], spec.name + " has no drawing for " + spec.height)
     if (!noTrick.has(spec.act)) assert.ok(D.TRICK_DRAW[spec.act], spec.name + " has no drawing for " + spec.act)
@@ -130,4 +130,38 @@ test("an agent fires at a drone in range whichever way it is facing", () => {
   drone.x = 5; drone.gone = false
   ag.gunCool = 0
   assert.ok(!S.shootDrone(w, ag), "not at one out of range")
+})
+
+test("Hot Reload brings back a recent loss through the hatch, twice at most", () => {
+  const w = S.generate(1, 0, 99)
+  const hero = { id: 1, special: "hotreload", x: 20.5, y: 30, dir: 1, state: "walk", cool: 0, gone: false }
+  w.agents = [hero]
+  const lost0 = w.lost
+  for (let i = 0; i < 3; i++) w.agents.push({ id: 10 + i, trait: "brave", gone: true, state: "dead", x: 30, y: 30, diedAt: w.ticks })
+  w.lost += 3
+  for (let i = 0; i < 3; i++) { hero.cool = 0; S.reloadColleague(w, hero) }
+  assert.equal(w.reloads, 2, "capped")
+  assert.equal(w.lost, lost0 + 1)
+  const back = w.agents.filter(a => !a.gone && a !== hero)
+  assert.equal(back.length, 2)
+  assert.ok(back.every(a => a.trait === "brave"), "keeps the colleague's trait")
+  w.ticks += 1000
+  w.reloads = 0
+  hero.cool = 0
+  assert.ok(!S.reloadColleague(w, hero), "a death outside the window stays dead")
+})
+
+test("the reload trail draws over its life and stops", async () => {
+  const { canvas, themeOf } = await import("../tools/render.js")
+  const D = loadCore("Draw.js")
+  const w = S.generate(1, 0, 99); w.specialSpec = S.specialSpec("hotreload")
+  const theme = themeOf("tokyo-night")
+  for (const age of [0, 15, 35, 50]) {
+    const img = canvas(400, 248, theme.background)
+    const blank = Buffer.from(img.buf).toString("base64")
+    w.ticks = 100 + age
+    D.drawReloadTrail(img.ctx, w, { fromX: 30, fromY: 40, t: 100 })
+    const drew = Buffer.from(img.buf).toString("base64") !== blank
+    assert.equal(drew, age <= 45, `age ${age}`)
+  }
 })

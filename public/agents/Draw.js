@@ -1629,6 +1629,7 @@ function drawActors(ctx, w, pal, opts) {
   }
   ctx.globalAlpha = 1
   if (w.nets) for (var ni = 0; ni < w.nets.length; ni++) drawNet(ctx, w, w.nets[ni])
+  if (w.reloadFx) drawReloadTrail(ctx, w, w.reloadFx)
 
   for (var i = 0; i < w.agents.length; i++) {
     var ag = w.agents[i]
@@ -2249,6 +2250,18 @@ function drawCroc(ctx, w, pal, p, px, pw, sy) {
 // Three per special, picked by level number so it is the same line every time
 // you come back to level 42 — the same rule the rest of the level runs on.
 var SPECIAL_FACTS = {
+  hotreload: [
+    "restarts the process. The process was a colleague.",
+    "your changes have been applied without losing state.",
+    "has never once read the stack trace first.",
+    "it worked on the second run. Ship it.",
+    "keeps the module, swaps the outcome.",
+    "turned it off and on again. Twice. That is the limit.",
+    "remembers the trait, forgets the fall.",
+    "does not travel. It is simply somewhere else now.",
+    "rolls back one mistake per cooldown.",
+    "you were never gone. You were cached."
+  ],
   fallback: [
     "is the plan for when the plan hits the floor.",
     "catches what the happy path dropped.",
@@ -4293,6 +4306,42 @@ function drawNetThrow(ctx, w, ag, ox, oy, dir, hair) {
   }
 }
 
+// Hot Reload's revival: a stream of light running from where the colleague
+// was lost to the hatch it comes back out of, over a second, then a ring at
+// the hatch as it drops through. Without it a body appears at the top of the
+// board for no reason anybody could give.
+function drawReloadTrail(ctx, w, fx) {
+  var age = w.ticks - fx.t
+  if (age < 0 || age > 45) return
+  var C = w.k.CELL, sp = w.specialSpec
+  var sx = fx.fromX * C, sy = (fx.fromY - 2) * C, tx = w.hatch.x * C, ty = w.hatch.y * C
+  var p = Math.min(1, age / 30)
+  ctx.fillStyle = sp ? sp.hair : "#ff5b8a"
+  for (var s = 0; s <= 24; s++) {
+    var q = s / 24
+    if (q > p || q < p - 0.4) continue
+    ctx.globalAlpha = 0.9 * (1 - (p - q) / 0.4)
+    ctx.fillRect(Math.round(sx + (tx - sx) * q), Math.round(sy + (ty - sy) * q - Math.sin(q * Math.PI) * 20), 2, 2)
+  }
+  if (age >= 30) {
+    ctx.globalAlpha = 1 - (age - 30) / 15
+    var r = 4 + (age - 30)
+    for (var a = 0; a < 12; a++) ctx.fillRect(Math.round(tx + Math.cos(a / 12 * Math.PI * 2) * r), Math.round(ty + Math.sin(a / 12 * Math.PI * 2) * r * 0.6), 1, 1)
+  }
+  ctx.globalAlpha = 1
+}
+
+// The gesture: a circular arrow over its head while it does it.
+function drawReloadSign(ctx, ag, ox, oy, hair) {
+  ctx.fillStyle = hair
+  var cx = ox + 4, cy = oy - 5, turn = ag.reloadFor * 0.4
+  for (var a = 0; a < 9; a++) {
+    var ang = turn + a / 12 * Math.PI * 2
+    ctx.fillRect(Math.round(cx + Math.cos(ang) * 3), Math.round(cy + Math.sin(ang) * 3), 1, 1)
+  }
+  ctx.fillRect(Math.round(cx + Math.cos(turn) * 3) - 1, Math.round(cy + Math.sin(turn) * 3), 2, 1)
+}
+
 // Fallback's net: two posts and a mesh slung between them on the landing
 // floor, in the special's colours so it is seen to be its. It sags and springs
 // back when it takes somebody, and fades for its last second.
@@ -5163,8 +5212,21 @@ function drawGearBungee(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
   ctx.fillRect(ox + 1, oy + 9, 6, 1)                            // harness
 }
 
+// Hot Reload going down a drop: it comes apart into scattered pixels at the
+// top and assembles out of them at the bottom.
+function drawGearTeleport(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var hp = fr.hp, half = hp < 0.5 ? hp * 2 : (1 - hp) * 2
+  ctx.fillStyle = hair
+  for (var i = 0; i < 10; i++) {
+    var sx = ox + ((i * 7) % 10) - 1 + Math.round(Math.sin(i * 2.1 + hp * 9) * half * 6)
+    var sy = oy + ((i * 5) % 16) + Math.round(Math.cos(i * 1.3 + hp * 7) * half * 4)
+    ctx.fillRect(sx, sy, 1, 1)
+  }
+  ctx.globalAlpha = Math.max(0.15, 1 - half)
+}
+
 var GEAR_DRAW = {
-  bungee: drawGearBungee,
+  bungee: drawGearBungee, teleport: drawGearTeleport,
   jetpack: drawGearJetpack, helicopter: drawGearHelicopter,
   cushion: drawGearCushion, conning: drawGearConning, web: drawGearWeb,
   chain: drawGearWeb, balloon: drawGearBalloon, promptchute: drawGearPromptchute,
@@ -5595,6 +5657,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   if (ag.throttleFor > 0) drawThrottleSignal(ctx, pal, ag, ox, oy, dir, robe)
   drawReleaseRing(ctx, pal, ag, ox, oy, w.ticks)
   if (ag.netFor > 0) drawNetThrow(ctx, w, ag, ox, oy, dir, hair)
+  if (ag.reloadFor > 0) drawReloadSign(ctx, ag, ox, oy, hair)
   drawCampShot(ctx, w, pal, ag, ox, oy, dir, st, w.k.CELL)
 
   // No special borrows the colony's umbrella. At a lethal height each carries
