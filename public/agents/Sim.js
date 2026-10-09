@@ -800,6 +800,7 @@ function generate(level, attempt, colonySeed) {
     pits: [],
     pit: null,
     particles: [],
+    blasts: [],       // recent explosions, for Draw's fireball; see noteBlast
     buildSites: [],
     ticks: 0,
     nextId: 1,
@@ -2544,6 +2545,7 @@ function specialCut(w, ag, act, dry) {
         }
       }
     addDust(w, fx + d * 5, fy - 2, 18)
+    if (!dry && moved) noteBlast(w, fx + d * 5, fy - 2, BOMB_RADIUS)
     if (!dry && moved) {
       // The payload is an instruction, not merely a charge: everyone close
       // enough to read it adopts the injector's direction with total confidence.
@@ -5528,6 +5530,7 @@ function stepMines(w) {
         wreckHazard(w, w.hazards[hi])
     }
     addDust(w, mine.x, mine.y, 28)
+    noteBlast(w, mine.x + 0.5, mine.y, MINE_RADIUS)
     w.mines.splice(i, 1)
     w.lastEvent = "mine boom"
   }
@@ -5633,6 +5636,7 @@ function stepBomb(w, ag) {
   }
 
   addDust(w, ag.x, ag.y - 1, 22)
+  noteBlast(w, ag.x, ag.y - 1, BOMB_RADIUS)
   ag.gone = true
   w.lost++
   w.lastEvent = "boom"
@@ -5665,6 +5669,15 @@ function addBlood(w, x, y, n) {
       blood: true
     })
   }
+}
+
+// An explosion, recorded for the renderer and nothing else: where, how big,
+// and when. Twenty-two dust specks was the whole of a bomb going off, and the
+// commonest way to die on this board looked like somebody sneezing.
+var BLAST_LIFE = 26
+function noteBlast(w, x, y, r) {
+  w.blasts.push({ x: x, y: y, r: r, t: w.ticks })
+  if (w.blasts.length > 12) w.blasts.shift()
 }
 
 function addDust(w, x, y, n) {
@@ -6652,6 +6665,7 @@ function explodeDrone(w, drone, ag) {
   drone.gone = true
   drone.state = "dead"
   addDust(w, drone.x, drone.y, 18)
+  noteBlast(w, drone.x, drone.y, 2)
   w.lastEvent = "drone strike"
   if (!ag || ag.gone || ag.state === "saved") return
   ag.gone = true
@@ -7521,6 +7535,7 @@ function stepSwim(w, ag) {
 }
 
 function stepParticles(w) {
+  while (w.blasts.length && w.ticks - w.blasts[0].t > BLAST_LIFE) w.blasts.shift()
   for (var i = w.particles.length - 1; i >= 0; i--) {
     var p = w.particles[i]
     p.x += p.vx

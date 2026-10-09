@@ -1455,7 +1455,6 @@ function drawActors(ctx, w, pal, opts) {
     }
   }
   ctx.globalAlpha = 1
-
   for (var i = 0; i < w.agents.length; i++) {
     var ag = w.agents[i]
     if (ag.gone) continue
@@ -1469,6 +1468,8 @@ function drawActors(ctx, w, pal, opts) {
       if (enemy.throttled > 0) drawThrottled(ctx, w, enemy.x * w.k.CELL, (enemy.y - 4) * w.k.CELL - 4, enemy.throttled)
     }
   }
+  // Last, over everybody: whoever is standing in a fireball is behind it.
+  if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
 }
 
 function drawMission(ctx, w, pal) {
@@ -3643,6 +3644,64 @@ function drawAgentHome(ctx, w, pal, ag, ox, oy, dir, robe, skin) {
     ctx.fillRect(Math.round(ox + 4 + Math.cos(ang) * r), Math.round(oy + 6 + Math.sin(ang) * r * 0.7), 1, 1)
   }
   ctx.fillStyle = robe
+}
+
+// A disc in two-pixel rows, so a fireball keeps the board's blockiness rather
+// than turning up as the one smooth circle in the game. `rag` frays the edge
+// row by row, off a seed, so it billows instead of reading as a balloon.
+function pixelDisc(ctx, cx, cy, r, rag, seed) {
+  for (var dy = -r; dy <= r; dy += 2) {
+    var half = Math.round(Math.sqrt(Math.max(0, r * r - dy * dy)))
+    if (rag) half += Math.round(Math.sin(dy * 1.7 + seed) * rag)
+    if (half > 0) ctx.fillRect(Math.round(cx - half), Math.round(cy + dy), half * 2, 2)
+  }
+}
+
+// Fire is fire in every theme, for the reason blood is blood: the theme's
+// `urgent` is pink in some of them, and a pink explosion is a balloon.
+var BLAST_RIM = "#c2402a", BLAST_MID = "#ff8a35", BLAST_CORE = "#ffe68a"
+
+// An explosion over its life (Sim's `noteBlast`): a white flash, a fireball
+// that swells to the blast radius in three layers and burns down from the
+// core outward, a shock ring running out past it, and smoke left rising. The
+// size is the real radius, so a mine reads bigger than a bomb because it is,
+// and a drone's pop stays a pop.
+function drawBlast(ctx, w, pal, b) {
+  var a = w.ticks - b.t
+  if (a < 0 || a > 26) return
+  var C = w.k.CELL, cx = b.x * C, cy = b.y * C, R = b.r * C
+  var grow = Math.min(1, a / 4)
+  if (a < 10) {
+    ctx.globalAlpha = 0.6 * (1 - a / 10)
+    ctx.fillStyle = BLAST_CORE
+    var ring = R * (0.7 + a / 6)
+    for (var s = 0; s < 24; s++) {
+      var ang = s / 24 * Math.PI * 2
+      ctx.fillRect(Math.round(cx + Math.cos(ang) * ring), Math.round(cy + Math.sin(ang) * ring * 0.8), 2, 1)
+    }
+  }
+  if (a > 4) {
+    ctx.fillStyle = pal.rigDark
+    ctx.globalAlpha = 0.6 * (1 - (a - 4) / 22)
+    for (var pf = 0; pf < 5; pf++) {
+      var px = cx + (pf - 2) * R * 0.34, py = cy - (a - 4) * 0.55 - (pf % 2) * 3
+      pixelDisc(ctx, px, py, 3 + (pf % 3) + Math.round((a - 4) / 5), 1, pf + b.t)
+    }
+  }
+  var layers = [[BLAST_RIM, 1.0, 13], [BLAST_MID, 0.72, 9], [BLAST_CORE, 0.42, 5]]
+  for (var li = 0; li < layers.length; li++) {
+    var until = layers[li][2]
+    if (a >= until) continue
+    ctx.globalAlpha = a < 3 ? 1 : 1 - (a - 3) / (until - 3)
+    ctx.fillStyle = layers[li][0]
+    pixelDisc(ctx, cx, cy - a * 0.3, Math.round(R * layers[li][1] * (0.4 + 0.6 * grow)), 2, b.t + li * 3 + a)
+  }
+  if (a < 2) {
+    ctx.globalAlpha = 0.95
+    ctx.fillStyle = "#ffffff"
+    pixelDisc(ctx, cx, cy, Math.round(R * 0.35), 0, 0)
+  }
+  ctx.globalAlpha = 1
 }
 
 // One 8x16 sprite, mirrored by facing, with per-action limb changes. The

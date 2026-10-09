@@ -283,3 +283,27 @@ on an easy biome. First streaks (decorLit, ≤70) were invisible on screen; now
 **Next.** Agents could lean into the wind (a pixel of head forward) — small.
 Bigger: a new hero, or a second look at what kills most (`red team`,
 `hazard`, `boom` — see log 4's tally) for a mechanic that answers it.
+
+## 11 — 2026-10-09 · Graphics: explosions
+
+**Why.** "boom" is one of the three biggest causes of death (log 4's tally),
+and a bomb going off was 22 dust specks — the most common death on the board
+looked like a sneeze.
+
+**Changed.** Sim records each explosion with `noteBlast(w, x, y, r)` into
+`w.blasts` (render-only, capped at 12, pruned after `BLAST_LIFE` 26 ticks):
+the bomber, a mine, a drone hit and Prompt Injection's charge. Draw:
+`drawBlast` — a white flash for two ticks, a three-layer fireball (rim, mid,
+core in fixed fire colours, ragged per row so it billows) that swells to the
+real blast radius and burns down from the core out, a shock ring running
+past it, and smoke puffs left rising. Drawn last, over agents and enemies.
+
+**Checked.** Strip of ten frames at 3×. First version used the theme's
+`fire`/`fireHot`: pink in tokyo-night, and a flat disc — read as a balloon.
+Fire is now fixed colours like blood. In context on level 2 at tick 838: the
+first try drew agents over the fireball; moved to the end of `drawActors`.
+`sim play` identical (98 / 87 / 44s, 2886/3334).
+
+**Next.** Deploy (10 + 11). Then: deaths by `red team` — the enemies'
+shooting could get the same treatment (tracer, muzzle flash, hit spark) if it
+is as thin as the bombs were; check before assuming.
