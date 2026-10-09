@@ -18,22 +18,9 @@
 // It loads Sim.js the way a browser does — as text, with the top-level
 // declarations exported — so it needs no changes to the game files.
 
-import fs from "node:fs"
-import path from "node:path"
-import { fileURLToPath } from "node:url"
+import { loadCore } from "./load-core.js"
 
-const HERE = path.dirname(fileURLToPath(import.meta.url))
-const AGENTS = path.join(HERE, "..", "public", "agents")
-
-function loadSim() {
-  const src = fs.readFileSync(path.join(AGENTS, "Sim.js"), "utf8")
-  const fns = [...src.matchAll(/^function\s+([A-Za-z0-9_]+)\s*\(/gm)].map(m => m[1])
-  const consts = [...src.matchAll(/^var\s+([A-Z][A-Z0-9_]*)\s*=/gm)].map(m => m[1])
-  const names = [...new Set([...fns, ...consts])]
-  const mod = { exports: {} }
-  new Function("module", "exports", src + "\nmodule.exports={" + names.join(",") + "}")(mod, mod.exports)
-  return mod.exports
-}
+function loadSim() { return loadCore("Sim.js") }
 
 // The colony is random per playthrough in the game, which is the point of it —
 // but a harness that reports a different number every run reports nothing. Every

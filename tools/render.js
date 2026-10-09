@@ -22,22 +22,10 @@
 import fs from "node:fs"
 import path from "node:path"
 import zlib from "node:zlib"
-import { fileURLToPath } from "node:url"
 
-const HERE = path.dirname(fileURLToPath(import.meta.url))
-const AGENTS = path.join(HERE, "..", "public", "agents")
-
-// Same trick as simcheck's loadSim: the core files carry no imports, so they
-// can be evaluated as text and their top-level declarations handed back.
-export function load(name) {
-  const src = fs.readFileSync(path.join(AGENTS, name), "utf8")
-  const fns = [...src.matchAll(/^function\s+([A-Za-z0-9_]+)\s*\(/gm)].map(m => m[1])
-  const consts = [...src.matchAll(/^var\s+([A-Z][A-Z0-9_]*)\s*=/gm)].map(m => m[1])
-  const names = [...new Set([...fns, ...consts])]
-  const mod = { exports: {} }
-  new Function("module", "exports", src + "\nmodule.exports={" + names.join(",") + "}")(mod, mod.exports)
-  return mod.exports
-}
+// The core files carry no imports, so they are evaluated as text and their
+// top-level declarations handed back — see load-core.js.
+export { loadCore as load } from "./load-core.js"
 
 // The themes live in web.js, which this cannot load — it is the host file and
 // it does have imports. They are short, and only the five roles matter here.

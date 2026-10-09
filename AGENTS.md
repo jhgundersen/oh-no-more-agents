@@ -387,7 +387,21 @@ Install with `npm install`, then before committing:
 npm run check     # syntax, core-file self-containment, stamps, unit tests
 ```
 
-It does **not** cover gameplay. For that, see below.
+It does **not** cover gameplay. For that, see below. `npm test` does play three
+levels of every biome to the end and draw them (`test/play.test.js`), so a
+missing function or a throw fails it — but it measures nothing.
+
+```bash
+npm run crap -- --changed   # CRAP score for functions you touched
+```
+
+`npm run crap` is unclebob/crapper (fetched into `.crapper/` on first run) over
+the coverage from `npm test`. A function you add or change should come out under
+30; the old giants (`drawHazardKind`, `drawAgent`, `generate`) are known and
+logged in `LOG.md` — split them when you are in them anyway.
+
+`LOG.md` is the improvement log: one entry per iteration, newest last, ending
+with what to do next.
 
 Port 8787 (`npm run dev`) is the human's server — never take it over or kill it.
 Agents use:
