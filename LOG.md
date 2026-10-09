@@ -498,3 +498,15 @@ along its base. Divers, snipers, drones, operators and xenos untouched.
 **Next.** Deploy soon (18 + 19). Remaining finer-res candidates: the exit
 portal, the mission pens, the commonest hazards (gun, sentry, spikes,
 crusher). Or gameplay: the open-corridor condemnations.
+
+## 20 — 2026-10-09 · Finer pixels, step 5: the way out
+
+**Changed.** `drawExitShimmer` (res ≥ 2, actor pass, only once the door is
+open): four half-pixel bands of `exitLight` climbing the mouth and brighter
+toward the floor, five white sparks drifting up through it, and a pulsing
+spill of light across the floor in front. The biome frames are untouched.
+
+**Checked.** Seven biomes' exits at 6×, before and after. Subtle in a still,
+alive in motion — the point is that the way home looks like it is on.
+
+**Deployed** with 18 and 19 after a browser check (below).

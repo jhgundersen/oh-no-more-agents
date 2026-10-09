@@ -2591,6 +2591,34 @@ function drawExitGlow(ctx, w, pal) {
   ctx.globalAlpha = pulse * 0.45
   ctx.fillRect(x - 3, y - 5, ww + 6, hh + 6)
   ctx.globalAlpha = 1
+  if ((w.res || 1) >= 2 && !missionOpening) drawExitShimmer(ctx, w, pal, x, y, ww, hh)
+}
+
+// The open door at res 2: bands of light climbing the mouth, a few sparks
+// drifting up through it, and light spilled across the floor in front. A door
+// that is doing something reads as a way out from across the board; a flat
+// pane reads as a window.
+function drawExitShimmer(ctx, w, pal, x, y, ww, hh) {
+  var t = w.ticks
+  ctx.fillStyle = pal.exitLight
+  for (var b = 0; b < 4; b++) {
+    var by = y + hh - 1 - ((t * 0.35 + b * hh / 4) % hh)
+    ctx.globalAlpha = 0.18 + 0.25 * ((by - y) / hh)
+    ctx.fillRect(x + 1, Math.round(by * 2) / 2, ww - 2, 0.5)
+  }
+  ctx.fillStyle = "#ffffff"
+  for (var sp = 0; sp < 5; sp++) {
+    var sx = x + 1.5 + ((sp * 37 + w.level * 11) % Math.max(1, ww - 3))
+    var sy = y + hh - 1 - ((t * (0.25 + sp * 0.06) + sp * 7) % (hh - 1))
+    ctx.globalAlpha = 0.7 * ((sy - y) / hh)
+    ctx.fillRect(Math.round(sx * 2) / 2, Math.round(sy * 2) / 2, 0.5, 0.5)
+  }
+  ctx.fillStyle = pal.exitLight
+  ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 0.06)
+  ctx.fillRect(x - 4, y + hh, ww + 8, 0.5)
+  ctx.globalAlpha = 0.18
+  ctx.fillRect(x - 8, y + hh + 0.5, ww + 16, 0.5)
+  ctx.globalAlpha = 1
 }
 
 function drawExitGate(ctx, w, pal) {
