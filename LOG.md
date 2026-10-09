@@ -566,3 +566,21 @@ not at one out of range, and reloads.
 easy before trying.
 
 **Deployed** after 22 (name="build" content="6e2971a1"): Fallback, drone fire. Browser check clean.
+
+## 23 — 2026-10-09 · Finer pixels, step 6: the people in the pens
+
+**Changed.** `drawPersonFine` (res ≥ 2) for civilians and explorers — the
+prisoners of seven of eleven biomes, which were a pale block with two dots:
+a skin face, half-pixel eyes, a frown while held and an open cheer once
+freed, arms up from the shoulders in the coat's colour when freed, buttons
+down civilians' coats, a goggle strap with a glint on explorers.
+`drawMissionSubject` takes a `fine` flag from `drawMission` (`w.res`).
+
+**Checked.** All mission kinds held and freed at 3×; civilians and
+explorers at 10×. First arms were thin dark lines standing off the body —
+read as antennae; now coat-coloured and attached. `test/missions.test.js`
+draws every kind with and without fine detail.
+
+**Next.** Animals, alien, treasure and camel are untouched — smaller wins.
+Time for gameplay again: the drone operator (survives 38 of 42), or a look at
+whether any biome has drifted out of the band after all the changes.

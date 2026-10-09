@@ -1599,7 +1599,7 @@ function drawMission(ctx, w, pal) {
     var x = Math.round(t.x * C), y = Math.round(t.y * C)
 
     if (!t.freed && !t.dead) drawMissionContainer(ctx, m.kind, x, y, pal)
-    drawMissionSubject(ctx, m.kind, t, x, y, pal)
+    drawMissionSubject(ctx, m.kind, t, x, y, pal, (w.res || 1) >= 2)
 
     if (!t.freed && !t.dead && m.progress > 0) {
       ctx.fillStyle = pal.rigDark
@@ -1705,7 +1705,7 @@ function drawAgentSidearm(ctx, w, pal, ag) {
   }
 }
 
-function drawMissionSubject(ctx, kind, t, x, y, pal) {
+function drawMissionSubject(ctx, kind, t, x, y, pal, fine) {
   var v = t.variant || 0
   var dir = t.dir || 1
   var bob = t.freed && Math.floor(t.anim / 5) % 2 ? 1 : 0
@@ -1806,6 +1806,38 @@ function drawMissionSubject(ctx, kind, t, x, y, pal) {
   else { ctx.fillRect(x - 3, y - 12, 6, 2); ctx.fillRect(x + 3, y - 9, 2, 5) }
   ctx.fillRect(x - 1, y - 9 + short, 1, 1); ctx.fillRect(x + 2, y - 9 + short, 1, 1)
   if (kind === "explorer") { ctx.fillStyle = pal.urgent; ctx.fillRect(x - dir * 5, y - 7, 3, 5) }
+  if (fine) drawPersonFine(ctx, kind, t, x, y + short, pal,
+    kind === "explorer" ? (v === 2 ? pal.ore : pal.decorLit) : (v === 2 ? pal.warn : pal.exitLight))
+}
+
+// A prisoner's half-pixel detail at res 2: a face where the coarse sprite has
+// a pale block with two dots in it — skin, eyes, and a mouth that is a frown
+// while held and an open cheer once freed, when the arms go up as well.
+// Civilians get buttons down the coat; explorers a goggle strap with a glint.
+function drawPersonFine(ctx, kind, t, x, y, pal, coat) {
+  ctx.fillStyle = pal.skin
+  ctx.fillRect(x - 1.5, y - 10, 4, 3)
+  ctx.fillStyle = pal.eye
+  ctx.fillRect(x - 0.5, y - 9, 0.5, 0.5); ctx.fillRect(x + 1.5, y - 9, 0.5, 0.5)
+  if (t.freed) {
+    ctx.fillRect(x, y - 8, 1, 0.5)                          // a cheer
+    ctx.fillStyle = coat                                    // arms up, from the shoulders
+    ctx.fillRect(x - 4, y - 10, 1, 4.5); ctx.fillRect(x + 4, y - 10, 1, 4.5)
+    ctx.fillStyle = pal.skin
+    ctx.fillRect(x - 4, y - 11, 1, 1); ctx.fillRect(x + 4, y - 11, 1, 1)
+  } else {
+    ctx.fillRect(x, y - 7.5, 1, 0.5)                        // a frown
+    ctx.fillRect(x - 0.5, y - 7, 0.5, 0.5); ctx.fillRect(x + 1, y - 7, 0.5, 0.5)
+  }
+  if (kind === "explorer") {
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(x - 2, y - 9.5, 5, 0.5)                    // goggle strap
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(x + 2, y - 9.5, 0.5, 0.5)
+  } else {
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(x + 0.5, y - 5, 0.5, 0.5); ctx.fillRect(x + 0.5, y - 3.5, 0.5, 0.5)
+  }
 }
 
 // ---------------------------------------------------------------------------
