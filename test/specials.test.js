@@ -49,8 +49,8 @@ test("Rate Limiter freezes a fixture and the colony stops treating it as lethal"
 
 test("every special has its own flight gear, and a trick unless it never does one", () => {
   const D = loadCore("Draw.js")
-  // These four never enter the `trick` state: they act while walking, or camp.
-  const noTrick = new Set(["ceiling", "camp", "shield", "throttle"])
+  // These never enter the `trick` state: they act while walking, or camp.
+  const noTrick = new Set(["ceiling", "camp", "shield", "throttle", "net"])
   for (const spec of S.SPECIALS) {
     assert.ok(D.GEAR_DRAW[spec.height], spec.name + " has no drawing for " + spec.height)
     if (!noTrick.has(spec.act)) assert.ok(D.TRICK_DRAW[spec.act], spec.name + " has no drawing for " + spec.act)
@@ -76,4 +76,43 @@ test("every trick and every flight device draws without throwing, both ways", as
           100, 80, dir, spec.robe, spec.hair)
     }
   }
+})
+
+test("Fallback nets a lethal fall once the umbrellas are gone, and the net is drawn", async () => {
+  const { canvas, themeOf } = await import("../tools/render.js")
+  const D = loadCore("Draw.js"), P = loadCore("Palette.js")
+  const w = S.generate(1, 0, 99)
+  // A clear shaft, a floor at the bottom, nobody else on the board.
+  w.agents = []; w.enemies = []; w.hazards = []; w.toRelease = w.released = 2
+  for (let y = 10; y < 40; y++) for (let x = 20; x < 40; x++) w.terrain[y * S.COLS + x] = S.EMPTY
+  for (let x = 20; x < 40; x++) w.terrain[40 * S.COLS + x] = S.DIRT
+  w.skills.floater = 0
+  const hero = { id: 1, special: "fallback", x: 25.5, y: 39, dir: 1, state: "walk", cool: 0, gone: false }
+  const faller = { id: 2, x: 30.5, y: 12, dir: 1, state: "fall", fall: 0, floater: false, gone: false, trait: "steady" }
+  w.specialSpec = S.specialSpec("fallback")
+  w.agents.push(hero, faller)
+  assert.ok(S.deployNet(w, hero), "a net goes down under a lethal drop")
+  assert.equal(w.nets.length, 1)
+  assert.ok(!S.deployNet(w, Object.assign({}, hero, { cool: 0 })), "and not a second under the same spot")
+  for (let i = 0; i < 400 && faller.state === "fall"; i++) S.stepFall(w, faller)
+  assert.ok(!faller.gone, "caught, not splatted")
+  assert.equal(faller.state, "walk")
+
+  const theme = themeOf("tokyo-night"), pal = P.build(theme.theme, 1)
+  const img = canvas(400, 248, theme.background)
+  const blank = Buffer.from(img.buf).toString("base64")
+  D.drawNet(img.ctx, w, w.nets[0])
+  assert.notEqual(Buffer.from(img.buf).toString("base64"), blank)
+})
+
+test("without the net the same fall kills", () => {
+  const w = S.generate(1, 0, 99)
+  w.agents = []
+  for (let y = 10; y < 40; y++) for (let x = 20; x < 40; x++) w.terrain[y * S.COLS + x] = S.EMPTY
+  for (let x = 20; x < 40; x++) w.terrain[40 * S.COLS + x] = S.DIRT
+  w.skills.floater = 0
+  const faller = { id: 2, x: 30.5, y: 12, dir: 1, state: "fall", fall: 0, floater: false, gone: false, trait: "steady" }
+  w.agents.push(faller)
+  for (let i = 0; i < 400 && faller.state === "fall"; i++) S.stepFall(w, faller)
+  assert.ok(faller.gone)
 })

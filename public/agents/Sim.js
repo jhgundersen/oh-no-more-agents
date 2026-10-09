@@ -789,6 +789,7 @@ function generate(level, attempt, colonySeed) {
     nextEnemyId: 1,
     mines: [],
     ladders: [],
+    nets: [],         // Fallback's catch nets; see deployNet
     // The Skyscraper's two cars, and which way this tower is played. Empty and
     // false everywhere else; see the block above cutHoistway.
     lifts: [],
@@ -2175,6 +2176,14 @@ var SPECIALS = [
   // where they were built while hostiles come looking. Worth about three
   // points of home on its levels against the same levels without the move.
   ,{ id: "ratelimit", name: "Rate Limiter", act: "throttle", height: "backoff", cool: 180, robe: "#c9821a", hair: "#2a2a30" }
+
+  // The only one on the roster whose move is for somebody falling. It watches
+  // the air rather than the wall: a colleague dropping further than a body
+  // survives, within reach, and no umbrella left in the toolbar to open — and
+  // it throws a net under where they are going to land. Measured, falls are a
+  // tenth of the colony's deaths, and every one of them happens after the
+  // floaters have run out.
+  ,{ id: "fallback", name: "Fallback", act: "net", height: "bungee", cool: 160, robe: "#3a8f8f", hair: "#ffd6e0" }
 ]
 
 function specialSpec(id) {
@@ -4343,6 +4352,7 @@ function spawn(w) {
     mineCool: 0,      // one charge at a time, and not again until it has gone off
     shieldFor: 0,     // ticks left on the plate; renewed while a threat is in front
     throttleFor: 0,   // Rate Limiter's pose and signal, after it throttles something
+    netFor: 0,        // Fallback's throw, after it puts a net down
     shieldHeld: 0,    // how long it has been up for, which is what tires it out
     blockFor: 0,      // ticks of the spark from the last thing it stopped
     coveredFor: 0,    // ticks since it was last inside somebody's cover
@@ -4936,7 +4946,9 @@ function stepFall(w, ag) {
     if (shaft && yy >= shaft.floorY) continue
     if (solid(w, cx, yy)) {
       ag.y = yy - 1
-      if (ag.fall > killingFall(w) && !ag.floater) { splat(w, ag); return }
+      var net = ag.fall > killingFall(w) && !ag.floater ? netAt(w, cx, ag.y) : null
+      if (net) net.caught = w.ticks
+      else if (ag.fall > killingFall(w) && !ag.floater) { splat(w, ag); return }
       ag.state = "walk"
       ag.landedAt = w.ticks
       ag.landedFrom = ag.fall
@@ -5813,6 +5825,45 @@ function specialCountersHazard(w, ag, act) {
   return false
 }
 
+// Fallback. Reach is a corridor's worth either side, measured to where the
+// faller is now; the net lasts long enough for a drop of a whole storey and
+// is gone soon after, so it is a catch and not a new floor.
+var NET_REACH = 16
+var NET_LIFE = 120
+var NET_HALF = 3          // cells either side of the faller's column it covers
+
+function deployNet(w, ag) {
+  // While there are umbrellas the colony hands one out itself (stepFall), and
+  // a net under somebody already floating is a net thrown for show. Measured
+  // over 440 runs, 41 of 53 fall deaths came after the floaters ran out.
+  if ((w.skills.floater || 0) > 0) return false
+  for (var i = 0; i < w.agents.length; i++) {
+    var a = w.agents[i]
+    if (a === ag || a.gone || a.state !== "fall" || a.floater) continue
+    if (Math.abs(a.x - ag.x) > NET_REACH) continue
+    var fx = Math.floor(a.x), fy = Math.floor(a.y)
+    var depth = dropDepth(w, fx, fy)
+    if (depth === Infinity || a.fall + depth <= killingFall(w)) continue
+    if (netAt(w, fx, fy + depth)) continue
+    w.nets.push({ x: fx, y: fy + depth, t: w.ticks, caught: -1 })
+    ag.netFor = 20
+    ag.netX = fx
+    ag.netY = fy + depth
+    ag.cool = specOf(ag).cool
+    w.lastEvent = "fallback"
+    return true
+  }
+  return false
+}
+
+function netAt(w, x, y) {
+  for (var i = 0; i < w.nets.length; i++) {
+    var n = w.nets[i]
+    if (Math.abs(n.x - x) <= NET_HALF && Math.abs(n.y - y) <= 1) return n
+  }
+  return null
+}
+
 // Rate Limiter. Everything hostile it can see within reach — fixtures and red
 // team alike — stops for THROTTLE_TICKS. The window is long enough for a queue
 // of five to file past at walking pace and short enough that a straggler can
@@ -5941,7 +5992,7 @@ function specialAtWall(w, ag) {
   // Ada Blocker has no move for a wall — its move is for what a wall cannot
   // help with. Turning at one must not spend the cooldown, or it arrives at
   // the danger it exists for with the plate still on its back.
-  if (spec.act === "shield" || spec.act === "throttle") { turnAround(w, ag); return }
+  if (spec.act === "shield" || spec.act === "throttle" || spec.act === "net") { turnAround(w, ag); return }
 
   if (spec.act === "ceiling") { startCeiling(w, ag); return }
 
@@ -6175,7 +6226,7 @@ function specialDropLanding(w, ag, nx, depth, mode) {
     recoil: -3, cyclone: 4, web: 0, logchute: 3, balloon: -4,
     promptchute: 2, piledrive: 0, helicopter: 7, glasswing: 5,
     ghost: -3, gunwing: 4, tractor: 1, steps: 3, chain: 5,
-    jetpack: 7, cushion: 2, extender: 0, shieldglider: 5, backoff: 1
+    jetpack: 7, cushion: 2, extender: 0, shieldglider: 5, backoff: 1, bungee: 0
   }[mode] || 0
   var footY = Math.floor(ag.y) + depth
   var baseX = Math.floor(nx)
@@ -6222,6 +6273,7 @@ function startSpecialHeight(w, ag, nx, depth, far) {
   if (spec.height === "helicopter") ag.heightTicks += 60
   if (spec.height === "balloon") ag.heightTicks += 25
   if (spec.height === "backoff") ag.heightTicks += 40
+  if (spec.height === "bungee") ag.heightTicks += 30
   ag.x = nx
   ag.timer = 0
   w.lastEvent = spec.height === "cushion" ? "copies, cushion!" : spec.height
@@ -6272,6 +6324,15 @@ function startSpecialAscent(w, ag) {
   return true
 }
 
+// A bungee: all the way down in the first half, then two bounces that die
+// away, ending exactly at the landing. Never past it — the cord is cut to
+// the drop, so the floor is the bottom of the stretch.
+function bungeeCurve(p) {
+  if (p < 0.5) { var q = p / 0.5; return q * q }
+  var b = (p - 0.5) / 0.5
+  return 1 - Math.abs(Math.sin(b * Math.PI * 2)) * 0.22 * (1 - b)
+}
+
 // Progress through a fall that stops to retry: four equal drops, separated by
 // pauses of 1, 2 and 4 units against a drop's 1. Answers 0 at 0 and 1 at 1.
 var BACKOFF_SPANS = [1, 1, 1, 2, 1, 4, 1]
@@ -6299,6 +6360,7 @@ function stepSpecialHeight(w, ag) {
   // Exponential backoff: drop, wait, drop, wait longer. Four retries, each
   // pause twice the last, and every drop the same height.
   if (ag.heightMode === "backoff") moveP = backoffCurve(p)
+  if (ag.heightMode === "bungee") moveP = bungeeCurve(p)
 
   ag.x = ag.heightFromX + (ag.heightToX - ag.heightFromX) * moveP
   ag.y = ag.heightFromY + (ag.heightToY - ag.heightFromY) * moveP
@@ -6310,7 +6372,7 @@ function stepSpecialHeight(w, ag) {
     recoil: -2, cyclone: 3, web: 0.4, logchute: 2, balloon: -3,
     promptchute: 1.5, piledrive: 0, helicopter: 5, glasswing: 3,
     ghost: -2, gunwing: 2.5, tractor: 0.8, steps: 1.5, chain: 3,
-    jetpack: 4, cushion: 1.5, extender: 0, shieldglider: 3, backoff: 0.5
+    jetpack: 4, cushion: 1.5, extender: 0, shieldglider: 3, backoff: 0.5, bungee: 0.3
   }[ag.heightMode] || 0
   ag.x += ag.dir * sway * Math.sin(moveP * Math.PI)
   if (ag.heightMode === "helicopter") {
@@ -7551,6 +7613,8 @@ function stepSwim(w, ag) {
 }
 
 function stepParticles(w) {
+  for (var ni = w.nets.length - 1; ni >= 0; ni--)
+    if (w.ticks - w.nets[ni].t > NET_LIFE) w.nets.splice(ni, 1)
   while (w.blasts.length && w.ticks - w.blasts[0].t > BLAST_LIFE) w.blasts.shift()
   for (var i = w.particles.length - 1; i >= 0; i--) {
     var p = w.particles[i]
@@ -7815,6 +7879,7 @@ function stepAgents(w) {
     }
     if (ag.shotFor > 0) ag.shotFor--
     if (ag.throttleFor > 0) ag.throttleFor--
+    if (ag.netFor > 0) ag.netFor--
     if (ag.gunCool > 0) ag.gunCool--
     if (ag.shoveCool > 0) ag.shoveCool--
     if (ag.hazardGrace > 0) ag.hazardGrace--
@@ -7837,6 +7902,7 @@ function stepAgents(w) {
       // at fixtures only: inReach already asks for a clear line, both ways,
       // and waiting to be facing the thing meant it acted on almost nothing.
       if (sact === "throttle" && ag.cool <= 0) throttleHazard(w, ag)
+      if (sact === "net" && ag.cool <= 0) deployNet(w, ag)
 
       if (sact === "camp" && (seesDanger || seesRed)) {
         ag.state = "camp"

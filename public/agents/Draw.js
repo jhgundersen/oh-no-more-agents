@@ -1556,6 +1556,8 @@ function drawActors(ctx, w, pal, opts) {
     }
   }
   ctx.globalAlpha = 1
+  if (w.nets) for (var ni = 0; ni < w.nets.length; ni++) drawNet(ctx, w, w.nets[ni])
+
   for (var i = 0; i < w.agents.length; i++) {
     var ag = w.agents[i]
     if (ag.gone) continue
@@ -2143,6 +2145,18 @@ function drawCroc(ctx, w, pal, p, px, pw, sy) {
 // Three per special, picked by level number so it is the same line every time
 // you come back to level 42 — the same rule the rest of the level runs on.
 var SPECIAL_FACTS = {
+  fallback: [
+    "is the plan for when the plan hits the floor.",
+    "catches what the happy path dropped.",
+    "has never once been the primary.",
+    "degrades gracefully, and makes you do it too.",
+    "only works when everything else has failed.",
+    "was configured years ago and finally got called.",
+    "returns a safe default. You are the safe default.",
+    "falls the way it handles errors: with a bounce.",
+    "stands under the edge case so you do not have to.",
+    "the umbrellas ran out. This did not."
+  ],
   ratelimit: [
     "returns 429 to anything that moves too often.",
     "does not fix the danger. Schedules it.",
@@ -3816,6 +3830,46 @@ function drawAgentHome(ctx, w, pal, ag, ox, oy, dir, robe, skin) {
   ctx.fillStyle = robe
 }
 
+// The throw: both arms out toward where the net went, and a line of cord
+// arcing from the hands to it for the first few ticks.
+function drawNetThrow(ctx, w, ag, ox, oy, dir, hair) {
+  var C = w.k.CELL, p = 1 - ag.netFor / 20
+  ctx.fillStyle = hair
+  blit(ctx, ox, oy, dir, 7, 8, 2, 1); blit(ctx, ox, oy, dir, 7, 10, 2, 1)
+  if (p > 0.5) return
+  var sx = ox + 4, sy = oy + 8, tx = (ag.netX + 0.5) * C, ty = (ag.netY - 1) * C
+  for (var s = 0; s <= 10; s++) {
+    var q = s / 10 * Math.min(1, p * 2.5)
+    ctx.fillRect(Math.round(sx + (tx - sx) * q), Math.round(sy + (ty - sy) * q - Math.sin(q * Math.PI) * 10), 1, 1)
+  }
+}
+
+// Fallback's net: two posts and a mesh slung between them on the landing
+// floor, in the special's colours so it is seen to be its. It sags and springs
+// back when it takes somebody, and fades for its last second.
+var NET_FADE = 30
+function drawNet(ctx, w, n) {
+  var sp = w.specialSpec, C = w.k.CELL
+  var age = w.ticks - n.t, left = 120 - age
+  if (left <= 0) return
+  var x0 = (n.x - 3) * C, x1 = (n.x + 4) * C, base = (n.y + 1) * C
+  var since = n.caught >= 0 ? w.ticks - n.caught : 99
+  var sag = since < 12 ? Math.round(Math.sin(since / 12 * Math.PI) * 4) : 1
+  var rise = Math.min(1, age / 6)
+  ctx.globalAlpha = left < NET_FADE ? left / NET_FADE : 1
+  ctx.fillStyle = sp ? sp.robe : "#3a8f8f"
+  ctx.fillRect(x0, base - 9 * rise, 1, 9 * rise)                  // posts
+  ctx.fillRect(x1 - 1, base - 9 * rise, 1, 9 * rise)
+  ctx.fillStyle = sp ? sp.hair : "#ffd6e0"
+  var span = x1 - x0
+  for (var i = 0; i <= span; i += 2) {
+    var d = Math.round(Math.sin(i / span * Math.PI) * sag)
+    ctx.fillRect(x0 + i, base - 7 * rise + d, 1, 1)                // the top cord
+    if (i % 4 === 0) ctx.fillRect(x0 + i, base - 6 * rise + d, 1, 3 + sag)   // mesh
+  }
+  ctx.globalAlpha = 1
+}
+
 // A disc in two-pixel rows, so a fireball keeps the board's blockiness rather
 // than turning up as the one smooth circle in the game. `rag` frays the edge
 // row by row, off a seed, so it billows instead of reading as a balloon.
@@ -4595,7 +4649,19 @@ function drawAgentHeightGear(ctx, w, pal, ag, ox, oy, dir, robe, hair) {
   // original agent alone around the middle of its sprite.
 }
 
+// Fallback on its own way down: a cord from where it jumped to its harness,
+// stretching and slackening with the bounce.
+function drawGearBungee(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var C = fr.C, topY = Math.round((ag.heightFromY - 3) * C), hx = ox + 4
+  ctx.fillStyle = hair
+  for (var y = topY; y < oy + 6; y += 2) ctx.fillRect(hx + ((y >> 2) % 2), y, 1, 1)
+  ctx.fillRect(hx - 2, topY - 1, 5, 1)                          // the anchor
+  ctx.fillStyle = robe
+  ctx.fillRect(ox + 1, oy + 9, 6, 1)                            // harness
+}
+
 var GEAR_DRAW = {
+  bungee: drawGearBungee,
   jetpack: drawGearJetpack, helicopter: drawGearHelicopter,
   cushion: drawGearCushion, conning: drawGearConning, web: drawGearWeb,
   chain: drawGearWeb, balloon: drawGearBalloon, promptchute: drawGearPromptchute,
@@ -5095,6 +5161,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   drawAgentTrick(ctx, w, pal, ag, ox, oy, dir, robe, hair)
   if (ag.throttleFor > 0) drawThrottleSignal(ctx, pal, ag, ox, oy, dir, robe)
   drawReleaseRing(ctx, pal, ag, ox, oy, w.ticks)
+  if (ag.netFor > 0) drawNetThrow(ctx, w, ag, ox, oy, dir, hair)
   if (st === "camp" && ag.shotFor > 0 && ag.special) {
     var csp = w.specialSpec
     ctx.globalAlpha = Math.min(1, ag.shotFor / 6)

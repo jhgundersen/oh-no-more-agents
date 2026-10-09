@@ -512,3 +512,30 @@ alive in motion — the point is that the way home looks like it is on.
 **Deployed** with 18 and 19 after a browser check (below).
 
 **Deployed** after 20 (name="build" content="6a61628f"): jam fix, finer red team, exit shimmer. Browser check on level 13 clean.
+
+## 21 — 2026-10-09 · Hero: Fallback
+
+**Why.** First hero since log 4, aimed at a measured cause: falls ("splat"
+and "fell") are about a tenth of deaths. Profiled 53 of them: 41 came after
+the floaters ran out — while there are umbrellas, `stepFall` hands one out.
+
+**Changed.** Special #20, *Fallback* (`fallback`, act `net`, height
+`bungee`, teal with pink hair). Walking, cooldown ready, no floaters left,
+and a colleague within `NET_REACH` (16) falling further than a body
+survives (`dropDepth`) onto ground: it throws a net (`w.nets`) at the landing
+spot, `NET_HALF` 3 cells either side, lasting `NET_LIFE` (120 ticks). A lethal
+landing on a net is a landing (`stepFall`). At a wall it turns, like Ada
+Blocker. Its own drop is a bungee (`bungeeCurve`: down in the first half,
+two dying bounces). Drawn: arms out and a cord arcing to the net as it is
+thrown; posts and a mesh that sags and springs back when it takes somebody,
+fading over its last second; the bungee cord and harness. Ten lines.
+
+**Checked.** Its levels, 192 runs: first version (no floater gate) threw 9
+nets and caught nobody — the colony's own umbrella got there first. Gated:
+4 nets, 3 catches, splats 8 → 5; home 91.9% either way (falls without
+floaters are rare). Rendered a throw (level 533) and a catch (level 551).
+`sim play` 98 / 88 / 46s, `inert`, `heights` 20/20. Tests: a constructed
+lethal shaft — netted, the faller walks away; without the net, it dies.
+
+**Next.** Deploy with 22. Candidates: mission pens at the finer res; the
+drone (9% of deaths) has no counter at all.
