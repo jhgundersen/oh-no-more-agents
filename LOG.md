@@ -454,3 +454,31 @@ the edges but no grain. CRAP: 14 and 3.
 for an iteration (the 82 condemned agents are still waiting).
 
 **Deployed** after 17 (version c011eb88, build d8ad9af6): stand-down cue, res 2, finer agents and earth. Browser check on level 5: suits and lips visible, no errors.
+
+## 18 — 2026-10-09 · The jam on level 6
+
+**Why.** Log 13 left 82 agents condemned as stuck per 440 runs. Profiled
+each condemnation (biome, spot, toolbar): Ice Cave had 30, and eleven of
+those were one colony on level 6 blown up one by one at x68,y51 — flat open
+corridor, eighteen cells from the door, six miners in the toolbar.
+
+**Found.** A two-cell obstacle (a one-cell bump under an icicle mass) leaves a
+three-cell gap; the queue piles against it and turns at it every tick without
+leaving its cell. `hitWall` was reached 1,730 times there and `blastWall`
+refused every time on its half-patience gate (idle > 300) — while the
+stuck-in-one-cell rule condemns at `STILL_ESCAPE` (130) whatever the
+patience. The bomb always won the race to the charge.
+
+**Changed.** `hitWall`: an agent that is jammed (`still` past half of
+`STILL_ESCAPE`) may lay a wall charge before its patience runs out — but only
+a mine (`blastWall(…, mineOnly)`). First version let it be the bomb itself
+too: level 6 went 0 → 10 home and the aggregate didn't move, the jams it
+cleared paid for by agents spent early elsewhere. Mines only: 14 of 18 home.
+
+**Checked.** Wide sweep on vs off: 88.06 vs 88.10% home, 97.0 / 97.0
+cleared, no hangs — a correctness fix with no aggregate effect, like
+AGENTS.md's level 100 fixes. `sim play` 98 / 88 / 45s; `inert`, `gravity`.
+
+**Next.** The rest of the condemned are "open corridor, tools left" — agents
+pacing in the open, not at a wall. Worth one look at a sample before deciding.
+Graphics alternative: hazards at the finer res.

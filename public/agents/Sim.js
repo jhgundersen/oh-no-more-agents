@@ -3811,7 +3811,19 @@ function hitWall(w, ag) {
   // instead — see blastWall. Half, rather than the full PATIENCE the rest of
   // recovery waits for: by the time forceEscape has run dry the level's
   // bashers are gone, and a charge laid then is laid on the clock.
-  if (ag.idle * 2 > PATIENCE - trait.digBias && blastWall(w, ag, t)) return
+  //
+  // Or sooner, when it is not moving at all. A queue jammed against an
+  // obstacle turns at it every tick without leaving its cell, and the stuck-
+  // in-one-cell rule condemns it after STILL_ESCAPE ticks whatever its patience
+  // — so on level 6's Ice Cave eleven agents in a row were blown up beside a
+  // two-cell bump with six miners still in the toolbar, each at an idle of
+  // 130-210, long before the half-patience gate here would have opened.
+  // Early, it may only lay a mine — the charge that costs nobody. Letting it
+  // be the bomb itself that soon was a wash: the jams it cleared paid for the
+  // agents it spent on obstacles a little patience would have seen through.
+  var patient = ag.idle * 2 > PATIENCE - trait.digBias
+  var jammed = ag.still * 2 > STILL_ESCAPE
+  if ((patient || jammed) && blastWall(w, ag, t, !patient)) return
 
   turnAround(w, ag)
 }
@@ -3855,7 +3867,7 @@ function obstructionAhead(w, ag) {
   return depth
 }
 
-function blastWall(w, ag, thickness) {
+function blastWall(w, ag, thickness, mineOnly) {
   // Nothing to open — see obstructionAhead. Wider than the blast is the other
   // end of the same test: the hole would stop inside the obstruction.
   var depth = obstructionAhead(w, ag)
@@ -3866,6 +3878,7 @@ function blastWall(w, ag, thickness) {
   // charge each, and the colony died of its own rescue.
   if (chargeNear(w, ag)) return false
   if (canPlantMine(w, ag) && spend(w, ag, "miner")) { plantMine(w, ag); return true }
+  if (mineOnly) return false
   // A sacrifice with nobody left to walk through the gap is just a death.
   if (depth > BOMB_RADIUS || countComing(w, ag) < 1) return false
   if (!take(w, "bomber")) return false
