@@ -663,3 +663,5 @@ deaths; red team is now 35%. `sim play` 99 / 90 / 46s (AGENTS.md baselines
 updated); `inert`, `gravity`, `heights` pass. CRAP 13.7 / 3.
 
 **Next.** Red team is the biggest killer now. Deploy first.
+
+**Deployed** after 26 (name="build" content="85519e16"): hazard audit tool, flee fix. Browser check clean.
