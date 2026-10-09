@@ -3571,6 +3571,57 @@ function drawThrottleSignal(ctx, pal, ag, ox, oy, dir, robe) {
   ctx.globalAlpha = 1
 }
 
+// Walking. The torso stretches down to the hips whatever the bob, so the
+// legs stay planted while the chest rises and falls above them.
+function drawAgentWalk(ctx, ag, ox, oy, dir, robe, skin, walkLead, squash, bodyDrop, walking) {
+  var walkTop = 7 + Math.max(bodyDrop, -1)
+  blit(ctx, ox, oy, dir, 1, walkTop, 6, 13 - walkTop)
+  if (squash) {
+    blit(ctx, ox, oy, dir, 1, 13, 2, 3)            // knees out, taking it
+    blit(ctx, ox, oy, dir, 5, 13, 2, 3)
+  } else {
+    blit(ctx, ox, oy, dir, 2 + walkLead, 13, 2, 3)
+    blit(ctx, ox, oy, dir, 4 - walkLead, 13, 2, 3)
+  }
+  // Hands, swinging against the legs: the one in front when the far leg is
+  // forward. A pixel each, but a walk with no arms in it is a slide.
+  if (walking && walkLead !== 0 && !squash) {
+    ctx.fillStyle = skin
+    blit(ctx, ox, oy, dir, walkLead < 0 ? 6 : 0, 11 + Math.max(bodyDrop, -1), 1, 1)
+    ctx.fillStyle = robe
+  }
+}
+
+// How deep the knees go after a landing: two pixels on the first ticks of a
+// real drop, one as it straightens, none for a step down a stair.
+function landSquash(w, ag) {
+  if (!(ag.landedFrom > 3)) return 0
+  var since = w.ticks - ag.landedAt
+  return since < 3 ? 2 : (since < 6 ? 1 : 0)
+}
+
+// Home. Arms up and a few sparks off the portal (the hop is on `oy`, above,
+// so the head goes with it) — the fade alone read as an agent switched off
+// rather than one that made it.
+function drawAgentHome(ctx, w, pal, ag, ox, oy, dir, robe, skin) {
+  ctx.fillStyle = robe
+  blit(ctx, ox, oy, dir, 1, 7, 6, 6)
+  blit(ctx, ox, oy, dir, 2, 13, 2, 3)
+  blit(ctx, ox, oy, dir, 4, 13, 2, 3)
+  blit(ctx, ox, oy, dir, 0, 2, 1, 6)             // arms up
+  blit(ctx, ox, oy, dir, 7, 2, 1, 6)
+  ctx.fillStyle = skin
+  blit(ctx, ox, oy, dir, 0, 0, 1, 2)
+  blit(ctx, ox, oy, dir, 7, 0, 1, 2)
+  ctx.fillStyle = pal.exitLight
+  var r = 3 + ag.fade
+  for (var sp = 0; sp < 4; sp++) {
+    var ang = sp * Math.PI / 2 + ag.fade * 0.3 + ag.id
+    ctx.fillRect(Math.round(ox + 4 + Math.cos(ang) * r), Math.round(oy + 6 + Math.sin(ang) * r * 0.7), 1, 1)
+  }
+  ctx.fillStyle = robe
+}
+
 // One 8x16 sprite, mirrored by facing, with per-action limb changes. The
 // helper takes coordinates in right-facing sprite space and flips them for a
 // left-facing agent, so every pose below is written once.
@@ -4547,7 +4598,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
     // A short rise and fade into the portal, so getting home reads as an
     // arrival rather than an agent simply blinking out.
     ctx.globalAlpha = Math.max(0, 1 - ag.fade / 14)
-    oy -= ag.fade
+    oy -= ag.fade + (ag.fade < 7 ? Math.round(Math.sin(ag.fade / 7 * Math.PI) * 2) : 0)
   }
 
   var robe = pal.robe
@@ -4754,7 +4805,14 @@ function drawAgent(ctx, w, pal, ag, opts) {
   // walks on ceilings reads as hanging rather than as floating.
   spriteFlip = (st === "ceil")
 
-  var bodyDrop = st === "slide" ? 4 : ((st === "dig" || st === "camp") ? 2 : 0)
+  // The walk cycle, worked out up here because the head rides it. On the
+  // passing frames, legs together, the body is at the top of its stride and
+  // everything above the hips comes up a pixel; for a few ticks after a real
+  // drop it goes the other way, knees taking the landing.
+  var walkLead = [0, 1, 0, -1][(ag.anim >> 2) % 4]
+  var squash = st === "walk" ? landSquash(w, ag) : 0
+  var bob = st === "walk" && !w.submerged && !squash && walkLead === 0 ? 1 : 0
+  var bodyDrop = st === "slide" ? 4 : ((st === "dig" || st === "camp") ? 2 : squash - bob)
 
   // --- hair + head -------------------------------------------------------
   // Which way it is looking has to survive the shades. The old sprite said it
@@ -4917,13 +4975,11 @@ function drawAgent(ctx, w, pal, ag, opts) {
     blit(ctx, ox, oy, dir, 0, 16 + lift + (kick > 0 ? 0 : 1), 3, 1)
     ctx.fillStyle = robe
 
+  } else if (st === "saved") {
+    drawAgentHome(ctx, w, pal, ag, ox, oy, dir, robe, skin)
+
   } else {
-    // Walking (and the saved fade-out, which keeps the walk pose).
-    blit(ctx, ox, oy, dir, 1, 7, 6, 6)
-    var f = (ag.anim >> 2) % 4
-    var lead = [0, 1, 0, -1][f]
-    blit(ctx, ox, oy, dir, 2 + lead, 13, 2, 3)
-    blit(ctx, ox, oy, dir, 4 - lead, 13, 2, 3)
+    drawAgentWalk(ctx, ag, ox, oy, dir, robe, skin, walkLead, squash, bodyDrop, st === "walk")
   }
 
   // --- bomber countdown --------------------------------------------------

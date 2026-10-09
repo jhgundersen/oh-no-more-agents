@@ -4310,7 +4310,9 @@ function spawn(w) {
     rideTicks: 0,
     anim: Math.floor(Math.random() * 8),
     gone: false,
-    fade: 0
+    fade: 0,
+    landedAt: -99,    // tick of the last landing, for the squash Draw puts on it
+    landedFrom: 0     // and how far it fell to get there
   }
 }
 
@@ -4884,6 +4886,8 @@ function stepFall(w, ag) {
       ag.y = yy - 1
       if (ag.fall > killingFall(w) && !ag.floater) { splat(w, ag); return }
       ag.state = "walk"
+      ag.landedAt = w.ticks
+      ag.landedFrom = ag.fall
       ag.fall = 0
       ag.floater = false
       herdSteer(w, ag)

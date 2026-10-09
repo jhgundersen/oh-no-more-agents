@@ -232,3 +232,28 @@ real code: `drawAgent` (CC 119, 1.1k), `stepCamp` (624, barely covered),
 **Next.** Gameplay/graphics again rather than crap three in a row. Candidate:
 the agents' own animation — walk cycle, landing squash, a celebration at the
 exit — the thing on screen most of the time.
+
+## 9 — 2026-10-09 · Graphics: the agents themselves move better
+
+**Why.** The agent is on screen more than anything else, and its walk was two
+leg blocks sliding sideways under a rigid body; getting home was a fade.
+
+**Changed.**
+- Walk: on the passing frames (legs together) everything above the hips
+  rises a pixel; the torso stretches to the hips so the feet stay planted.
+  A skin pixel for a hand swings against the legs.
+- Landing: Sim records `landedAt`/`landedFrom` (bookkeeping only); for six
+  ticks after a drop of more than three cells the knees go out and the body
+  drops two pixels, then one (`landSquash`).
+- Home: arms up, a two-pixel hop on the way in, and four sparks in
+  `exitLight` circling outward as it fades (`drawAgentHome`).
+- Walk pose moved out of `drawAgent` into `drawAgentWalk`.
+
+**Checked.** Pose contact sheet at 5×: walk cycle, the landing over 12 ticks,
+the home fade over 12. `sim play` byte-for-byte the same as log 7 (98 / 87 /
+45s, 2884/3334) — the new fields change nothing. `drawAgent` CC 119 → 126
+(the cycle has to be known before the head is drawn); new functions ≤ 6.
+
+**Next.** Deploy (8 + 9). Then something with gameplay weight — events and
+missions exist; heroes number 19; maybe a second mechanic in the Desert the
+way the Trench and Skyscraper have one (sand that drifts and buries?).
