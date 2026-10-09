@@ -435,3 +435,20 @@ shades now — men in black — where before they were a dark block with a face.
 **Next.** Terrain at the finer res: the earth is drawn in 4-px cells, and
 next to the new agents the edges look like a different game. A half-pixel lip
 on every top edge, grain inside the strata.
+
+## 17 — 2026-10-09 · Finer pixels, step 3: the earth
+
+**Changed.** `drawTerrainFine` (res ≥ 2, on the terrain layer, so it costs
+nothing per tick): a pale half-pixel hairline on the very top of every
+walkable edge and a dark one under the lip, so a floor reads as a surface;
+a shaded half-pixel down every exposed side; and grain inside natural
+materials (`drawGrain`: a dark fleck in a quarter of cells, a pale one in an
+eighth, placed by a hash of the cell so it stays put while the colony digs).
+
+**Checked.** Before/after crops at 4× in the Cavern, Spaceship and
+Skyscraper, and full levels at the page's res. On hull plate and office wall
+the grain read as dirt — `BUILT` biomes (Spaceship, Factory, Skyscraper) get
+the edges but no grain. CRAP: 14 and 3.
+
+**Next.** Hazards and the exit at the finer res, or step back to gameplay
+for an iteration (the 82 condemned agents are still waiting).

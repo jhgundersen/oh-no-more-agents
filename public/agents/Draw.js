@@ -139,6 +139,8 @@ function drawTerrain(ctx, w, pal) {
     }
   }
 
+  if ((w.res || 1) >= 2) drawTerrainFine(ctx, w, pal)
+
   // Factory only. ORE is this biome's machinery and mezzanine plate, so it
   // gets riveted and seamed. The room's character has to come from detail on
   // the structures that are already there — the first version tried to get it
@@ -174,6 +176,62 @@ function drawTerrain(ctx, w, pal) {
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
   drawSea(ctx, w, pal)
+}
+
+// The earth at half-pixel detail, for hosts that draw at res 2 (see
+// clearLayer). Three things the 4-pixel cells cannot say: grain inside every
+// material, so a wall is made of something; a bright hairline on the very top
+// of each walkable edge and a dark one under the lip, so a floor reads as a
+// surface you could stand on; and a shaded half-pixel down any exposed side.
+// Grain is a hash of the cell, so it is the same every repaint and stays put
+// while the colony digs around it.
+// Built places get no grain: on hull plate, office wall and machine housing it
+// read as dirt, and those biomes carry their own pattern (panels, bays, rivets).
+var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true }
+
+// One cell's grain: a dark fleck in a quarter of cells, a pale one in an
+// eighth, placed inside the cell by the hash.
+function drawGrain(ctx, k, pal, m, px, py, h) {
+  if ((h & 3) === 0) {
+    ctx.fillStyle = materialShade(k, pal, m)
+    ctx.fillRect(px + ((h >> 2) & 3) * 0.5 + 0.5, py + ((h >> 4) & 3) * 0.5 + 1, 1, 0.5)
+  } else if ((h & 7) === 1) {
+    ctx.fillStyle = materialEdge(k, pal, m)
+    ctx.globalAlpha = 0.45
+    ctx.fillRect(px + ((h >> 3) & 3) * 0.5 + 1, py + ((h >> 5) & 3) * 0.5 + 0.5, 0.5, 0.5)
+    ctx.globalAlpha = 1
+  }
+}
+
+function drawTerrainFine(ctx, w, pal) {
+  var k = w.k, C = k.CELL, cols = k.COLS, rows = k.ROWS, T = w.terrain
+  var grain = !BUILT[w.biome]
+  for (var y = 0; y < rows; y++) {
+    for (var x = 0; x < cols; x++) {
+      var m = T[y * cols + x]
+      if (m === k.EMPTY) continue
+      var px = x * C, py = y * C
+      var h = ((x * 73856093) ^ (y * 19349663)) >>> 0
+      var openAbove = y > 0 && T[(y - 1) * cols + x] === k.EMPTY
+      if (grain && !openAbove) drawGrain(ctx, k, pal, m, px, py, h)
+      if (openAbove) {
+        ctx.fillStyle = pal.dust
+        ctx.globalAlpha = 0.35
+        ctx.fillRect(px, py, C, 0.5)
+        ctx.globalAlpha = 1
+        ctx.fillStyle = materialShade(k, pal, m)
+        ctx.fillRect(px, py + C - 2, C, 0.5)
+      }
+      if (x > 0 && T[y * cols + x - 1] === k.EMPTY) {
+        ctx.fillStyle = materialShade(k, pal, m)
+        ctx.fillRect(px, py + (openAbove ? 0.5 : 0), 0.5, C)
+      }
+      if (x < cols - 1 && T[y * cols + x + 1] === k.EMPTY) {
+        ctx.fillStyle = materialShade(k, pal, m)
+        ctx.fillRect(px + C - 0.5, py + (openAbove ? 0.5 : 0), 0.5, C)
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
