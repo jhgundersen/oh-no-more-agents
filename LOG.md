@@ -60,3 +60,24 @@ sync is the user's call.
 on the actor pass (drawMachines) — dust motes in caves, falling leaves in the
 Jungle, snow in Frost, sparks in the Foundry — as pure functions of `w.ticks`
 like the Trench's fish.
+
+## 3 — 2026-10-09 · Graphics: air that moves
+
+**Why.** With the backdrop in, the stillest thing on the board was the air.
+
+**Changed.** `drawAmbience` / `drawMotes` in `Draw.js`, on the actor pass via
+`drawMachines`. `AMBIENCE` is a table, one row per biome, each a list of mote
+fields (count, drift, sway, size, colour, alpha, optional blink): dust in the
+caves, ruins and ship, snow in two sizes in Frost, embers rising in the
+Foundry, leaves and blinking fireflies in the Jungle, glints and drift in the
+Ice Cave. Stateless like the Trench's fish, and a mote inside solid ground is
+skipped so weather never draws over rock. Skyscraper and Trench untouched.
+
+**Checked.** Crops of Foundry and Jungle at 400 ticks; embers read as embers
+only in `fire` — `fireHot` alone came out near white and read as dust. Speeds
+sized for ~30 ticks/s (snow ~10px/s, embers ~7px/s up). Draw-only. New
+functions CRAP ≤ 7.
+
+**Next.** Gameplay or heroes — two graphics iterations in a row. Look at what
+the colony does least well (`npm run sim biomes`, the Skyscraper is lowest at
+77% home) or add a special. Deploy after the next iteration if it holds up.

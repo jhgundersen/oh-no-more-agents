@@ -822,8 +822,66 @@ function drawWaterLife(ctx, w, pal) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Ambience
+// ---------------------------------------------------------------------------
+//
+// Air that moves: dust, snow, embers, leaves, fireflies, glints. The same rules
+// as the Trench's water life — no state, every mote a pure function of
+// `w.ticks` and its index, so it costs the simulation nothing and two hosts
+// cannot disagree about it. A mote inside solid ground is skipped rather than
+// drawn over it: weather happens in the air, and snow falling through rock
+// reads as a rendering bug. One row per biome in AMBIENCE; a field is a count
+// and a motion, never code.
+//
+//   n      motes          vx, vy  drift, px per tick     sway  side-to-side px
+//   size   px square      col     palette key            alpha
+//   blink  >0: lit only for that share of a cycle (fireflies, glints)
+
+var AMBIENCE = {
+  "Cavern":   [{ n: 26, vx: 0.02, vy: 0.05, sway: 2, size: 1, col: "dust", alpha: 0.30 }],
+  "Ruins":    [{ n: 30, vx: 0.06, vy: 0.04, sway: 3, size: 1, col: "dust", alpha: 0.28 }],
+  "Frost":    [{ n: 70, vx: 0.18, vy: 0.32, sway: 4, size: 1, col: "dust", alpha: 0.65 },
+               { n: 14, vx: 0.24, vy: 0.45, sway: 5, size: 2, col: "dust", alpha: 0.45 }],
+  "Foundry":  [{ n: 30, vx: 0.03, vy: -0.22, sway: 3, size: 1, col: "fire", alpha: 0.85, blink: 0.7 },
+               { n: 10, vx: 0.05, vy: -0.30, sway: 4, size: 1, col: "fireHot", alpha: 0.9, blink: 0.4 }],
+  "Jungle":   [{ n: 12, vx: 0.10, vy: 0.16, sway: 6, size: 2, col: "decor", alpha: 0.70 },
+               { n: 18, vx: 0.04, vy: -0.02, sway: 5, size: 1, col: "decorLit", alpha: 0.95, blink: 0.35 }],
+  "Ice Cave": [{ n: 22, vx: 0, vy: 0, sway: 0, size: 1, col: "dust", alpha: 0.9, blink: 0.12 },
+               { n: 24, vx: 0.03, vy: 0.08, sway: 2, size: 1, col: "dust", alpha: 0.30 }],
+  "Spaceship":[{ n: 16, vx: 0.05, vy: 0.01, sway: 2, size: 1, col: "dust", alpha: 0.25 }],
+  "Factory":  [{ n: 24, vx: 0.08, vy: -0.03, sway: 3, size: 1, col: "dust", alpha: 0.22 }]
+}
+
+function drawAmbience(ctx, w, pal) {
+  var fields = AMBIENCE[w.biome]
+  if (!fields) return
+  for (var f = 0; f < fields.length; f++) drawMotes(ctx, w, pal, fields[f], f)
+  ctx.globalAlpha = 1
+}
+
+function drawMotes(ctx, w, pal, spec, salt) {
+  var k = w.k, C = k.CELL
+  var wide = k.COLS * C, top = k.SKY * C, tall = k.ROWS * C - top
+  var t = w.ticks
+  var seed = (w.level * 40503 + salt * 7919) % 65536
+  var next = function () { seed = (seed * 1103515245 + 12345) % 2147483648; return (seed >> 6) / 33554432 }
+  ctx.fillStyle = pal[spec.col]
+  for (var i = 0; i < spec.n; i++) {
+    var x0 = next() * wide, y0 = next() * tall, pace = 0.6 + next() * 0.8, phase = next() * 100
+    if (spec.blink && ((t * 0.02 * pace + phase) % 1) > spec.blink) continue
+    var x = ((x0 + t * spec.vx * pace + Math.sin(t * 0.015 * pace + phase) * spec.sway) % wide + wide) % wide
+    var y = ((y0 + t * spec.vy * pace) % tall + tall) % tall + top
+    var px = Math.floor(x), py = Math.floor(y)
+    if (w.terrain[Math.floor(py / C) * k.COLS + Math.floor(px / C)] !== k.EMPTY) continue
+    ctx.globalAlpha = spec.alpha
+    ctx.fillRect(px, py, spec.size, spec.size)
+  }
+}
+
 function drawMachines(ctx, w, pal) {
   drawWaterLife(ctx, w, pal)
+  drawAmbience(ctx, w, pal)
   if (w.biome !== "Factory") return
   var k = w.k
   var C = k.CELL
