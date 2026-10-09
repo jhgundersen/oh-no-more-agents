@@ -510,3 +510,5 @@ spill of light across the floor in front. The biome frames are untouched.
 alive in motion — the point is that the way home looks like it is on.
 
 **Deployed** with 18 and 19 after a browser check (below).
+
+**Deployed** after 20 (name="build" content="6a61628f"): jam fix, finer red team, exit shimmer. Browser check on level 13 clean.
