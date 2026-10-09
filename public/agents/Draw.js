@@ -5480,6 +5480,25 @@ function drawGearPiledrive(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
 // information the head used to carry with its nose and lens, and it has to
 // survive the change or a colony walking left looks exactly like a colony
 // walking right.
+// The diver at res 2 (the dry-land detail is drawAgentFine): rivets round
+// the collar, a dark ring framing the port and two bars of grille across it,
+// a second highlight following the helmet's curve, and a weight belt with
+// its lead blocks — the suit is what keeps a diver on the floor.
+function drawDiverFine(ctx, pal, ag, ox, oy, dir, drop) {
+  ctx.fillStyle = pal.helmetLit
+  for (var r = 1.5; r < 7; r += 1.5) blitFine(ctx, ox, oy, dir, r, 6.25 + drop, 0.5, 0.5)   // rivets
+  blitFine(ctx, ox, oy, dir, 1.5, 2 + drop, 0.5, 1.5)                                     // the curve
+  ctx.fillStyle = pal.helmetDark
+  blitFine(ctx, ox, oy, dir, 3.5, 2 + drop, 0.5, 3)                                       // port ring
+  blitFine(ctx, ox, oy, dir, 4, 5 + drop, 2, 0.5)
+  blitFine(ctx, ox, oy, dir, 4, 3 + drop, 2, 0.5)                                         // grille
+  blitFine(ctx, ox, oy, dir, 4, 4 + drop, 2, 0.5)
+  ctx.fillStyle = "#1c1c22"
+  blitFine(ctx, ox, oy, dir, 1, 11.5 + drop, 6, 1)                                        // weight belt
+  ctx.fillStyle = "#6a6f7a"
+  blitFine(ctx, ox, oy, dir, 1.5, 11.5 + drop, 1, 1); blitFine(ctx, ox, oy, dir, 5.5, 11.5 + drop, 1, 1)
+}
+
 function drawDiverHead(ctx, w, pal, ag, ox, oy, dir, drop) {
   // Built row by row rather than as one rectangle, because the corners are the
   // whole difference between a copper sphere and a brass brick: the first
@@ -5777,6 +5796,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   }
 
   if ((w.res || 1) >= 2 && !w.submerged) drawAgentFine(ctx, pal, ag, ox, oy, dir, bodyDrop, walkLead, squash, robe)
+  else if ((w.res || 1) >= 2 && st !== "saved") drawDiverFine(ctx, pal, ag, ox, oy, dir, bodyDrop + (headLift || 0))
 
   // A pip on the shoulder in the special's second colour. The robe alone is a
   // handful of pixels on a board that already has a lot going on.

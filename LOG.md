@@ -816,3 +816,16 @@ at the fixture, the arrow, the trail to the hatch. `heights` 21/21, `inert`,
 window staying dead; the trail drawn through its life and gone after.
 
 **Next.** Deploy with the next iteration.
+
+## 34 — 2026-10-09 · Finer pixels: the divers
+
+**Changed.** `drawDiverFine` (res ≥ 2, submerged): rivets round the collar,
+a dark ring framing the port with two grille bars across it, a second
+highlight along the helmet's curve, a weight belt with two lead blocks. The
+dry-land detail never ran under water, so every agent in the Trench was still
+coarse.
+
+**Checked.** Ten poses in two themes at 8×, before/after: reads as a hard-hat
+helmet now. `test/agents.test.js` already draws every pose wet at res 2.
+
+**Deployed** with 33 (below).
