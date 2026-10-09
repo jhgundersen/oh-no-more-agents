@@ -257,3 +257,6 @@ the home fade over 12. `sim play` byte-for-byte the same as log 7 (98 / 87 /
 **Next.** Deploy (8 + 9). Then something with gameplay weight — events and
 missions exist; heroes number 19; maybe a second mechanic in the Desert the
 way the Trench and Skyscraper have one (sand that drifts and buries?).
+
+**Deployed** after 9 (version d0931e83, build c011326e). Browser check on
+level 11 first: no errors; the sun reads as a sun behind haze.
