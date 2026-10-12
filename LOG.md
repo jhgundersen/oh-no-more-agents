@@ -1633,3 +1633,58 @@ column and re-forms on arrival; the thaw shards and drips read clearly.
 Codex's seeded comparison kept Cavern / Frost / Trench frames identical.
 
 **Deployed** after 62 (name="build" content="467d7a1b"): Foundry chains, mechanism polish. Browser check clean.
+
+## 63 — 2026-10-12 · Fixtures that show their wind-up
+
+**Why.** Reviewed all 45 fixtures before changing pixels. Charge blinked off
+entirely for half its frames, while some idle payloads already looked lethal.
+Priority ranking, weakest tells first, in three tiers: (1) beartrap, packetloss,
+grinder, polisher, scarab, snowball, molten, rockfall, stamper; (2) gun, sentry,
+turret, darts, flame, tesla, sniper, lasergrid, sweeper, tripwire, spikes,
+sawblade, geyser, echobat, spores, blackice, frostjet, steamvent, sprinkler,
+shredder, vent, current, flywheel, hotaisle, pendulum; (3) crusher, piston,
+airlock, servo, icicle, vinelock, snake, scorpion, shark — these already had a
+useful pose change. Brazier and fence are continuously live fields, with no
+charge or recovery in the simulation; their art is unchanged.
+
+**Changed.** Draw only, all 43 phased fixtures. Charge stays visible, builds
+from warning colour toward a hot tip, and differs from the full release.
+Optical heads use dotted sights, dart ports load before launching, Tesla's
+charge climbs its coils with short local arcs, jets gather pressure at their
+outlets, and falling payloads wait at the source. Plates raise teeth or draw
+jaws inward; grinders, wheels, fans and the buffer spin up from a quiet idle.
+The pendulum draws back before swinging. Rams, floor plates and vines travel
+through charge and return over the first twelve rest ticks. Fire adds short
+flashes or impact marks, followed by local dust, wisps, bubbles, frost,
+settling payloads or cooling lamps. Animals keep their silhouettes and use
+breathing, a raised neck, a drawn-back sting or a steady shark lining up;
+the current strengthens its directional streamlines. Slow lamps, drips,
+flakes and glints keep idle alive. Half-pixel jaw teeth track the moving base,
+and fine sentry lamps follow the phase. Spin-up uses elapsed charge time so
+a long-running level does not amplify the animation speed. Recovery is
+suppressed while throttled, and an unfired fixture has no phantom discharge.
+Shark body, fins and jaw are separate small drawings, preserving its outline.
+
+**Checked.** `npm run check`, including `npm test`, passes; stamps are current
+and the core files remain self-contained. No component pixel pins needed
+updating. Hazard tests now check persistent early/late tells, distinct release,
+quiet idle motion, recovery expiry, throttling, visual timing against Sim,
+opacity restoration and no writes to world/hazard state at both resolutions
+and both facing orientations. Seeded `Math.random` identically for old/new
+renderers on all 118 hazard-free levels in 1–240, at ticks 0, 200, 500, 900 and
+1600: all 1,180 res-1/res-2 frames byte-identical, including 350 with specials.
+Reviewed the before/after contact sheet and enlarged res-1 crops for every
+fixture. `/tmp/codex-hazards/sheet.png` has res-2 art enlarged with nearest
+neighbour pixels: idle, early/late charge, fire, early/late rest; individual
+crops, readable pages, scripts, baseline and check logs are alongside it.
+
+**CRAP.** `npm run crap -- --changed`, with the cached tool copied locally;
+every changed/new function is under 30, maximum `drawHzCurrent` 21.0.
+New helpers: `hzLamp` 7.0, `hzPressure` 9.0, `hzImpact` 6.0, `hzStroke` and
+`hzSwing` 4.0; shark body/fins/jaw 11.0/13.0/7.0, its dispatcher 8.0.
+Full before/after reports against HEAD: functions over 30 fall from 41 to 40
+across the repository, and from 8 to 7 in Draw (the former shark giant was
+83.1). No existing over-30 count increases.
+
+**Next.** Watch the tells and twelve-tick recovery in crowded colonies on the
+panel and page before making the effects larger; retain the quiet idle.
