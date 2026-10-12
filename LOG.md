@@ -1422,3 +1422,56 @@ only conflicts). Res-1: 180 frames (levels 1–60 at three ticks, Math.random
 seeded, 88 with a special on screen) byte-identical old vs merged Draw.js.
 
 **Deployed** after 57 (name="build" content="49f0ff05"): refactors 53–56, hero gear detail. Browser check clean.
+
+## 58 — 2026-10-12 · Half-pixel backdrops and ambience
+
+**Changed.** `BACKDROP_FINE` and `AMBIENCE_FINE` dispatch small per-biome
+recipes only at res 2. Wall detail replays the existing seeded rectangles
+through a recording context, so placement rules stay in one place and every
+mark stays inside the original shapes. Only the three dark wall shades are
+used, at 0.4 alpha, behind terrain and actors. The sun and port stars retain
+their light. Fine particles keep the original drift and blink recipes, move
+on half-pixel steps, and check their complete footprints against solid ground.
+
+Cavern gets mineral seams, split edges and dust flakes; Ruins gets mortar,
+fluted shadows and chipped dust. Frost gets ridge crevices, snow lips and
+crossed snowflakes; Foundry gets girder recesses, chain hollows, fixings and
+embers with hot cores. Jungle gets bark, vine edges, leaf veins, curling
+leaves with stems and winged fireflies; Ice Cave gets split facets, face
+shading, asymmetric glints and ice splinters. Spaceship gets rib channels,
+joints, port rims and weightless flecks; Factory gets mortar/glazing depth
+and soot flakes. Skyscraper had no coarse interior wall or dust: res 2 gets
+quiet office panel joints and indoor dust. Trench gets spire erosion, kelp
+midribs, sediment ledges and shaped marine snow in its existing water-life
+pass. Desert gets dune lips, mesa strata and wind-polished grains; Data Center
+gets cabinet seams, vent slots and shaped vent dust. Fine passes preserve the
+coarse pass's canvas state.
+
+**Checked.** `npm run check` / `npm test` pass; 294 individual tests pass with
+Node test isolation disabled, including 39 new tests. Each biome's wall and
+air/water ambience draws at both resolutions and adds visible fine pixels
+across all five themes at three phases. Tests pin the pre-edit coarse hash,
+check hard half-pixel rectangles, dark wall colours, silhouette containment,
+canvas state and particles staying out of solid ground. Compared the committed
+Draw.js with the final renderer on the same world states, seeding Math.random
+identically: 360 full frames (levels 1–60 at ticks 200/500/900, absent or
+explicit res 1) byte-identical. Temporary core copy removed afterwards.
+Rendered all 12 biomes before/after via tools/shoot.js at res 2 with identical
+Math.random seeds; reviewed full boards and ImageMagick crops enlarged with
+nearest-neighbour scaling. Agents still stand out clearly. Contact sheet:
+`/tmp/codex-backdrops/sheet.png`. Asset and build stamps refreshed.
+
+**CRAP.** `backCavernFine`, `backFactoryFine`, `drawMoteCavernFine`,
+`drawMoteRuinsFine`, `drawMoteFrostFine`, `drawMoteFoundryFine`,
+`drawMoteSpaceshipFine`, `drawMoteFactoryFine`, `drawMoteSkyscraperFine`,
+`drawMoteTrenchFine`, `drawMoteDesertFine`, `drawMoteDataFine`: 1.0 each.
+`backRuinsFine`, `backFrostFine`, `backJungleFine`, `backIceCaveFine`,
+`backTrenchFine`, `drawMoteJungleFine`, `drawMoteIceFine`: 2.0 each.
+`backSkyscraperFine`, `backDesertFine`, `backDataCenterFine`,
+`drawBackdropFine`: 3.0 each. `backFoundryFine`: 4.0;
+`backSpaceshipFine`: 5.0; `backFineRecorder`: 6.0; `moteFineRect`: 8.0.
+All 27 added functions have 100% coverage. Existing touched dispatchers:
+`drawBackdrop` 4.0, `drawMotes` 7.0, `drawAmbience` 9.0,
+`drawWaterLife` 14.0. Used a local copy of the cached crapper tool.
+
+**Next.** Review distant sky stars and skyline detail at res 2.
