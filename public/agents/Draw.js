@@ -1514,21 +1514,36 @@ function drawAmbience(ctx, w, pal) {
 // blows. The wind slows and carries the colony, and a force nobody can see is
 // a force the audience reads as agents dawdling for no reason.
 function drawGust(ctx, w, pal) {
-  var k = w.k, C = k.CELL
-  var wide = k.COLS * C, top = k.SKY * C, tall = k.ROWS * C - top
+  var k = w.k, C = k.CELL, wide = k.COLS * C
+  var top = k.SKY * C, tall = k.ROWS * C - top
   var force = Math.abs(w.wind), sign = w.wind > 0 ? 1 : -1
-  var n = Math.round(130 * force), len = 4 + Math.round(force * 6)
   var seed = (w.level * 7121) % 65536
   var next = function () { seed = (seed * 1103515245 + 12345) % 2147483648; return (seed >> 6) / 33554432 }
-  ctx.fillStyle = pal.dust
-  for (var i = 0; i < n; i++) {
-    var x0 = next() * wide, y = Math.floor(top + next() * tall), pace = 2.2 + next() * 1.6
+  ctx.save()
+  for (var i = 0; i < Math.round(100 * force); i++) {
+    var x0 = next() * wide, y0 = top + next() * tall, pace = 1.2 + next() * 1.6
     var x = Math.floor(((x0 + sign * w.ticks * pace) % wide + wide) % wide)
-    if (w.terrain[Math.floor(y / C) * k.COLS + Math.floor(x / C)] !== k.EMPTY) continue
-    ctx.globalAlpha = 0.25 + 0.4 * force
-    ctx.fillRect(sign > 0 ? x - len : x, y, len, 1)
+    var y = Math.floor(y0 + Math.sin(w.ticks * 0.045 + i) * 2)
+    drawSandStreak(ctx, w, pal, x, y, sign, 3 + Math.round(force * 5), force, i)
   }
-  ctx.globalAlpha = 1
+  ctx.restore()
+}
+
+// Clip every grain, including the tail: no sand streak drawn through a wall.
+function drawSandStreak(ctx, w, pal, x, y, sign, len, force, seed) {
+  for (var j = 0; j < len; j++) {
+    var px = x - sign * j, py = y + Math.floor(j / 4) * (seed % 2 ? 1 : -1)
+    if (!mechanismAir(w, px, py)) continue
+    ctx.fillStyle = j === 0 ? pal.decorLit : pal.dust
+    ctx.globalAlpha = (0.25 + force * 0.45) * (1 - j / len)
+    ctx.fillRect(px, py, 1, 1)
+    if ((w.res || 1) >= 2 && j === 0 && mechanismAir(w, px, py - 0.5)) ctx.fillRect(px, py - 0.5, 0.5, 0.5)
+  }
+}
+
+function mechanismAir(w, x, y) {
+  var k = w.k, cx = Math.floor(x / k.CELL), cy = Math.floor(y / k.CELL)
+  return cx >= 0 && cx < k.COLS && cy >= 0 && cy < k.ROWS && w.terrain[cy * k.COLS + cx] === k.EMPTY
 }
 
 function drawMotes(ctx, w, pal, spec, salt) {
@@ -1677,21 +1692,33 @@ function drawRackLights(ctx, w) {
 // column of rising air, in open air only. A safe way down that the audience
 // cannot see is a safe way down that looks like luck.
 function drawUpdrafts(ctx, w, pal) {
-  var k = w.k, C = k.CELL, T = w.terrain, top = k.SKY * C, tall = k.ROWS * C - top
-  ctx.fillStyle = pal.dust
+  var k = w.k, C = k.CELL, top = k.SKY * C, tall = k.ROWS * C - top
+  ctx.save()
   for (var x = 0; x < k.COLS; x++) {
     if (!w.updraft[x]) continue
-    ctx.globalAlpha = 0.06                                  // the column itself
+    ctx.fillStyle = pal.dust
+    ctx.globalAlpha = 0.04
     for (var cy = k.SKY; cy < k.ROWS; cy++)
-      if (T[cy * k.COLS + x] === k.EMPTY) ctx.fillRect(x * C, cy * C, C, C)
-    ctx.globalAlpha = 0.4
-    for (var s = 0; s < 12; s++) {
-      var y = top + tall - ((w.ticks * 0.9 + s * tall / 12 + x * 13) % tall)
-      if (T[Math.floor(y / C) * k.COLS + x] !== k.EMPTY) continue
-      ctx.fillRect(x * C + 0.5 + (s % 3) * 1, y, 0.5, 3)
+      if (w.terrain[cy * k.COLS + x] === k.EMPTY) ctx.fillRect(x * C, cy * C, C, C)
+    for (var s = 0; s < 10; s++) {
+      var y = Math.floor(top + tall - ((w.ticks * 0.75 + s * tall / 10 + x * 13) % tall))
+      drawDraftWisp(ctx, w, pal, x * C + 1 + s % 2, y, s)
     }
   }
-  ctx.globalAlpha = 1
+  ctx.restore()
+}
+
+function drawDraftWisp(ctx, w, pal, x, y, seed) {
+  var fine = (w.res || 1) >= 2, size = fine ? 0.5 : 1
+  for (var j = 0; j < 5; j++) {
+    var px = x + (j > 2 ? seed % 2 : 0), py = y + j
+    if (!mechanismAir(w, px, py)) continue
+    ctx.fillStyle = j === 0 ? pal.decorLit : pal.dust
+    ctx.globalAlpha = 0.6 - j * 0.1
+    ctx.fillRect(px, py, size, 1)
+  }
+  // A tiny opening curl at the leading end, rather than falling rain.
+  if (mechanismAir(w, x - 1, y + 1)) ctx.fillRect(x - 1, y + 1, size, size)
 }
 
 // The Factory's conveyors (Sim's `w.belts`): a dark belt along the top of the
@@ -1701,39 +1728,57 @@ function drawUpdrafts(ctx, w, pal) {
 // pass because it moves.
 var BELT_DRIFT = 0.56   // px per tick: the speed it adds to a walker, drawn
 function drawBelts(ctx, w, pal) {
-  var C = w.k.CELL, cols = w.k.COLS, fine = (w.res || 1) >= 2
+  var C = w.k.CELL, cols = w.k.COLS
   for (var i = 0; i < w.belts.length; i++) {
     var b = w.belts[i], top = (b.y + 1) * C
-    var shift = ((w.ticks * BELT_DRIFT * b.dir) % 4 + 4) % 4
+    var shift = Math.floor(w.ticks * BELT_DRIFT) * b.dir
     for (var x = b.x0; x < b.x1; x++) {
       if (w.terrain[(b.y + 1) * cols + x] === w.k.EMPTY) continue
-      ctx.fillStyle = pal.rigDark
-      ctx.fillRect(x * C, top, C, 2)
-      ctx.fillStyle = pal.decorLit
-      var tx = x * C + shift
-      ctx.fillRect(Math.floor(tx), top, 1, fine ? 0.5 : 1)          // a tread
-      if (fine) {
-        ctx.fillStyle = pal.decorDim
-        ctx.fillRect(Math.floor(tx) + 0.5, top + 0.5, 0.5, 1)
-      }
+      drawBeltTreads(ctx, w, pal, x * C, top, shift)
     }
-    drawBeltDrum(ctx, w, pal, b.x0 * C, top, -1)
-    drawBeltDrum(ctx, w, pal, b.x1 * C, top, 1)
+    if (w.terrain[(b.y + 1) * cols + b.x0] !== w.k.EMPTY)
+      drawBeltDrum(ctx, w, pal, b.x0 * C, top, -1, b.dir)
+    if (w.terrain[(b.y + 1) * cols + b.x1 - 1] !== w.k.EMPTY)
+      drawBeltDrum(ctx, w, pal, b.x1 * C, top, 1, b.dir)
+  }
+}
+
+function drawBeltTreads(ctx, w, pal, x, top, shift) {
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x, top, w.k.CELL, 3)
+  for (var j = 0; j < w.k.CELL; j++) {
+    var phase = ((x + j - shift) % 4 + 4) % 4
+    ctx.fillStyle = phase < 2 ? pal.steelShade : pal.decorLit
+    ctx.fillRect(x + j, top, 1, 1)
+    ctx.fillStyle = pal.decorDim
+    if (phase === 3) ctx.fillRect(x + j, top + 1, 1, 1)
+    // The return run moves the other way underneath the carrying surface.
+    if (((x + j + shift) % 4 + 4) % 4 === 0) ctx.fillRect(x + j, top + 2, 1, 1)
+  }
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = pal.steelEdge
+    ctx.fillRect(x, top, w.k.CELL, 0.5)
   }
 }
 
 // An end drum: a stubby round end with a spoke that turns with the belt.
-function drawBeltDrum(ctx, w, pal, x, top, side) {
-  var cx = x + (side > 0 ? 0 : -2)
-  ctx.fillStyle = pal.rig
-  ctx.fillRect(cx, top - 1, 2, 4)
-  ctx.fillRect(cx - 0.5 + (side > 0 ? 0.5 : 0), top, 2.5, 2)
-  if ((w.res || 1) < 2) return
-  var a = Math.floor(w.ticks / 4) % 4
+function drawBeltDrum(ctx, w, pal, x, top, side, dir) {
+  var cx = x + (side > 0 ? 0 : -3), cy = top + 1
   ctx.fillStyle = pal.rigDark
-  ctx.fillRect(cx + (a === 1 ? 1 : 0.5), top + (a === 2 ? 1.5 : a === 0 ? -0.5 : 0.5), 0.5, 0.5)
+  ctx.fillRect(cx, top, 3, 3)
+  ctx.fillRect(cx + 1, top - 1, 1, 5)
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(cx, top, 3, 2)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(cx, top, 2, 1)
+  var a = w.ticks * BELT_DRIFT * (dir || 1)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(cx + 1 + Math.round(Math.sin(a)), cy - Math.round(Math.cos(a)), 1, 1)
+  if ((w.res || 1) < 2) return
   ctx.fillStyle = pal.decorLit
-  ctx.fillRect(cx + 0.5, top - 1, 1, 0.5)                    // light on the drum
+  ctx.fillRect(cx + 0.5, top - 0.5, 1, 0.5)
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(cx + 1, cy + 0.5, 0.5, 0.5)
 }
 
 function drawMachines(ctx, w, pal) {
@@ -2206,6 +2251,7 @@ function drawActors(ctx, w, pal, opts) {
   for (var i = 0; i < w.agents.length; i++) {
     var ag = w.agents[i]
     if (ag.gone) { drawDeath(ctx, w, pal, ag); continue }
+    if (drawBeamArrival(ctx, w, ag)) continue
     drawAgent(ctx, w, pal, ag, opts)
     drawAgentSidearm(ctx, w, pal, ag)
   }
@@ -2254,7 +2300,7 @@ function drawActorLadders(ctx, w, pal) {
     var lbot = Math.round((lad.bottom + 1) * k.CELL)
     var lspan = Math.round((lad.bottom - lad.top + 1) * k.CELL * lgrow)
     var stile = lad.side > 0 ? lx - 3 : lx + 1
-    if (lad.vine) { drawVine(ctx, pal, stile, lbot, lspan, lad.x); continue }
+    if (lad.vine) { drawVine(ctx, w, pal, stile, lbot, lspan, lad.x); continue }
     if (lad.chain) { drawChain(ctx, w, pal, stile, lbot, lspan); continue }
 
     ctx.fillStyle = pal.rigDark
@@ -5404,8 +5450,9 @@ var PAD_LIGHT = "#6ff3ff", PAD_FX_TICKS = 24, PAD_CHARGE = 10
 function drawPadPair(ctx, w, pal, p) {
   var since = w.ticks - p.usedAt
   drawPad(ctx, w, pal, p.ax, p.ay, Math.min(1, since / PAD_CHARGE))
-  drawPad(ctx, w, pal, p.bx, p.by, 1)
-  if (since >= PAD_FX_TICKS) return
+  drawPad(ctx, w, pal, p.bx, p.by, Math.min(1, since / PAD_CHARGE))
+  // usedAt starts negative; a newly generated pad has never beamed anyone.
+  if (p.usedAt < 0 || since < 0 || since >= PAD_FX_TICKS) return
   drawBeam(ctx, w, p.ax, p.ay, since, -1)
   drawBeam(ctx, w, p.bx, p.by, since, 1)
 }
@@ -5413,77 +5460,179 @@ function drawPadPair(ctx, w, pal, p) {
 function drawPad(ctx, w, pal, x, y, charge) {
   var C = w.k.CELL, px = (x - 1) * C, py = (y + 1) * C
   ctx.fillStyle = pal.rigDark
-  ctx.fillRect(px, py - 1, C * 3, 2)
+  ctx.fillRect(px, py - 1, C * 3, 3)
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(px + 1, py - 2, C * 3 - 2, 1)
   ctx.fillStyle = pal.steelEdge
-  ctx.fillRect(px + 1, py - 1, C * 3 - 2, 1)
-  ctx.fillStyle = PAD_LIGHT
+  ctx.fillRect(px + 2, py - 2, C * 3 - 4, 1)
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(px, py - 3, 2, 2)
+  ctx.fillRect(px + C * 3 - 2, py - 3, 2, 2)
+  drawPadLamps(ctx, w, px, py, charge)
+}
+
+function drawPadLamps(ctx, w, px, py, charge) {
+  ctx.save()
   for (var l = 0; l < 4; l++) {
-    ctx.globalAlpha = l < Math.round(charge * 4) ? 0.9 : 0.2
-    ctx.fillRect(px + 2 + l * 2.5, py - 1, 1, (w.res || 1) >= 2 ? 0.5 : 1)
+    ctx.fillStyle = PAD_LIGHT
+    ctx.globalAlpha = l < Math.floor(charge * 4) ? 1 : 0.18
+    ctx.fillRect(px + 2 + l * 2, py, 1, 1)
   }
-  ctx.globalAlpha = 1
+  if ((w.res || 1) >= 2) {
+    ctx.globalAlpha = 0.8
+    ctx.fillRect(px + 0.5, py - 2.5, 1, 0.5)
+    ctx.fillRect(px + 10.5, py - 2.5, 1, 0.5)
+  }
+  ctx.restore()
 }
 
 // `way` -1 climbs out of the floor, +1 settles down onto it.
 function drawBeam(ctx, w, x, y, age, way) {
-  var C = w.k.CELL, px = (x - 1) * C + 1, base = (y + 1) * C, tall = 18
-  var fade = 1 - age / PAD_FX_TICKS
+  var C = w.k.CELL, px = (x - 1) * C + 1, base = (y + 1) * C
+  var fade = 1 - age / PAD_FX_TICKS, fine = (w.res || 1) >= 2
+  ctx.save()
   ctx.fillStyle = PAD_LIGHT
-  ctx.globalAlpha = 0.25 * fade
-  ctx.fillRect(px, base - tall, C * 3 - 2, tall)
-  ctx.globalAlpha = 0.8 * fade
+  ctx.globalAlpha = 0.08 * fade
+  ctx.fillRect(px, base - 18, C * 3 - 2, 16)
+  ctx.globalAlpha = 0.6 * fade
   for (var s = 0; s < 3; s++) {
-    var t = (age * 1.5 + s * 6) % tall
-    ctx.fillRect(px, base - 1 - (way < 0 ? t : tall - t), C * 3 - 2, (w.res || 1) >= 2 ? 0.5 : 1)
+    var t = (age + s * 6) % 16
+    ctx.fillRect(px + 1, base - 2 - (way < 0 ? t : 16 - t), C * 3 - 4, fine ? 0.5 : 1)
   }
-  ctx.fillStyle = "#ffffff"
-  for (var k = 0; k < 4; k++)
-    ctx.fillRect(px + ((k * 5 + age) % (C * 3 - 3)), base - 3 - ((k * 7 + age * 2) % (tall - 4)), 1, 1)
-  ctx.globalAlpha = 1
+  if (way < 0) drawBeamOutline(ctx, w, (x + 0.5) * C, base, age, -1)
+  drawBeamGrains(ctx, w, px, base, age, way)
+  ctx.restore()
+}
+
+// A head, shoulders, collar and split boots, scanned away or assembled in rows.
+var BEAM_ROWS = [2, 3, 3, 3, 2, 1, 3, 4, 4, 3, 3, 3, 2, 2, 2, 3]
+function drawBeamOutline(ctx, w, cx, base, age, way) {
+  var progress = Math.min(1, age / PAD_CHARGE), scan = Math.floor(progress * 16)
+  for (var row = 0; row < BEAM_ROWS.length; row++) {
+    var visible = way < 0 ? row >= scan : row < scan
+    if (!visible) continue
+    var hw = BEAM_ROWS[row], y = Math.round(base) - SPRITE_PX + row
+    ctx.fillStyle = row === (way < 0 ? scan : scan - 1) ? "#ffffff" : PAD_LIGHT
+    ctx.globalAlpha = 0.85
+    ctx.fillRect(Math.round(cx) - hw, y, 1, 1)
+    ctx.fillRect(Math.round(cx) + hw - 1, y, 1, 1)
+    ctx.globalAlpha = 0.4
+    if (row < 13) ctx.fillRect(Math.round(cx) - hw + 1, y, hw * 2 - 2, 1)
+    if ((w.res || 1) >= 2 && row === 5) {
+      ctx.fillStyle = "#ffffff"
+      ctx.fillRect(Math.round(cx) - 0.5, y, 0.5, 1) // the tie leaves with its row
+    }
+  }
+}
+
+function drawBeamGrains(ctx, w, px, base, age, way) {
+  ctx.fillStyle = PAD_LIGHT
+  for (var k = 0; k < 6; k++) {
+    var phase = (age + k * 3) % 16
+    ctx.globalAlpha = 0.8 * (1 - age / PAD_FX_TICKS)
+    ctx.fillRect(px + (k * 5 % 9), base - 2 - (way < 0 ? phase : 16 - phase), 1, 1)
+  }
+}
+
+// The traveller has already moved in Sim. Materialise at its current position
+// so the effect follows the walker instead of leaving a second body on the pad.
+function drawBeamArrival(ctx, w, ag) {
+  if (!w.pads) return false
+  for (var i = 0; i < w.pads.length; i++) {
+    var p = w.pads[i], age = w.ticks - p.usedAt
+    if (p.usedAt < 0 || p.who !== ag.id || age < 0 || age >= PAD_CHARGE) continue
+    ctx.save()
+    drawBeamOutline(ctx, w, ag.x * w.k.CELL, (ag.y + 1) * w.k.CELL, age + 1, 1)
+    ctx.restore()
+    return true
+  }
+  return false
 }
 
 // A colleague in the Ice Cave's ice (Sim's `w.frozen`): the ordinary sprite,
 // standing, under a pane of ice with a shine across it — seen through the
 // wall, not standing in front of it. When the wall is opened the ice goes in
-// shards and steam for a second while they walk off.
+// shards, drips and a wisp of mist for a second while they walk off.
 var FROZEN_FX = 30
 function drawFrozen(ctx, w, pal, f) {
   if (f.thawedAt >= 0) { drawThaw(ctx, w, pal, f, w.ticks - f.thawedAt); return }
   var C = w.k.CELL
   drawAgent(ctx, w, pal, { x: f.x + 0.5, y: f.y, dir: f.dir, state: "wait", anim: 0, fade: 0 }, {})
-  var x = f.x * C - 1, top = (f.y + 1) * C - SPRITE_PX - 1, wide = C * 2 + 2, tall = SPRITE_PX + 1
+  var x = f.x * C - 1, top = (f.y + 1) * C - SPRITE_PX - 1
+  drawIcePane(ctx, w, pal, x, top, C * 2 + 2, SPRITE_PX + 1)
+}
+
+function drawIcePane(ctx, w, pal, x, top, wide, tall) {
+  ctx.save()
   ctx.fillStyle = pal.decorLit
-  ctx.globalAlpha = 0.45
-  ctx.fillRect(x, top, wide, tall)
-  ctx.globalAlpha = 0.9                                            // its edges
-  ctx.fillRect(x, top, wide, 1)
-  ctx.fillRect(x, top, 1, tall)
-  ctx.fillRect(x + wide - 1, top, 1, tall)
-  ctx.globalAlpha = 0.8
+  ctx.globalAlpha = 0.28
+  ctx.fillRect(x + 1, top, wide - 2, tall)
+  ctx.fillRect(x, top + 2, wide, tall - 4)
+  ctx.globalAlpha = 0.9
+  ctx.fillRect(x + 2, top, wide - 4, 1)
+  ctx.fillRect(x, top + 2, 1, tall - 4)
+  ctx.fillRect(x + wide - 1, top + 2, 1, tall - 4)
+  ctx.fillRect(x + 1, top + tall - 2, wide - 2, 2)
+  drawIceFacets(ctx, w, pal, x, top, wide, tall)
+  ctx.restore()
+}
+
+function drawIceFacets(ctx, w, pal, x, top, wide, tall) {
+  ctx.fillStyle = pal.dust
+  ctx.globalAlpha = 0.65
+  for (var r = 1; r < tall - 2; r++) {
+    var edge = Math.min(3, Math.floor(r / 4))
+    ctx.fillRect(x + 1 + edge, top + r, 1, 1)
+    if (r % 3 === 0) ctx.fillRect(x + wide - 2, top + r, 2, 1)
+  }
   ctx.fillStyle = "#ffffff"
-  var fine = (w.res || 1) >= 2 ? 0.5 : 1
-  for (var i = 0; i < 4; i++) ctx.fillRect(x + 2 + i * fine, top + 9 - i * 2 * fine, fine, fine * 2)  // the shine
-  ctx.globalAlpha = 1
+  ctx.globalAlpha = 0.7
+  ctx.fillRect(x + 1, top + 1, 2, 1)
+  ctx.fillRect(x + 1, top + 2, 1, 3)
+  ctx.fillRect(x + wide - 3, top + tall - 3, 2, 1)
+  if ((w.res || 1) < 2) return
+  ctx.globalAlpha = 0.55 + Math.sin(w.ticks * 0.045 + x) * 0.2
+  for (var j = 0; j < 6; j++) ctx.fillRect(x + 3 + j * 0.5, top + 9 - j, 0.5, 1)
 }
 
 function drawThaw(ctx, w, pal, f, age) {
-  if (age > FROZEN_FX) return
-  var C = w.k.CELL, cx = (f.x + 0.5) * C, cy = (f.y + 1) * C - 8
+  if (age < 0 || age >= FROZEN_FX) return
+  var C = w.k.CELL, cx = (f.x + 0.5) * C, base = (f.y + 1) * C
+  ctx.save()
   ctx.globalAlpha = 1 - age / FROZEN_FX
-  ctx.fillStyle = pal.decorLit
   for (var k = 0; k < 8; k++) {
-    var vx = ((k * 29) % 7 - 3) * 0.45, vy = -0.8 - (k % 3) * 0.4
-    ctx.fillRect(Math.round(cx + vx * age), Math.round(cy + vy * age + age * age * 0.08), 2, 1 + (k % 2))
+    var vx = ((k * 29) % 7 - 3) * 0.3, vy = -0.7 - (k % 3) * 0.3
+    var x = Math.round(cx + vx * age), y = Math.min(base - 2, Math.round(base - 8 + vy * age + age * age * 0.05))
+    ctx.fillStyle = pal.decorLit
+    ctx.fillRect(x, y, 2, 1 + k % 2)
+    ctx.fillStyle = pal.dust
+    ctx.fillRect(x, y, 1, 1)
   }
-  ctx.fillStyle = "#ffffff"
-  ctx.globalAlpha *= 0.5
-  for (var p = 0; p < 3; p++)                                        // steam
-    ctx.fillRect(Math.round(cx - 3 + p * 3 + Math.sin(age * 0.3 + p) * 1.5), Math.round(cy - age * 0.5 - p * 2), 2, 2)
-  ctx.globalAlpha = 1
+  drawThawDrips(ctx, w, pal, cx, base, age)
+  ctx.restore()
 }
 
-// The Ruins' boulder (Sim's `w.boulder`): a carved stone ball with a cross cut
-// into it, the cross turning as it rolls so the roll reads at a glance. Rocks
+function drawThawDrips(ctx, w, pal, cx, base, age) {
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(cx - 4, base - 1, 8, 1) // meltwater stays on the floor
+  for (var d = 0; d < 3; d++) {
+    var fall = Math.max(0, age - d * 4), x = cx - 3 + d * 3
+    var y = Math.min(base - 2, base - 14 + Math.floor(fall * fall * 0.12))
+    ctx.fillRect(x, y, 1, 2)
+    if ((w.res || 1) >= 2) {
+      ctx.fillStyle = pal.dust
+      ctx.fillRect(x, y, 0.5, 0.5)
+      ctx.fillStyle = pal.decorLit
+    }
+  }
+  ctx.fillStyle = pal.dust
+  ctx.globalAlpha *= 0.35
+  for (var p = 0; p < 3; p++)
+    ctx.fillRect(Math.round(cx - 3 + p * 3 + Math.sin(age * 0.15 + p)), Math.round(base - 8 - age * 0.25 - p * 2), 2, 1)
+}
+
+// The Ruins' boulder (Sim's `w.boulder`): a carved stone ball with three cracks
+// and an off-centre fossil turning under fixed upper-left lighting. Rocks
 // on its seat while it wakes, kicks up dust as it goes, and flies apart where
 // it stops. Half-pixel moss and a rim of light at res 2.
 // Its own sandstone, not the biome's rock: the rock is the backdrop's colour,
@@ -5492,37 +5641,59 @@ var BOULDER_ROWS = [2, 4, 5, 5, 6, 6, 6, 6, 5, 5, 4, 2]   // half-width per row
 var BOULDER_STONE = "#a8946f", BOULDER_LIT = "#dcc9a0", BOULDER_SHADE = "#6b5a42", BOULDER_CUT = "#3b3024"
 var BOULDER_SHARDS = 10
 function drawBoulder(ctx, w, pal, b) {
-  var C = w.k.CELL
   if (b.state === "done") { drawBoulderShards(ctx, w, pal, b, w.ticks - b.endedAt); return }
   var waking = b.state === "wake" ? w.ticks - b.wokeAt : -1
-  var cx = Math.round(b.x * C) + (waking >= 0 ? Math.round(Math.sin(waking * 1.3)) : 0)
-  var bot = (Math.floor(b.y) + 1) * C, top = bot - BOULDER_ROWS.length
+  var cx = Math.round(b.x * w.k.CELL) + (waking >= 0 ? Math.round(Math.sin(waking * 1.3)) : 0)
+  var bot = (Math.floor(b.y) + 1) * w.k.CELL, top = bot - BOULDER_ROWS.length
+  if (b.state === "roll" || waking >= 0) drawBoulderDust(ctx, w, pal, b, cx, bot, waking)
+  drawBoulderBody(ctx, cx, top)
+  drawBoulderGlyph(ctx, pal, cx, top + 6, b.spin * b.dir)
+  if ((w.res || 1) >= 2) drawBoulderFine(ctx, pal, cx, top)
+}
+
+function drawBoulderBody(ctx, cx, top) {
   for (var r = 0; r < BOULDER_ROWS.length; r++) {
     var hw = BOULDER_ROWS[r]
-    ctx.fillStyle = BOULDER_STONE
+    ctx.fillStyle = BOULDER_SHADE
     ctx.fillRect(cx - hw, top + r, hw * 2, 1)
-    ctx.fillStyle = r < 6 ? BOULDER_LIT : BOULDER_SHADE          // lit above, shade below
-    ctx.fillRect(r < 6 ? cx - hw : cx + hw - 2, top + r, 2, 1)
-  }
-  drawBoulderGlyph(ctx, pal, cx, top + 6, b.spin)
-  if ((w.res || 1) >= 2) drawBoulderFine(ctx, pal, cx, top)
-  if (b.state === "roll" || waking >= 0) {
-    ctx.fillStyle = pal.dust
-    ctx.globalAlpha = 0.6
-    for (var d = 0; d < 3; d++)
-      ctx.fillRect(cx - b.dir * (5 + ((w.ticks + d * 3) % 7)), bot - 1 - (d % 2) * 2, 2, 1)
-    ctx.globalAlpha = 1
+    ctx.fillStyle = BOULDER_STONE
+    ctx.fillRect(cx - hw, top + r, hw * 2 - 2, 1)
+    if (r < 8) {
+      ctx.fillStyle = BOULDER_LIT
+      ctx.fillRect(cx - hw, top + r, Math.max(1, 4 - Math.floor(r / 3)), 1)
+    }
   }
 }
 
-// The cross: two cuts through the centre, at right angles, at the roll angle.
+function drawBoulderDust(ctx, w, pal, b, cx, bot, waking) {
+  ctx.save()
+  ctx.fillStyle = pal.dust
+  for (var d = 0; d < 5; d++) {
+    var age = (w.ticks + d * 5) % 18, reach = 5 + Math.floor(age * 0.7)
+    var x = cx - b.dir * reach, y = bot - 1 - Math.floor(age * 0.15) - d % 2
+    if (waking >= 0) { x = cx + (d % 2 ? -1 : 1) * (5 + age % 3); y = bot - 1 - d % 2 }
+    ctx.globalAlpha = 0.65 * (1 - age / 18)
+    ctx.fillRect(x, y, 2, 1)
+    if ((w.res || 1) >= 2) ctx.fillRect(x + 0.5, y - 0.5, 0.5, 0.5)
+  }
+  ctx.restore()
+}
+
+// Three unequal markings turn with the stone; the rim light never turns.
 function drawBoulderGlyph(ctx, pal, cx, cy, spin) {
   ctx.fillStyle = BOULDER_CUT
-  for (var arm = 0; arm < 4; arm++) {
-    var a = spin + arm * Math.PI / 2
+  for (var arm = 0; arm < 3; arm++) {
+    var a = spin + arm * Math.PI * 2 / 3
     for (var t = 1; t <= 4; t++)
-      ctx.fillRect(Math.round(cx + Math.cos(a) * t) - 0.5, Math.round(cy + Math.sin(a) * t) - 0.5, 1, 1)
+      ctx.fillRect(cx + Math.round(Math.cos(a) * t) - 1, cy + Math.round(Math.sin(a) * t), 1, 1)
   }
+  // An off-centre fossil breaks rotational symmetry; light stays on the body.
+  var fx = cx + Math.round(Math.cos(spin + 0.6) * 3)
+  var fy = cy + Math.round(Math.sin(spin + 0.6) * 3)
+  ctx.fillStyle = BOULDER_SHADE
+  ctx.fillRect(fx - 1, fy - 1, 2, 2)
+  ctx.fillStyle = BOULDER_LIT
+  ctx.fillRect(fx - 1, fy - 1, 1, 1)
 }
 
 function drawBoulderFine(ctx, pal, cx, top) {
@@ -5539,49 +5710,92 @@ function drawBoulderFine(ctx, pal, cx, top) {
 }
 
 function drawBoulderShards(ctx, w, pal, b, age) {
-  if (age > 24) return
-  var C = w.k.CELL, cx = b.x * C, cy = (Math.floor(b.y) + 1) * C - 6
+  if (age < 0 || age >= 24) return
+  var C = w.k.CELL, cx = b.x * C, base = (Math.floor(b.y) + 1) * C
+  ctx.save()
   ctx.globalAlpha = 1 - age / 24
   for (var k = 0; k < BOULDER_SHARDS; k++) {
     var vx = ((k * 37) % 9 - 4) * 0.35 - b.dir * 0.3, vy = -1.2 - (k % 4) * 0.35
-    ctx.fillStyle = k % 3 ? BOULDER_STONE : BOULDER_LIT
-    ctx.fillRect(Math.round(cx + vx * age), Math.round(cy + vy * age + age * age * 0.09), 2 + (k % 2), 2)
+    var x = Math.round(cx + vx * age), y = Math.min(base - 2, Math.round(base - 6 + vy * age + age * age * 0.09))
+    ctx.fillStyle = BOULDER_SHADE
+    ctx.fillRect(x, y, 2 + k % 2, 2)
+    ctx.fillStyle = BOULDER_STONE
+    ctx.fillRect(x, y, 2, 1)
+    if ((w.res || 1) >= 2) { ctx.fillStyle = BOULDER_LIT; ctx.fillRect(x, y, 1, 0.5) }
   }
-  ctx.globalAlpha = 1
+  drawBoulderImpact(ctx, pal, cx, base, age)
+  ctx.restore()
+}
+
+function drawBoulderImpact(ctx, pal, cx, base, age) {
+  ctx.fillStyle = pal.dust
+  ctx.globalAlpha *= 0.6
+  for (var d = 0; d < 6; d++) {
+    var side = d % 2 ? -1 : 1
+    ctx.fillRect(Math.round(cx + side * (3 + age * 0.7 + d)), base - 1 - Math.floor(age / 6) - d % 3, 3, 1)
+  }
 }
 
 // A Foundry hoist chain down a wall face (a ladder in everything but looks):
-// links that alternate face-on and edge-on, a hook at the top, and at res 2
-// a glint on each face-on link.
+// links that alternate face-on and edge-on, a fixed hook and a small pendulum
+// sway growing toward the loose end. Half-pixel glints at res 2.
 function drawChain(ctx, w, pal, stile, lbot, lspan) {
-  var fine = (w.res || 1) >= 2
   for (var y = 0; y < lspan; y += 3) {
-    var top = lbot - y - 3, face = (y / 3) % 2 === 0
-    ctx.fillStyle = pal.steelShade
-    if (face) {
-      ctx.fillRect(stile, top, 3, 3)
-      ctx.fillStyle = pal.rigDark
-      ctx.fillRect(stile + 1, top + 1, 1, 1)              // the hole
-      if (fine) { ctx.fillStyle = pal.steelEdge; ctx.fillRect(stile + 0.5, top + 0.5, 0.5, 1) }
-    } else ctx.fillRect(stile + 1, top, 1, 3)
+    var top = lbot - y - 3
+    var sway = Math.round(Math.sin(w.ticks * 0.035 + stile * 0.2) * (1 - y / lspan))
+    drawChainLink(ctx, w, pal, stile + sway, top, (y / 3) % 2 === 0)
   }
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(stile - 1, lbot - lspan - 3, 5, 2)
   ctx.fillStyle = pal.steelEdge
-  ctx.fillRect(stile, lbot - lspan - 2, 3, 1)               // the hook
+  ctx.fillRect(stile, lbot - lspan - 2, 3, 1)
   ctx.fillRect(stile + 2, lbot - lspan - 1, 1, 2)
 }
 
+function drawChainLink(ctx, w, pal, x, top, face) {
+  ctx.fillStyle = pal.steelShade
+  if (face) {
+    ctx.fillRect(x, top, 3, 3)
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(x + 1, top + 1, 1, 1)
+    ctx.fillStyle = pal.steelEdge
+    ctx.fillRect(x, top, 1, 2)
+  } else {
+    ctx.fillRect(x + 1, top, 1, 3)
+    ctx.fillStyle = pal.rig
+    ctx.fillRect(x + 1, top, 1, 1)
+  }
+  if ((w.res || 1) < 2) return
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x + (face ? 0.5 : 1), top + 0.5, 0.5, 1)
+}
+
 // A Jungle vine down a wall face (a ladder in everything but looks): a
-// wavering stem with leaves off it on alternate sides, so it reads as
-// something that grew there and not as something somebody brought.
-function drawVine(ctx, pal, stile, lbot, lspan, seed) {
+// rooted stem, gently swaying at the loose end, with cupped leaves on alternate
+// sides. Whole-pixel contours first, half-pixel veins at res 2.
+function drawVine(ctx, w, pal, stile, lbot, lspan, seed) {
   for (var y = 0; y < lspan; y++) {
-    var wob = Math.round(Math.sin((y + seed * 3) * 0.35))
+    var sway = Math.sin(w.ticks * 0.04 + seed) * (1 - y / lspan)
+    var wob = Math.round(Math.sin((y + seed * 3) * 0.35) + sway)
+    var x = stile + 1 + wob, py = lbot - y - 1
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(x, py, 2, 1)
     ctx.fillStyle = pal.decor
-    ctx.fillRect(stile + 1 + wob, lbot - y - 1, 1, 1)
-    if (y % 4 === seed % 4) {
-      ctx.fillStyle = pal.decorLit
-      ctx.fillRect(stile + 1 + wob + ((y >> 2) % 2 ? 1 : -2), lbot - y - 1, 2, 1)
-    }
+    ctx.fillRect(x, py, 1, 1)
+    if (y % 5 === seed % 5) drawVineLeaf(ctx, w, pal, x, py, (y % 10 < 5 ? 1 : -1))
+  }
+}
+
+function drawVineLeaf(ctx, w, pal, x, y, side) {
+  var left = side > 0 ? x + 1 : x - 3
+  ctx.fillStyle = pal.decor
+  ctx.fillRect(left, y - 1, 3, 1)
+  ctx.fillRect(left + 1, y - 2, 2, 1)
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(left + 1, y - 1, 2, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(left + 0.5, y - 0.5, 2, 0.5)
   }
 }
 
