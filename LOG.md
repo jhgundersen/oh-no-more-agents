@@ -1275,3 +1275,5 @@ new functions under 12 CRAP. Rendered both pads through a beam at res 2.
 
 **Next.** Deploy (exit frames + pads). Codex is on hero gear detail.
 Cavern, Frost, Foundry still have no mechanism.
+
+**Deployed** after 52 (name="build" content="f4c51999"): exit frames, Spaceship transporters, copy count fix. Browser check clean.
