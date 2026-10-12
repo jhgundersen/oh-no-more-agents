@@ -2097,3 +2097,21 @@ changed which hazards and events the played test levels reach (`drawCroc`
 that reach them on purpose, not by level number.
 
 **Deployed** after 75 (name="build" content="b96b9a83"): the Library. Browser check clean.
+
+## 76 — 2026-10-13 · The whole catalogue, tested on purpose
+
+**Why.** Adding the Library reshuffled which biome every level number is,
+and functions over 30 rose 31 → 35 without a line of game code changing: the
+played test sample simply stopped meeting the crocodile, the infection event,
+and some heroes' edge moves. Coverage that depends on which levels happen to
+be played is coverage by luck.
+
+**Changed.** `test/catalogue.test.js`: every event fired on a level of its own
+biome (found with `levelWith`), drawn, and played to the end; every hero put
+in the special slot on two levels, drawn, and played out; a Jungle pit with
+its crocodile drawn through a rise; the crocodile's whole cycle drawn
+directly, and absent from a pool too narrow for it; an ascending tower
+played out; `climbOut` with and without climbers and builders.
+
+**Checked.** 62 new tests, all pass. Over 30: 35 → 30, with four of those
+the simcheck CLI and the worker's `readStats`. No game code changed.
