@@ -8951,4 +8951,11 @@ function noteDeaths(w) {
     ag.diedAt = w.ticks
     ag.diedBy = w.lastEvent || ""
   }
+  // The red team too, for their defeat animations: render-only, like the rest.
+  for (var e = 0; e < w.enemies.length; e++) {
+    var en = w.enemies[e]
+    if (!en.gone || en.diedAt !== undefined) continue
+    en.diedAt = w.ticks
+    en.diedBy = w.lastEvent || ""
+  }
 }

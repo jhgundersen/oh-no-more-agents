@@ -1768,3 +1768,10 @@ over 30 fall from 39 to 37 across the repository, and from 7 to 6 in Draw.
 particles, but no per-enemy death tick; Draw cannot date a defeat from those
 without storing state. Sim remains untouched and gone enemies remain absent.
 Watch the eight-tick gunner tell in crowded colonies before enlarging it.
+
+*Reviewed and merged by the loop:* written by Codex (`codex/enemies`).
+Rendered a gunner on level 13 through aim, fire and recover at res 2 myself:
+a red dotted aim line, a muzzle flash with recoil, and the colleague hit now
+plays its new death animation. Codex reported that a defeat animation needed
+a death tick Sim did not record; `noteDeaths` now stamps `diedAt` / `diedBy`
+on enemies too (render-only), for a follow-up.
