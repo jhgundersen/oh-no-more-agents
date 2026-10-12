@@ -1043,50 +1043,7 @@ function generate(level, attempt, colonySeed) {
   }
   w.startDir = first.dir
 
-  // A separate deterministic stream keeps the red team optional without
-  // reshuffling the established terrain, hazards, specials or personalities.
-  var enemyRng = makeRng(level * 65537 + 4049)
-  var guardPlan = null
-  if (level >= 12 && enemyRng() < 0.22) {
-    // Hide the post on a deeper corridor. Its exact depth and position use a
-    // separate stream, so neither the established map nor the enemy roster is
-    // reshuffled. Starting down-route means the guards must patrol and fly to
-    // meet the colony instead of opening fire beside the friendly hatch.
-    var guardIndex = irand(enemyRng, 1, Math.max(1, corridors.length - 2))
-    if (hazardCorridors.indexOf(guardIndex) >= 0 && corridors.length > 3) {
-      var foundGuardCorridor = false
-      for (var gci = 1; gci < corridors.length - 1; gci++)
-        if (hazardCorridors.indexOf(gci) < 0) { guardIndex = gci; foundGuardCorridor = true; break }
-      if (!foundGuardCorridor) guardIndex = corridors.length - 1
-    }
-    var guardCorridor = corridors[guardIndex]
-    var guardFraction = 0.35 + enemyRng() * 0.30
-    var desiredEnemyX = Math.round(guardCorridor.startX
-      + (guardCorridor.handoffX - guardCorridor.startX) * guardFraction)
-    guardPlan = { corridor: guardCorridor, index: guardIndex, desiredX: desiredEnemyX }
-    // One threat model per post: a single Drone Operator sending replacements,
-    // one sniper establishing a permanent position, or one to two Trigger
-    // Warnings patrolling in person. Mixing them stacks ranged pressure in a
-    // way the colony cannot read or answer cleanly.
-    var enemyKindRoll = enemyRng()
-    // A drone operator on the sea floor is a joke the biome does not need, and
-    // a quadcopter under forty atmospheres is not a joke at all. Down here the
-    // post is held by a rival salvage crew: one diver with a speargun, or a
-    // pair of them with the ordinary sidearm.
-    if (submerged(w)) {
-      if (enemyKindRoll < 0.55) w.enemyRoster.push("harpoon")
-      else {
-        var divers = irand(enemyRng, 1, 2)
-        for (var dv = 0; dv < divers; dv++) w.enemyRoster.push("gun")
-      }
-    }
-    else if (enemyKindRoll < 0.32) w.enemyRoster.push("operator")
-    else if (enemyKindRoll < 0.57) w.enemyRoster.push("sniper")
-    else {
-      var enemyCount = irand(enemyRng, 1, 2)
-      for (var er = 0; er < enemyCount; er++) w.enemyRoster.push("gun")
-    }
-  }
+  var guardPlan = planGuard(w, level, corridors, hazardCorridors)
 
   // A roaming armed squad is already the level's threat. Mixing it with up to
   // three fixed hazards made the board unreadable and turned freezing effects
@@ -1127,59 +1084,7 @@ function generate(level, attempt, colonySeed) {
         setCell(w, sx2, sy2, DIRT)
 
   w.corridors = corridors
-  // Fewer and quicker out of the hatch than before. Denser levels take longer
-  // per agent, and a slow trickle of twenty spent half the level's clock
-  // just getting everybody onto the board.
-  w.toRelease = irand(rng, 12, 18)
-  w.releaseInterval = irand(rng, 24, 34)
-
-  // Every agent counts and the run continues either way, so there is no
-  // second, smaller number to reach: the bar is the whole colony. Anything
-  // that needs a pass/fail line for tuning sets its own — see tools/simcheck.
-  w.traitBag = traitBag(w, w.toRelease)
-
-  w.skills = {
-    climber: irand(rng, 12, 18) + attempt * 2,
-    floater: w.toRelease + 2 + attempt * 2,
-    bomber: w.toRelease,
-    blocker: irand(rng, 3, 5) + attempt,
-    builder: irand(rng, 13, 19) + attempt * 3,
-    basher: irand(rng, 9, 15) + attempt * 3,
-    miner: irand(rng, 4, 8) + attempt * 2,
-    digger: irand(rng, 6, 10) + attempt * 2
-  }
-  // The digger and the miner are the two skills a tower cannot use at all: its
-  // floors are slabs, so canDescendHere never says yes and neither of them can
-  // be reached. Leaving them in the toolbar would be a lie and leaving the
-  // allowance unspent would be worse — everywhere else a chasm lets a good
-  // half of the colony past an obstacle for nothing, and in a building every
-  // partition on every storey has to be paid for out of the same three skills.
-  // So the ground allowance becomes a building allowance.
-  if (tower) {
-    var spare = w.skills.digger + w.skills.miner
-    w.skills.digger = 0
-    w.skills.miner = 0
-    w.skills.basher += Math.round(spare * 0.55)
-    w.skills.climber += Math.round(spare * 0.30)
-    w.skills.builder += Math.round(spare * 0.15)
-  }
-
-  // At most one special, on a bit over half of levels, and a fixed place in the
-  // release order — so level 42 always sends the same one out in the same slot.
-  // Never first: the colony should be under way before the odd one turns up.
-  // Most levels get one. It was a bit over half, which combined with a move
-  // that fires once or twice a visit meant a given special was a rare sight.
-  if (rng() < 0.75) {
-    w.special = pick(rng, SPECIALS).id
-    // Resolved here and carried on the world, exactly like `w.k`. Draw.js has
-    // no imports and no way to reach into this file — in a browser both are in
-    // one global scope so calling specialSpec() from there appeared to work,
-    // and in QML each .js is its own scope, where it threw a ReferenceError
-    // inside drawActors and took every agent on the board down with it.
-    w.specialSpec = specialSpec(w.special)
-    w.factPick = Math.floor(rng() * 997)
-    w.specialAt = irand(rng, 1, Math.max(1, w.toRelease - 2))
-  }
+  setupColony(w, rng, attempt, tower)
 
   for (var s = 0; s < SKILL_ORDER.length; s++) w.granted[SKILL_ORDER[s]] = 0
 
@@ -1248,75 +1153,198 @@ function generate(level, attempt, colonySeed) {
   // it is a tax and not a crutch.
   if (w.submerged) w.timeLimit = Math.round(w.timeLimit / SWIM_PACE)
 
-  // Place the booth only after terrain roughening, decoration and hazards are
-  // final. Earlier placement could pass a clear-space test and then have a
-  // grate, hanging prop or hazard drawn straight through its roof.
-  if (guardPlan) {
-    var gc = guardPlan.corridor
-    // A sniper house needs a clear run to the shaft above; unlike patrols it
-    // has a deliberate deployment route. Put its booth near that shaft rather
-    // than behind a full-height obstacle it cannot fly through.
-    var enemyDesired = guardPlan.desiredX
-    if (w.enemyRoster.length === 1 && w.enemyRoster[0] === "sniper"
-        && guardPlan.index > 0) {
-      var sniperShaft = corridors[guardPlan.index - 1].handoffX
-      enemyDesired = sniperShaft + (gc.dir > 0 ? 6 : -6)
-    }
-    var enemyX = enemyDesired, enemyBest = Infinity
-    for (var egx = gc.x0 + 4; egx <= gc.x1 - 4; egx++) {
-      var guardClear = true
-      // Seven cells wide and eight high covers even the Ice Cave roof spikes
-      // and the Spaceship booth's side antennae.
-      for (var ewx = egx - 3; ewx <= egx + 3 && guardClear; ewx++) {
-        if (!solid(w, ewx, gc.floorY)) guardClear = false
-        for (var ehy = 1; ehy <= 8 && guardClear; ehy++)
-          if (solid(w, ewx, gc.floorY - ehy)) guardClear = false
-      }
-      for (var edi = 0; edi < w.decor.length && guardClear; edi++) {
-        var ed = w.decor[edi]
-        if (Math.abs(ed.x - egx) <= 4 && ed.y >= gc.floorY - 10 && ed.y <= gc.floorY + 2)
-          guardClear = false
-      }
-      for (var ghi = 0; ghi < w.hazards.length && guardClear; ghi++) {
-        var gh = w.hazards[ghi]
-        if (Math.abs(gh.floorY - gc.floorY) < 3
-            && egx + 5 >= gh.zx0 && egx - 5 <= gh.zx1) guardClear = false
-      }
-      if (gc === last && egx + 5 >= w.exit.x - 2 && egx - 5 <= w.exit.x + w.exit.w + 2)
-        guardClear = false
-      var enemyDistance = Math.abs(egx - enemyDesired)
-      if (guardClear && enemyDistance < enemyBest) { enemyX = egx; enemyBest = enemyDistance }
-    }
-    if (enemyBest === Infinity) {
-      enemyX = Math.max(gc.x0 + 4, Math.min(gc.x1 - 4, enemyDesired))
-      // Absolute fallback: cut a booth-sized alcove. A rare tiny terrain edit
-      // is preferable to ever drawing a building inside solid earth.
-      for (var ecx = enemyX - 3; ecx <= enemyX + 3; ecx++)
-        for (var ecy = gc.floorY - 8; ecy < gc.floorY; ecy++) clearCell(w, ecx, ecy)
-    }
-    // There is normally ample room; if a particularly furnished corridor has
-    // none, remove only overlapping decor at the best terrain-safe fallback.
-    w.decor = w.decor.filter(function(ed) {
-      return !(Math.abs(ed.x - enemyX) <= 4 && ed.y >= gc.floorY - 10 && ed.y <= gc.floorY + 2)
-    })
-    w.enemyHatch = {
-      x: enemyX, y: gc.floorY - 1, biome: w.biome,
-      corridor: guardPlan.index, dir: -gc.dir
-    }
-    for (var epadY = gc.floorY; epadY < gc.floorY + 2; epadY++)
-      for (var epadX = enemyX - 2; epadX <= enemyX + 2; epadX++) setCell(w, epadX, epadY, STEEL)
-  }
+  if (guardPlan) buildGuardBooth(w, guardPlan, corridors, last)
 
-  if (w.biome === "Jungle") placeVines(w, corridors)
-  if (w.biome === "Ruins") placeBoulder(w, corridors)
-  if (w.biome === "Factory") placeBelts(w, corridors)
-  if (w.biome === "Ice Cave") placeFrozen(w, corridors)
-  if (w.biome === "Spaceship") placePads(w, corridors)
+  var mechanism = BIOME_MECHANISMS[w.biome]
+  if (mechanism) mechanism(w, corridors)
 
   // Last, so that everything above this line still cuts freely (see clearCell).
   w.bedFloor = corridors[corridors.length - 1].floorY
 
   return w
+}
+
+// The red team's post, if this level has one: which corridor, roughly where,
+// and who holds it. Null on most levels.
+function planGuard(w, level, corridors, hazardCorridors) {
+  // A separate deterministic stream keeps the red team optional without
+  // reshuffling the established terrain, hazards, specials or personalities.
+  var enemyRng = makeRng(level * 65537 + 4049)
+  if (level < 12 || enemyRng() >= 0.22) return null
+  // Hide the post on a deeper corridor. Its exact depth and position use a
+  // separate stream, so neither the established map nor the enemy roster is
+  // reshuffled. Starting down-route means the guards must patrol and fly to
+  // meet the colony instead of opening fire beside the friendly hatch.
+  var guardIndex = irand(enemyRng, 1, Math.max(1, corridors.length - 2))
+  if (hazardCorridors.indexOf(guardIndex) >= 0 && corridors.length > 3) {
+    var foundGuardCorridor = false
+    for (var gci = 1; gci < corridors.length - 1; gci++)
+      if (hazardCorridors.indexOf(gci) < 0) { guardIndex = gci; foundGuardCorridor = true; break }
+    if (!foundGuardCorridor) guardIndex = corridors.length - 1
+  }
+  var guardCorridor = corridors[guardIndex]
+  var guardFraction = 0.35 + enemyRng() * 0.30
+  var desiredEnemyX = Math.round(guardCorridor.startX
+    + (guardCorridor.handoffX - guardCorridor.startX) * guardFraction)
+  var guardPlan = { corridor: guardCorridor, index: guardIndex, desiredX: desiredEnemyX }
+  // One threat model per post: a single Drone Operator sending replacements,
+  // one sniper establishing a permanent position, or one to two Trigger
+  // Warnings patrolling in person. Mixing them stacks ranged pressure in a
+  // way the colony cannot read or answer cleanly.
+  var enemyKindRoll = enemyRng()
+  // A drone operator on the sea floor is a joke the biome does not need, and
+  // a quadcopter under forty atmospheres is not a joke at all. Down here the
+  // post is held by a rival salvage crew: one diver with a speargun, or a
+  // pair of them with the ordinary sidearm.
+  if (submerged(w)) {
+    if (enemyKindRoll < 0.55) w.enemyRoster.push("harpoon")
+    else {
+      var divers = irand(enemyRng, 1, 2)
+      for (var dv = 0; dv < divers; dv++) w.enemyRoster.push("gun")
+    }
+  }
+  else if (enemyKindRoll < 0.32) w.enemyRoster.push("operator")
+  else if (enemyKindRoll < 0.57) w.enemyRoster.push("sniper")
+  else {
+    var enemyCount = irand(enemyRng, 1, 2)
+    for (var er = 0; er < enemyCount; er++) w.enemyRoster.push("gun")
+  }
+  return guardPlan
+}
+
+// Who is in the colony and what it carries: its size and pace out of the
+// hatch, its personalities, its toolbar, and whether a special comes along.
+function setupColony(w, rng, attempt, tower) {
+// Fewer and quicker out of the hatch than before. Denser levels take longer
+// per agent, and a slow trickle of twenty spent half the level's clock
+// just getting everybody onto the board.
+w.toRelease = irand(rng, 12, 18)
+w.releaseInterval = irand(rng, 24, 34)
+
+// Every agent counts and the run continues either way, so there is no
+// second, smaller number to reach: the bar is the whole colony. Anything
+// that needs a pass/fail line for tuning sets its own — see tools/simcheck.
+w.traitBag = traitBag(w, w.toRelease)
+
+w.skills = {
+  climber: irand(rng, 12, 18) + attempt * 2,
+  floater: w.toRelease + 2 + attempt * 2,
+  bomber: w.toRelease,
+  blocker: irand(rng, 3, 5) + attempt,
+  builder: irand(rng, 13, 19) + attempt * 3,
+  basher: irand(rng, 9, 15) + attempt * 3,
+  miner: irand(rng, 4, 8) + attempt * 2,
+  digger: irand(rng, 6, 10) + attempt * 2
+}
+// The digger and the miner are the two skills a tower cannot use at all: its
+// floors are slabs, so canDescendHere never says yes and neither of them can
+// be reached. Leaving them in the toolbar would be a lie and leaving the
+// allowance unspent would be worse — everywhere else a chasm lets a good
+// half of the colony past an obstacle for nothing, and in a building every
+// partition on every storey has to be paid for out of the same three skills.
+// So the ground allowance becomes a building allowance.
+if (tower) {
+  var spare = w.skills.digger + w.skills.miner
+  w.skills.digger = 0
+  w.skills.miner = 0
+  w.skills.basher += Math.round(spare * 0.55)
+  w.skills.climber += Math.round(spare * 0.30)
+  w.skills.builder += Math.round(spare * 0.15)
+}
+
+// At most one special, on a bit over half of levels, and a fixed place in the
+// release order — so level 42 always sends the same one out in the same slot.
+// Never first: the colony should be under way before the odd one turns up.
+// Most levels get one. It was a bit over half, which combined with a move
+// that fires once or twice a visit meant a given special was a rare sight.
+if (rng() < 0.75) {
+  w.special = pick(rng, SPECIALS).id
+  // Resolved here and carried on the world, exactly like `w.k`. Draw.js has
+  // no imports and no way to reach into this file — in a browser both are in
+  // one global scope so calling specialSpec() from there appeared to work,
+  // and in QML each .js is its own scope, where it threw a ReferenceError
+  // inside drawActors and took every agent on the board down with it.
+  w.specialSpec = specialSpec(w.special)
+  w.factPick = Math.floor(rng() * 997)
+  w.specialAt = irand(rng, 1, Math.max(1, w.toRelease - 2))
+}
+}
+
+// Room for the booth at egx: floor under all seven cells, eight clear above,
+// no decor, no hazard zone and not in front of the exit.
+function boothSiteClear(w, gc, egx, last) {
+  var guardClear = true
+  // Seven cells wide and eight high covers even the Ice Cave roof spikes
+  // and the Spaceship booth's side antennae.
+  for (var ewx = egx - 3; ewx <= egx + 3 && guardClear; ewx++) {
+    if (!solid(w, ewx, gc.floorY)) guardClear = false
+    for (var ehy = 1; ehy <= 8 && guardClear; ehy++)
+      if (solid(w, ewx, gc.floorY - ehy)) guardClear = false
+  }
+  for (var edi = 0; edi < w.decor.length && guardClear; edi++) {
+    var ed = w.decor[edi]
+    if (Math.abs(ed.x - egx) <= 4 && ed.y >= gc.floorY - 10 && ed.y <= gc.floorY + 2)
+      guardClear = false
+  }
+  for (var ghi = 0; ghi < w.hazards.length && guardClear; ghi++) {
+    var gh = w.hazards[ghi]
+    if (Math.abs(gh.floorY - gc.floorY) < 3
+        && egx + 5 >= gh.zx0 && egx - 5 <= gh.zx1) guardClear = false
+  }
+  if (gc === last && egx + 5 >= w.exit.x - 2 && egx - 5 <= w.exit.x + w.exit.w + 2)
+    guardClear = false
+  return guardClear
+}
+
+// Place the booth only after terrain roughening, decoration and hazards are
+// final. Earlier placement could pass a clear-space test and then have a
+// grate, hanging prop or hazard drawn straight through its roof.
+function buildGuardBooth(w, guardPlan, corridors, last) {
+  var gc = guardPlan.corridor
+  // A sniper house needs a clear run to the shaft above; unlike patrols it
+  // has a deliberate deployment route. Put its booth near that shaft rather
+  // than behind a full-height obstacle it cannot fly through.
+  var enemyDesired = guardPlan.desiredX
+  if (w.enemyRoster.length === 1 && w.enemyRoster[0] === "sniper"
+      && guardPlan.index > 0) {
+    var sniperShaft = corridors[guardPlan.index - 1].handoffX
+    enemyDesired = sniperShaft + (gc.dir > 0 ? 6 : -6)
+  }
+  var enemyX = enemyDesired, enemyBest = Infinity
+  for (var egx = gc.x0 + 4; egx <= gc.x1 - 4; egx++) {
+    var guardClear = boothSiteClear(w, gc, egx, last)
+    var enemyDistance = Math.abs(egx - enemyDesired)
+    if (guardClear && enemyDistance < enemyBest) { enemyX = egx; enemyBest = enemyDistance }
+  }
+  if (enemyBest === Infinity) {
+    enemyX = Math.max(gc.x0 + 4, Math.min(gc.x1 - 4, enemyDesired))
+    // Absolute fallback: cut a booth-sized alcove. A rare tiny terrain edit
+    // is preferable to ever drawing a building inside solid earth.
+    for (var ecx = enemyX - 3; ecx <= enemyX + 3; ecx++)
+      for (var ecy = gc.floorY - 8; ecy < gc.floorY; ecy++) clearCell(w, ecx, ecy)
+  }
+  // There is normally ample room; if a particularly furnished corridor has
+  // none, remove only overlapping decor at the best terrain-safe fallback.
+  w.decor = w.decor.filter(function(ed) {
+    return !(Math.abs(ed.x - enemyX) <= 4 && ed.y >= gc.floorY - 10 && ed.y <= gc.floorY + 2)
+  })
+  w.enemyHatch = {
+    x: enemyX, y: gc.floorY - 1, biome: w.biome,
+    corridor: guardPlan.index, dir: -gc.dir
+  }
+  for (var epadY = gc.floorY; epadY < gc.floorY + 2; epadY++)
+    for (var epadX = enemyX - 2; epadX <= enemyX + 2; epadX++) setCell(w, epadX, epadY, STEEL)
+
+}
+
+// The biomes whose mechanism is placed after everything else is final, each
+// from a stream of its own so the rest of the level is what it was.
+var BIOME_MECHANISMS = {
+  "Jungle": placeVines,
+  "Ruins": placeBoulder,
+  "Factory": placeBelts,
+  "Ice Cave": placeFrozen,
+  "Spaceship": placePads
 }
 
 // The Jungle's own mechanism: some walls have a vine down their face, and a

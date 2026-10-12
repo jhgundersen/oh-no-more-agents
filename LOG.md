@@ -1338,3 +1338,18 @@ pushed it over 30. 226 tests pass; over 30: 42 (it went to 44 mid-way, with
 the split pieces untested).
 
 **Next.** Codex's hero gear branch. `generate` (129), `drawAgent` (86).
+
+## 56 — 2026-10-12 · Crap: generate
+
+**Changed.** Out of `generate` (CRAP 129): `planGuard` (the red team's post:
+corridor, spot, roster — on its own stream as before), `setupColony` (size,
+release pace, personalities, toolbar, special), `buildGuardBooth` with
+`boothSiteClear` (the seven-by-eight clearance test), and a
+`BIOME_MECHANISMS` table for the five biome placements. Now 77; the pieces
+20 at most.
+
+**Checked.** Generation golden (600 levels) and full-play golden (150
+levels) identical before and after. 226 tests pass; over 30 stays 42.
+
+**Next.** Codex's hero-gear branch (still running, slow model). `drawAgent`
+(86) once that branch is merged — it touches Draw.js.
