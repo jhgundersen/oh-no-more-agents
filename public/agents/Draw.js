@@ -1223,9 +1223,52 @@ function drawUpdrafts(ctx, w, pal) {
   ctx.globalAlpha = 1
 }
 
+// The Factory's conveyors (Sim's `w.belts`): a dark belt along the top of the
+// floor with treads moving the way it carries, a drum at each end turning
+// with it, and nothing where the floor under it is gone — the same test
+// `beltUnder` makes, so what is drawn moving is what carries. On the actor
+// pass because it moves.
+var BELT_DRIFT = 0.56   // px per tick: the speed it adds to a walker, drawn
+function drawBelts(ctx, w, pal) {
+  var C = w.k.CELL, cols = w.k.COLS, fine = (w.res || 1) >= 2
+  for (var i = 0; i < w.belts.length; i++) {
+    var b = w.belts[i], top = (b.y + 1) * C
+    var shift = ((w.ticks * BELT_DRIFT * b.dir) % 4 + 4) % 4
+    for (var x = b.x0; x < b.x1; x++) {
+      if (w.terrain[(b.y + 1) * cols + x] === w.k.EMPTY) continue
+      ctx.fillStyle = pal.rigDark
+      ctx.fillRect(x * C, top, C, 2)
+      ctx.fillStyle = pal.decorLit
+      var tx = x * C + shift
+      ctx.fillRect(Math.floor(tx), top, 1, fine ? 0.5 : 1)          // a tread
+      if (fine) {
+        ctx.fillStyle = pal.decorDim
+        ctx.fillRect(Math.floor(tx) + 0.5, top + 0.5, 0.5, 1)
+      }
+    }
+    drawBeltDrum(ctx, w, pal, b.x0 * C, top, -1)
+    drawBeltDrum(ctx, w, pal, b.x1 * C, top, 1)
+  }
+}
+
+// An end drum: a stubby round end with a spoke that turns with the belt.
+function drawBeltDrum(ctx, w, pal, x, top, side) {
+  var cx = x + (side > 0 ? 0 : -2)
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(cx, top - 1, 2, 4)
+  ctx.fillRect(cx - 0.5 + (side > 0 ? 0.5 : 0), top, 2.5, 2)
+  if ((w.res || 1) < 2) return
+  var a = Math.floor(w.ticks / 4) % 4
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(cx + (a === 1 ? 1 : 0.5), top + (a === 2 ? 1.5 : a === 0 ? -0.5 : 0.5), 0.5, 0.5)
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(cx + 0.5, top - 1, 1, 0.5)                    // light on the drum
+}
+
 function drawMachines(ctx, w, pal) {
   drawWaterLife(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
+  if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
   if (w.updraft) drawUpdrafts(ctx, w, pal)
   drawAmbience(ctx, w, pal)
   if (w.biome !== "Factory") return

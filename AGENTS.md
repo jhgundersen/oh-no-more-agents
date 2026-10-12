@@ -351,6 +351,21 @@ gathered above `cutHoistway`.
   *add* skills — measured, more tools made the tower worse, because the extra
   builds cost more clock than the obstacles did.
 
+## The Factory
+
+Conveyors (`placeBelts`, `beltUnder`, above `placeMission`). Most corridors get
+a belt of 10–18 cells on a flat open stretch, running either way; own RNG
+stream, so the rest of the level is unchanged.
+
+- **`w.beltAt` is one number per feet cell**, read by `walkStep` alone — the
+  wind's rule, fixed in place instead of in time. 1.5x with it, 0.5x against.
+  No belt where the floor under it is gone: `beltUnder` checks, and
+  `drawBelts` makes the same test so nothing is drawn moving that does not
+  carry.
+- Measured over 240 Factory plays: 92.7% home with belts against 92.5%
+  without, levels about 5% longer, timeouts 3 against 1. Walkers spend about
+  15% of their walking time on a belt — it is seen, and it barely costs.
+
 ## Staying current
 
 A tab is left open for days, so a deploy has to reach it without anyone pressing

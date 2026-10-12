@@ -355,7 +355,8 @@ function walkStep(ag, w) {
   var swim = w && w.submerged ? SWIM_PACE : 1
   var wind = w && w.wind ? 1 + w.wind * ag.dir * WIND_PUSH : 1
   var run = w && w.ticks < (ag.sprintUntil || 0) ? BOULDER_SPRINT : 1
-  return WALK_SPEED * (traitOf(ag).pace || 1) * (ag.chilledFor > 0 ? 0.48 : 1) * swim * wind * run
+  var belt = w && w.beltAt ? 1 + beltUnder(w, ag) * ag.dir * BELT_PUSH : 1
+  return WALK_SPEED * (traitOf(ag).pace || 1) * (ag.chilledFor > 0 ? 0.48 : 1) * swim * wind * run * belt
 }
 
 // ---------------------------------------------------------------------------
@@ -776,6 +777,8 @@ function generate(level, attempt, colonySeed) {
     wind: 0,          // the Desert's gust, -1..1 along x; set every tick by windAt
     updraft: null,    // the Data Center's rising columns, per x; see skinDataCenter
     boulder: null,    // the Ruins' rolling stone; see placeBoulder
+    belts: [],        // the Factory's conveyors; see placeBelts
+    beltAt: null,     // and which way each feet cell is carried, -1/0/1
     k: K,
     decor: [],
     corrGap: CORR_GAP,
@@ -1304,6 +1307,7 @@ function generate(level, attempt, colonySeed) {
 
   if (w.biome === "Jungle") placeVines(w, corridors)
   if (w.biome === "Ruins") placeBoulder(w, corridors)
+  if (w.biome === "Factory") placeBelts(w, corridors)
 
   // Last, so that everything above this line still cuts freely (see clearCell).
   w.bedFloor = corridors[corridors.length - 1].floorY
@@ -1452,6 +1456,56 @@ function shatterBoulder(w, b) {
   b.state = "done"
   b.endedAt = w.ticks
   addDust(w, b.x, b.y - 1, 24)
+}
+
+// ---------------------------------------------------------------------------
+// Conveyors
+// ---------------------------------------------------------------------------
+//
+// The Factory's own mechanism. A stretch of most corridor floors is a belt,
+// running one way or the other: walk with it and you stride out, walk against
+// it and you tread water. One number per feet cell (`w.beltAt`), read by
+// `walkStep` and nothing else — the wind's rule again, only fixed in place
+// rather than in time. A belt whose floor has been dug or blown out stops
+// carrying there, because there is nothing under the feet to carry them.
+// Placed from a stream of its own, so the rest of a Factory level is what it
+// was.
+var BELT_PUSH = 0.5        // 0.5x against, 1.5x with
+var BELT_CHANCE = 0.75     // per corridor
+var BELT_MIN = 10, BELT_MAX = 18
+
+function placeBelts(w, corridors) {
+  var brng = makeRng(w.level * 4099 + 1777)
+  w.beltAt = new Int8Array(COLS * ROWS)
+  for (var ci = 0; ci < corridors.length; ci++) {
+    var c = corridors[ci]
+    if (brng() >= BELT_CHANCE) continue
+    var len = irand(brng, BELT_MIN, BELT_MAX), dir = brng() < 0.5 ? 1 : -1
+    var x0 = beltRun(w, c, irand(brng, c.x0 + 4, c.x1 - 4 - len), len)
+    if (x0 < 0) continue
+    var feet = c.floorY - 1
+    for (var x = x0; x < x0 + len; x++) w.beltAt[feet * COLS + x] = dir
+    w.belts.push({ x0: x0, x1: x0 + len, y: feet, dir: dir })
+  }
+}
+
+// The first flat, open stretch of `len` cells at or after `from`, or -1.
+function beltRun(w, c, from, len) {
+  var feet = c.floorY - 1
+  for (var x0 = from; x0 + len < c.x1 - 3; x0++) {
+    var ok = true
+    for (var x = x0; x < x0 + len && ok; x++)
+      ok = solid(w, x, feet + 1) && !solid(w, x, feet) && !solid(w, x, feet - 1)
+    if (ok) return x0
+  }
+  return -1
+}
+
+function beltUnder(w, ag) {
+  var cx = Math.floor(ag.x), fy = Math.floor(ag.y)
+  if (fy < 0 || fy >= ROWS - 1) return 0
+  var d = w.beltAt[fy * COLS + cx]
+  return d && solid(w, cx, fy + 1) ? d : 0
 }
 
 function placeMission(w, corridors) {

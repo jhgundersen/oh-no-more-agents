@@ -1066,3 +1066,24 @@ control showed that). Res 2 rendered at 6× on Ruins and Cavern. Check passes;
 **Next.** A hero or mechanic gap — every biome now has a mechanism or a
 fixture of its own except Cavern, Frost and Foundry (check); or the exit
 frames at finer pixels.
+
+## 46 — 2026-10-12 · Factory conveyors
+
+**Why.** The Factory was all fittings and no mechanism. The cheapest
+mechanism this game has found is one number read by `walkStep` (the wind);
+a belt is that number fixed to a place, which suits a factory.
+
+**Changed.** Sim: `placeBelts` (own stream) puts a 10–18-cell belt on a flat
+stretch of three in four corridors, running either way; `w.beltAt` per feet
+cell; `beltUnder` reads it and refuses where the floor is gone; `walkStep`
+multiplies pace by 1.5 with it, 0.5 against. Draw: `drawBelts` — a dark band
+on the floor's top edge with treads travelling at the speed it adds, drums at
+each end with a turning spoke at res 2.
+
+**Checked.** Factory, 240 plays each way: 92.7% home with belts / 92.5%
+without; avg ticks 1229 / 1163; timeouts 3 / 1. Walkers are on a belt for
+~15% of walking time. Render at 4×, two ticks apart. `sim play` 95 / 88,
+`inert` passes, 4 new tests, all new functions under 10 CRAP.
+
+**Next.** Cavern, Frost, Foundry, Ice Cave and Spaceship still have no
+mechanism of their own; the exit frames at finer pixels.
