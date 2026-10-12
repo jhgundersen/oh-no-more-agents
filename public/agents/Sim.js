@@ -124,7 +124,7 @@ var SKILL_LABELS = {
 // putting a new one anywhere but the end would re-skin every level above it.
 // Palette.js derives the same index with the same rule and must be kept in
 // step — see the note over poolTint there.
-var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center"]
+var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library"]
 
 // A small job on the route gives each biome a premise beyond merely reaching
 // the door. These are deliberately one mechanism with different casts: an
@@ -154,7 +154,9 @@ var MISSION_SPECS = {
   "Desert":    { id: "caravan",   verb: "FREE THE CAMELS",       kind: "camel", count: 2 },
   // The colony's own habitat. Somebody is always still in here at three in
   // the morning, and getting them out is the job.
-  "Data Center": { id: "oncall",  verb: "RELIEVE THE ON-CALL",   kind: "civilian", count: 2 }
+  "Data Center": { id: "oncall",  verb: "RELIEVE THE ON-CALL",   kind: "civilian", count: 2 },
+  // Asleep over the documentation. Nobody has read this far before.
+  "Library":   { id: "readers",   verb: "WAKE THE READERS",      kind: "civilian", count: 3 }
 }
 
 // ---------------------------------------------------------------------------
@@ -1756,6 +1758,14 @@ function sinkholeStoodOn(w, s) {
   return false
 }
 
+// The Library's own mechanism: a wall of books is a ladder. Climbing the
+// shelves costs no climber — anyone can do it — wherever the face the agent
+// meets is shelving (ORE, the books) rather than an upright or a board. The
+// same decision as any climb (hitWall), with the toolbar left out of it.
+function shelfClimb(w, ag) {
+  return w.biome === "Library" && at(w, Math.floor(ag.x) + ag.dir, Math.floor(ag.y)) === ORE
+}
+
 function placeMission(w, corridors) {
   // Optional, and rolled from its own stream so adding missions does not
   // reshuffle terrain, hazards, specials or events on established levels.
@@ -1966,7 +1976,8 @@ var BIOME_SKINS = {
   "Jungle": skinJungle,
   "Trench": skinTrench,
   "Desert": skinDesert,
-  "Data Center": skinDataCenter
+  "Data Center": skinDataCenter,
+  "Library": skinLibrary
 }
 
 function skinSpaceship(w, rng) {
@@ -2206,6 +2217,21 @@ function skinTrench(w, rng) {
 }
 
 
+// The stacks. Floor-to-ceiling shelving: uprights (DIRT, the tinted wood) on a
+// pitch, shelf boards (ROCK) every three rows, and books (ORE) filling every
+// shelf — so almost every wall the colony meets here is a wall of books, which
+// is what makes the Library's mechanism (`shelfClimb`) worth having.
+function skinLibrary(w, rng) {
+  var x, y
+  var pitch = irand(rng, 8, 11), offset = irand(rng, 0, pitch - 1), board = irand(rng, 0, 2)
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++) {
+      if (at(w, x, y) === STEEL) continue
+      var upright = (x + offset) % pitch === 0
+      setCell(w, x, y, upright ? DIRT : ((y + board) % 3 === 0 ? ROCK : ORE))
+    }
+}
+
 // Rows of racks in a raised-floor hall. The hall is DIRT (the tinted
 // material, so it carries the biome's colour); the racks are ORE, full-height
 // columns two cells wide at a fixed pitch with a gap between pairs — the cold
@@ -2288,6 +2314,10 @@ function placeDecor(w, rng, corridors) {
     // character on their own, and the general scatter was competing with them.
     floorRate = 0.07; ceilRate = 0.05; gap = 7
     floorKinds = ["spire", "spire", "clump"]
+  } else if (w.biome === "Library") {
+    // Book piles on the floor, not much hanging: it is dusted, mostly.
+    floorRate = 0.12; ceilRate = 0.03; gap = 5
+    floorKinds = ["clump", "clump", "spire"]
   } else if (w.biome === "Data Center") {
     // Cable runs off the ceiling, almost nothing on the floor: it is swept.
     floorRate = 0.05; ceilRate = 0.10; gap = 6
@@ -4370,9 +4400,9 @@ function hitWall(w, ag) {
 
   if (bashFirst) {
     if (t <= BASH_REACH && spend(w, ag, "basher")) { ag.state = "bash"; ag.timer = 0; return }
-    if (climbable && spend(w, ag, "climber")) { startClimb(w, ag); return }
+    if (climbable && (shelfClimb(w, ag) || spend(w, ag, "climber"))) { startClimb(w, ag); return }
   } else {
-    if (climbable && spend(w, ag, "climber")) { startClimb(w, ag); return }
+    if (climbable && (shelfClimb(w, ag) || spend(w, ag, "climber"))) { startClimb(w, ag); return }
     // Climbers are the scarcest thing on the board and a pit will empty them.
     // A staircase is the other way up, and the one the level has plenty of —
     // so under the exit it comes before the bash rather than after it, and
@@ -5040,7 +5070,12 @@ var EVENTS = [
   // --- Data Center ---
   { id: "failover", name: "Failover",         biome: "Data Center", mech: "blackout", mult: 0, ticks: 300 },
   { id: "hotfix",   name: "Hot Swap",         biome: "Data Center", mech: "collapse", at: "ceiling", span: 6, deep: 3 },
-  { id: "rackgrow", name: "Capacity Planning",biome: "Data Center", mech: "growth",   span: 12, high: 2 }
+  { id: "rackgrow", name: "Capacity Planning",biome: "Data Center", mech: "growth",   span: 12, high: 2 },
+
+  // --- Library ---
+  { id: "weeding",  name: "Deprecation Notice",biome: "Library", mech: "collapse", at: "floor",   span: 6, deep: 2 },
+  { id: "reindex",  name: "Reindexing",       biome: "Library",  mech: "growth",   span: 12, high: 2 },
+  { id: "quiet",    name: "Quiet Hours",      biome: "Library",  mech: "drift",    what: "sight", ticks: 420 }
 ]
 
 function eventsFor(biome) {

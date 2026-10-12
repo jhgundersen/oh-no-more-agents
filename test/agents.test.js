@@ -52,10 +52,17 @@ test("a digger stops on the last layer over a fatal drop unless an umbrella is g
 })
 
 test("a block with the floor a step higher behind it is a block, not a wall to the exit", () => {
-  // Level 569: a three-cell block under a low roof, and beyond it the floor
-  // one step up all the way to the door. It used to measure as wall to the
-  // exit — too deep to blast — and the colony paced in front of it.
-  const w = S.generate(569, 0, 24326)
+  // Built after level 569 as it was: a three-cell block under a low roof, and
+  // beyond it the floor one step up all the way along. It used to measure as
+  // wall to the far end — too deep to blast — and the colony paced in front of
+  // it until the loop rule bombed it. Built by hand so later changes to
+  // generation cannot move it.
+  const w = S.generate(1, 0, 3), C = S.COLS
+  const put = (x, y, v) => { w.terrain[y * C + x] = v }
+  for (let y = 40; y < 58; y++) for (let x = 60; x < 96; x++) put(x, y, S.EMPTY)
+  for (let x = 60; x < 96; x++) { put(x, 53, S.ROCK); put(x, 47, S.ROCK) }   // floor, low roof
+  for (let x = 77; x < 96; x++) put(x, 52, S.ROCK)                            // a step up
+  for (let x = 77; x < 80; x++) for (let y = 50; y < 52; y++) put(x, y, S.ROCK) // the block
   const ag = S.spawn(w)
   ag.x = 76.5; ag.y = 52; ag.dir = 1
   assert.equal(S.obstructionAhead(w, ag), 3)

@@ -67,7 +67,7 @@ for (let level = 1; level <= 12; level++) {
 
   test(`${biome} fine wall uses dark half-pixels within the existing silhouette`, () => {
     // A second layout exercises more seeded dimensions and broken arches.
-    for (const lv of [level, level + 12]) {
+    for (const lv of [level, level + S.BIOMES.length]) {
       const { w, pal } = sample(lv)
       const mask = image(w, "#000000", 2), coarse = image(w, "#000000", 2)
       const fill = mask.ctx.fillRect.bind(mask.ctx)

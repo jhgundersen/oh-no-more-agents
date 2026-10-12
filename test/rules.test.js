@@ -1,12 +1,14 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { loadCore } from "../tools/load-core.js"
+import { levelWith } from "./levels.js"
 
 // Rules that were only ever reached deep inside a played level, often not at
 // all in the sample the tests play: built here on purpose so each can be
 // checked, and so the CRAP report sees them covered.
 
 const S = loadCore("Sim.js")
+const CAVERN = levelWith(S, "Cavern", (w) => w.sinkholes.length > 0)
 
 function floorAgent(w, x) {
   const ag = S.spawn(w)
@@ -124,7 +126,7 @@ test("Cavern sinkholes: a crust over a hollow that opens under the first walker"
     found += w.sinkholes.length
   }
   assert.ok(found > 0)
-  const w = S.generate(61, 0, 3), s = w.sinkholes[0]
+  const w = S.generate(CAVERN, 0, 3), s = w.sinkholes[0]
   const ag = S.spawn(w)
   ag.state = "walk"; ag.x = s.x + 1.5; ag.y = s.top - 1
   w.agents = [ag]

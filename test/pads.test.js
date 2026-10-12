@@ -1,12 +1,14 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { loadCore } from "../tools/load-core.js"
+import { levelWith } from "./levels.js"
 import { canvas, themeOf } from "../tools/render.js"
 
 // The Spaceship's transporters: a pair per Spaceship level, always beaming one
 // corridor down, recharging between uses.
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
+const SHIP = levelWith(S, "Spaceship", (w) => w.pads.length > 0)
 
 test("pads are a Spaceship thing, and always send downstream", () => {
   let found = 0
@@ -19,7 +21,7 @@ test("pads are a Spaceship thing, and always send downstream", () => {
 })
 
 function onPad() {
-  const w = S.generate(19, 0, 3), p = w.pads[0]
+  const w = S.generate(SHIP, 0, 3), p = w.pads[0]
   const ag = S.spawn(w)
   ag.state = "walk"; ag.x = p.ax + 0.5; ag.y = p.ay
   w.agents = [ag]

@@ -9,8 +9,10 @@ const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js"
 test("exit frames at res 1 and unspecified res match the pre-detail pixels", () => {
   // Captured before changing Draw.js: all twelve generated exits in all five
   // themes, including the absent w.res used by the QML host (120 rasters).
+  // The twelve biomes it was pinned on: levels 1–12 are the same biomes and the
+  // same layouts whatever is appended to BIOMES later.
   const hash = createHash("sha256")
-  for (let level = 1; level <= S.BIOMES.length; level++) {
+  for (let level = 1; level <= 12; level++) {
     const w = S.generate(level, 0, 3)
     for (const name of Object.keys(THEMES)) for (const res of [undefined, 1]) {
       w.res = res
