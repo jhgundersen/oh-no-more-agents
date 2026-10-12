@@ -1,6 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { loadCore } from "../tools/load-core.js"
+import { levelWith } from "./levels.js"
 import { canvas, themeOf } from "../tools/render.js"
 
 // The Ruins' boulder: placed on every Ruins level and nowhere else, woken by
@@ -8,6 +9,13 @@ import { canvas, themeOf } from "../tools/render.js"
 // at most one agent with it.
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
+// A Ruins level whose boulder, played out, wakes, rolls and shatters.
+const RUINS = levelWith(S, "Ruins", (w) => {
+  const b = w.boulder, x0 = b && b.x
+  if (!b) return false
+  while (!w.done && w.ticks < 20000) S.step(w)
+  return b.state === "done" && b.x !== x0
+})
 
 test("every Ruins level has a boulder, and no other biome does", () => {
   for (let lv = 1; lv <= 72; lv++) {
@@ -17,7 +25,7 @@ test("every Ruins level has a boulder, and no other biome does", () => {
 })
 
 test("it wakes, rolls and shatters, taking at most one", () => {
-  const w = S.generate(38, 0, 3), b = w.boulder, seen = [b.state]
+  const w = S.generate(RUINS, 0, 3), b = w.boulder, seen = [b.state]
   const x0 = b.x
   while (!w.done && w.ticks < 20000) {
     S.step(w)
@@ -30,7 +38,7 @@ test("it wakes, rolls and shatters, taking at most one", () => {
 
 // Its own floor, cleared, with one agent placed on it.
 function scene(state, ahead) {
-  const w = S.generate(38, 0, 3), b = w.boulder
+  const w = S.generate(RUINS, 0, 3), b = w.boulder
   w.agents = [S.spawn(w)]
   const ag = w.agents[0]
   ag.state = state
@@ -70,7 +78,7 @@ test("nobody is crushed in mid-air, and a blocker stops it", () => {
 test("the boulder draws in every state", () => {
   const theme = themeOf("tokyo-night")
   const pal = P.build(theme.theme, 1)
-  const w = S.generate(38, 0, 3), b = w.boulder
+  const w = S.generate(RUINS, 0, 3), b = w.boulder
   for (const res of [1, 2]) for (const state of ["rest", "wake", "roll", "done"]) {
     w.res = res
     w.ticks = 100

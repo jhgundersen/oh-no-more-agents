@@ -1,9 +1,12 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { loadCore } from "../tools/load-core.js"
+import { levelWith } from "./levels.js"
 import { canvas, themeOf } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
+const SHIP = levelWith(S, "Spaceship", (w) => w.pads.length > 0)
+const RUINS = levelWith(S, "Ruins", (w) => !!w.boulder)
 const theme = themeOf("tokyo-night")
 function picture(w, draw) {
   const res = w.res || 1, img = canvas(400 * res, 248 * res, theme.background)
@@ -76,7 +79,7 @@ test("wind and updraft wisps clip every pixel to open air at both resolutions", 
 })
 
 test("fresh pads have lamps but no phantom beam; arrivals follow the actual traveller", () => {
-  const w = S.generate(19, 0, 3), p = w.pads[0], ag = S.spawn(w)
+  const w = S.generate(SHIP, 0, 3), p = w.pads[0], ag = S.spawn(w)
   for (const res of [1, 2]) {
     w.res = res
     const fresh = picture(w, (ctx, pal) => D.drawPadPair(ctx, w, pal, p))
@@ -102,7 +105,7 @@ test("fresh pads have lamps but no phantom beam; arrivals follow the actual trav
 
 test("mechanisms animate at res 1 and res 2 without writing simulation state", () => {
   for (const res of [1, 2]) {
-    const w = S.generate(38, 0, 3); w.res = res
+    const w = S.generate(RUINS, 0, 3); w.res = res
     const b = w.boulder
     for (const state of ["rest", "wake", "roll", "done"]) {
       b.state = state; b.wokeAt = 0; b.endedAt = 0

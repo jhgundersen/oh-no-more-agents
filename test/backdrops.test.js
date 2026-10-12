@@ -40,7 +40,7 @@ test("all back walls and ambience retain their res-1 and unspecified-res bytes",
   assert.equal(hash.digest("hex"), "30c620a9549b6a868a88941a6ed0ca1eab4970b80b81607587a83b508f3a078b")
 })
 
-for (let level = 1; level <= 12; level++) {
+for (let level = 1; level <= S.BIOMES.length; level++) {
   const biome = S.generate(level, 0, 99).biome
   for (const [kind, draw] of [["backdrop", D.drawBackdrop], ["ambience", ambience]]) {
     test(`${biome} ${kind} draws at res 1 and 2 and adds fine pixels`, () => {
@@ -67,7 +67,7 @@ for (let level = 1; level <= 12; level++) {
 
   test(`${biome} fine wall uses dark half-pixels within the existing silhouette`, () => {
     // A second layout exercises more seeded dimensions and broken arches.
-    for (const lv of [level, level + 12]) {
+    for (const lv of [level, level + S.BIOMES.length]) {
       const { w, pal } = sample(lv)
       const mask = image(w, "#000000", 2), coarse = image(w, "#000000", 2)
       const fill = mask.ctx.fillRect.bind(mask.ctx)
@@ -93,7 +93,7 @@ for (let level = 1; level <= 12; level++) {
 }
 
 test("fine motes stay on half-pixels and never paint solid ground", () => {
-  for (let level = 1; level <= 12; level++) {
+  for (let level = 1; level <= S.BIOMES.length; level++) {
     const { w, pal } = sample(level)
     w.res = 2
     const img = image(w, "#000000", 2), fill = img.ctx.fillRect.bind(img.ctx)

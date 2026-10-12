@@ -139,6 +139,7 @@ function drawTerrain(ctx, w, pal) {
     }
   }
 
+  if (w.biome === "Library") drawLibraryStacks(ctx, w, pal)
   if ((w.res || 1) >= 2) drawTerrainFine(ctx, w, pal)
 
   // Factory only. ORE is this biome's machinery and mezzanine plate, so it
@@ -187,7 +188,7 @@ function drawTerrain(ctx, w, pal) {
 // while the colony digs around it.
 // Built places get no grain: on hull plate, office wall and machine housing it
 // read as dirt, and those biomes carry their own pattern (panels, bays, rivets).
-var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true }
+var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true, "Library": true }
 
 // One cell's grain: a dark fleck in a quarter of cells, a pale one in an
 // eighth, placed inside the cell by the hash.
@@ -255,7 +256,7 @@ var BACKDROPS = {
   "Cavern": backCavern, "Ruins": backRuins, "Frost": backFrost,
   "Foundry": backFoundry, "Jungle": backJungle, "Ice Cave": backIceCave,
   "Spaceship": backSpaceship, "Factory": backFactory, "Trench": backTrench,
-  "Desert": backDesert, "Data Center": backDataCenter
+  "Desert": backDesert, "Data Center": backDataCenter, "Library": backLibrary
 }
 
 function drawBackdrop(ctx, w, pal) {
@@ -516,7 +517,7 @@ var BACKDROP_FINE = {
   "Foundry": backFoundryFine, "Jungle": backJungleFine, "Ice Cave": backIceCaveFine,
   "Spaceship": backSpaceshipFine, "Factory": backFactoryFine,
   "Skyscraper": backSkyscraperFine, "Trench": backTrenchFine,
-  "Desert": backDesertFine, "Data Center": backDataCenterFine
+  "Desert": backDesertFine, "Data Center": backDataCenterFine, "Library": backLibraryFine
 }
 
 function drawBackdropFine(ctx, w, pal) {
@@ -778,11 +779,12 @@ function drawDecor(ctx, w, pal) {
     var desert = w.biome === "Desert"
     drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert)
     if ((w.res || 1) >= 2) drawDecorFine(ctx, pal, d, px, py, py + C,
-      foundry ? "pipe" : ruins ? "ruins" : desert ? "desert" : jungle ? "jungle" : frost ? "frost" : "cave")
+      w.biome === "Library" ? "library" : foundry ? "pipe" : ruins ? "ruins" : desert ? "desert" : jungle ? "jungle" : frost ? "frost" : "cave")
   }
 }
 
 function drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert) {
+  if (w.biome === "Library") return drawLibraryDecor(ctx, pal, d, px, py, w.k.CELL)
   var C = w.k.CELL
 
     if (d.kind === "spire") {
@@ -895,6 +897,8 @@ function drawDecorFine(ctx, pal, d, px, top, base, look) {
 function fineSpireHeight(d) { return 3 + d.size * 3 }
 
 var DECOR_FINE = {
+  "spire:library": fineLibraryLadder, "hang:library": fineLibraryLamp,
+  "clump:library": fineLibraryPile, "tuft:library": fineLibraryLamp,
   "spire:cave": function(ctx, pal, d, px, base) { fineCone(ctx, pal, d, px, base, 2.4) },
   "spire:frost": function(ctx, pal, d, px, base) {
     fineCone(ctx, pal, d, px, base, 3.2)
@@ -1056,16 +1060,12 @@ function drawExitBack(ctx, w, pal) {
     for (var rv = 0; rv < ww + 8; rv += 5) ctx.fillRect(x - 4 + rv, y - 5, 2, 2)
     break
 
+  case "Library":
+    drawExitLibrary(ctx, pal, x, y, ww, hh)
+    break
+
   case "Data Center":
-    // A rack door: a heavy frame, a strip of status lights across the top,
-    // and a badge reader by the handle.
-    ctx.fillRect(x - 4, y - 6, ww + 8, 4)
-    ctx.fillRect(x - 4, y - 2, 3, hh + 2)
-    ctx.fillRect(x + ww + 1, y - 2, 3, hh + 2)
-    ctx.fillStyle = pal.decorLit
-    for (var sl = 0; sl < ww + 4; sl += 3) ctx.fillRect(x - 2 + sl, y - 5, 1, 1)
-    ctx.fillStyle = pal.rigDark
-    ctx.fillRect(x + ww + 1, y + hh / 2 - 2, 3, 4)
+    drawExitDataBack(ctx, pal, x, y, ww, hh)
     break
 
   case "Desert":
@@ -1172,7 +1172,8 @@ var EXIT_FINE = {
   "Skyscraper": drawExitSkyscraperFine,
   "Trench": drawExitTrenchFine,
   "Desert": drawExitDesertFine,
-  "Data Center": drawExitDataFine
+  "Data Center": drawExitDataFine,
+  "Library": drawExitLibraryFine
 }
 
 function drawExitFrameFine(ctx, w, pal, x, y, ww, hh) {
@@ -1479,6 +1480,7 @@ function drawWaterLife(ctx, w, pal) {
 //   blink  >0: lit only for that share of a cycle (fireflies, glints)
 
 var AMBIENCE = {
+  "Library":  [{ n: 36, vx: 0.015, vy: 0.025, sway: 2, size: 1, col: "dust", alpha: 0.24 }],
   "Cavern":   [{ n: 26, vx: 0.02, vy: 0.05, sway: 2, size: 1, col: "dust", alpha: 0.30 }],
   "Ruins":    [{ n: 30, vx: 0.06, vy: 0.04, sway: 3, size: 1, col: "dust", alpha: 0.28 }],
   "Frost":    [{ n: 70, vx: 0.18, vy: 0.32, sway: 4, size: 1, col: "dust", alpha: 0.65 },
@@ -1499,6 +1501,7 @@ var AMBIENCE = {
 }
 
 function drawAmbience(ctx, w, pal) {
+  if (w.biome === "Library") drawLibraryLamplight(ctx, w, pal)
   if (w.wind) drawGust(ctx, w, pal)
   var fields = AMBIENCE[w.biome] || ((w.res || 1) >= 2 && AMBIENCE_FINE_ONLY[w.biome])
   if (!fields) return
@@ -1576,7 +1579,7 @@ var AMBIENCE_FINE = {
   "Foundry": drawMoteFoundryFine, "Jungle": drawMoteJungleFine, "Ice Cave": drawMoteIceFine,
   "Spaceship": drawMoteSpaceshipFine, "Factory": drawMoteFactoryFine,
   "Skyscraper": drawMoteSkyscraperFine, "Trench": drawMoteTrenchFine,
-  "Desert": drawMoteDesertFine, "Data Center": drawMoteDataFine
+  "Desert": drawMoteDesertFine, "Data Center": drawMoteDataFine, "Library": drawMoteLibraryFine
 }
 
 // Check the complete half-pixel footprint: the motion can put a corner into
@@ -3945,6 +3948,7 @@ function drawEnemyHatch(ctx, w, pal, opts) {
   else if (biome === "Skyscraper") { wall = pal.dirt; roof = pal.rig; edge = pal.dirtEdge; sign = "MIDDLE MANAGEMENT" }
   else if (biome === "Desert") { wall = pal.ore; roof = pal.dirtShade; edge = pal.oreEdge; sign = "SANDBOX ESCAPE" }
   else if (biome === "Data Center") { wall = pal.steel; roof = pal.rigDark; edge = pal.oreEdge; sign = "SHADOW IT" }
+  else if (biome === "Library") { wall = pal.dirt; roof = pal.dirtShade; edge = pal.oreEdge; sign = "STACK OVERFLOW" }
 
   // Barely larger than an agent: a sentry booth, not a second landmark. Its
   // materials come from the current theme; biome identity is in the roofline.
@@ -3955,6 +3959,8 @@ function drawEnemyHatch(ctx, w, pal, opts) {
     ctx.fillRect(x - 6, y - 19, 12, 2); ctx.fillRect(x - 9, y - 17, 18, 2)
   } else if (biome === "Jungle") {
     ctx.fillRect(x - 11, y - 19, 22, 3); ctx.fillRect(x - 7, y - 22, 14, 3)
+  } else if (biome === "Library") {
+    drawLibraryBoothTop(ctx, pal, x, y)
   } else if (biome === "Ice Cave") {
     hzTri(ctx, x - 5, y - 15, 4, 7, -1); hzTri(ctx, x + 4, y - 15, 5, 10, -1)
   } else {
@@ -5466,6 +5472,7 @@ function drawAgentBody(ctx, w, pal, ag, ox, oy, dir, robe, skin, st, bodyDrop, w
 }
 
 function drawPoseClimb(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  if (libraryShelfPose(w, ag)) return drawPoseShelf(ctx, w, pal, ag, ox, oy, dir, robe)
   blit(ctx, ox, oy, dir, 2, 7, 4, 6)
   blit(ctx, ox, oy, dir, 5, 3 + (ag.anim >> 3) % 2, 2, 4)   // hand over hand
   blit(ctx, ox, oy, dir, 3, 13, 3, 3)
@@ -6445,7 +6452,12 @@ var FINE_POSES = {
   slide: drawFineSlide, stunned: drawFineStunned,
   bomb: drawFineStride, jump: drawFineStride, ceil: drawFineStride
 }
-function drawAgentFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe) {
+function drawAgentFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w) {
+  if (w && libraryShelfPose(w, ag)) {
+    drawFineHead(ctx, pal, ag, ox, oy, dir, drop)
+    drawFineSuit(ctx, pal, ox, oy, dir, 7)
+    return
+  }
   var pose = FINE_POSES[ag.state]
   if (!pose) return
   if (pose !== drawAgentUprightFine) drawFineHead(ctx, pal, ag, ox, oy, dir, drop)
@@ -8629,8 +8641,10 @@ function drawAgent(ctx, w, pal, ag, opts) {
     blit(ctx, ox, oy, dir, 6, 7 + bodyDrop, 1, 1)
   }
 
-  if ((w.res || 1) >= 2 && !w.submerged) drawAgentFine(ctx, pal, ag, ox, oy, dir, bodyDrop, walkLead, squash, robe)
+  if ((w.res || 1) >= 2 && !w.submerged) drawAgentFine(ctx, pal, ag, ox, oy, dir, bodyDrop, walkLead, squash, robe, w)
   else if ((w.res || 1) >= 2 && st !== "saved") drawDiverFine(ctx, pal, ag, ox, oy, dir, bodyDrop + (headLift || 0))
+
+  if (libraryShelfPose(w, ag)) drawShelfGrip(ctx, w, pal, ag, ox, oy, dir, robe)
 
   // A pip on the shoulder in the special's second colour. The robe alone is a
   // handful of pixels on a board that already has a lot going on.
@@ -8703,4 +8717,233 @@ function actionLabel(st) {
   if (st === "trick") return "!"
   if (st === "camp") return "camped"
   return ""
+}
+
+// Library: quiet stacks behind the walkable shelves. Back shades keep the
+// distant books from being mistaken for terrain; placement uses only the level.
+function backLibrary(ctx, r, b, pal) {
+  for (var x = -8; x < b.w; x += 30) {
+    ctx.fillStyle = pal.backDim
+    ctx.fillRect(x, b.y, 25, b.h)
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(x, b.y, 2, b.h)
+    ctx.fillRect(x + 23, b.y, 2, b.h)
+    for (var y = b.y + 9; y < b.y + b.h - 8; y += 12) {
+      ctx.fillStyle = pal.backLit
+      ctx.fillRect(x + 2, y + 7, 21, 1)
+      for (var book = 3; book < 22; book += 3) {
+        var h = 3 + Math.floor(r() * 4)
+        ctx.fillStyle = book % 2 ? pal.back : pal.backLit
+        ctx.fillRect(x + book, y + 7 - h, 2, h)
+      }
+    }
+  }
+}
+
+function backLibraryFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + b.w - 0.5, b.y + 0.5, 0.5, b.h - 0.5)
+  if (b.w > 1 && b.h > 2) {
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(b.x + 0.5, b.y + 1.5, b.w - 1, 0.5) // far spine's label
+  }
+}
+
+// Cloth bindings, faded rather than luminous. Hash each cell and book, never
+// Math.random: a repaint after digging must leave every remaining spine alone.
+var LIBRARY_BINDINGS = ["#79504a", "#52655b", "#526079", "#8a734f", "#705971", "#93836b"]
+function drawLibraryStacks(ctx, w, pal) {
+  var k = w.k, C = k.CELL, fine = (w.res || 1) >= 2
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 0; x < k.COLS; x++) {
+    var m = w.terrain[y * k.COLS + x], px = x * C, py = y * C
+    if (m === k.ORE) drawLibraryBooks(ctx, pal, px, py, C, ((x * 73856093) ^ (y * 19349663)) >>> 0, fine)
+    else if (m === k.DIRT) {
+      ctx.fillStyle = pal.dirtShade
+      ctx.fillRect(px + 2, py, fine ? 0.5 : 1, C) // timber grain down the upright
+    } else if (m === k.ROCK) {
+      ctx.fillStyle = pal.dirt
+      ctx.fillRect(px, py + 1, C, C - 1) // timber board over its structural rock
+      ctx.fillStyle = pal.dirtEdge
+      ctx.fillRect(px, py, C, fine ? 0.5 : 1)
+    }
+  }
+}
+
+function drawLibraryBooks(ctx, pal, px, py, C, hash, fine) {
+  ctx.fillStyle = pal.oreShade
+  ctx.fillRect(px, py, C, C)
+  var width = fine ? 1 : 2, gap = fine ? 0.5 : 1
+  for (var b = 0; b < C; b += width + gap) {
+    var n = (hash >>> (b * 2)) + b * 7
+    var h = fine ? 2 + (n % 4) * 0.5 : 2 + n % 2
+    ctx.fillStyle = LIBRARY_BINDINGS[n % LIBRARY_BINDINGS.length]
+    ctx.fillRect(px + b, py + C - h, Math.min(width, C - b), h)
+    ctx.fillStyle = pal.oreEdge
+    if (fine) ctx.fillRect(px + b, py + C - 1, width, 0.5) // gilt title band
+  }
+}
+
+function drawLibraryDecor(ctx, pal, d, x, y, C) {
+  var base = y + C
+  if (d.kind === "spire") {
+    var h = fineSpireHeight(d)
+    ctx.fillStyle = pal.dirtEdge
+    ctx.fillRect(x, base - h, 1, h); ctx.fillRect(x + 5, base - h, 1, h)
+    for (var r = 2; r < h; r += 3) ctx.fillRect(x + 1, base - r, 4, 1)
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(x - 1, base - 1, 2, 1); ctx.fillRect(x + 5, base - 1, 2, 1)
+  } else if (d.kind === "clump") {
+    for (var b = 0; b < 2 + d.size; b++) {
+      ctx.fillStyle = LIBRARY_BINDINGS[(d.seed + b) % LIBRARY_BINDINGS.length]
+      ctx.fillRect(x + b % 2, base - 2 - b * 2, 6 - b % 2, 2)
+      ctx.fillStyle = pal.decorLit
+      ctx.fillRect(x + 1 + b % 2, base - 1 - b * 2, 4 - b % 2, 1)
+    }
+  } else drawLibraryLamp(ctx, pal, x, d.kind === "hang" ? y + 5 : base - 6, d.kind === "hang" ? y : base)
+}
+
+function drawLibraryLamp(ctx, pal, x, shade, anchor) {
+  ctx.fillStyle = pal.decorDim
+  ctx.fillRect(x + 2, Math.min(shade, anchor), 1, Math.abs(anchor - shade))
+  ctx.fillStyle = pal.decor
+  ctx.fillRect(x, shade, 5, 2); ctx.fillRect(x - 1, shade + 2, 7, 1)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x, shade + 3, 5, 1)
+  if (anchor > shade) { ctx.fillStyle = pal.decorDim; ctx.fillRect(x, anchor - 1, 5, 1) }
+}
+
+function fineLibraryLadder(ctx, pal, d, x, base) {
+  var h = fineSpireHeight(d)
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x + 0.5, base - h, 0.5, h)
+  for (var r = 2; r < h; r += 3) ctx.fillRect(x + 1, base - r, 4, 0.5)
+}
+function fineLibraryPile(ctx, pal, d, x, base) {
+  ctx.fillStyle = pal.decorDim
+  for (var b = 0; b < 2 + d.size; b++) ctx.fillRect(x + 2 + b % 2, base - 1 - b * 2, 3 - b % 2, 0.5)
+}
+function fineLibraryLamp(ctx, pal, d, x, base, top) {
+  var shade = d.kind === "hang" ? top + 5 : base - 6
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x + 0.5, shade + 0.5, 3.5, 0.5)
+  ctx.fillStyle = pal.dust
+  ctx.fillRect(x + 1, shade + 3, 3, 0.5)
+}
+
+// An oak arch, with card catalogue drawers in the jambs and a quiet plaque.
+function drawExitLibrary(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.dirt
+  ctx.fillRect(x - 5, y - 2, 4, hh + 2); ctx.fillRect(x + ww + 1, y - 2, 4, hh + 2)
+  for (var r = 0; r < 4; r++) ctx.fillRect(x - 5 + r, y - 3 - r, ww + 10 - r * 2, 1)
+  ctx.fillStyle = pal.dirtEdge
+  ctx.fillRect(x - 6, y + hh - 1, ww + 12, 1)
+  ctx.fillRect(x - 2, y - 10, ww + 4, 4)
+  ctx.fillStyle = pal.hatchMouth
+  ctx.font = "bold 3px monospace"; ctx.textAlign = "center"
+  ctx.fillText("SILENCE", x + ww / 2, y - 7)
+  ctx.textAlign = "left"
+}
+function drawExitLibraryFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.oreEdge
+  for (var r = 0; r < 4; r++) ctx.fillRect(x - 4.5 + r, y - 2.5 - r, ww + 9 - r * 2, 0.5)
+  ctx.fillRect(x - 1.5, y - 9.5, ww + 3, 0.5)
+  for (var j = 0; j < 2; j++) {
+    var dx = j ? x + ww + 1 : x - 5
+    for (var drawer = y; drawer + 3 < y + hh; drawer += 4) {
+      ctx.fillStyle = pal.dirtShade
+      ctx.fillRect(dx + 0.5, drawer + 3, 3, 0.5)
+      ctx.fillStyle = pal.oreEdge
+      ctx.fillRect(dx + 1, drawer + 1, 2, 0.5)
+    }
+  }
+}
+function drawLibraryBoothTop(ctx, pal, x, y) {
+  ctx.fillRect(x - 10, y - 18, 20, 3)
+  ctx.fillStyle = pal.oreEdge
+  for (var b = 0; b < 4; b++) {
+    ctx.fillRect(x - 8 + b * 4, y - 22 + b % 2, 3, 4 - b % 2)
+    ctx.fillStyle = pal.dirtEdge
+  }
+}
+function drawMoteLibraryFine(ctx, w, pal, x, y) {
+  moteFineRect(ctx, w, x, y, 0.5, 0.5)
+  moteFineRect(ctx, w, x + 0.5, y + 0.5, 0.5, 0.5)
+}
+
+// No extra simulation flag: read the book face beside the climbing body.
+// A paid climb on bare wood and a downward climb keep their usual pose. Shelves get a side-on grip and knees braced against the books.
+function libraryShelfPose(w, ag) {
+  if (w.biome !== "Library" || ag.state !== "climb" || ag.climbDown) return false
+  var k = w.k, x = Math.floor(ag.x) + ag.dir, y = Math.floor(ag.y)
+  var face = w.terrain[y * k.COLS + x]
+  return face === k.ORE || (face === k.ROCK && w.terrain[(y + 1) * k.COLS + x] === k.ORE)
+}
+function drawPoseShelf(ctx, w, pal, ag, ox, oy, dir, robe) {
+  blit(ctx, ox, oy, dir, 2, 7, 4, 6)
+  var reach = (ag.anim >> 3) % 2
+  blit(ctx, ox, oy, dir, 5, 5 + reach * 3, 3, 2)
+  blit(ctx, ox, oy, dir, 2, 12, 2, 4)
+  blit(ctx, ox, oy, dir, 4, 12 - reach, 4, 2) // knee lifted onto a shelf
+}
+function drawShelfGrip(ctx, w, pal, ag, ox, oy, dir, robe) {
+  var k = w.k, C = k.CELL, wall = (Math.floor(ag.x) + ag.dir + (dir < 0 ? 1 : 0)) * C
+  var hand = oy + 5 + ((ag.anim >> 3) % 2) * 3
+  // Grip the nearest actual shelf board above the waist, within arm's reach.
+  for (var row = Math.floor((oy + 3) / C); row <= Math.floor((oy + 11) / C); row++) {
+    var cell = Math.floor(ag.x) + dir
+    if (w.terrain[row * k.COLS + cell] === k.ROCK) { hand = row * C; break }
+  }
+  ctx.fillStyle = robe
+  ctx.fillRect(Math.min(ox + 4, wall), hand + 1, Math.abs(wall - ox - 4) + 1, 1)
+  ctx.fillStyle = pal.skin
+  ctx.fillRect(wall - (dir > 0 ? 1 : 0), hand, 2, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = pal.shirt
+    ctx.fillRect(wall - dir, hand + 1, 1, 0.5)
+    ctx.fillStyle = pal.eye
+    blitFine(ctx, ox, oy, dir, 5, 12.5 - ((ag.anim >> 3) % 2), 2.5, 0.5)
+  }
+}
+
+// Light belongs to the fixture. Clip the warm pool and its floating dust to
+// open air every tick, so a dug-away support takes its lamp light with it.
+function drawLibraryLamplight(ctx, w, pal) {
+  ctx.save()
+  for (var i = 0; i < w.decor.length; i++) {
+    var d = w.decor[i]
+    if (d.kind !== "hang" && d.kind !== "tuft") continue
+    var C = w.k.CELL, x = d.x * C, y = d.y * C
+    var support = d.kind === "hang" ? d.y - 1 : d.y + 1
+    if (!w.terrain[support * w.k.COLS + d.x] || !mechanismAir(w, x, y)) continue
+    drawLibraryLightPool(ctx, w, pal, x + 2, d.kind === "hang" ? y + 9 : y + C - 2, d.seed)
+  }
+  ctx.restore()
+}
+function drawLibraryLightPool(ctx, w, pal, x, y, seed) {
+  ctx.fillStyle = pal.oreEdge
+  for (var row = 0; row < 9; row++) for (var dx = -2 - (row >> 1); dx <= 2 + (row >> 1); dx++) {
+    if (!mechanismAir(w, x + dx, y + row)) continue
+    ctx.globalAlpha = 0.09 * (1 - row / 10)
+    ctx.fillRect(x + dx, y + row, 1, 1)
+  }
+  ctx.globalAlpha = 0.55
+  ctx.fillStyle = pal.dust
+  for (var i = 0; i < 3; i++) {
+    var mx = x + Math.round(Math.sin(w.ticks * 0.018 + seed + i * 2) * 3)
+    var my = y + (w.ticks * 0.035 + seed + i * 3) % 8
+    if ((w.res || 1) >= 2) moteFineRect(ctx, w, mx, Math.floor(my * 2) / 2, 0.5, 0.5)
+    else if (mechanismAir(w, mx, Math.floor(my))) ctx.fillRect(mx, Math.floor(my), 1, 1)
+  }
+}
+
+function drawExitDataBack(ctx, pal, x, y, ww, hh) {
+    // A rack door: a heavy frame, a strip of status lights across the top,
+    // and a badge reader by the handle.
+    ctx.fillRect(x - 4, y - 6, ww + 8, 4)
+    ctx.fillRect(x - 4, y - 2, 3, hh + 2)
+    ctx.fillRect(x + ww + 1, y - 2, 3, hh + 2)
+    ctx.fillStyle = pal.decorLit
+    for (var sl = 0; sl < ww + 4; sl += 3) ctx.fillRect(x - 2 + sl, y - 5, 1, 1)
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(x + ww + 1, y + hh / 2 - 2, 3, 4)
 }
