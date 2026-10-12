@@ -1043,3 +1043,5 @@ so it now asks only that the boulder moved. `sim play` 95 / 88; check passes
 
 **Next.** Decor at finer pixels (spires, tufts, clumps are the chunkiest
 thing left); look for a hero or mechanic gap.
+
+**Deployed** after 44 (name="build" content="f793ad70"): Ruins boulder, riveted hatch. Browser check clean.
