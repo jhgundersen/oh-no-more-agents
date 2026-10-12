@@ -1625,3 +1625,9 @@ stay below 30; the largest is `drawActors` at 21.9.
 
 **Next.** Watch these short effects in crowded colonies on the panel and page
 before adding more detail; keep the mechanism silhouettes readable at res 1.
+
+*Reviewed and merged by the loop:* written by Codex (`codex/mechanisms`).
+Looked at its before/after sheet frame by frame, zoomed on ice and
+transporters: the beamed agent now dissolves as a cyan outline climbing the
+column and re-forms on arrival; the thaw shards and drips read clearly.
+Codex's seeded comparison kept Cavern / Frost / Trench frames identical.
