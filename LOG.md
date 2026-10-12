@@ -2165,3 +2165,9 @@ is below 30; `drawAgent` 88.5 → 21.5.
 
 **Next.** Watch the fidgets in a long-running colony, especially crowded lift
 queues. No push, deploy or sibling-copy update.
+
+*Reviewed and merged by the loop:* written by Codex (`codex/idle`). Sheet of
+all five idle roles over time: tap / watch / fold for the blocker (the fold
+is brief, so a blocker still reads as one), phone / glance / yawn in a lift
+queue, drumming and tie-straightening when held at a hazard. Non-idle frames
+identical per Codex's seeded check; over 30: 30 → 29.
