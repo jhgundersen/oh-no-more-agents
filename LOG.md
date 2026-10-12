@@ -1825,7 +1825,6 @@ Codex's seeded check: 1,198 frames with no recent defeat identical.
 
 **Deployed** after 66 (name="build" content="ca21c87b"): enemy animation and defeats. Browser check clean.
 
-<<<<<<< HEAD
 ## 67 — 2026-10-12 · Crap: the untested rules
 
 **Why.** Several functions scored high on CRAP not because they are complex
@@ -1845,8 +1844,8 @@ house in every biome at both resolutions.
 **Checked.** Over 30: 37 → 31 — and four of those 31 are `tools/simcheck`
 CLI commands and the worker's `readStats`, which the tests never run. No
 game code changed.
-=======
-## 67 — 2026-10-12 · A little air, a little interface
+
+## 68 — 2026-10-12 · A little air, a little interface
 
 **Why.** The sky's portrait and captions were flat rectangles, the mission
 could collide with the special's name, and an event blinked its entire message
@@ -1897,7 +1896,6 @@ There is no dedicated special release tick or level-end tick on the world:
 the card enters from level ticks and yields to dated notices, rather than
 inventing either timestamp. The existing telegraph/flash durations (75/40)
 are mirrored in Draw; keep those together if the simulation durations change.
->>>>>>> codex/skyband
 
 *Reviewed and merged by the loop:* written by Codex (`codex/skyband`).
 Before/after sheet across card, mission, every event phase, stand-down,
