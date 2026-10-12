@@ -90,3 +90,28 @@ test("every special tries its own way out of a stuck spot without throwing", () 
     assert.equal(typeof ag.state, "string", spec.id)
   }
 })
+
+test("Frost's powder snow lets a longer fall land, and the colony knows it", () => {
+  const frost = S.generate(3, 0, 3), cavern = S.generate(1, 0, 3)
+  assert.equal(frost.biome, "Frost")
+  assert.ok(S.killingFall(frost) > S.killingFall(cavern))
+  assert.equal(S.killingFall(cavern), S.SAFE_FALL)
+})
+
+test("a graze stuns and knocks back; a second one, or a lethal shot, kills", () => {
+  const w = S.generate(13, 0, 3)
+  const ag = floorAgent(w, 40)
+  const lost = w.lost
+  S.woundFriendly(w, ag, 45, false)
+  assert.equal(ag.state, "stunned")
+  assert.equal(ag.dir, -1, "knocked away from the shot")
+  assert.ok(!ag.gone)
+  S.woundFriendly(w, ag, 45, false)
+  assert.ok(ag.gone)
+  assert.equal(w.lost, lost + 1)
+  const other = floorAgent(w, 30)
+  S.woundFriendly(w, other, 20, true)
+  assert.ok(other.gone)
+  S.woundFriendly(w, other, 20, true)
+  assert.equal(w.lost, lost + 2, "no double count")
+})

@@ -223,3 +223,17 @@ test("the guard house draws in every biome at both resolutions", async () => {
     assert.notEqual(Buffer.from(img.buf).toString("base64"), blank, biome)
   }
 })
+
+test("an operator's drones launch, hunt and are resolved one way or another", () => {
+  for (const [level, seed] of [[24, 313], [42, 547], [78, 1015]]) {
+    const w = S.generate(level, 0, seed)
+    let launched = 0
+    while (!w.done && w.ticks < 6000) {
+      S.step(w)
+      launched = Math.max(launched, w.enemies.filter(e => e.kind === "drone").length)
+    }
+    assert.ok(w.done, `level ${level} finished`)
+    assert.ok(launched > 0, `level ${level} launched a drone`)
+    assert.ok(w.saved + w.lost <= w.released)
+  }
+})

@@ -181,3 +181,19 @@ test("Rubber Duck's duck and its squeak draw, asked and answered", async () => {
     assert.notEqual(Buffer.from(img.buf).toString("base64"), blank)
   }
 })
+
+test("powder bursts draw for a long landing in Frost and not after", async () => {
+  const { canvas, themeOf } = await import("../tools/render.js")
+  const D = loadCore("Draw.js"), P = loadCore("Palette.js")
+  const theme = themeOf("tokyo-night"), w = S.generate(3, 0, 3)
+  const ag = S.spawn(w)
+  ag.x = 50; ag.y = 30; ag.landedAt = 100; ag.landedFrom = 15
+  w.agents = [ag]
+  for (const [age, drawn] of [[0, true], [8, true], [16, false]]) {
+    w.ticks = 100 + age
+    const img = canvas(400, 248, theme.background)
+    const blank = Buffer.from(img.buf).toString("base64")
+    D.drawPowderBursts(img.ctx, w, P.build(theme.theme, 3))
+    assert.equal(Buffer.from(img.buf).toString("base64") !== blank, drawn, `age ${age}`)
+  }
+})

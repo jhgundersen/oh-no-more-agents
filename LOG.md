@@ -1997,3 +1997,25 @@ the mildest of the four. All enemy levels 89.6 → 88.9%. `sim play` 97% /
 90% (unchanged). Deploying 70–71.
 
 **Deployed** after 71 (name="build" content="68437f95"): red-team balance. Browser check clean.
+
+## 72 — 2026-10-12 · Frost: powder snow
+
+**Why.** Frost was one of two biomes left without a mechanism, and the lesson
+of iteration 54 was to open routes, not close them. Deep snow opens one: the
+drop the colony could not take.
+
+**Changed.** `killingFall` — the one number every fall and every edge
+decision reads — is `SAFE_FALL + 8` in Frost. Draw: `drawPowderBursts`, a
+spray of snow off a long landing.
+
+**Checked.** 800 Frost plays on / off: umbrellas spent 8.43 → 2.91 a level,
+splats 13 → 5, avg ticks 1274 → 1231, home 94.51 → 94.27% (within noise).
+The visible change is the colony stepping off ledges into the snow instead
+of opening umbrellas. `sim play` 97% / 90%; `inert` passes.
+
+**Also.** Two functions went over 30 for coverage, not complexity:
+`woundFriendly` (its graze path went unused in play once every hostile shot
+became lethal in 71 — one caller still grazes) and `stepDrone` (the play
+sample stopped reaching an operator after the hero list grew). Tests for
+both: a graze, a second graze, a lethal shot and no double count; three
+operator levels played to the end with drones launched. Over 30: 31.

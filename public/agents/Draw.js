@@ -2338,6 +2338,7 @@ function drawActors(ctx, w, pal, opts) {
   if (w.reloadFx) drawReloadTrail(ctx, w, w.reloadFx)
   if (w.debugFx) drawDebugFx(ctx, w, w.debugFx)
 
+  if (w.biome === "Frost") drawPowderBursts(ctx, w, pal)
   for (var i = 0; i < w.agents.length; i++) {
     var ag = w.agents[i]
     if (ag.gone) { drawDeath(ctx, w, pal, ag); continue }
@@ -6025,6 +6026,26 @@ function drawBeamArrival(ctx, w, ag) {
     return true
   }
   return false
+}
+
+// Frost's powder snow (Sim's killingFall): a long drop ends in a burst of
+// snow thrown up round the landing instead of a splat — the only sign that the
+// colony stepped off that ledge on purpose.
+var POWDER_TICKS = 16
+function drawPowderBursts(ctx, w, pal) {
+  var C = w.k.CELL
+  ctx.fillStyle = pal.decorLit
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i], age = w.ticks - (ag.landedAt === undefined ? -99 : ag.landedAt)
+    if (ag.gone || age < 0 || age >= POWDER_TICKS || (ag.landedFrom || 0) < 6) continue
+    var cx = ag.x * C, by = (ag.y + 1) * C
+    ctx.globalAlpha = 1 - age / POWDER_TICKS
+    for (var k = 0; k < 10; k++) {
+      var vx = ((k * 7) % 11 - 5) * 0.45, vy = -0.9 - (k % 3) * 0.35
+      ctx.fillRect(Math.round(cx + vx * age), Math.round(by + vy * age + age * age * 0.06), k % 2 + 1, 1)
+    }
+  }
+  ctx.globalAlpha = 1
 }
 
 // A colleague in the Ice Cave's ice (Sim's `w.frozen`): the ordinary sprite,

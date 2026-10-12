@@ -255,7 +255,15 @@ function submerged(w) { return w.biome === "Trench" }
 // `simcheck inert` and the height rigs build worlds by hand, and a constant
 // mutated per level is a constant that leaks between them.
 function fallSpeed(w) { return w.submerged ? SINK_SPEED : FALL_SPEED }
-function killingFall(w) { return w.submerged ? Infinity : SAFE_FALL }
+// Frost's own mechanism: powder snow. Every floor is under a deep drift, so a
+// fall lands soft — further than anywhere else before it kills. The one number
+// read by every fall and every edge decision, so the colony knows it too: it
+// steps off drops here that it would bridge or umbrella anywhere else.
+var POWDER_FALL = 8       // extra cells of fall the snow absorbs
+function killingFall(w) {
+  if (w.submerged) return Infinity
+  return w.biome === "Frost" ? SAFE_FALL + POWDER_FALL : SAFE_FALL
+}
 
 var TRAITS = {
   steady:   { label: "steady",   turnLimit: 3, fallMargin: 0, bridgeAt: 8,  bashFirst: false, blockBias: 0, buildCap: 2, noFloat: false, standDown: 0, digBias: 0, pace: 1 },

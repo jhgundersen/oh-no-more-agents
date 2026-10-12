@@ -406,6 +406,16 @@ Collapse's copies both bump `toRelease` and `released`. Copies used not to,
 so a level could report more home than it released — the play test caught it
 on level 19 once the pads changed that level's run.
 
+## Frost
+
+Powder snow (`killingFall`, `POWDER_FALL`). In Frost a fall kills only past
+`SAFE_FALL + 8`: the same number is read by the fall itself and by every edge
+decision, so the colony steps off drops it would bridge or umbrella anywhere
+else. Draw throws up a burst of snow on a long landing (`drawPowderBursts`).
+Measured over 800 Frost plays: umbrellas spent 8.4 → 2.9 a level, splats
+13 → 5, levels ~3% shorter, home 94.5 → 94.3% (noise). Tried before it and
+reverted: thin ice over chasms (iteration 54) — it closed a route.
+
 ## Staying current
 
 A tab is left open for days, so a deploy has to reach it without anyone pressing
