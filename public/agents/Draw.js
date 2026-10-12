@@ -3812,15 +3812,14 @@ function drawExitGate(ctx, w, pal) {
   ctx.globalAlpha = 1
 }
 
-// Each of the thirty-four dangers gets its own fixture and effect; a level may
+// Each danger gets its own fixture and effect; a level may
 // now contain several, and shared silhouettes would turn that into visual soup.
 // A hazard you cannot tell from the last one is, from where the viewer sits,
 // the same hazard.
 //
-// Three states worth telling apart at a glance: dormant is the fixture and a
-// warning stripe, winding up adds a blinking telegraph, and firing shows the
-// exact projectile, beam or impact path. The telegraph is the only reason a
-// danger sitting on the route is fair, so it is drawn to be unmissable.
+// Charge stays visible throughout, builds from the fixture, and never borrows
+// the full lethal effect. Fire snaps; the first twelve rest ticks settle.
+// All animation is derived from the phase clock, never stored on the world.
 
 // A triangle standing on its base, or hanging from it. Teeth, spikes, jaws and
 // stalactite-shaped things are all this.
@@ -3859,15 +3858,86 @@ function drawHazardKind(ctx, w, pal, h) {
   var wide = x1 - x0, tall = y1 - y0
   var live = h.phase === "fire", winding = h.phase === "charge"
   var t = w.ticks, seed = h.zx0
-  var show = live || (winding && Math.floor(t / 4) % 2 === 0)
-  var hot = live ? pal.fireHot : pal.warn
+  var progress = winding ? Math.min(1, h.t / (HAZARD_CHARGE[h.kind] || 1)) : 0
+  var cool = h.phase === "rest" && !h.throttled && h.fired > 0 ? Math.max(0, 1 - h.t / 12) : 0
+  var show = live || winding
+  var hot = live || (winding && progress > 0.65) ? pal.fireHot : pal.warn
   // The frame every drawing below is measured against, worked out once.
   var geo = { C: C, x0: x0, x1: x1, y0: y0, y1: y1, cx: cx, wide: wide, tall: tall,
-    live: live, winding: winding, t: t, seed: seed, show: show, hot: hot }
+    live: live, winding: winding, t: t, seed: seed, show: show, hot: hot,
+    progress: progress, cool: cool }
   var draw = HAZARD_DRAW[h.kind] || drawHzDefault
   draw(ctx, w, pal, h, geo)
   var fine = (w.res || 1) >= 2 && HAZARD_FINE[h.kind]
   if (fine) fine(ctx, w, pal, h, geo)
+}
+
+// Visual wind-up lengths only; test/hazards.test.js guards this mirror of the
+// simulation timings. Draw cannot call hazardSpec in the panel's QML scope.
+var HAZARD_CHARGE = {
+  gun: 16, sentry: 34, turret: 18, darts: 18, flame: 30, tesla: 24, sniper: 44,
+  lasergrid: 30, sweeper: 26, tripwire: 20, spikes: 16, beartrap: 8, sawblade: 20,
+  grinder: 24, crusher: 34, pendulum: 28, geyser: 30, rockfall: 36, piston: 18,
+  echobat: 24, scarab: 18, snowball: 28, molten: 26, hotaisle: 26, scorpion: 22,
+  snake: 20, spores: 30, vinelock: 14, icicle: 32, frostjet: 22, blackice: 12,
+  airlock: 34, servo: 18, packetloss: 24, stamper: 30, flywheel: 26, steamvent: 26,
+  sprinkler: 26, polisher: 22, shredder: 16, shark: 30, current: 26, vent: 28
+}
+
+// A small running light, then a filling bank of warning lamps. The tell is
+// solid even between pulses; a flash belongs to the first few fire ticks only.
+function hzLamp(ctx, pal, h, g, x, y) {
+  var n = g.winding ? 1 + Math.floor(g.progress * 3) : 1 + Math.ceil(g.cool * 2)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x, y, 4, 1)
+  ctx.fillStyle = g.show ? g.hot : pal.warn
+  ctx.globalAlpha = g.show || g.cool ? 1 : (0.25 + 0.25 * (Math.floor(g.t / 24) % 2))
+  ctx.fillRect(x, y, n, 1)
+  ctx.globalAlpha = 1
+  if (g.live && h.t < 3) {
+    ctx.fillStyle = pal.fireHot
+    ctx.fillRect(x - 1, y - 1, 6, 1)
+  }
+}
+
+// A pilot/drip at idle, pressure gathering at the outlet, a hot core on
+// release, then three short wisps. Whole pixels carry it; res 2 adds a glint.
+function hzPressure(ctx, w, pal, h, g, x, y, color) {
+  var strength = g.winding ? 0.4 + g.progress * 0.6 : g.cool
+  if (g.live) strength = 1
+  if (!g.show && !g.cool) strength = Math.floor(g.t / 24) % 2 * 0.2
+  ctx.fillStyle = color
+  ctx.globalAlpha = strength
+  for (var i = 0; i < 3; i++) {
+    var lift = (h.t + i * 3) % 9
+    ctx.fillRect(x - 2 + i * 2, y - 1 - lift, 1 + Math.round(strength), 1)
+  }
+  ctx.globalAlpha = 1
+  if ((w.res || 1) >= 2 && g.show) {
+    ctx.fillStyle = pal.fireHot
+    ctx.fillRect(x - 0.5, y - 0.5, 1, 0.5)
+  }
+}
+
+// Contact sparks/dust stay close to the impact, never claim another corridor.
+function hzImpact(ctx, pal, h, g, x, y, color) {
+  var energy = g.cool
+  if (g.live && h.t < 4) energy = 1 - h.t / 6
+  if (!energy) return
+  ctx.fillStyle = color
+  ctx.globalAlpha = energy
+  for (var i = 0; i < 4; i++) {
+    var side = i % 2 ? 1 : -1
+    ctx.fillRect(Math.round(x + side * (3 + (1 - energy) * 6 + (i >> 1) * 3)),
+      Math.round(y - 1 - (i >> 1) * 2 - energy * 2), 2, 1)
+  }
+  ctx.globalAlpha = 1
+}
+
+function hzStroke(g, full, windup) {
+  if (g.live) return full
+  if (g.cool) return Math.round(full * g.cool)
+  return g.winding ? Math.round(windup * (0.3 + g.progress * 0.7)) : 0
 }
 
 // Half-pixel detail at res 2 for the commonest fixtures, laid over the coarse
@@ -3889,11 +3959,11 @@ var HAZARD_FINE = {
     ctx.fillRect(g.x0 + 0.5, g.y1 - 5, 1, 0.5)                  // armed lamp on the post
   },
   beartrap: function (ctx, w, pal, h, g) {
-    if (g.show && g.live) return
+    if (g.live || g.cool > 0.5) return
     ctx.fillStyle = "#e9edf7"                                   // teeth along both jaws
     for (var j = 0; j < 5; j += 1) {
-      ctx.fillRect(g.x0 + j + 0.5, g.y1 - 3.5 - j, 0.5, 0.5)
-      ctx.fillRect(g.x1 - 1.5 - j, g.y1 - 3.5 - j, 0.5, 0.5)
+      ctx.fillRect(g.x0 + j + 0.5 + (g.winding ? Math.round(g.progress * 2) : 0), g.y1 - 3.5 - j, 0.5, 0.5)
+      ctx.fillRect(g.x1 - 1.5 - j - (g.winding ? Math.round(g.progress * 2) : 0), g.y1 - 3.5 - j, 0.5, 0.5)
     }
     ctx.fillStyle = pal.rigDark                                 // chain to the floor
     for (var c = 0; c < 4; c++) ctx.fillRect(g.cx + 1 + c, g.y1 - 0.5 - (c % 2) * 0.5, 0.5, 0.5)
@@ -3911,7 +3981,7 @@ var HAZARD_FINE = {
     ctx.fillRect(g.cx + 0.5, g.y0 + 2.5, 0.5, 0.5)              // glint on the lens
     ctx.fillStyle = pal.rigDark                                 // vents
     for (var v = 0; v < 3; v++) ctx.fillRect(g.x0 + 1 + v * 1.5, g.y0 + 0.5, 0.5, 1.5)
-    ctx.fillStyle = Math.floor(w.ticks / 9) % 2 ? "#ff5268" : "#5c1424"
+    ctx.fillStyle = g.show ? g.hot : (Math.floor(w.ticks / 24) % 2 ? "#ff5268" : "#5c1424")
     ctx.fillRect(g.x1 - 1.5, g.y0 + 0.5, 1, 0.5)                // status lamp
   }
 }
@@ -3952,6 +4022,8 @@ function drawHzGun(ctx, w, pal, h, geo) {
       for (var g = 0; g < tall; g += 5) ctx.fillRect(cx - 1, y0 + 13 + ((t * 4 + g) % tall), 2, 3)
     } else ctx.fillRect(cx - 1, y0 + 11, 2, 2)
   }
+  hzLamp(ctx, pal, h, geo, cx - 2, y0 + 2)
+  hzPressure(ctx, w, pal, h, geo, cx, y0 + 11, pal.rig)
 }
 
 function drawHzSentry(ctx, w, pal, h, geo) {
@@ -3961,13 +4033,16 @@ function drawHzSentry(ctx, w, pal, h, geo) {
   ctx.fillRect(x0, y0, wide, 6)
   ctx.fillStyle = pal.rigDark
   ctx.fillRect(x0 + 1, y0 + 6, wide - 2, 2)
-  ctx.fillStyle = show ? hot : pal.warn
+  ctx.fillStyle = show ? hot : (geo.cool ? pal.fire : pal.warn)
   ctx.fillRect(cx - 2, y0 + 2, 4, 3)             // lens
   if (show) {
     ctx.fillStyle = hot
     var sentryReach = 16 * C * h.dir
-    ctx.fillRect(Math.min(cx, cx + sentryReach), y0 + 4, Math.abs(sentryReach), live ? 2 : 1)
+    if (live) ctx.fillRect(Math.min(cx, cx + sentryReach), y0 + 4, Math.abs(sentryReach), 2)
+    else for (var sight = 0; sight < Math.abs(sentryReach); sight += 5)
+      ctx.fillRect(cx + sight * h.dir, y0 + 4, 1, 1)
   }
+  hzLamp(ctx, pal, h, geo, cx - 2, y0 + 1)
 }
 
 function drawHzTurret(ctx, w, pal, h, geo) {
@@ -3981,9 +4056,12 @@ function drawHzTurret(ctx, w, pal, h, geo) {
   ctx.fillRect(x0 + 1, y0 + 1, wide - 2, 1)
   if (show) {
     ctx.fillStyle = hot
-    ctx.fillRect(cx - 3, y0 + 9, live ? 2 : 1, tall - 9)
-    ctx.fillRect(cx + 3, y0 + 9, live ? 2 : 1, tall - 9)
+    var beam = live ? tall - 9 : 1 + Math.round(geo.progress * 4)
+    ctx.fillRect(cx - 3, y0 + 9, live ? 2 : 1, beam)
+    ctx.fillRect(cx + 3, y0 + 9, live ? 2 : 1, beam)
   }
+  hzLamp(ctx, pal, h, geo, cx - 2, y0 + 1)
+  hzPressure(ctx, w, pal, h, geo, cx, y0 + 9, pal.rig)
 }
 
 function drawHzDarts(ctx, w, pal, h, geo) {
@@ -3999,11 +4077,13 @@ function drawHzDarts(ctx, w, pal, h, geo) {
     ctx.fillStyle = hot
     // Darts in flight: short dashes marching away from the plate.
     for (var dd = 0; dd < 3; dd++) {
-      var dartTravel = ((h.t * 4 + dd * 13) % (11 * C)) * h.dir
-      var dx2 = cx + dartTravel
+      var dartTravel = live ? ((h.t * 4 + dd * 13) % (11 * C)) * h.dir : 0
+      var dx2 = live ? cx + dartTravel : x0 + 5 + Math.floor(geo.progress * 2)
       ctx.fillRect(dx2, y0 + 3 + dd * 3, live ? 5 : 2, 1)
     }
   }
+  hzLamp(ctx, pal, h, geo, x0, y0 + 1)
+  hzPressure(ctx, w, pal, h, geo, x0 + 5, y0 + 6, pal.rig)
 }
 
 function drawHzFlame(ctx, w, pal, h, geo) {
@@ -4016,12 +4096,13 @@ function drawHzFlame(ctx, w, pal, h, geo) {
   ctx.fillRect(cx - 3, y0 + 1, 6, 1)
   if (show) {
     // A cone that widens as it falls, with a hotter core.
-    for (var f = 0; f < (live ? tall - 7 : 5); f++) {
+    for (var f = 0; f < (live ? tall - 7 : 2 + Math.round(geo.progress * 4)); f++) {
       var fw = Math.round((wide / 2) * (0.25 + (f / tall) * (live ? 1.5 : 0.5)))
       ctx.fillStyle = f % 3 === Math.floor(t / 3) % 3 ? pal.fireHot : pal.fire
       ctx.fillRect(cx - fw, y0 + 7 + f, fw * 2, 1)
     }
   }
+  hzPressure(ctx, w, pal, h, geo, cx, y0 + 7, pal.fire)
 }
 
 function drawHzTesla(ctx, w, pal, h, geo) {
@@ -4035,9 +4116,16 @@ function drawHzTesla(ctx, w, pal, h, geo) {
   ctx.fillRect(cx - 4, y0, 8, 4)                     // ball on top
   if (show) {
     ctx.fillStyle = hot
-    hzBolt(ctx, cx, y0 + 2, x0, y1 - 4, seed + t, live ? 2 : 1)
-    hzBolt(ctx, cx, y0 + 2, x1, y1 - 4, seed + t + 3, live ? 2 : 1)
+    var arc = live ? tall - 6 : 1 + Math.round(geo.progress * 4)
+    hzBolt(ctx, cx, y0 + 2, live ? x0 : cx - arc, y0 + 2 + arc, seed + t, live ? 2 : 1)
+    hzBolt(ctx, cx, y0 + 2, live ? x1 : cx + arc, y0 + 2 + arc, seed + t + 3, live ? 2 : 1)
   }
+  ctx.fillStyle = geo.cool ? pal.warn : pal.rig
+  for (var coil = 0; coil < 3; coil++) {
+    if (geo.winding && coil < Math.ceil(geo.progress * 3)) ctx.fillStyle = geo.hot
+    ctx.fillRect(cx - 3, y1 - 5 - coil * 3, 6, 1)
+  }
+  hzPressure(ctx, w, pal, h, geo, cx, y0, pal.warn)
 }
 
 // --- snipe: one target, a long way off, one shot then a long reload -----
@@ -4065,6 +4153,8 @@ function drawHzSniper(ctx, w, pal, h, geo) {
       ctx.fillRect(Math.round(qx), Math.round(qy), live ? 2 : 1, live ? 2 : 1)
     }
   }
+  hzLamp(ctx, pal, h, geo, x0 + 4, y0 + 2)
+  hzPressure(ctx, w, pal, h, geo, x0 + 11, y0 + 5, pal.rig)
 }
 
 // --- beam: keeps its own schedule ---------------------------------------
@@ -4073,14 +4163,18 @@ function drawHzLasergrid(ctx, w, pal, h, geo) {
     live = geo.live, show = geo.show, hot = geo.hot
   ctx.fillStyle = pal.rig
   ctx.fillRect(x0, y0, wide, 3)
-  ctx.fillStyle = pal.rigDark
+  ctx.fillStyle = geo.cool ? pal.warn : pal.rigDark
   for (var e = x0 + 2; e < x1 - 1; e += 8) ctx.fillRect(e, y0 + 3, 3, 2)
   ctx.fillStyle = pal.warn
   ctx.fillRect(x0, y0 + 1, wide, 1)
   if (show) {
     ctx.fillStyle = hot
-    for (var b2 = x0 + 3; b2 < x1 - 1; b2 += 8) ctx.fillRect(b2, y0 + 5, live ? 2 : 1, tall - 5)
+    for (var b2 = x0 + 3; b2 < x1 - 1; b2 += 8) {
+      if (live) ctx.fillRect(b2, y0 + 5, 2, tall - 5)
+      else for (var aim = 0; aim < tall - 5; aim += 5) ctx.fillRect(b2, y0 + 5 + aim, 1, 1)
+    }
   }
+  hzLamp(ctx, pal, h, geo, geo.cx - 2, y0 + 1)
 }
 
 function drawHzSweeper(ctx, w, pal, h, geo) {
@@ -4092,15 +4186,16 @@ function drawHzSweeper(ctx, w, pal, h, geo) {
   ctx.fillRect(x0, y0, wide, 2)                      // the rail
   ctx.fillStyle = pal.rig
   ctx.fillRect(rail, y0, 8, 5)                       // the head
-  ctx.fillStyle = pal.warn
+  ctx.fillStyle = geo.cool ? pal.fire : pal.warn
   ctx.fillRect(rail + 1, y0 + 1, 6, 1)
   if (show) {
     ctx.fillStyle = hot
     for (var sv = 0; sv < tall - 5; sv++) {
       var lean = Math.round(sv * Math.sin(t * 0.05) * 0.5)
-      ctx.fillRect(rail + 3 + lean, y0 + 5 + sv, live ? 3 : 1, 1)
+      if (live || sv % 5 === 0) ctx.fillRect(rail + 3 + lean, y0 + 5 + sv, live ? 3 : 1, 1)
     }
   }
+  hzLamp(ctx, pal, h, geo, rail + 2, y0 + 1)
 }
 
 function drawHzTripwire(ctx, w, pal, h, geo) {
@@ -4115,6 +4210,7 @@ function drawHzTripwire(ctx, w, pal, h, geo) {
     ctx.fillStyle = pal.fireHot
     for (var tw = 0; tw < wide; tw += 3) ctx.fillRect(x0 + tw, y1 - 9 - ((t + tw) % 4), 2, 2)
   }
+  hzLamp(ctx, pal, h, geo, x0, y1 - 4)
 }
 
 // --- plate: armed by being stood on -------------------------------------
@@ -4125,10 +4221,12 @@ function drawHzSpikes(ctx, w, pal, h, geo) {
   ctx.fillRect(x0, y1 - 3, wide, 3)                  // the plate
   ctx.fillStyle = pal.warn
   ctx.fillRect(x0 + 1, y1 - 2, wide - 2, 1)
-  if (show) {
+  if (show || geo.cool) {
     ctx.fillStyle = hot
-    for (var sp = x0 + 2; sp < x1 - 1; sp += 4) hzTri(ctx, sp, y1 - 3, 2, live ? 10 : 3, -1)
+    for (var sp = x0 + 2; sp < x1 - 1; sp += 4) hzTri(ctx, sp, y1 - 3, 2, hzStroke(geo, 10, 4), -1)
   }
+  hzLamp(ctx, pal, h, geo, geo.cx - 2, y1 - 2)
+  hzImpact(ctx, pal, h, geo, geo.cx, y1 - 3, pal.rig)
 }
 
 function drawHzBeartrap(ctx, w, pal, h, geo) {
@@ -4137,18 +4235,20 @@ function drawHzBeartrap(ctx, w, pal, h, geo) {
   // Jaws: open and waiting, or shut.
   ctx.fillStyle = pal.rig
   ctx.fillRect(cx - 1, y1 - 2, 2, 2)                 // the plate between them
-  ctx.fillStyle = show && live ? hot : pal.rigDark
-  if (show && live) {
+  ctx.fillStyle = show ? hot : pal.rigDark
+  if (live || geo.cool > 0.5) {
     hzTri(ctx, cx - 3, y1 - 2, 3, 7, -1)
     hzTri(ctx, cx + 3, y1 - 2, 3, 7, -1)
   } else {
     for (var jw = 0; jw < 5; jw++) {
-      ctx.fillRect(x0 + jw, y1 - 3 - jw, 2, 1)       // open, leaning out
-      ctx.fillRect(x1 - 2 - jw, y1 - 3 - jw, 2, 1)
+      ctx.fillRect(x0 + jw + (geo.winding ? Math.round(geo.progress * 2) : 0), y1 - 3 - jw, 2, 1)       // open, leaning out
+      ctx.fillRect(x1 - 2 - jw - (geo.winding ? Math.round(geo.progress * 2) : 0), y1 - 3 - jw, 2, 1)
     }
     ctx.fillStyle = pal.warn
     ctx.fillRect(cx - 2, y1 - 3, 4, 1)
   }
+  hzLamp(ctx, pal, h, geo, cx - 2, y1 - 2)
+  hzImpact(ctx, pal, h, geo, cx, y1 - 2, pal.rig)
 }
 
 function drawHzSawblade(ctx, w, pal, h, geo) {
@@ -4158,17 +4258,19 @@ function drawHzSawblade(ctx, w, pal, h, geo) {
   ctx.fillRect(x0 + 2, y1 - 3, wide - 4, 3)          // slot
   ctx.fillStyle = pal.warn
   ctx.fillRect(x0 + 3, y1 - 2, wide - 6, 1)
-  if (show) {
+  if (show || geo.cool) {
     // A disc rising out of the slot, teeth turning.
-    var rise = live ? 9 : 3
+    var rise = hzStroke(geo, 9, 5)
     var rad = Math.min(rise, 8)
-    ctx.fillStyle = hot
+    ctx.fillStyle = geo.cool ? pal.rig : hot
     for (var a2 = 0; a2 < 12; a2++) {
       var ang = (a2 / 12) * Math.PI * 2 + t * 0.25
       ctx.fillRect(Math.round(cx + Math.cos(ang) * rad), Math.round(y1 - 3 - rise / 2 + Math.sin(ang) * rad * 0.6), 2, 2)
     }
     ctx.fillRect(cx - 1, y1 - 4 - rise / 2, 2, 2)
   }
+  hzLamp(ctx, pal, h, geo, cx - 2, y1 - 2)
+  hzImpact(ctx, pal, h, geo, cx, y1 - 3, pal.warn)
 }
 
 function drawHzGrinder(ctx, w, pal, h, geo) {
@@ -4181,9 +4283,12 @@ function drawHzGrinder(ctx, w, pal, h, geo) {
   ctx.fillRect(cx - 1, y1 - 6, 2, 6)
   ctx.fillStyle = show ? hot : pal.warn
   for (var gr = 0; gr < wide; gr += 4) {
-    var off = (t * 2 + gr) % 4
+    var turn = live ? t * 2 : t * 0.08 + (geo.winding ? h.t * (0.42 + geo.progress * 0.5) : 0)
+    var off = (Math.floor(turn) + gr) % 4
     ctx.fillRect(x0 + gr + (gr < wide / 2 ? off : 3 - off), y1 - 7, 2, live ? 4 : 2)
   }
+  hzLamp(ctx, pal, h, geo, cx - 2, y1 - 3)
+  hzImpact(ctx, pal, h, geo, cx, y1 - 6, pal.warn)
 }
 
 // --- cycle: never triggers, never stops ---------------------------------
@@ -4191,7 +4296,7 @@ function drawHzCrusher(ctx, w, pal, h, geo) {
   var x0 = geo.x0, x1 = geo.x1, y0 = geo.y0, wide = geo.wide, tall = geo.tall,
     live = geo.live, winding = geo.winding, hot = geo.hot
   // A block on two rams, hanging high or driven down.
-  var drop = live ? tall - 8 : (winding ? 3 : 0)
+  var drop = hzStroke(geo, tall - 11, 3)
   ctx.fillStyle = pal.rigDark
   ctx.fillRect(x0 + 3, y0, 2, 4 + drop)
   ctx.fillRect(x1 - 5, y0, 2, 4 + drop)
@@ -4199,13 +4304,23 @@ function drawHzCrusher(ctx, w, pal, h, geo) {
   ctx.fillRect(x0, y0 + 4 + drop, wide, 7)
   ctx.fillStyle = pal.warn
   ctx.fillRect(x0 + 1, y0 + 5 + drop, wide - 2, 1)
+  hzLamp(ctx, pal, h, geo, geo.cx - 2, y0 + 1)
+  hzImpact(ctx, pal, h, geo, geo.cx, geo.y1, pal.rig)
+}
+
+function hzSwing(g, h) {
+  if (g.live) return Math.sin(h.t * 0.26)
+  if (g.winding) return -0.3 - g.progress * 0.65
+  if (g.cool) return Math.sin(h.t * 0.26) * g.cool
+  return Math.sin(g.t * 0.035) * 0.2
 }
 
 function drawHzPendulum(ctx, w, pal, h, geo) {
   var y0 = geo.y0, cx = geo.cx, wide = geo.wide, tall = geo.tall, t = geo.t,
     show = geo.show, hot = geo.hot
   // A blade on an arm, swinging from a pivot.
-  var sw = Math.sin(t * 0.06) * (wide / 2 - 2)
+  var swing = hzSwing(geo, h)
+  var sw = swing * (wide / 2 - 2)
   ctx.fillStyle = pal.rigDark
   ctx.fillRect(cx - 2, y0, 4, 3)                     // pivot
   ctx.fillStyle = pal.rig
@@ -4216,6 +4331,8 @@ function drawHzPendulum(ctx, w, pal, h, geo) {
     ctx.fillRect(Math.round(cx + (bx - cx) * pa / an), Math.round(y0 + 3 + (by - y0 - 3) * pa / an), 2, 2)
   ctx.fillStyle = show ? hot : pal.warn
   hzTri(ctx, bx, by + 5, 4, 6, -1)                   // the blade
+  hzLamp(ctx, pal, h, geo, cx - 2, y0)
+  hzImpact(ctx, pal, h, geo, bx, by + 5, pal.rig)
 }
 
 function drawHzGeyser(ctx, w, pal, h, geo) {
@@ -4227,12 +4344,13 @@ function drawHzGeyser(ctx, w, pal, h, geo) {
   for (var gg = x0 + 1; gg < x1 - 1; gg += 3) ctx.fillRect(gg, y1 - 3, 1, 3)
   if (show) {
     // A plume that billows wider the higher it gets.
-    for (var pu = 0; pu < (live ? tall - 4 : 4); pu++) {
+    for (var pu = 0; pu < (live ? tall - 4 : 2 + Math.round(geo.progress * 5)); pu++) {
       var pw = Math.round((wide / 2) * (0.3 + (pu / tall) * (live ? 1.4 : 0.4)))
       ctx.fillStyle = (pu + Math.floor(t / 2)) % 4 === 0 ? pal.fireHot : hot
       ctx.fillRect(cx - pw, y1 - 4 - pu, pw * 2, 1)
     }
   }
+  hzPressure(ctx, w, pal, h, geo, cx, y1 - 3, pal.decorLit)
 }
 
 function drawHzRockfall(ctx, w, pal, h, geo) {
@@ -4244,14 +4362,20 @@ function drawHzRockfall(ctx, w, pal, h, geo) {
   for (var cr = 0; cr < wide; cr += 5) ctx.fillRect(x0 + cr, y0 + 3, 3, 1)
   ctx.fillStyle = pal.warn
   ctx.fillRect(x0 + 2, y0 + 1, wide - 4, 1)
-  if (show) {
+  if (show || geo.cool) {
     // Rocks on their way down, at staggered heights.
     ctx.fillStyle = live ? pal.rig : pal.warn
     for (var rk = 0; rk < 4; rk++) {
-      var rockX = (h.zx0 + 0.5 + ((rk * 2.3 + h.fired) % Math.max(1, h.zx1 - h.zx0 + 1))) * C
-      var ry = (h.zy0 + ((h.t * 0.55 + rk * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))) * C
+      var rockX = (h.zx0 + 0.5 + ((rk * 2.3 + (live ? h.fired : 0)) % Math.max(1, h.zx1 - h.zx0 + 1))) * C
+      var ry = live ? (h.zy0 + ((h.t * 0.55 + rk * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))) * C
+        : (geo.cool ? geo.y1 - 2 : y0 + 3 + (rk % 2) + Math.round(geo.progress * 2))
       ctx.fillRect(rockX, ry, live ? 4 : 2, live ? 4 : 2)
     }
+  }
+  hzImpact(ctx, pal, h, geo, geo.cx, geo.y1, pal.rig)
+  if (!show && !geo.cool) {
+    ctx.fillStyle = pal.rig
+    ctx.fillRect(geo.cx, y0 + 4 + Math.floor(geo.t / 24) % 3, 1, 1)
   }
 }
 
@@ -4259,13 +4383,15 @@ function drawHzPiston(ctx, w, pal, h, geo) {
   var x0 = geo.x0, y0 = geo.y0, wide = geo.wide, tall = geo.tall,
     live = geo.live, winding = geo.winding, show = geo.show, hot = geo.hot
   // A ram in a housing, driven out sideways.
-  var ext = live ? wide - 6 : (winding ? 3 : 0)
+  var ext = hzStroke(geo, wide - 8, 4)
   ctx.fillStyle = pal.rig
   ctx.fillRect(x0, y0, 5, tall)                      // housing
   ctx.fillStyle = pal.rigDark
   ctx.fillRect(x0 + 5, y0 + 2, ext, tall - 4)        // the ram
   ctx.fillStyle = show ? hot : pal.warn
   ctx.fillRect(x0 + 5 + ext, y0 + 1, 3, tall - 2)    // the head
+  hzLamp(ctx, pal, h, geo, x0, y0 + 1)
+  hzImpact(ctx, pal, h, geo, x0 + 5 + ext, geo.y1, pal.warn)
 }
 
 // --- field: always live -------------------------------------------------
@@ -4308,13 +4434,15 @@ function drawHzEchobat(ctx, w, pal, h, geo) {
   ctx.fillStyle = pal.rigDark
   ctx.fillRect(cx - 2, y0, 4, 5)
   ctx.fillStyle = show ? hot : pal.rig
-  hzTri(ctx, cx - 5, y0 + 4, 5, 4, 1)
-  hzTri(ctx, cx + 5, y0 + 4, 5, 4, 1)
+  var wing = geo.winding ? 3 + Math.round(geo.progress * 3) : 5
+  var breath = Math.floor(t / 24) % 2
+  hzTri(ctx, cx - wing, y0 + 4 + breath, wing, 4, 1)
+  hzTri(ctx, cx + wing, y0 + 4 + breath, wing, 4, 1)
   // The screech, out to where it actually kills: three rings travelling to
   // the full reach either side. It used to stop at five cells while the
   // lethal zone ran to fifteen — the colony died to something nobody could see.
   if (show) {
-    var span = (h.reach || 9) * geo.C
+    var span = geo.live ? (h.reach || 9) * geo.C * Math.min(1, h.t / 18) : 3 + geo.progress * 5
     ctx.fillStyle = hot
     for (var eb = 1; eb <= 3; eb++) {
       var er = Math.round(((t + eb * 6) % 18) / 18 * span) + 3
@@ -4325,6 +4453,7 @@ function drawHzEchobat(ctx, w, pal, h, geo) {
     }
     ctx.globalAlpha = 1
   }
+  hzPressure(ctx, w, pal, h, geo, cx, y0 + 8, pal.rig)
 }
 
 function drawHzScarab(ctx, w, pal, h, geo) {
@@ -4333,11 +4462,13 @@ function drawHzScarab(ctx, w, pal, h, geo) {
   ctx.fillStyle = pal.rigDark
   ctx.fillRect(x0, y1 - 2, wide, 2)
   for (var sca = 0; sca < 5; sca++) {
-    var scx = cx + h.dir * ((sca * 7 + (live ? t * 2 : t >> 2)) % (10 * C))
+    var scx = live ? cx + h.dir * ((sca * 7 + t * 2) % (10 * C))
+      : x0 + 2 + sca * 3 + (geo.winding ? Math.round(geo.progress * 2) : Math.floor(t / 30) % 2)
     ctx.fillStyle = show ? hot : pal.rig
     ctx.fillRect(scx, y1 - 5 - (sca % 2), 3, 2)
     ctx.fillRect(scx + 1, y1 - 7 - (sca % 2), 1, 2)
   }
+  hzImpact(ctx, pal, h, geo, cx, y1 - 2, pal.rig)
 }
 
 function drawHzSnowball(ctx, w, pal, h, geo) {
@@ -4347,11 +4478,14 @@ function drawHzSnowball(ctx, w, pal, h, geo) {
   ctx.fillRect(x0, y0, wide, 2)
   ctx.fillStyle = show ? hot : pal.decorLit
   for (var sn = 0; sn < 4; sn++) {
-    var snowX = (h.zx0 + 0.5 + ((sn * 2.3 + h.fired) % Math.max(1, h.zx1 - h.zx0 + 1))) * C
-    var sny = (h.zy0 + ((h.t * 0.55 + sn * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))) * C
+    if (!show && !geo.cool && sn > 0) continue
+    var snowX = (h.zx0 + 0.5 + ((sn * 2.3 + (live ? h.fired : 0)) % Math.max(1, h.zx1 - h.zx0 + 1))) * C
+    var sny = live ? (h.zy0 + ((h.t * 0.55 + sn * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))) * C
+        : (geo.cool ? geo.y1 - 2 : y0 + 3 + (sn % 2) + Math.round(geo.progress * 2) + (!show ? Math.floor(geo.t / 24) % 2 : 0))
     var snr = live ? 4 : 2
     ctx.fillRect(snowX - snr, sny - snr, snr * 2, snr * 2)
   }
+  hzImpact(ctx, pal, h, geo, geo.cx, geo.y1, pal.decorLit)
 }
 
 function drawHzMolten(ctx, w, pal, h, geo) {
@@ -4361,10 +4495,13 @@ function drawHzMolten(ctx, w, pal, h, geo) {
   ctx.fillRect(x0, y0, wide, 3)
   ctx.fillStyle = show ? hot : pal.warn
   for (var ml = 0; ml < 4; ml++) {
-    var moltenX = (h.zx0 + 0.5 + ((ml * 2.3 + h.fired) % Math.max(1, h.zx1 - h.zx0 + 1))) * C
-    var mly = (h.zy0 + ((h.t * 0.55 + ml * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))) * C
+    if (!show && !geo.cool && ml > 0) continue
+    var moltenX = (h.zx0 + 0.5 + ((ml * 2.3 + (live ? h.fired : 0)) % Math.max(1, h.zx1 - h.zx0 + 1))) * C
+    var mly = live ? (h.zy0 + ((h.t * 0.55 + ml * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))) * C
+        : (geo.cool ? geo.y1 - 2 : y0 + 3 + (ml % 2) + Math.round(geo.progress * 2) + (!show ? Math.floor(geo.t / 24) % 2 : 0))
     ctx.fillRect(moltenX, mly, live ? 3 : 1, live ? 5 : 2)
   }
+  hzImpact(ctx, pal, h, geo, geo.cx, geo.y1, pal.fire)
 }
 
 function drawHzVinelock(ctx, w, pal, h, geo) {
@@ -4374,9 +4511,10 @@ function drawHzVinelock(ctx, w, pal, h, geo) {
   ctx.fillRect(x0, y1 - 2, wide, 2)
   ctx.fillStyle = show ? hot : pal.decor
   for (var vl = 1; vl < wide; vl += 4) {
-    var vh = live ? tall - 2 : (winding ? 5 : 2)
-    for (var vv = 0; vv < vh; vv++) ctx.fillRect(x0 + vl + ((vv >> 2) % 2), y1 - 3 - vv, 2, 1)
+    var vh = 2 + hzStroke(geo, tall - 4, 6)
+    for (var vv = 0; vv < vh; vv++) ctx.fillRect(x0 + vl + ((vv >> 2) % 2) + (vv > 0 ? Math.round(Math.sin(geo.t * 0.06 + vl) * 0.6) : 0), y1 - 3 - vv, 2, 1)
   }
+  hzImpact(ctx, pal, h, geo, geo.cx, y1 - 4, pal.decor)
 }
 
 function drawHzBlackice(ctx, w, pal, h, geo) {
@@ -4390,6 +4528,14 @@ function drawHzBlackice(ctx, w, pal, h, geo) {
     ctx.fillStyle = hot
     hzTri(ctx, cx, y1 - 2, 5, 8, -1)
   }
+  ctx.fillStyle = show ? hot : pal.decorLit
+  var crack = geo.winding ? 2 + Math.round(geo.progress * 7) : 2
+  for (var frost = 0; frost < 3; frost++) {
+    var fx = x0 + 3 + frost * 7 + (Math.floor(geo.t / 30) % 2)
+    ctx.fillRect(fx, y1 - 3, crack, 1)
+    if (geo.winding) ctx.fillRect(fx + crack - 1, y1 - 5, 1, 2)
+  }
+  hzImpact(ctx, pal, h, geo, cx, y1 - 3, pal.decorLit)
 }
 
 function drawHzPacketloss(ctx, w, pal, h, geo) {
@@ -4399,11 +4545,14 @@ function drawHzPacketloss(ctx, w, pal, h, geo) {
   ctx.fillRect(x0, y0, wide, 3)
   ctx.fillStyle = show ? hot : pal.warn
   for (var pk = 0; pk < 18; pk++) {
-    if ((pk + Math.floor(t / 3)) % 4 === 0) continue
+    if (!show && !geo.cool && pk > 1) continue
+    if (geo.winding && pk > 3 + Math.floor(geo.progress * 14)) continue
+    if (live && (pk + Math.floor(t / 3)) % 4 === 0) continue
     var pkx = x0 + ((pk * 7) % Math.max(1, wide))
-    var pky = y0 + 4 + ((pk * 11 + t) % Math.max(1, tall - 5))
+    var pky = y0 + 4 + ((pk * 11 + (live ? t : Math.floor(t / 12))) % Math.max(1, tall - 5))
     ctx.fillRect(pkx, pky, live ? 3 : 1, live ? 2 : 1)
   }
+  hzLamp(ctx, pal, h, geo, geo.cx - 2, y0 + 1)
 }
 
 // --- jungle -------------------------------------------------------------
@@ -4427,7 +4576,7 @@ function drawHzScorpion(ctx, w, pal, h, geo) {
   ctx.fillRect(front + sdir * 1 - (sdir < 0 ? 2 : 0), floorY - 1, 3, 1)
   // The tail: four segments rising from the back. Each phase pushes the hook
   // further forward over the body.
-  var reach = live ? 1 : (winding ? -0.3 + ((Math.floor(t / 2) % 2) * 0.1) : 0.35)
+  var reach = live ? 1 : (winding ? -0.35 - geo.progress * 0.45 : 0.18 + Math.sin(t * 0.04) * 0.18)
   ctx.fillStyle = pal.rigDark
   var tx = back, ty = floorY - 3
   for (var sg = 0; sg < 4; sg++) {
@@ -4439,6 +4588,7 @@ function drawHzScorpion(ctx, w, pal, h, geo) {
   var sty = live ? floorY - 4 : ty + 1
   ctx.fillStyle = show ? hot : pal.warn
   ctx.fillRect(stx - (sdir < 0 ? 1 : 0), sty, 2, 2)                           // sting
+  hzImpact(ctx, pal, h, geo, front, floorY, pal.rig)
 }
 
 // A rack fan on the wall: a round grille with blades that turn slowly at
@@ -4452,19 +4602,21 @@ function drawHzHotaisle(ctx, w, pal, h, geo) {
   ctx.fillRect(x0, y0 + 2, wide, 10)
   ctx.fillStyle = pal.rig
   ctx.fillRect(x0 + 1, y0 + 3, wide - 2, 8)
-  var spin = t * (live ? 0.9 : (winding ? 0.5 : 0.08))
+  var spin = t * 0.08 + (winding ? h.t * geo.progress * 0.25 : 0)
+  if (live) spin = t * 0.9
   ctx.fillStyle = show ? hot : pal.rigDark
   for (var b = 0; b < 3; b++) {
     var a = spin + b * 2.094
     ctx.fillRect(Math.round(cx + Math.cos(a) * 3) - 1, Math.round(cy + Math.sin(a) * 3) - 1, 2, 2)
   }
   ctx.fillRect(cx - 1, cy - 1, 2, 2)
-  if (!live) return
+  hzLamp(ctx, pal, h, geo, x0 + 1, y0 + 2)
+  if (!live && !geo.cool) return
   ctx.fillStyle = hot
   var reach = (h.reach || 10) * C
   for (var s = 0; s < 4; s++) {
     var sx = cx + h.dir * (((t * 3 + s * reach / 4) % reach) + 4)
-    ctx.globalAlpha = 0.7 * (1 - s / 5)
+    ctx.globalAlpha = 0.7 * (1 - s / 5) * (live ? 1 : geo.cool)
     ctx.fillRect(Math.min(sx, sx + h.dir * 6), cy - 3 + (s % 2) * 4, 6, 1)
   }
   ctx.globalAlpha = 1
@@ -4495,7 +4647,7 @@ function drawHzSnake(ctx, w, pal, h, geo) {
   // The head, at the end it is facing, raised a little when it is winding up
   // and thrown forward when it strikes.
   var hx = sdir > 0 ? x1 - 4 : x0
-  var rear2 = live ? 0 : (winding ? 4 : 2)
+  var rear2 = live ? 0 : (winding ? 3 + Math.round(geo.progress * 3) : 2 + Math.floor(geo.t / 30) % 2)
   var hy = bodyY - rear2 - 2
   if (winding || live) {
     // The raised neck curving up out of the coil.
@@ -4516,6 +4668,7 @@ function drawHzSnake(ctx, w, pal, h, geo) {
     ctx.fillStyle = pal.warn
     ctx.fillRect(hx + (sdir > 0 ? 5 : -3), hy + 1, 3, 1)  // flicking tongue
   }
+  hzImpact(ctx, pal, h, geo, hx, y1 - 1, pal.decorDim)
 }
 
 // --- Trench -------------------------------------------------------------
@@ -4530,12 +4683,21 @@ function drawHzShark(ctx, w, pal, h, geo) {
   // one run when it strikes.
   var swim = live
     ? (h.t / Math.max(1, 16)) * wide           // the run
-    : (winding ? wide * 0.5 : (0.5 + 0.5 * Math.sin(t * 0.018 + seed)) * (wide - 22))
+    : (winding ? wide * (0.4 + geo.progress * 0.1) : (0.5 + 0.5 * Math.sin(t * 0.018 + seed)) * (wide - 22))
   var shdir = h.zx0 % 2 === 0 ? 1 : -1
   var shx = Math.round(shdir > 0 ? x0 + swim : x1 - swim - 22)
-  var shy = Math.round(y0 + tall * 0.42 + Math.sin(t * 0.05) * 2)
+  var shy = Math.round(y0 + tall * 0.42 + Math.sin(t * 0.05) * (winding ? 0 : 2))
   var nose = shdir > 0 ? shx + 22 : shx
 
+  var pose = { x: shx, y: shy, dir: shdir, nose: nose }
+  drawSharkBody(ctx, pal, geo, pose)
+  drawSharkFins(ctx, pal, geo, pose)
+  drawSharkJaw(ctx, pal, geo, pose)
+  hzPressure(ctx, w, pal, h, geo, shdir > 0 ? shx - 1 : shx + 22, shy + 2, pal.bubble)
+}
+
+function drawSharkBody(ctx, pal, g, pose) {
+  var shx = pose.x, shy = pose.y, shdir = pose.dir, live = g.live, hot = g.hot
   // Body. The first version drew a symmetric wedge and it read, unmistakably,
   // as a submarine — which in this biome is a real confusion, because there
   // is a submarine on the roster. A fish is not symmetric: the back is a
@@ -4563,7 +4725,10 @@ function drawHzShark(ctx, w, pal, h, geo) {
     var bbelly = Math.round(2.0 * bgirth + (balong > 0.15 && balong < 0.7 ? 1 : 0))
     ctx.fillRect(shx + bk, shy + bbelly, 1, 1)
   }
+}
 
+function drawSharkFins(ctx, pal, g, pose) {
+  var shx = pose.x, shy = pose.y, shdir = pose.dir, nose = pose.nose, live = g.live, hot = g.hot
   // The fins. A crescent tail with the upper lobe longer than the lower —
   // the one detail that says shark rather than fish — plus a tall dorsal set
   // forward of centre and a pectoral swept back under it.
@@ -4583,6 +4748,10 @@ function drawHzShark(ctx, w, pal, h, geo) {
     ctx.fillRect(nose + (shdir > 0 ? -6 - gs * 2 : 6 + gs * 2), shy - 1, 1, 3)
   ctx.fillStyle = pal.eye
   ctx.fillRect(shdir > 0 ? nose - 4 : nose + 3, shy - 2, 1, 1)
+}
+
+function drawSharkJaw(ctx, pal, g, pose) {
+  var shy = pose.y, shdir = pose.dir, nose = pose.nose, live = g.live, show = g.show, hot = g.hot
   // The jaw. Shut until it means it, and then the whole point of the thing.
   if (show) {
     ctx.fillStyle = live ? "#ffffff" : pal.warn
@@ -4610,12 +4779,12 @@ function drawHzCurrent(ctx, w, pal, h, geo) {
     var fy2 = y0 + 3 + fl * Math.max(2, Math.floor((tall - 6) / lines))
     // Each streamline runs at its own speed and phase, which is what makes
     // the band read as moving water instead of as marching dashes.
-    var rate = live ? 3.4 : 1.1
+    var drift = live ? t * 3.4 : t * 1.1 + (geo.winding ? h.t * geo.progress * 0.8 : 0)
     var span = wide + 40
-    var head = ((t * rate + fl * 23) % span)
+    var head = ((drift + fl * 23) % span)
     var fx2 = flowDir > 0 ? x0 - 20 + head : x1 + 20 - head
-    var len = live ? 16 : 9
-    ctx.globalAlpha = live ? 0.85 : 0.42
+    var len = live ? 16 : 9 + Math.round((geo.winding ? geo.progress : geo.cool) * 5)
+    ctx.globalAlpha = live ? 0.85 : 0.42 + (geo.winding ? geo.progress : geo.cool) * 0.35
     ctx.fillStyle = live ? pal.bubbleLit : pal.bubble
     // Clipped to the zone by hand: a streamline that ran past the edge would
     // claim corridor the current cannot actually reach.
@@ -4634,7 +4803,8 @@ function drawHzCurrent(ctx, w, pal, h, geo) {
   ctx.fillStyle = pal.bubble
   ctx.globalAlpha = live ? 0.7 : 0.3
   for (var cb = 0; cb < 9; cb++) {
-    var cbx = x0 + (((t * (live ? 4.2 : 1.4)) + cb * 31) % Math.max(1, wide))
+    var bubbleDrift = live ? t * 4.2 : t * 1.4 + (geo.winding ? h.t * geo.progress : 0)
+    var cbx = x0 + ((bubbleDrift + cb * 31) % Math.max(1, wide))
     if (flowDir < 0) cbx = x1 - (cbx - x0)
     ctx.fillRect(Math.round(cbx), Math.round(y0 + 2 + ((cb * 37) % Math.max(1, tall - 4))), 1, 1)
   }
@@ -4656,7 +4826,7 @@ function drawHzVent(ctx, w, pal, h, geo) {
     for (var vb = 0; vb < 16; vb++) {
       var vlife = (((t * (live ? 2.6 : 1.0)) + vb * 19) % 100) / 100
       var vx = cx + Math.sin(vlife * 5 + vb) * (2 + vlife * (wide / 2))
-      var vy = y1 - 4 - vlife * tall
+      var vy = y1 - 4 - vlife * (live ? tall : 3 + geo.progress * 6)
       if (vy < y0) continue
       ctx.globalAlpha = (live ? 0.85 : 0.4) * (1 - vlife * 0.8)
       ctx.fillStyle = live ? pal.bubbleLit : pal.bubble
@@ -4665,6 +4835,7 @@ function drawHzVent(ctx, w, pal, h, geo) {
     }
     ctx.globalAlpha = 1
   }
+  hzPressure(ctx, w, pal, h, geo, cx, y1 - 4, pal.bubbleLit)
 }
 
 function drawHzSpores(ctx, w, pal, h, geo) {
@@ -4675,14 +4846,17 @@ function drawHzSpores(ctx, w, pal, h, geo) {
   ctx.fillRect(cx - 4, y0, 8, 4)
   ctx.fillStyle = show ? hot : pal.rig
   ctx.fillRect(cx - 5, y0 + 4, 10, 2)
+  ctx.fillStyle = show ? hot : pal.decorDim
+  ctx.fillRect(cx - 1, y0 + 2, 2, 2 + (geo.winding ? Math.round(geo.progress * 2) : Math.floor(t / 30) % 2))
   if (show) {
     ctx.fillStyle = hot
     for (var sp2 = 0; sp2 < 14; sp2++) {
-      var sy3 = y0 + 6 + ((t + sp2 * 9) % Math.max(1, tall - 6))
+      var sy3 = y0 + 6 + ((t + sp2 * 9) % (live ? Math.max(1, tall - 6) : 2 + Math.round(geo.progress * 4)))
       var sx3 = x0 + ((sp2 * 5 + Math.floor(t / 6)) % Math.max(1, wide))
       ctx.fillRect(sx3, sy3, live ? 2 : 1, live ? 2 : 1)
     }
   }
+  hzPressure(ctx, w, pal, h, geo, cx, y0 + 6, pal.decor)
 }
 
 // --- ice cave -----------------------------------------------------------
@@ -4693,12 +4867,14 @@ function drawHzIcicle(ctx, w, pal, h, geo) {
   // Hanging, until it isn't.
   ctx.fillStyle = pal.rigDark
   ctx.fillRect(x0, y0, wide, 2)
-  var drop2 = live ? tall - 10 : (winding ? 2 : 0)
+  var drop2 = live ? tall - 10 : (winding ? Math.round(geo.progress * 2) : 0)
   ctx.fillStyle = show ? hot : pal.rig
   for (var ic = 0; ic < 3; ic++) {
     var icx = x0 + 2 + ic * Math.max(3, Math.round((wide - 4) / 3))
-    hzTri(ctx, icx, y0 + 2 + drop2, 2, 8, 1)
+    hzTri(ctx, icx + (winding ? Math.floor(t / 2) % 2 : 0), y0 + 2 + drop2, 2, 8, 1)
   }
+  hzPressure(ctx, w, pal, h, geo, geo.cx, y0 + 4, pal.decorLit)
+  hzImpact(ctx, pal, h, geo, geo.cx, geo.y1, pal.decorLit)
 }
 
 function drawHzFrostjet(ctx, w, pal, h, geo) {
@@ -4713,11 +4889,12 @@ function drawHzFrostjet(ctx, w, pal, h, geo) {
   if (show) {
     // A cone of vapour, thickening as it goes.
     ctx.fillStyle = hot
-    for (var fj = 0; fj < (live ? 12 * C : 6); fj++) {
+    for (var fj = 0; fj < (live ? 12 * C : 2 + Math.round(geo.progress * 5)); fj++) {
       var fh = Math.round(1 + fj * (live ? 0.18 : 0.1))
       ctx.fillRect(cx + h.dir * fj, y0 + 4 - fh / 2, 1, fh + 1)
     }
   }
+  hzPressure(ctx, w, pal, h, geo, x0 + 7, y0 + 4, pal.decorLit)
 }
 
 // --- spaceship ----------------------------------------------------------
@@ -4725,7 +4902,7 @@ function drawHzAirlock(ctx, w, pal, h, geo) {
   var x0 = geo.x0, y0 = geo.y0, y1 = geo.y1, wide = geo.wide, tall = geo.tall,
     live = geo.live, winding = geo.winding, show = geo.show, hot = geo.hot
   // Floor plates that part, and everything above them goes.
-  var gap2 = live ? Math.round(wide / 2) - 2 : (winding ? 2 : 0)
+  var gap2 = hzStroke(geo, Math.round(wide / 2) - 2, 4)
   ctx.fillStyle = pal.rig
   ctx.fillRect(x0, y1 - 4, Math.max(0, wide / 2 - gap2), 4)
   ctx.fillRect(x0 + wide / 2 + gap2, y1 - 4, Math.max(0, wide / 2 - gap2), 4)
@@ -4737,6 +4914,8 @@ function drawHzAirlock(ctx, w, pal, h, geo) {
     ctx.fillRect(x0 + wide / 2 - gap2, y0, gap2 * 2, tall - 4)
     ctx.globalAlpha = 1
   }
+  hzLamp(ctx, pal, h, geo, x0 + 1, y1 - 3)
+  hzPressure(ctx, w, pal, h, geo, geo.cx, y1 - 4, pal.decorLit)
 }
 
 // --- Factory ------------------------------------------------------------
@@ -4748,8 +4927,9 @@ function drawHzStamper(ctx, w, pal, h, geo) {
   ctx.fillStyle = pal.rigDark
   ctx.fillRect(x0 + 1, y0, wide - 2, 3)                   // the gantry
   ctx.fillStyle = pal.rig
-  ctx.fillRect(cx - 2, y0 + 3, 4, live ? tall - 9 : 6)    // the ram
-  var headY = live ? y1 - 6 : y0 + 9
+  var stroke = hzStroke(geo, tall - 15, 3)
+  ctx.fillRect(cx - 2, y0 + 3, 4, 6 + stroke)    // the ram
+  var headY = y0 + 9 + stroke
   ctx.fillRect(x0 + 2, headY, wide - 4, 6)                // the head
   ctx.fillStyle = pal.rigDark
   for (var sb = 0; sb < wide - 6; sb += 4)                // its bolts
@@ -4758,6 +4938,8 @@ function drawHzStamper(ctx, w, pal, h, geo) {
     ctx.fillStyle = hot
     ctx.fillRect(x0 + 2, live ? y1 - 1 : headY + 6, wide - 4, 1)
   }
+  hzLamp(ctx, pal, h, geo, cx - 2, y0 + 1)
+  hzImpact(ctx, pal, h, geo, cx, y1, pal.rig)
 }
 
 function drawHzFlywheel(ctx, w, pal, h, geo) {
@@ -4767,12 +4949,13 @@ function drawHzFlywheel(ctx, w, pal, h, geo) {
   // blurs into a disc and throws its spokes out as a ring.
   var fr = Math.min(wide, tall) / 2 - 1
   var fcx = cx, fcy = y0 + tall / 2
-  var rate = live ? 0.42 : (winding ? 0.16 : 0.04)
+  var rate = live ? 0.42 : 0.04
+  var angle = t * rate + (winding ? h.t * (0.04 + geo.progress * 0.15) : 0)
   ctx.fillStyle = pal.rigDark
   ctx.fillRect(fcx - fr - 1, fcy - 1, fr * 2 + 2, 2)      // the shaft
-  ctx.fillStyle = pal.rig
+  ctx.fillStyle = winding ? hot : pal.rig
   for (var sp = 0; sp < 6; sp++) {
-    var sa = t * rate + sp * Math.PI / 3
+    var sa = angle + sp * Math.PI / 3
     ctx.fillRect(Math.round(fcx + Math.cos(sa) * fr) - 1,
                  Math.round(fcy + Math.sin(sa) * fr) - 1, 2, 2)
   }
@@ -4788,6 +4971,8 @@ function drawHzFlywheel(ctx, w, pal, h, geo) {
     }
     ctx.globalAlpha = 1
   }
+  hzLamp(ctx, pal, h, geo, cx - 2, y0)
+  hzImpact(ctx, pal, h, geo, cx, y0 + tall / 2, pal.warn)
 }
 
 function drawHzSteamvent(ctx, w, pal, h, geo) {
@@ -4801,7 +4986,7 @@ function drawHzSteamvent(ctx, w, pal, h, geo) {
   ctx.fillRect(cx - 3, y1 - 6, 6, 2)
   if (show) {
     // The column, widening as it rises and thinning as it loses pressure.
-    for (var jv = 0; jv < tall - 6; jv += 2) {
+    for (var jv = 0; jv < (live ? tall - 6 : 3 + Math.round(geo.progress * 6)); jv += 2) {
       var lift = live ? 1 : 0.45
       var wj = 2 + Math.round(jv * 0.22 * lift)
       ctx.globalAlpha = (live ? 0.75 : 0.35) * (1 - jv / (tall - 6))
@@ -4811,6 +4996,7 @@ function drawHzSteamvent(ctx, w, pal, h, geo) {
     }
     ctx.globalAlpha = 1
   }
+  hzPressure(ctx, w, pal, h, geo, cx, y1 - 6, pal.decorLit)
 }
 
 function drawHzSprinkler(ctx, w, pal, h, geo) {
@@ -4829,7 +5015,7 @@ function drawHzSprinkler(ctx, w, pal, h, geo) {
     ctx.fillStyle = live ? pal.poolLip : pal.decorLit
     for (var sw2 = 0; sw2 < 4; sw2++) {
       var swx = x0 + 4 + Math.round(sw2 * (wide - 8) / 3)
-      var reach = live ? tall - 8 : 6
+      var reach = live ? tall - 8 : 2 + Math.round(geo.progress * 6)
       for (var sd = 0; sd < reach; sd += 3) {
         var spread = Math.round(sd * 0.35)
         ctx.globalAlpha = live ? 0.8 - sd / (tall * 1.6) : 0.4
@@ -4839,6 +5025,7 @@ function drawHzSprinkler(ctx, w, pal, h, geo) {
     }
     ctx.globalAlpha = 1
   }
+  hzPressure(ctx, w, pal, h, geo, geo.cx, y0 + 7, pal.poolLip)
 }
 
 function drawHzPolisher(ctx, w, pal, h, geo) {
@@ -4853,9 +5040,10 @@ function drawHzPolisher(ctx, w, pal, h, geo) {
   ctx.fillStyle = pal.rig
   ctx.fillRect(pcx + 3, y1 - 12, 2, 9)                    // the handle
   ctx.fillRect(pcx + 3, y1 - 13, 5, 2)
-  ctx.fillStyle = live ? hot : pal.steelShade
+  ctx.fillStyle = show ? hot : pal.steelShade
+  var turn = live ? t * 2 : t * 0.08 + (geo.winding ? h.t * (0.12 + geo.progress * 0.5) : 0)
   for (var pb = 0; pb < 5; pb++)                          // the pad, spinning
-    ctx.fillRect(pcx - 5 + ((pb * 3 + t) % 10), y1 - 1, 2, 1)
+    ctx.fillRect(pcx - 5 + ((pb * 3 + Math.floor(turn)) % 10), y1 - 1, 2, 1)
   if (show) {
     ctx.globalAlpha = 0.5
     ctx.fillStyle = pal.decorLit
@@ -4863,6 +5051,8 @@ function drawHzPolisher(ctx, w, pal, h, geo) {
       ctx.fillRect(pcx - 7 + pf * 4, y1 - 6 - ((t + pf * 7) % 5), 2, 1)
     ctx.globalAlpha = 1
   }
+  hzLamp(ctx, pal, h, geo, pcx - 2, y1 - 3)
+  hzImpact(ctx, pal, h, geo, pcx, y1 - 4, pal.decorLit)
 }
 
 function drawHzShredder(ctx, w, pal, h, geo) {
@@ -4882,13 +5072,15 @@ function drawHzShredder(ctx, w, pal, h, geo) {
     if (live) for (var st5 = 0; st5 < wide - 6; st5 += 4)
       hzTri(ctx, x0 + 4 + st5, y1 - 5, 2, 3, -1)          // and the teeth
   }
+  hzLamp(ctx, pal, h, geo, x0 + 2, y1 - 2)
+  hzImpact(ctx, pal, h, geo, geo.cx, y1 - 5, pal.rig)
 }
 
 function drawHzServo(ctx, w, pal, h, geo) {
   var x0 = geo.x0, y0 = geo.y0, cx = geo.cx, wide = geo.wide, tall = geo.tall,
     live = geo.live, winding = geo.winding, show = geo.show, hot = geo.hot
   // An arm on a rail that swings down and sweeps.
-  var swing2 = live ? 1 : (winding ? 0.5 : 0)
+  var swing2 = hzStroke(geo, 10, 6) / 10
   ctx.fillStyle = pal.rigDark
   ctx.fillRect(x0, y0, wide, 3)
   ctx.fillStyle = pal.rig
@@ -4896,6 +5088,8 @@ function drawHzServo(ctx, w, pal, h, geo) {
   ctx.fillStyle = show ? hot : pal.warn
   var armY = y0 + 3 + Math.round(4 + swing2 * (tall - 8))
   ctx.fillRect(cx - Math.round(wide / 2 * swing2) - 1, armY, Math.round(wide * swing2) + 2, 2)
+  hzLamp(ctx, pal, h, geo, cx - 2, y0 + 1)
+  hzImpact(ctx, pal, h, geo, cx, armY, pal.warn)
 }
 
 function drawHzDefault(ctx, w, pal, h, geo) {
