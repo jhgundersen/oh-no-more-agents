@@ -2192,6 +2192,36 @@ function drawActors(ctx, w, pal, opts) {
 
   drawEventBanner(ctx, w, pal)
 
+  drawActorMines(ctx, w, pal)
+  drawActorLadders(ctx, w, pal)
+  drawActorParticles(ctx, w, pal)
+  if (w.prints && w.prints.length) drawPrints(ctx, w, pal)
+  if (w.eventSiteFx) drawEventSite(ctx, w, pal, w.eventSiteFx)
+  if (w.boulder) drawBoulder(ctx, w, pal, w.boulder)
+  if (w.frozen) for (var fz = 0; fz < w.frozen.length; fz++) drawFrozen(ctx, w, pal, w.frozen[fz])
+  if (w.pads) for (var pd = 0; pd < w.pads.length; pd++) drawPadPair(ctx, w, pal, w.pads[pd])
+  if (w.nets) for (var ni = 0; ni < w.nets.length; ni++) drawNet(ctx, w, w.nets[ni])
+  if (w.reloadFx) drawReloadTrail(ctx, w, w.reloadFx)
+
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone) { drawDeath(ctx, w, pal, ag); continue }
+    drawAgent(ctx, w, pal, ag, opts)
+    drawAgentSidearm(ctx, w, pal, ag)
+  }
+  for (var ei = 0; ei < w.enemies.length; ei++) {
+    var enemy = w.enemies[ei]
+    if (!enemy.gone) {
+      drawEnemy(ctx, w, pal, enemy, opts)
+      if (enemy.throttled > 0) drawThrottled(ctx, w, enemy.x * w.k.CELL, (enemy.y - 4) * w.k.CELL - 4, enemy.throttled)
+    }
+  }
+  // Last, over everybody: whoever is standing in a fireball is behind it.
+  if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
+}
+
+function drawActorMines(ctx, w, pal) {
+  var k = w.k
   // Planted mines are separate actors: a small pulsing charge on the floor
   // with its own three-second countdown, rather than a tool hidden in a pose.
   for (var mi = 0; mi < w.mines.length; mi++) {
@@ -2209,7 +2239,10 @@ function drawActors(ctx, w, pal, opts) {
     ctx.textAlign = "center"
     ctx.fillText(String(Math.ceil(mine.fuse / 30)), mx, my - 9)
   }
+}
 
+function drawActorLadders(ctx, w, pal) {
+  var k = w.k
   // Ladders. Drawn on the face of the wall they lean on, in the timber colours
   // of whoever left them, and drawn BEFORE the agents so a climber's hands are
   // in front of the rungs rather than behind them. `t` grows the ladder up the
@@ -2239,7 +2272,10 @@ function drawActors(ctx, w, pal, opts) {
       ctx.globalAlpha = 1
     }
   }
+}
 
+function drawActorParticles(ctx, w, pal) {
+  var k = w.k
   for (var p = 0; p < w.particles.length; p++) {
     var d = w.particles[p]
     // Blood is bigger, redder and fades slower than dust, because it is the
@@ -2255,29 +2291,225 @@ function drawActors(ctx, w, pal, opts) {
     }
   }
   ctx.globalAlpha = 1
-  if (w.prints && w.prints.length) drawPrints(ctx, w, pal)
-  if (w.eventSiteFx) drawEventSite(ctx, w, pal, w.eventSiteFx)
-  if (w.boulder) drawBoulder(ctx, w, pal, w.boulder)
-  if (w.frozen) for (var fz = 0; fz < w.frozen.length; fz++) drawFrozen(ctx, w, pal, w.frozen[fz])
-  if (w.pads) for (var pd = 0; pd < w.pads.length; pd++) drawPadPair(ctx, w, pal, w.pads[pd])
-  if (w.nets) for (var ni = 0; ni < w.nets.length; ni++) drawNet(ctx, w, w.nets[ni])
-  if (w.reloadFx) drawReloadTrail(ctx, w, w.reloadFx)
+}
 
-  for (var i = 0; i < w.agents.length; i++) {
-    var ag = w.agents[i]
-    if (ag.gone) continue
-    drawAgent(ctx, w, pal, ag, opts)
-    drawAgentSidearm(ctx, w, pal, ag)
+// Deaths are poses, never another walk cycle. Coordinates below are whole art
+// pixels relative to the last boot line, mirrored by the dispatcher's transform.
+// No random draws or stored animation state: a repaint cannot change the world.
+var DEATH_TICKS = 32
+var DEATH_DRAW = {
+  "boom": drawDeathBoom,
+  "red team": drawDeathShot,
+  "hazard": drawDeathHazard,
+  "drone strike": drawDeathDrone,
+  "fell": drawDeathFell,
+  "splat": drawDeathSplat,
+  "crushed": drawDeathCrushed,
+  "turned": drawDeathTurned,
+  "stand down": drawDeathStandDown
+}
+
+function drawDeath(ctx, w, pal, ag) {
+  if (!ag.gone || ag.state === "saved" || ag.diedAt === undefined) return
+  var age = w.ticks - ag.diedAt
+  if (age < 0 || age >= DEATH_TICKS) return
+  var draw = Object.prototype.hasOwnProperty.call(DEATH_DRAW, ag.diedBy)
+    ? DEATH_DRAW[ag.diedBy] : drawDeathGeneric
+  ctx.save()
+  ctx.translate(Math.round(ag.x * w.k.CELL), Math.round((ag.y + 1) * w.k.CELL))
+  ctx.scale(ag.dir === -1 ? -1 : 1, 1)
+  ctx.globalAlpha = Math.min(1, (DEATH_TICKS - age) / 10)
+  draw(ctx, w, pal, age)
+  ctx.restore()
+}
+
+function drawDeathFlat(ctx, pal, width, height) {
+  ctx.fillStyle = pal.robe
+  ctx.fillRect(-width + 2, -height, width + 1, height)
+  ctx.fillStyle = pal.lapel
+  ctx.fillRect(-width + 3, -height, width - 2, 1)
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(1, -height, 2, height)
+  ctx.fillStyle = pal.skin
+  ctx.fillRect(3, -height, 4, height)
+  ctx.fillStyle = pal.hair
+  ctx.fillRect(5, -height - 1, 3, 1)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(-width, -height, 2, height)
+  ctx.fillRect(5, -height, 1, 1)
+}
+
+function drawDeathDust(ctx, pal, age, spread) {
+  var reach = spread + Math.floor(age / 4)
+  var lift = Math.max(0, 3 - Math.floor(age / 5))
+  ctx.fillStyle = pal.dust
+  ctx.fillRect(-reach - 2, -2 - lift, 2, 1)
+  ctx.fillRect(reach, -2 - lift, 2, 1)
+  ctx.fillRect(-reach, -1, 2, 1)
+  ctx.fillRect(reach - 2, -1, 2, 1)
+}
+
+function drawDeathSplat(ctx, w, pal, age) {
+  drawDeathFlat(ctx, pal, 7, age < 4 ? 3 : 2)
+  if (age < 8) {
+    ctx.fillStyle = pal.robe
+    ctx.fillRect(-5, -6 + Math.floor(age / 2), 2, 3)
   }
-  for (var ei = 0; ei < w.enemies.length; ei++) {
-    var enemy = w.enemies[ei]
-    if (!enemy.gone) {
-      drawEnemy(ctx, w, pal, enemy, opts)
-      if (enemy.throttled > 0) drawThrottled(ctx, w, enemy.x * w.k.CELL, (enemy.y - 4) * w.k.CELL - 4, enemy.throttled)
-    }
+  if (age < 20) drawDeathDust(ctx, pal, age, 8)
+}
+
+function drawDeathCrushed(ctx, w, pal, age) {
+  // A suit pressed to one row, with its collar squeezed out at the sides.
+  drawDeathFlat(ctx, pal, 10, 1)
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(-4, -2, 3, 1)
+  ctx.fillRect(3, -2, 3, 1)
+  if (age < 16) drawDeathDust(ctx, pal, age, 11)
+}
+
+function drawDeathGhost(ctx, w, pal, age) {
+  var y = -13 - Math.floor(age / 2)
+  var x = Math.floor(age / 4) % 2
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(x - 1, y, 3, 1)
+  ctx.fillRect(x - 2, y + 1, 5, 4)
+  ctx.fillRect(x - 2, y + 5, 1, 1)
+  ctx.fillRect(x, y + 5, 1, 1)
+  ctx.fillRect(x + 2, y + 5, 1, 1)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 1, y + 2, 1, 1)
+  ctx.fillRect(x + 1, y + 2, 1, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = pal.lapel
+    ctx.fillRect(x - 1.5, y + 3.5, 0.5, 1)
+    ctx.fillRect(x + 1.5, y + 3.5, 0.5, 1)
   }
-  // Last, over everybody: whoever is standing in a fireball is behind it.
-  if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
+}
+
+function drawDeathRecoil(ctx, pal, age) {
+  // Hand-stepped diagonal poses keep the impact crisp at res 1, unlike a
+  // rotated standing sprite. The head is already behind the boots at age 0.
+  var lean = Math.min(3, Math.floor(age / 3))
+  ctx.save()
+  ctx.translate(-Math.min(5, Math.floor(age / 2)), 0)
+  ctx.fillStyle = pal.robe
+  ctx.fillRect(-2, -5, 5, 3)
+  ctx.fillRect(-3 - lean, -9 + lean, 4, 4)
+  ctx.fillRect(1, -2, 3, 2)
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(-2 - lean, -10 + lean, 2, 2)
+  ctx.fillStyle = pal.skin
+  ctx.fillRect(-5 - lean, -13 + lean * 2, 4, 3)
+  ctx.fillStyle = pal.hair
+  ctx.fillRect(-6 - lean, -14 + lean * 2, 4, 1)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(-4 - lean, -12 + lean * 2, 2, 1)
+  ctx.restore()
+}
+
+function drawDeathShot(ctx, w, pal, age) {
+  if (age < 12) drawDeathRecoil(ctx, pal, age)
+  else {
+    ctx.save(); ctx.translate(-5, 0)
+    ctx.scale(-1, 1)
+    drawDeathFlat(ctx, pal, 7, 3)
+    if (age >= 14) drawDeathGhost(ctx, w, pal, age - 14)
+    ctx.restore()
+  }
+}
+
+function drawDeathDrone(ctx, w, pal, age) {
+  // A downward strike: splayed suit, impact rays, then the tie escapes upward.
+  drawDeathFlat(ctx, pal, 6 + Math.min(3, Math.floor(age / 3)), 2)
+  if (age < 10) {
+    ctx.fillStyle = pal.fireHot
+    ctx.fillRect(-8, -9 + Math.floor(age / 2), 1, 3)
+    ctx.fillRect(8, -9 + Math.floor(age / 2), 1, 3)
+    drawDeathDust(ctx, pal, age, 10)
+  }
+  ctx.save()
+  ctx.translate(Math.floor(age / 6) % 2, -5 - Math.floor(age / 2))
+  drawDeathTie(ctx, pal)
+  ctx.restore()
+}
+
+function drawDeathTie(ctx, pal) {
+  ctx.fillStyle = pal.urgent
+  ctx.fillRect(0, 0, 1, 1)
+  ctx.fillRect(-1, 2, 3, 2)
+  ctx.fillRect(0, 4, 1, 1)
+}
+
+function drawDeathBoom(ctx, w, pal, age) {
+  // The blast owns the body; just a hat (copper for divers) arcs out of it.
+  var x = Math.floor(age / 3)
+  var y = -17 - Math.round(age * (DEATH_TICKS - age) / 36)
+  ctx.fillStyle = w.submerged ? "#bc8147" : pal.hair
+  ctx.fillRect(x - 2, y, 5, 3)
+  ctx.fillRect(x - 3, y + 3, 7, 1)
+  ctx.fillStyle = w.submerged ? "#f2c886" : pal.lapel
+  ctx.fillRect(x - 1, y, 3, 1)
+  ctx.fillStyle = pal.dust
+  ctx.fillRect(x - 3, y + 6, 1, 1)
+  ctx.fillRect(x - 4, y + 9, 1, 1)
+}
+
+function drawDeathHazard(ctx, w, pal, age) {
+  // Charcoal, white eyes and a last electrical twitch, then a collapsing heap.
+  var height = Math.max(2, 12 - Math.floor(age / 2))
+  var twitch = Math.floor(age / 2) % 2
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(-3 + twitch, -height, 5, height - 1)
+  ctx.fillRect(-5, -3, 9, 2)
+  ctx.fillStyle = pal.lapel
+  ctx.fillRect(-3 + twitch, -height, 4, 1)
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(-2 + twitch, -Math.max(1, height - 2), 1, 1)
+  ctx.fillRect(twitch, -Math.max(1, height - 2), 1, 1)
+  if (age < 16) {
+    ctx.fillStyle = pal.fireHot
+    ctx.fillRect(-7, -height - 2, 3, 1)
+    ctx.fillRect(-5, -height - 1, 1, 3)
+    ctx.fillRect(5, -height + 1, 3, 1)
+    ctx.fillRect(5, -height + 2, 1, 3)
+  }
+}
+
+function drawDeathTurned(ctx, w, pal, age) {
+  // The replacement enemy is drawn separately. Only the old identity sheds
+  // pixels here, pulling inward before its green/purple afterimage disperses.
+  var spread = Math.abs(8 - Math.floor(age / 2))
+  for (var i = 0; i < 6; i++) {
+    var side = i % 2 === 0 ? -1 : 1
+    ctx.fillStyle = i % 2 === 0 ? "#9ce879" : "#c586e8"
+    ctx.fillRect(side * (spread + i % 3), -14 + i * 2, 2, 1)
+  }
+}
+
+function drawDeathStandDown(ctx, w, pal, age) {
+  // An empty shirt collar drops as a white handkerchief flutters away.
+  var drop = Math.min(9, Math.floor(age / 2))
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(-3, -11 + drop, 2, 2)
+  ctx.fillRect(1, -11 + drop, 2, 2)
+  ctx.save()
+  ctx.translate(0, -9 + Math.min(4, Math.floor(age / 2)))
+  drawDeathTie(ctx, pal)
+  ctx.restore()
+  ctx.fillStyle = "#ffffff"
+  var x = 4 + Math.floor(age / 5) % 2
+  var y = -16 - Math.floor(age / 3)
+  ctx.fillRect(x, y, 3, 2)
+  ctx.fillRect(x + 2, y + 2, 2, 2)
+}
+
+function drawDeathFell(ctx, w, pal, age) {
+  // Already below the world: do not bring a falling body back onto the board.
+}
+
+function drawDeathGeneric(ctx, w, pal, age) {
+  drawDeathGhost(ctx, w, pal, age)
+  if (age < 12) drawDeathDust(ctx, pal, age, 5)
 }
 
 function drawMission(ctx, w, pal) {

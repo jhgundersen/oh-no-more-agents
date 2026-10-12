@@ -1496,3 +1496,53 @@ red team, hazard, fell, drone strike, splat, stand down, crushed, turned.
 **Checked.** `sim play` 95% / 88%, home 3023 (unchanged); check passes.
 Hot Reload's revival window now counts from the true tick for those deaths
 (one tick earlier) — no measurable effect.
+
+## 60 — 2026-10-12 · Short death poses by cause
+
+**Why.** A death used to remove its sprite immediately, so only the existing
+blood, dust or blast said what had happened. The cause stamps from 59 let the
+renderer give each departure a short, readable pose.
+
+**Changed.** `DEATH_DRAW` dispatches from the dead-agent branch in `drawActors`
+for 32 ticks, fading over the last ten. Splat folds into a flattened suit with
+a dust ring; crushed presses it to one row with dust at the sides. Red team
+knocks the body backward, keels it over, then releases a small ghost. Drone
+strike splays the suit with impact rays and a floating tie. Hazard leaves a
+zapped charcoal silhouette that collapses into ash. Boom throws a hat out of
+the existing blast (a copper helmet underwater). Turned sheds green/purple
+pixels that contract and disperse around the replacement enemy. Stand down
+drops an empty collar and tie while a white handkerchief flutters away. Fell
+stays invisible below the world; empty and unknown causes get a rising ghost
+and dust. Saved, unstamped and revived agents get no death pose.
+
+All base marks use whole art pixels; the ghost adds cheek detail at res 2.
+The pass uses no randomness, reads world state only, and saves/restores the
+canvas transform, colour and alpha. Extracted the existing mine, ladder and
+particle loops unchanged so the touched actor pass also stays under CRAP 30.
+Asset and build stamps refreshed.
+
+**Checked.** `npm run check` / `npm test` pass. Sixteen new tests exercise every
+animation age at res 1, res 2 and unspecified resolution, facing both ways,
+on land and underwater; future and expired stamps draw nothing. Unknown
+causes include inherited object names. Tests check hard pixels, marks staying
+above the boot line, canvas-state restoration, the actual actor dispatch and
+no world mutation. A golden recorded before this edit pins 108 full frames
+across all twelve biomes, ticks 0/200/500 and all three resolution settings,
+with deaths outside the window and Math.random seeded identically: exact
+byte match after the animation pass and helper extraction. Rendered and
+visually reviewed every age 0–32 of all ten recipes at both resolutions,
+enlarged with nearest-neighbour scaling. Fixed the recoil-to-ground facing
+and kept the final ash eyes and dropped tie above the floor. Contact sheet:
+`/tmp/codex-deaths/sheet.png`; per-cause sheets there include every frame.
+
+**CRAP.** `drawDeath`: 8.0. `drawDeathSplat`, `drawDeathTurned`: 4.0 each.
+`drawDeathBoom`, `drawDeathGhost`, `drawDeathShot`: 3.0 each.
+`drawDeathCrushed`, `drawDeathDrone`, `drawDeathGeneric`, `drawDeathHazard`:
+2.0 each. `drawDeathDust`, `drawDeathFell`, `drawDeathFlat`, `drawDeathRecoil`,
+`drawDeathStandDown`, `drawDeathTie`: 1.0 each. All sixteen death functions
+have 100% coverage. Extracted helpers: `drawActorMines` 8.1,
+`drawActorLadders` 12.0, `drawActorParticles` 3.0. `drawActors`: 21.2,
+down from 48.2. Used a local copy of the cached crapper tool.
+
+**Next.** Watch the short poses against overlapping live colonies and blasts
+in normal play before adding any further detail.
