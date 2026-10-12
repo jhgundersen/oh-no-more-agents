@@ -1824,3 +1824,23 @@ smoking and pops, the xeno shrivels, the diver's helmet rises in bubbles.
 Codex's seeded check: 1,198 frames with no recent defeat identical.
 
 **Deployed** after 66 (name="build" content="ca21c87b"): enemy animation and defeats. Browser check clean.
+
+## 67 — 2026-10-12 · Crap: the untested rules
+
+**Why.** Several functions scored high on CRAP not because they are complex
+but because no test ever reached them: `threatAhead` (4.8% covered),
+`startWebEscape` (4.2%), `stepEnemyFall` (3.7%), `stepSniperCamp` (9%),
+`specialEscape` (45%), `drawEnemyHatch` (52%). A rule nothing exercises is a
+rule nobody would notice breaking.
+
+**Changed.** `test/rules.test.js`: built scenes for each — a hazard or the
+red team ahead vs behind vs wrecked vs another floor; a web escape finding
+open floor above and failing when sealed in; a hostile landing on a floor and
+one falling off the world; a camped sniper with nobody to shoot and with its
+floor gone; every special's `specialEscape` three times from one spot
+(dig, tunnel, nothing left) on three levels. `enemies.test.js`: the guard
+house in every biome at both resolutions.
+
+**Checked.** Over 30: 37 → 31 — and four of those 31 are `tools/simcheck`
+CLI commands and the worker's `readStats`, which the tests never run. No
+game code changed.

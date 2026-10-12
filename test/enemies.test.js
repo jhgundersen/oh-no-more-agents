@@ -207,3 +207,19 @@ test("unspecified resolution draws exactly the panel art", () => {
     assert.deepEqual(pixels(render(w, en)), explicit)
   }
 })
+
+test("the guard house draws in every biome at both resolutions", async () => {
+  const { canvas, themeOf } = await import("../tools/render.js")
+  const D2 = loadCore("Draw.js"), P2 = loadCore("Palette.js")
+  const theme = themeOf("tokyo-night")
+  for (const biome of S.BIOMES) for (const res of [1, 2]) {
+    const w = S.generate(13, 0, 3)
+    w.res = res
+    w.enemyHatch = { x: 50, y: 30, biome, corridor: 1, dir: 1 }
+    const img = canvas(400 * res, 248 * res, theme.background)
+    img.ctx.setTransform(res, 0, 0, res, 0, 0)
+    const blank = Buffer.from(img.buf).toString("base64")
+    D2.drawEnemyHatch(img.ctx, w, P2.build(theme.theme, 1), {})
+    assert.notEqual(Buffer.from(img.buf).toString("base64"), blank, biome)
+  }
+})
