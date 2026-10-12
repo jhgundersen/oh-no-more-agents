@@ -2221,3 +2221,28 @@ as counted 89.84 → 90.67%, original colony 91.29 → 91.58%. It drops out of
 the five costliest heroes. 510 tests pass.
 
 **Next.** Glazier, Roundhouse, Chain of Thought (−2.3 to −2.9).
+
+## 81 — 2026-10-13 · Two ways heroes died that were not their fault
+
+**Looked at.** The next costliest heroes, hero survival and the rest of the
+colony measured apart (160 levels, paired against no hero).
+
+**Found and fixed.**
+- **Beam Search home 46%**, 79 of its losses bombs at the end of the level.
+  The colony stood down (`standDown` releases blockers and campers), and the
+  camper went straight back to its post — at the next danger it saw
+  (`specialTakesAim`) or the next wall it met (`specialAtWall`) — and, the
+  stand-down being spent, `bombBlockers` took it. Neither now once the
+  colony has stood down. Hero home 46 → 77%; the rest of the colony 93.3%,
+  better than with no hero at all.
+- **Guard Rails dug itself to death** in a tenth of its levels: a hero's
+  escape digs, and `digOpensDeath` (iteration 48) let the dig through
+  whenever the colony had umbrellas — which a hero cannot take. For a hero
+  they no longer count. Its splats 16 → 2.
+
+**Checked.** Re-ranked all 23 heroes against no hero: the spread is now
+−2.5 … +1.6 (was −3.4 … +1.5); Beam Search −2.2 → +0.05. 510 tests pass.
+
+**Next.** Guard Rails and Vector Van Damme still cost the *rest* of the
+colony ~1.3–1.9 points — their moves, not their survival. More heroes now
+end a level alive but stuck.
