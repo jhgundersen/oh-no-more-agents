@@ -1299,3 +1299,25 @@ ticks) identical to HEAD. 225 tests pass. Functions over 30: 44 → 42.
 **Next.** Review Codex's hero-gear branch when it finishes. More CRAP:
 `stepAgents` (122), `generate` (129), `drawAgent` (86). A mechanism for
 Cavern / Frost / Foundry when a good one comes along.
+
+## 54 — 2026-10-12 · Tried and reverted: thin ice for Frost
+
+**Idea.** The first chasm on a Frost level frozen over level with the floor:
+the colony walks across, the sheet cracks under load and gives way, and the
+rest drop to the corridor below.
+
+**Measured** (800 Frost plays, same levels with the sheet removed as
+control): load 220 → 92.93% vs 93.36% home, 6% longer; load 60 → 92.69%;
+only over survivable drops (a third of chasms were deeper than `SAFE_FALL`
+and the break took away the choice of umbrella or bridge) → 92.49%; load 25
+→ 92.81%. Always worse.
+
+**Why.** A chasm is a shortcut: dropping into it skips the rest of the
+corridor. Ice turns the early arrivals into walkers of the whole corridor,
+into its hazard and its obstacles — hazard deaths +20, bombs +26 per 800.
+The mechanism takes away a route rather than adding one. Reverted. Lesson
+for the next biome mechanism: add routes (pads, vines, frozen colleagues)
+or bend existing ones (wind, belts), don't close them.
+
+**Next.** Merge Codex's hero gear when it is done; deploy. CRAP:
+`stepAgents`, `generate`, `drawAgent`.
