@@ -1045,3 +1045,24 @@ so it now asks only that the boulder moved. `sim play` 95 / 88; check passes
 thing left); look for a hero or mechanic gap.
 
 **Deployed** after 44 (name="build" content="f793ad70"): Ruins boulder, riveted hatch. Browser check clean.
+
+## 45 — 2026-10-12 · Decor at finer pixels
+
+**Changed.** `drawDecor` split three ways: `DECOR_FITTINGS` (window, strip,
+grate, desk — a table, each checking its own mount), `drawDecorShape` (the
+four ground shapes in every biome), and the loop. New `drawDecorFine` /
+`DECOR_FINE` (res ≥ 2), by shape and look: shadow and highlight down a
+cave or frost cone and a white point on the ice needle; fluting, a base
+course and a lit edge on a Ruins column; light, shade and collar bolts on a
+pipe; spines on a cactus; leaf specks and bark on a jungle trunk; a shadow
+side and a forming drop on stalactites and icicles; pebbles in a clump; lit
+tips on tuft blades.
+
+**Checked.** Res-1 frames byte-identical before/after on nine biomes at
+tick 1 (later ticks differ run to run by random particles — a repeat-run
+control showed that). Res 2 rendered at 6× on Ruins and Cavern. Check passes;
+`drawDecor` CRAP 32 → 20; 44 functions over 30 (was 45).
+
+**Next.** A hero or mechanic gap — every biome now has a mechanism or a
+fixture of its own except Cavern, Frost and Foundry (check); or the exit
+frames at finer pixels.

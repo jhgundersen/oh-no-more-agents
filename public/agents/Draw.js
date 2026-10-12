@@ -554,6 +554,65 @@ function drawSea(ctx, w, pal) {
 }
 
 // Decor is non-solid and disappears visually when its supporting cell is gone.
+// Fittings: the decor that is furniture rather than ground — a ship's
+// viewport, a strip light, a floor grate, a desk. Each one checks the terrain
+// it is fixed to and draws nothing once that has been dug away.
+// The viewport is only drawn while the hull it is set into is still there,
+// so an agent that bashes through the wall takes the window with it. The
+// desk is the one piece of decor somebody was sitting at this morning; the
+// chair is pushed back because they left in a hurry.
+var DECOR_FITTINGS = {
+  window: function(ctx, w, pal, d, px, py) {
+    var k = w.k, C = k.CELL
+    if (w.terrain[d.y * k.COLS + d.x] === k.EMPTY) return
+    var ww2 = (d.size + 2) * C
+    var wh2 = (d.size + 1) * C
+    ctx.fillStyle = pal.hatchMouth               // the void outside
+    ctx.fillRect(px, py, ww2, wh2)
+    ctx.fillStyle = pal.decorLit
+    for (var st3 = 0; st3 < 5; st3++) {          // stars in it
+      var sxx = px + 2 + ((d.seed * (st3 + 3)) % Math.max(1, ww2 - 4))
+      var syy = py + 2 + ((d.seed * (st3 + 7)) % Math.max(1, wh2 - 4))
+      ctx.fillRect(sxx, syy, 1, 1)
+    }
+    ctx.fillStyle = pal.rig                      // the frame
+    ctx.fillRect(px - 1, py - 1, ww2 + 2, 2)
+    ctx.fillRect(px - 1, py + wh2 - 1, ww2 + 2, 2)
+    ctx.fillRect(px - 1, py - 1, 2, wh2 + 2)
+    ctx.fillRect(px + ww2 - 1, py - 1, 2, wh2 + 2)
+  },
+  strip: function(ctx, w, pal, d, px, py) {
+    var k = w.k
+    if (w.terrain[(d.y - 1) * k.COLS + d.x] === k.EMPTY) return
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(px - 6, py, 16, 2)
+    ctx.fillStyle = pal.decorLit                 // the lit tube
+    ctx.fillRect(px - 4, py + 1, 12, 1)
+  },
+  grate: function(ctx, w, pal, d, px, py) {
+    var k = w.k, C = k.CELL
+    if (w.terrain[(d.y + 1) * k.COLS + d.x] === k.EMPTY) return
+    ctx.fillStyle = pal.decorDim
+    for (var gg = 0; gg < 5; gg++) ctx.fillRect(px + gg * 3, py + C - 2, 2, 2)
+  },
+  desk: function(ctx, w, pal, d, px, py) {
+    var k = w.k, C = k.CELL
+    if (w.terrain[(d.y + 1) * k.COLS + d.x] === k.EMPTY) return
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(px - 1, py + C - 6, 12, 2)             // the desktop
+    ctx.fillRect(px, py + C - 4, 2, 4)                  // and its legs
+    ctx.fillRect(px + 8, py + C - 4, 2, 4)
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(px + 5, py + C - 11, 6, 5)             // the monitor
+    ctx.fillStyle = d.seed % 3 === 0 ? pal.decorLit : pal.decorDim
+    ctx.fillRect(px + 6, py + C - 10, 4, 3)             // still logged in
+    ctx.fillStyle = pal.decor
+    ctx.fillRect(px - 5, py + C - 9, 4, 2)              // the chair back
+    ctx.fillRect(px - 4, py + C - 7, 2, 4)
+    ctx.fillRect(px - 6, py + C - 5, 5, 1)
+  }
+}
+
 function drawDecor(ctx, w, pal) {
   var k = w.k
   var C = k.CELL
@@ -562,64 +621,8 @@ function drawDecor(ctx, w, pal) {
     var px = d.x * C
     var py = d.y * C
 
-    // Ship fittings. A viewport is only drawn while the hull it is set into is
-    // still there, so an agent that bashes through the wall takes the window
-    // with it.
-    if (d.kind === "window") {
-      if (w.terrain[d.y * k.COLS + d.x] === k.EMPTY) continue
-      var ww2 = (d.size + 2) * C
-      var wh2 = (d.size + 1) * C
-      ctx.fillStyle = pal.hatchMouth               // the void outside
-      ctx.fillRect(px, py, ww2, wh2)
-      ctx.fillStyle = pal.decorLit
-      for (var st3 = 0; st3 < 5; st3++) {          // stars in it
-        var sxx = px + 2 + ((d.seed * (st3 + 3)) % Math.max(1, ww2 - 4))
-        var syy = py + 2 + ((d.seed * (st3 + 7)) % Math.max(1, wh2 - 4))
-        ctx.fillRect(sxx, syy, 1, 1)
-      }
-      ctx.fillStyle = pal.rig                      // the frame
-      ctx.fillRect(px - 1, py - 1, ww2 + 2, 2)
-      ctx.fillRect(px - 1, py + wh2 - 1, ww2 + 2, 2)
-      ctx.fillRect(px - 1, py - 1, 2, wh2 + 2)
-      ctx.fillRect(px + ww2 - 1, py - 1, 2, wh2 + 2)
-      continue
-    }
-
-    if (d.kind === "strip") {
-      if (w.terrain[(d.y - 1) * k.COLS + d.x] === k.EMPTY) continue
-      ctx.fillStyle = pal.rigDark
-      ctx.fillRect(px - 6, py, 16, 2)
-      ctx.fillStyle = pal.decorLit                 // the lit tube
-      ctx.fillRect(px - 4, py + 1, 12, 1)
-      continue
-    }
-
-    if (d.kind === "grate") {
-      if (w.terrain[(d.y + 1) * k.COLS + d.x] === k.EMPTY) continue
-      ctx.fillStyle = pal.decorDim
-      for (var gg = 0; gg < 5; gg++) ctx.fillRect(px + gg * 3, py + C - 2, 2, 2)
-      continue
-    }
-
-    // A workstation, and the one piece of decor on this board that somebody
-    // was sitting at this morning. The chair is pushed back because they left
-    // in a hurry, which is the level's premise.
-    if (d.kind === "desk") {
-      if (w.terrain[(d.y + 1) * k.COLS + d.x] === k.EMPTY) continue
-      ctx.fillStyle = pal.decorDim
-      ctx.fillRect(px - 1, py + C - 6, 12, 2)             // the desktop
-      ctx.fillRect(px, py + C - 4, 2, 4)                  // and its legs
-      ctx.fillRect(px + 8, py + C - 4, 2, 4)
-      ctx.fillStyle = pal.rigDark
-      ctx.fillRect(px + 5, py + C - 11, 6, 5)             // the monitor
-      ctx.fillStyle = d.seed % 3 === 0 ? pal.decorLit : pal.decorDim
-      ctx.fillRect(px + 6, py + C - 10, 4, 3)             // still logged in
-      ctx.fillStyle = pal.decor
-      ctx.fillRect(px - 5, py + C - 9, 4, 2)              // the chair back
-      ctx.fillRect(px - 4, py + C - 7, 2, 4)
-      ctx.fillRect(px - 6, py + C - 5, 5, 1)
-      continue
-    }
+    var fit = DECOR_FITTINGS[d.kind]
+    if (fit) { fit(ctx, w, pal, d, px, py); continue }
 
     if (d.kind === "hang") {
       if (w.terrain[(d.y - 1) * k.COLS + d.x] === k.EMPTY) continue
@@ -639,6 +642,14 @@ function drawDecor(ctx, w, pal) {
                || w.biome === "Factory" || w.biome === "Skyscraper" || w.biome === "Data Center"
     var jungle = w.biome === "Jungle"
     var desert = w.biome === "Desert"
+    drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert)
+    if ((w.res || 1) >= 2) drawDecorFine(ctx, pal, d, px, py, py + C,
+      foundry ? "pipe" : ruins ? "ruins" : desert ? "desert" : jungle ? "jungle" : frost ? "frost" : "cave")
+  }
+}
+
+function drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert) {
+  var C = w.k.CELL
 
     if (d.kind === "spire") {
       var h = 3 + d.size * 3
@@ -735,6 +746,107 @@ function drawDecor(ctx, w, pal) {
         if (frost) ctx.fillRect(px + bxo, py + C - bh, 1, 1)
       }
     }
+}
+
+// Decor at half-pixel detail: shading down the shadow side of a spire, the
+// fluting on a column, spines on a cactus, pebbles in a heap, light on the tip
+// of a blade. Inside the silhouettes drawDecorShape has just drawn, so res 1
+// loses nothing. `base` is the floor line a standing shape stands on; `top`
+// the ceiling line a hanging one hangs from.
+function drawDecorFine(ctx, pal, d, px, top, base, look) {
+  var fn = DECOR_FINE[d.kind + ":" + look] || DECOR_FINE[d.kind]
+  if (fn) fn(ctx, pal, d, px, base, top)
+}
+
+function fineSpireHeight(d) { return 3 + d.size * 3 }
+
+var DECOR_FINE = {
+  "spire:cave": function(ctx, pal, d, px, base) { fineCone(ctx, pal, d, px, base, 2.4) },
+  "spire:frost": function(ctx, pal, d, px, base) {
+    fineCone(ctx, pal, d, px, base, 3.2)
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(px + 2, base - fineSpireHeight(d), 0.5, 0.5)       // the needle's point
+  },
+  "spire:ruins": function(ctx, pal, d, px, base) {
+    var h = fineSpireHeight(d)
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(px + 1.5, base - h + 1.5, 0.5, h - 1.5)            // fluting
+    ctx.fillRect(px + 3, base - h + 2, 0.5, h - 2)
+    ctx.fillRect(px, base - 1.5, 5, 0.5)                             // the base course
+    ctx.fillStyle = pal.decorLit
+    ctx.fillRect(px + 0.5, base - h + 1, 0.5, h - 2)
+  },
+  "spire:pipe": function(ctx, pal, d, px, base) {
+    var h = fineSpireHeight(d)
+    ctx.fillStyle = pal.decorLit
+    ctx.fillRect(px + 1.5, base - h, 0.5, h)                         // light down the pipe
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(px + 3.5, base - h, 0.5, h)
+    ctx.fillRect(px + 0.5, base - h + 2.5, 0.5, 0.5)                 // bolts on the collar
+    ctx.fillRect(px + 4, base - h + 2.5, 0.5, 0.5)
+  },
+  "spire:desert": function(ctx, pal, d, px, base) {
+    var h = fineSpireHeight(d)
+    ctx.fillStyle = pal.decorDim
+    for (var y = 0; y < h; y += 2) ctx.fillRect(px + 4.5, base - h - 1 + y, 0.5, 0.5)   // spines
+    ctx.fillRect(px + 1.5, base - h + 1, 0.5, 0.5)
+    ctx.fillRect(px + 7.5, base - h + 2, 0.5, 0.5)
+  },
+  "spire:jungle": function(ctx, pal, d, px, base) {
+    var h = fineSpireHeight(d)
+    ctx.fillStyle = pal.decor
+    for (var l = 0; l < 4; l++) ctx.fillRect(px - 0.5 + l * 2, base - h - 0.5 + (l % 2) * 0.5, 0.5, 0.5)
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(px + 3.5, base - h + 1, 0.5, h - 1)                 // bark on the trunk
+  },
+  "hang:cave": fineDrip,
+  "hang:ruins": fineDrip,
+  "hang:frost": fineDrip,
+  "clump": function(ctx, pal, d, px, base) {
+    var cw = 3 + d.size * 2
+    for (var p = 0; p < cw; p += 1.5) {
+      ctx.fillStyle = (d.seed + p * 2) % 3 ? pal.decorLit : pal.rigDark
+      ctx.fillRect(px + 0.5 + p, base - 1.5 - ((d.seed + p * 2) % 2) * 0.5, 0.5, 0.5)
+    }
+  },
+  "tuft": function(ctx, pal, d, px, base) {
+    ctx.fillStyle = pal.decorLit
+    var blades = 2 + (d.seed % 2)
+    for (var bl = 0; bl <= blades; bl++) {
+      var bh = 2 + ((d.seed >> bl) % 3) + d.size
+      ctx.fillRect(px + bl * 2 + 0.5, base - bh, 0.5, 1)             // light on the tip
+    }
+  }
+}
+
+// A stalactite (or an icicle): the shadow side, and a drop of water forming
+// on the tip.
+function fineDrip(ctx, pal, d, px, base, top) {
+  var hh = 2 + d.size * 3
+  ctx.fillStyle = pal.rigDark
+  ctx.globalAlpha = 0.5
+  for (var g = 0; g < hh - 1; g++) {
+    var gw = Math.round((hh - g) / 2.6)
+    if (gw) ctx.fillRect(px + 2 + gw + 0.5, top + g, 0.5, 1)
+  }
+  ctx.globalAlpha = 1
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(px + 2.25, top + hh + 0.5, 0.5, 0.5)
+}
+
+// The shadow side of a cone, half a pixel in from its right edge, and a
+// highlight a half-pixel left of its spine.
+function fineCone(ctx, pal, d, px, base, taper) {
+  var h = fineSpireHeight(d)
+  for (var r = 0; r < h - 1; r++) {
+    var half = Math.max(0, Math.round((h - r) / taper))
+    if (!half) continue
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(px + 2 + half + 0.5, base - 1 - r, 0.5, 1)
+    ctx.fillStyle = pal.decorLit
+    ctx.globalAlpha = 0.5
+    ctx.fillRect(px + 1.5, base - 1 - r, 0.5, 1)
+    ctx.globalAlpha = 1
   }
 }
 
