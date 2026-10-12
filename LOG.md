@@ -1208,3 +1208,38 @@ before/after pose sheets, re-ran res-1 frames on levels 3, 8, 10 (same),
 `npm run check` (207 pass), CRAP count over 30 unchanged at 44.
 
 **Deployed** after 50 (name="build" content="1616e35e"): obstruction fix, action-pose detail. Browser check clean.
+
+## 51 — 2026-10-12 · Half-pixel exit frames
+
+**Changed.** `EXIT_FINE` dispatches one small drawing per biome, gated at
+res 2 in `drawExitFrameFine`; `drawExitBack` gains only the dispatch line.
+Cavern gets bevels, mortar and a crack; Ruins fluting and fractured stone;
+Frost icicle edges and glints; Foundry rivet crowns and welded joints;
+Jungle vine edges, leaf veins and cracked stone; Ice Cave arch facets and
+ice glints; Spaceship collar seams, bolt slots and a lamp glint; Factory
+shutter edges, rail screws and inset lamps; Skyscraper polished trim and
+indicator detail; Trench wet edges, salt pits and marine deposits; Desert
+carved glyphs, eroded joints and a recessed sun disc; Data Center vents,
+LED glints and a badge-reader slot. All marks are opaque rectangles on the
+half-pixel grid using existing palette colours inside the coarse silhouette.
+The mouth, glow and animated shimmer are unchanged.
+
+**Checked.** `npm run check` / `npm test`: 221 pass. Fourteen new tests cover
+every biome at both resolutions in all five themes, visible fine pixels,
+silhouette containment, the half-pixel grid, palette use and the Cavern
+fallback. The pre-edit res-1 hash matches 120 exit rasters with `w.res`
+absent or 1; 96 complete frames on levels 1–12, two seeds and two tick
+counts also match byte for byte from identical world states. Rendered and
+reviewed every exit before and after at seed 3, tick 1, res 2, with 120×90
+ImageMagick crops enlarged 500%. Contact sheet:
+`/tmp/codex-exit/sheet.png`. Asset and build stamps refreshed.
+
+**CRAP.** `drawExitRuinsFine`, `drawExitDesertFine`: 1.0 each.
+`drawExitFrostFine`, `drawExitJungleFine`, `drawExitSpaceshipFine`,
+`drawExitSkyscraperFine`: 2.0 each. `drawExitCavernFine`,
+`drawExitFoundryFine`, `drawExitIceFine`, `drawExitFactoryFine`,
+`drawExitTrenchFine`, `drawExitDataFine`: 3.0 each. Dispatcher
+`drawExitFrameFine`: 4.0; existing `drawExitBack`: 29.0. All have 100%
+coverage. Used a local copy of the cached crapper tool.
+
+**Next.** Review the separate special height-device props at res 2.

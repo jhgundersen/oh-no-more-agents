@@ -1020,6 +1020,236 @@ function drawExitBack(ctx, w, pal) {
     ctx.fillRect(x - 2, y - 3, 2, hh + 3)
     ctx.fillRect(x + ww, y - 3, 2, hh + 3)
   }
+  drawExitFrameFine(ctx, w, pal, x, y, ww, hh)
+}
+
+// Static material detail, all on the half-pixel grid and inside the existing
+// frame. The panel's res-1 pass never enters this table; the lit mouth and its
+// animated shimmer stay in their own passes.
+var EXIT_FINE = {
+  "Cavern": drawExitCavernFine,
+  "Ruins": drawExitRuinsFine,
+  "Frost": drawExitFrostFine,
+  "Foundry": drawExitFoundryFine,
+  "Jungle": drawExitJungleFine,
+  "Ice Cave": drawExitIceFine,
+  "Spaceship": drawExitSpaceshipFine,
+  "Factory": drawExitFactoryFine,
+  "Skyscraper": drawExitSkyscraperFine,
+  "Trench": drawExitTrenchFine,
+  "Desert": drawExitDesertFine,
+  "Data Center": drawExitDataFine
+}
+
+function drawExitFrameFine(ctx, w, pal, x, y, ww, hh) {
+  if ((w.res || 1) >= 2) (EXIT_FINE[w.biome] || EXIT_FINE.Cavern)(ctx, pal, x, y, ww, hh)
+}
+
+function drawExitCavernFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 3.5, y - 5.5, ww + 7, 0.5)           // worn course edges
+  ctx.fillRect(x - 1.5, y - 2.5, ww + 3, 0.5)
+  ctx.fillRect(x - 1.5, y, 0.5, hh)
+  ctx.fillStyle = pal.rigDark
+  for (var c = 2; c < ww; c += 6) ctx.fillRect(x + c, y - 5, 0.5, 2)
+  for (var r = 3; r < hh - 2; r += 5) {
+    ctx.fillRect(x - 2, y + r, 2, 0.5)
+    ctx.fillRect(x + ww, y + r + 2, 2, 0.5)
+  }
+  ctx.fillRect(x + ww - 4, y - 2, 0.5, 1)
+  ctx.fillRect(x + ww - 4.5, y - 1, 0.5, 1)            // a stepped hairline crack
+}
+
+function drawExitRuinsFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 4.5, y - 6.5, ww + 9, 0.5)
+  ctx.fillRect(x + ww / 2 - 5.5, y - 9.5, 2, 0.5)
+  ctx.fillRect(x - 3.5, y - 3.5, 0.5, hh + 3.5)
+  ctx.fillRect(x + ww + 1.5, y - 3.5, 0.5, hh - 2.5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 2, y - 2, 0.5, hh + 2)              // fluted columns
+  ctx.fillRect(x + ww + 3, y - 2, 0.5, hh - 4)
+  ctx.fillRect(x - 4, y + hh - 3, 3, 0.5)
+  ctx.fillRect(x + ww + 1, y + hh - 6.5, 3, 0.5)       // fractured stump
+  ctx.fillRect(x + 5, y - 6, 0.5, 1)
+  ctx.fillRect(x + 5.5, y - 5, 2, 0.5)
+  ctx.fillRect(x + 7, y - 4.5, 0.5, 0.5)
+}
+
+function drawExitFrostFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 2.5, y - 4.5, ww + 5, 0.5)
+  ctx.fillRect(x - 2.5, y - 1.5, 0.5, hh + 1.5)
+  ctx.fillRect(x + ww + 1.5, y - 1.5, 0.5, hh + 1.5)
+  for (var i = 0; i < ww; i += 4) {
+    var h = 2 + ((i / 4) % 3)
+    ctx.fillStyle = pal.exitLight
+    ctx.fillRect(x + i, y - 2, 0.5, h)
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(x + i + 1.5, y - 2, 0.5, 2)           // translucent ice's dark edge
+  }
+  ctx.fillStyle = pal.exitLight
+  ctx.fillRect(x - 1, y - 4, 1, 0.5)
+  ctx.fillRect(x + ww - 3, y - 3.5, 0.5, 0.5)
+}
+
+function drawExitFoundryFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 4.5, y - 5.5, ww + 9, 0.5)
+  ctx.fillRect(x - 3.5, y - 1.5, 0.5, hh + 1.5)
+  ctx.fillRect(x + ww + 0.5, y - 1.5, 0.5, hh + 1.5)
+  for (var r = 0; r < ww + 8; r += 5) {
+    ctx.fillRect(x - 3.5 + r, y - 4.5, 1, 0.5)        // rivet crowns
+    ctx.fillRect(x - 3.5 + r, y - 4, 0.5, 0.5)
+  }
+  ctx.fillStyle = pal.rigDark
+  for (var j = 3; j < hh; j += 6) {
+    ctx.fillRect(x - 3, y + j, 2, 0.5)               // welded plate joints
+    ctx.fillRect(x + ww + 1, y + j, 2, 0.5)
+  }
+  ctx.fillRect(x + 4, y - 2.5, ww - 8, 0.5)
+}
+
+function drawExitJungleFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 2, y + 4, 0.5, 3)
+  ctx.fillRect(x - 2.5, y + 7, 0.5, 2)               // cracked stone under vines
+  ctx.fillRect(x + ww + 1, y + hh - 5, 2, 0.5)
+  for (var v = -4; v < ww + 4; v += 3) {
+    var drop = 3 + ((v + 12) % 4) * 2
+    ctx.fillStyle = pal.decorLit
+    ctx.fillRect(x + v, y - 4.5, 0.5, drop - 0.5)    // vine edge
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(x + v - 0.5, y - 5 + drop, 1.5, 0.5) // leaf vein
+    ctx.fillStyle = pal.steelEdge
+    ctx.fillRect(x + v - 1, y - 4.5 + drop, 0.5, 0.5) // leaf tip
+  }
+}
+
+function drawExitIceFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 4.5, y - 6.5, ww + 9, 0.5)
+  ctx.fillRect(x - 4.5, y - 6, 0.5, hh + 6)
+  ctx.fillRect(x + ww + 1.5, y - 1.5, 0.5, hh + 1.5)
+  ctx.fillStyle = pal.decorDim
+  for (var f = 0; f < ww; f += 6) {
+    ctx.fillRect(x + f, y - 6, 0.5, 1)
+    ctx.fillRect(x + f + 0.5, y - 5, 1, 0.5)         // angular facets in the arch
+  }
+  for (var i = 0; i < ww + 6; i += 3) {
+    ctx.fillStyle = pal.exitLight
+    ctx.fillRect(x - 3 + i, y - 2, 0.5, 1 + ((i / 3) % 4))
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(x - 1.5 + i, y - 2, 0.5, 2 + ((i / 3) % 4))
+  }
+  ctx.fillStyle = pal.exitLight
+  ctx.fillRect(x - 3.5, y + 5, 0.5, 1.5)
+  ctx.fillRect(x + ww + 3, y + 11, 1, 0.5)
+}
+
+function drawExitSpaceshipFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 4.5, y - 5.5, ww + 9, 0.5)
+  ctx.fillRect(x - 0.5, y - 1.5, 0.5, hh + 1.5)      // machined inner collar
+  ctx.fillRect(x + ww, y - 1.5, 0.5, hh + 1.5)
+  for (var b = 0; b < hh; b += 5) {
+    ctx.fillRect(x - 2.5, y + b + 0.5, 1, 0.5)       // slotted bolt heads
+    ctx.fillRect(x + ww + 1.5, y + b + 0.5, 1, 0.5)
+  }
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 4.5, y + 3, 0.5, hh - 3)
+  ctx.fillRect(x + ww + 4, y + 3, 0.5, hh - 3)
+  ctx.fillStyle = pal.exitLight
+  ctx.fillRect(x + ww / 2 - 1.5, y - 8.5, 3, 0.5)
+}
+
+function drawExitFactoryFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 4.5, y - 7.5, ww + 9, 0.5)
+  for (var s = 0; s < 4; s++) ctx.fillRect(x - 1.5, y - 6.5 + s * 2, ww + 3, 0.5)
+  ctx.fillRect(x - 3.5, y - 2, 0.5, hh + 2)
+  ctx.fillRect(x + ww + 1.5, y - 2, 0.5, hh + 2)
+  ctx.fillStyle = pal.rigDark
+  for (var b = 3; b < hh; b += 6) {
+    ctx.fillRect(x - 2.5, y + b, 0.5, 0.5)          // guide-rail screws
+    ctx.fillRect(x + ww + 2.5, y + b, 0.5, 0.5)
+  }
+  ctx.fillRect(x - 3.5, y - 4.5, 2, 2)             // inset lamp lenses
+  ctx.fillRect(x + ww + 1.5, y - 4.5, 2, 2)
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(x - 3, y - 4, 1, 1)
+  ctx.fillRect(x + ww + 2, y - 4, 1, 1)
+}
+
+function drawExitSkyscraperFine(ctx, pal, x, y, ww, hh) {
+  var cx = x + ww / 2
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 5.5, y - 4.5, ww + 11, 0.5)       // polished canopy and jambs
+  ctx.fillRect(x - 2.5, y - 1, 0.5, hh + 1)
+  ctx.fillRect(x + ww + 0.5, y - 1, 0.5, hh + 1)
+  ctx.fillRect(cx - 8.5, y - 10.5, 17, 0.5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 1, y, 0.5, hh)
+  ctx.fillRect(x + ww + 2, y, 0.5, hh)
+  ctx.fillStyle = pal.exitFrame
+  for (var f = 0; f < 4; f++) ctx.fillRect(cx - 6.5 + f * 4, y - 7.5, 2, 0.5)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(cx - 6.5, y - 9.5, 0.5, 1.5)          // glint in the lit lobby segment
+}
+
+function drawExitTrenchFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x - 3.5, y - 5.5, ww + 7, 0.5)        // wet upper edge
+  ctx.fillRect(x - 1.5, y - 2.5, 0.5, hh + 2.5)
+  ctx.fillRect(x + ww + 0.5, y - 2.5, 0.5, hh + 2.5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 1, y, 0.5, hh)
+  ctx.fillRect(x + ww + 1.5, y, 0.5, hh)
+  for (var p = 0; p < ww; p += 4) {
+    ctx.fillRect(x + p + 0.5, y - 4.5, 1, 0.5)       // salt pits in the lintel
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(x + p + 1, y - 4, 0.5, 0.5)
+    ctx.fillStyle = pal.rigDark
+  }
+  ctx.fillStyle = pal.decorDim
+  for (var r = 3; r < hh; r += 5) {
+    ctx.fillRect(x - 1.5, y + r, 1, 0.5)              // marine deposits on the jambs
+    ctx.fillRect(x + ww + 0.5, y + r + 1, 1, 0.5)
+  }
+}
+
+function drawExitDesertFine(ctx, pal, x, y, ww, hh) {
+  var cx = x + ww / 2
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 5.5, y - 6.5, ww + 11, 0.5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 4, y - 3, 0.5, 6)                 // carved reed and crossbar glyphs
+  ctx.fillRect(x - 4, y + 1, 2, 0.5)
+  ctx.fillRect(x + ww + 3, y - 3, 0.5, 6)
+  ctx.fillRect(x + ww + 2, y - 1, 2, 0.5)
+  ctx.fillRect(x - 5, y + hh - 5, 2.5, 0.5)          // eroded joints near the foot
+  ctx.fillRect(x + ww + 2.5, y + hh - 8, 2.5, 0.5)
+  ctx.fillRect(cx - 1, y - 10, 3, 0.5)               // recessed sun disc
+  ctx.fillRect(cx + 1.5, y - 9.5, 0.5, 1.5)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(cx - 1.5, y - 10.5, 2.5, 0.5)
+  ctx.fillRect(cx - 2.5, y - 9.5, 0.5, 1)
+}
+
+function drawExitDataFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 3.5, y - 5.5, ww + 7, 0.5)
+  ctx.fillRect(x - 3.5, y - 1.5, 0.5, hh + 1.5)
+  ctx.fillRect(x + ww + 1.5, y - 1.5, 0.5, hh / 2 - 0.5)
+  ctx.fillStyle = pal.rigDark
+  for (var v = 1; v < ww; v += 3) ctx.fillRect(x + v, y - 3.5, 1.5, 0.5) // rack vents
+  ctx.fillRect(x - 2, y + 2, 0.5, hh - 2)             // brushed frame seam
+  ctx.fillStyle = pal.exitLight
+  for (var l = 0; l < ww + 4; l += 3) ctx.fillRect(x - 2 + l, y - 5, 0.5, 0.5)
+  ctx.fillStyle = pal.exitFrame
+  ctx.fillRect(x + ww + 1.5, y + hh / 2 - 1.5, 2, 0.5) // badge-reader slot
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x + ww + 2, y + hh / 2 + 0.5, 0.5, 0.5)
 }
 
 // ---------------------------------------------------------------------------
