@@ -1829,238 +1829,259 @@ function fillEarth(w, rng) {
 }
 
 function biomeSkin(w, rng) {
+  var skin = BIOME_SKINS[w.biome]
+  if (skin) skin(w, rng)
+}
+
+// One function per biome that has a skin of its own; the rest keep the
+// layered earth fillEarth laid down.
+var BIOME_SKINS = {
+  "Spaceship": skinSpaceship,
+  "Ice Cave": skinIceCave,
+  "Factory": skinFactory,
+  "Skyscraper": skinSkyscraper,
+  "Jungle": skinJungle,
+  "Trench": skinTrench,
+  "Desert": skinDesert,
+  "Data Center": skinDataCenter
+}
+
+function skinSpaceship(w, rng) {
   var x, y
+  // Not geology at all: plating. A regular grid of panels with seams between
+  // them, which is the one pattern on this board that could not possibly have
+  // formed by itself.
+  var pw = 9, ph = 5
+  for (y = SKY; y < ROWS - 2; y++) {
+    for (x = 3; x < COLS - 3; x++) {
+      if (at(w, x, y) === STEEL) continue
+      var seam = (x % pw === 0) || (y % ph === 0)
+      var plate = (Math.floor(x / pw) + Math.floor(y / ph)) % 3 === 0
+      setCell(w, x, y, seam ? ORE : (plate ? DIRT : ROCK))
+    }
+  }
+  // A few panels missing entirely, exposing the frame underneath.
+  for (var b = 0; b < 10; b++) {
+    var bx = irand(rng, 5, COLS - 12), by = irand(rng, SKY + 3, ROWS - 8)
+    for (y = by; y < by + ph - 1; y++)
+      for (x = bx; x < bx + pw - 1; x++)
+        if (at(w, x, y) !== STEEL) setCell(w, x, y, DIRT)
+  }
 
-  if (w.biome === "Spaceship") {
-    // Not geology at all: plating. A regular grid of panels with seams between
-    // them, which is the one pattern on this board that could not possibly have
-    // formed by itself.
-    var pw = 9, ph = 5
+  // Structural ribs: full-height frames at a regular pitch, running through
+  // everything. A ship is a frame with plating on it, and the frame is what
+  // stops the grid reading as wallpaper.
+  for (x = 3 + (irand(rng, 0, 3)); x < COLS - 3; x += 17) {
     for (y = SKY; y < ROWS - 2; y++) {
-      for (x = 3; x < COLS - 3; x++) {
-        if (at(w, x, y) === STEEL) continue
-        var seam = (x % pw === 0) || (y % ph === 0)
-        var plate = (Math.floor(x / pw) + Math.floor(y / ph)) % 3 === 0
-        setCell(w, x, y, seam ? ORE : (plate ? DIRT : ROCK))
-      }
+      if (at(w, x, y) === STEEL) continue
+      setCell(w, x, y, ORE)
+      if (at(w, x + 1, y) !== STEEL) setCell(w, x + 1, y, ORE)
     }
-    // A few panels missing entirely, exposing the frame underneath.
-    for (var b = 0; b < 10; b++) {
-      var bx = irand(rng, 5, COLS - 12), by = irand(rng, SKY + 3, ROWS - 8)
-      for (y = by; y < by + ph - 1; y++)
-        for (x = bx; x < bx + pw - 1; x++)
-          if (at(w, x, y) !== STEEL) setCell(w, x, y, DIRT)
-    }
-
-    // Structural ribs: full-height frames at a regular pitch, running through
-    // everything. A ship is a frame with plating on it, and the frame is what
-    // stops the grid reading as wallpaper.
-    for (x = 3 + (irand(rng, 0, 3)); x < COLS - 3; x += 17) {
-      for (y = SKY; y < ROWS - 2; y++) {
-        if (at(w, x, y) === STEEL) continue
-        setCell(w, x, y, ORE)
-        if (at(w, x + 1, y) !== STEEL) setCell(w, x + 1, y, ORE)
-      }
-    }
-
-  } else if (w.biome === "Ice Cave") {
-    for (y = SKY; y < ROWS - 2; y++)
-      for (x = 3; x < COLS - 3; x++)
-        if (at(w, x, y) !== STEEL) setCell(w, x, y, DIRT)
-
-    var cracks = irand(rng, 14, 22)
-    for (var cr = 0; cr < cracks; cr++) {
-      var cx2 = irand(rng, 5, COLS - 6), cy2 = irand(rng, SKY + 2, ROWS - 5)
-      var len2 = irand(rng, 6, 20)
-      var slope2 = rng() < 0.5 ? -1 : 1
-      for (var st2 = 0; st2 < len2; st2++) {
-        cy2 += rng() < 0.55 ? slope2 : 0
-        cx2 += rng() < 0.7 ? 1 : 0
-        if (cx2 >= COLS - 4 || cy2 < SKY + 1 || cy2 >= ROWS - 3) break
-        if (at(w, cx2, cy2) !== STEEL) setCell(w, cx2, cy2, ORE)
-      }
-    }
-    // Denser, brighter ice toward the bottom, where it has been compressed.
-    for (y = ROWS - 14; y < ROWS - 2; y++)
-      for (x = 3; x < COLS - 3; x++)
-        if (at(w, x, y) === DIRT && rng() < 0.35) setCell(w, x, y, ROCK)
-
-  } else if (w.biome === "Factory") {
-    // Machinery bolted into concrete. The Spaceship is a uniform grid because
-    // a hull is manufactured all at once; a factory is not. Here the concrete
-    // is the ground and the machines are lumps set into it at a spacing that
-    // was decided by what fits, so the regularity is in the shapes and the
-    // mezzanine decks rather than in where anything sits.
-    // DIRT is the one material Palette tints; ROCK is derived from the theme
-    // foreground and comes out the same cold grey in every biome. So the room
-    // is DIRT and the machinery in it is ROCK, which is also the right way
-    // round to look at: warm concrete with cold metal set into it.
-    for (y = SKY; y < ROWS - 2; y++)
-      for (x = 3; x < COLS - 3; x++)
-        if (at(w, x, y) !== STEEL) setCell(w, x, y, DIRT)
-
-    // Housings: rectangles, never blobs. Nothing in here grew. A handful of
-    // big ones rather than a scatter of small ones — the first version had
-    // twenty-odd and they stopped reading as machines and started reading as
-    // texture, which is the failure this whole biome had to be pulled back
-    // from. A machine room is a few large things you walk around.
-    var housings = irand(rng, 5, 8)
-    for (var hs2 = 0; hs2 < housings; hs2++) {
-      var hx = irand(rng, 4, COLS - 16), hy = irand(rng, SKY + 1, ROWS - 12)
-      var hw2 = irand(rng, 8, 14), hh2 = irand(rng, 5, 9)
-      for (y = hy; y < hy + hh2; y++)
-        for (x = hx; x < hx + hw2; x++) {
-          if (at(w, x, y) === STEEL) continue
-          // Hollow-ish: a shell of ORE with DIRT innards, so a bash through a
-          // machine looks like it opened something rather than chipped a rock.
-          var shell = y === hy || y === hy + hh2 - 1 || x === hx || x === hx + hw2 - 1
-          setCell(w, x, y, shell ? ORE : ROCK)
-        }
-    }
-
-    // Mezzanine decks: thin horizontal plate at a regular pitch, the one thing
-    // in the room that was surveyed.
-    for (y = SKY + irand(rng, 4, 8); y < ROWS - 4; y += irand(rng, 13, 19)) {
-      for (x = 3; x < COLS - 3; x++) {
-        if (at(w, x, y) === STEEL) continue
-        if (rng() < 0.08) continue          // a missing plate here and there
-        setCell(w, x, y, ORE)
-      }
-    }
-
-    // Pipe runs dropping between the decks.
-    var pipes = irand(rng, 3, 5)
-    for (var pi2 = 0; pi2 < pipes; pi2++) {
-      var px2 = irand(rng, 5, COLS - 6), py2 = SKY + irand(rng, 0, 5)
-      var plen = irand(rng, 8, 26)
-      for (var ps2 = 0; ps2 < plen; ps2++) {
-        py2++
-        if (py2 >= ROWS - 3) break
-        if (at(w, px2, py2) !== STEEL) setCell(w, px2, py2, ORE)
-      }
-    }
-
-  } else if (w.biome === "Skyscraper") {
-    // A building is a frame with floors hung on it. Nothing in here formed;
-    // it was erected, so the regularity is total — and it is *vertical*, which
-    // is what keeps it clear of the other two manufactured biomes. The
-    // Spaceship is a flat grid of panels and the Factory is a few big lumps in
-    // concrete; this one is a colonnade with slabs across it.
-    //
-    // DIRT is the material Palette tints, so the glass is DIRT, the frame is
-    // ORE and the service cores are ROCK — which comes out the same cold grey
-    // in every biome and is exactly right for a concrete riser.
-    for (y = SKY; y < ROWS - 2; y++)
-      for (x = 3; x < COLS - 3; x++)
-        if (at(w, x, y) !== STEEL) setCell(w, x, y, DIRT)
-
-    var bay = irand(rng, 9, 12)
-    for (x = 3 + irand(rng, 0, bay - 1); x < COLS - 3; x += bay)
-      for (y = SKY; y < ROWS - 2; y++) {
-        if (at(w, x, y) === STEEL) continue
-        setCell(w, x, y, ORE)
-        if (at(w, x + 1, y) !== STEEL) setCell(w, x + 1, y, ORE)
-      }
-
-    var storey = irand(rng, 6, 8)
-    for (y = SKY + irand(rng, 1, 4); y < ROWS - 3; y += storey)
-      for (x = 3; x < COLS - 3; x++)
-        if (at(w, x, y) !== STEEL) setCell(w, x, y, ORE)
-
-    // Two or three service cores: tall, narrow, and the only thing on the
-    // board this side of the frame that is allowed to interrupt the bay.
-    var cores = irand(rng, 2, 3)
-    for (var co = 0; co < cores; co++) {
-      var cwx = irand(rng, 8, COLS - 16), cwy = irand(rng, SKY + 2, ROWS - 24)
-      var cww = irand(rng, 4, 7), cwh = irand(rng, 12, 20)
-      for (y = cwy; y < cwy + cwh && y < ROWS - 2; y++)
-        for (x = cwx; x < cwx + cww; x++)
-          if (at(w, x, y) !== STEEL) setCell(w, x, y, ROCK)
-    }
-
-  } else if (w.biome === "Jungle") {
-    for (var bl = 0; bl < 26; bl++) {
-      var mx = irand(rng, 5, COLS - 6), my = irand(rng, SKY + 1, ROWS - 5)
-      var mr = irand(rng, 2, 5)
-      for (var dy2 = -mr; dy2 <= mr; dy2++)
-        for (var dx2 = -mr; dx2 <= mr; dx2++) {
-          if (dx2 * dx2 + dy2 * dy2 > mr * mr) continue
-          if (at(w, mx + dx2, my + dy2) === STEEL) continue
-          setCell(w, mx + dx2, my + dy2, rng() < 0.6 ? ORE : DIRT)
-        }
-    }
-    // Runners: long thin roots that wander down through everything.
-    var roots = irand(rng, 8, 14)
-    for (var rt = 0; rt < roots; rt++) {
-      var rx = irand(rng, 5, COLS - 6), ry = SKY + irand(rng, 0, 4)
-      for (var rs = 0; rs < 30; rs++) {
-        ry += rng() < 0.8 ? 1 : 0
-        rx += rng() < 0.4 ? (rng() < 0.5 ? -1 : 1) : 0
-        if (rx < 4 || rx >= COLS - 4 || ry >= ROWS - 3) break
-        if (at(w, rx, ry) !== STEEL) setCell(w, rx, ry, ORE)
-      }
-    }
-
-  } else if (w.biome === "Trench") {
-    // Sediment. The one place on the board where the strata are horizontal and
-    // mean it: silt settles in flat beds, so the bands run the full width and
-    // wander by a row rather than by a slope. Everything else in this function
-    // is trying to look like rock that was forced somewhere; this is trying to
-    // look like rock that was dropped.
-    var bed = SKY + 2
-    var grain = 0
-    while (bed < ROWS - 2) {
-      var thick = irand(rng, 2, 5)
-      var band = grain % 3 === 0 ? ORE : (grain % 3 === 1 ? DIRT : ROCK)
-      var wander = 0
-      for (x = 3; x < COLS - 3; x++) {
-        // A bed is level, not ruled. One row of drift every few columns is the
-        // difference between sediment and a brick wall.
-        if (rng() < 0.10) wander += rng() < 0.5 ? -1 : 1
-        if (wander < -2) wander = -2
-        if (wander > 2) wander = 2
-        for (y = bed + wander; y < bed + wander + thick; y++) {
-          if (y < SKY || y >= ROWS - 2) continue
-          if (at(w, x, y) === STEEL) continue
-          setCell(w, x, y, band)
-        }
-      }
-      bed += thick
-      grain++
-    }
-
-    // Boulders that rolled in and were buried where they stopped, breaking the
-    // banding up. Without them the whole floor reads as a barcode.
-    for (var bo = 0; bo < 14; bo++) {
-      var box = irand(rng, 6, COLS - 8), boy = irand(rng, SKY + 4, ROWS - 6)
-      var bor = irand(rng, 2, 4)
-      for (var bdy = -bor; bdy <= bor; bdy++)
-        for (var bdx = -bor; bdx <= bor; bdx++) {
-          if (bdx * bdx + bdy * bdy > bor * bor) continue
-          if (at(w, box + bdx, boy + bdy) === STEEL) continue
-          setCell(w, box + bdx, boy + bdy, ROCK)
-        }
-    }
-
-    // Shell beds: thin bright seams following the top of a band, which is
-    // where things that lived here would have been left.
-    for (var sh = 0; sh < 18; sh++) {
-      var shx = irand(rng, 5, COLS - 12), shy = irand(rng, SKY + 3, ROWS - 4)
-      var shlen = irand(rng, 5, 14)
-      for (var sl = 0; sl < shlen; sl++) {
-        if (shx + sl >= COLS - 4) break
-        if (rng() < 0.25) shy += rng() < 0.5 ? -1 : 1
-        if (shy < SKY + 1 || shy >= ROWS - 3) break
-        if (at(w, shx + sl, shy) !== STEEL) setCell(w, shx + sl, shy, ORE)
-      }
-    }
-
-  } else if (w.biome === "Desert") {
-    skinDesert(w, rng)
-  } else if (w.biome === "Data Center") {
-    skinDataCenter(w, rng)
   }
 }
+
+function skinIceCave(w, rng) {
+  var x, y
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++)
+      if (at(w, x, y) !== STEEL) setCell(w, x, y, DIRT)
+
+  var cracks = irand(rng, 14, 22)
+  for (var cr = 0; cr < cracks; cr++) {
+    var cx2 = irand(rng, 5, COLS - 6), cy2 = irand(rng, SKY + 2, ROWS - 5)
+    var len2 = irand(rng, 6, 20)
+    var slope2 = rng() < 0.5 ? -1 : 1
+    for (var st2 = 0; st2 < len2; st2++) {
+      cy2 += rng() < 0.55 ? slope2 : 0
+      cx2 += rng() < 0.7 ? 1 : 0
+      if (cx2 >= COLS - 4 || cy2 < SKY + 1 || cy2 >= ROWS - 3) break
+      if (at(w, cx2, cy2) !== STEEL) setCell(w, cx2, cy2, ORE)
+    }
+  }
+  // Denser, brighter ice toward the bottom, where it has been compressed.
+  for (y = ROWS - 14; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++)
+      if (at(w, x, y) === DIRT && rng() < 0.35) setCell(w, x, y, ROCK)
+}
+
+function skinFactory(w, rng) {
+  var x, y
+  // Machinery bolted into concrete. The Spaceship is a uniform grid because
+  // a hull is manufactured all at once; a factory is not. Here the concrete
+  // is the ground and the machines are lumps set into it at a spacing that
+  // was decided by what fits, so the regularity is in the shapes and the
+  // mezzanine decks rather than in where anything sits.
+  // DIRT is the one material Palette tints; ROCK is derived from the theme
+  // foreground and comes out the same cold grey in every biome. So the room
+  // is DIRT and the machinery in it is ROCK, which is also the right way
+  // round to look at: warm concrete with cold metal set into it.
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++)
+      if (at(w, x, y) !== STEEL) setCell(w, x, y, DIRT)
+
+  // Housings: rectangles, never blobs. Nothing in here grew. A handful of
+  // big ones rather than a scatter of small ones — the first version had
+  // twenty-odd and they stopped reading as machines and started reading as
+  // texture, which is the failure this whole biome had to be pulled back
+  // from. A machine room is a few large things you walk around.
+  var housings = irand(rng, 5, 8)
+  for (var hs2 = 0; hs2 < housings; hs2++) {
+    var hx = irand(rng, 4, COLS - 16), hy = irand(rng, SKY + 1, ROWS - 12)
+    var hw2 = irand(rng, 8, 14), hh2 = irand(rng, 5, 9)
+    for (y = hy; y < hy + hh2; y++)
+      for (x = hx; x < hx + hw2; x++) {
+        if (at(w, x, y) === STEEL) continue
+        // Hollow-ish: a shell of ORE with DIRT innards, so a bash through a
+        // machine looks like it opened something rather than chipped a rock.
+        var shell = y === hy || y === hy + hh2 - 1 || x === hx || x === hx + hw2 - 1
+        setCell(w, x, y, shell ? ORE : ROCK)
+      }
+  }
+
+  // Mezzanine decks: thin horizontal plate at a regular pitch, the one thing
+  // in the room that was surveyed.
+  for (y = SKY + irand(rng, 4, 8); y < ROWS - 4; y += irand(rng, 13, 19)) {
+    for (x = 3; x < COLS - 3; x++) {
+      if (at(w, x, y) === STEEL) continue
+      if (rng() < 0.08) continue          // a missing plate here and there
+      setCell(w, x, y, ORE)
+    }
+  }
+
+  // Pipe runs dropping between the decks.
+  var pipes = irand(rng, 3, 5)
+  for (var pi2 = 0; pi2 < pipes; pi2++) {
+    var px2 = irand(rng, 5, COLS - 6), py2 = SKY + irand(rng, 0, 5)
+    var plen = irand(rng, 8, 26)
+    for (var ps2 = 0; ps2 < plen; ps2++) {
+      py2++
+      if (py2 >= ROWS - 3) break
+      if (at(w, px2, py2) !== STEEL) setCell(w, px2, py2, ORE)
+    }
+  }
+}
+
+function skinSkyscraper(w, rng) {
+  var x, y
+  // A building is a frame with floors hung on it. Nothing in here formed;
+  // it was erected, so the regularity is total — and it is *vertical*, which
+  // is what keeps it clear of the other two manufactured biomes. The
+  // Spaceship is a flat grid of panels and the Factory is a few big lumps in
+  // concrete; this one is a colonnade with slabs across it.
+  //
+  // DIRT is the material Palette tints, so the glass is DIRT, the frame is
+  // ORE and the service cores are ROCK — which comes out the same cold grey
+  // in every biome and is exactly right for a concrete riser.
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++)
+      if (at(w, x, y) !== STEEL) setCell(w, x, y, DIRT)
+
+  var bay = irand(rng, 9, 12)
+  for (x = 3 + irand(rng, 0, bay - 1); x < COLS - 3; x += bay)
+    for (y = SKY; y < ROWS - 2; y++) {
+      if (at(w, x, y) === STEEL) continue
+      setCell(w, x, y, ORE)
+      if (at(w, x + 1, y) !== STEEL) setCell(w, x + 1, y, ORE)
+    }
+
+  var storey = irand(rng, 6, 8)
+  for (y = SKY + irand(rng, 1, 4); y < ROWS - 3; y += storey)
+    for (x = 3; x < COLS - 3; x++)
+      if (at(w, x, y) !== STEEL) setCell(w, x, y, ORE)
+
+  // Two or three service cores: tall, narrow, and the only thing on the
+  // board this side of the frame that is allowed to interrupt the bay.
+  var cores = irand(rng, 2, 3)
+  for (var co = 0; co < cores; co++) {
+    var cwx = irand(rng, 8, COLS - 16), cwy = irand(rng, SKY + 2, ROWS - 24)
+    var cww = irand(rng, 4, 7), cwh = irand(rng, 12, 20)
+    for (y = cwy; y < cwy + cwh && y < ROWS - 2; y++)
+      for (x = cwx; x < cwx + cww; x++)
+        if (at(w, x, y) !== STEEL) setCell(w, x, y, ROCK)
+  }
+}
+
+function skinJungle(w, rng) {
+  var x, y
+  for (var bl = 0; bl < 26; bl++) {
+    var mx = irand(rng, 5, COLS - 6), my = irand(rng, SKY + 1, ROWS - 5)
+    var mr = irand(rng, 2, 5)
+    for (var dy2 = -mr; dy2 <= mr; dy2++)
+      for (var dx2 = -mr; dx2 <= mr; dx2++) {
+        if (dx2 * dx2 + dy2 * dy2 > mr * mr) continue
+        if (at(w, mx + dx2, my + dy2) === STEEL) continue
+        setCell(w, mx + dx2, my + dy2, rng() < 0.6 ? ORE : DIRT)
+      }
+  }
+  // Runners: long thin roots that wander down through everything.
+  var roots = irand(rng, 8, 14)
+  for (var rt = 0; rt < roots; rt++) {
+    var rx = irand(rng, 5, COLS - 6), ry = SKY + irand(rng, 0, 4)
+    for (var rs = 0; rs < 30; rs++) {
+      ry += rng() < 0.8 ? 1 : 0
+      rx += rng() < 0.4 ? (rng() < 0.5 ? -1 : 1) : 0
+      if (rx < 4 || rx >= COLS - 4 || ry >= ROWS - 3) break
+      if (at(w, rx, ry) !== STEEL) setCell(w, rx, ry, ORE)
+    }
+  }
+}
+
+function skinTrench(w, rng) {
+  var x, y
+  // Sediment. The one place on the board where the strata are horizontal and
+  // mean it: silt settles in flat beds, so the bands run the full width and
+  // wander by a row rather than by a slope. Everything else in this function
+  // is trying to look like rock that was forced somewhere; this is trying to
+  // look like rock that was dropped.
+  var bed = SKY + 2
+  var grain = 0
+  while (bed < ROWS - 2) {
+    var thick = irand(rng, 2, 5)
+    var band = grain % 3 === 0 ? ORE : (grain % 3 === 1 ? DIRT : ROCK)
+    var wander = 0
+    for (x = 3; x < COLS - 3; x++) {
+      // A bed is level, not ruled. One row of drift every few columns is the
+      // difference between sediment and a brick wall.
+      if (rng() < 0.10) wander += rng() < 0.5 ? -1 : 1
+      if (wander < -2) wander = -2
+      if (wander > 2) wander = 2
+      for (y = bed + wander; y < bed + wander + thick; y++) {
+        if (y < SKY || y >= ROWS - 2) continue
+        if (at(w, x, y) === STEEL) continue
+        setCell(w, x, y, band)
+      }
+    }
+    bed += thick
+    grain++
+  }
+
+  // Boulders that rolled in and were buried where they stopped, breaking the
+  // banding up. Without them the whole floor reads as a barcode.
+  for (var bo = 0; bo < 14; bo++) {
+    var box = irand(rng, 6, COLS - 8), boy = irand(rng, SKY + 4, ROWS - 6)
+    var bor = irand(rng, 2, 4)
+    for (var bdy = -bor; bdy <= bor; bdy++)
+      for (var bdx = -bor; bdx <= bor; bdx++) {
+        if (bdx * bdx + bdy * bdy > bor * bor) continue
+        if (at(w, box + bdx, boy + bdy) === STEEL) continue
+        setCell(w, box + bdx, boy + bdy, ROCK)
+      }
+  }
+
+  // Shell beds: thin bright seams following the top of a band, which is
+  // where things that lived here would have been left.
+  for (var sh = 0; sh < 18; sh++) {
+    var shx = irand(rng, 5, COLS - 12), shy = irand(rng, SKY + 3, ROWS - 4)
+    var shlen = irand(rng, 5, 14)
+    for (var sl = 0; sl < shlen; sl++) {
+      if (shx + sl >= COLS - 4) break
+      if (rng() < 0.25) shy += rng() < 0.5 ? -1 : 1
+      if (shy < SKY + 1 || shy >= ROWS - 3) break
+      if (at(w, shx + sl, shy) !== STEEL) setCell(w, shx + sl, shy, ORE)
+    }
+  }
+}
+
 
 // Rows of racks in a raised-floor hall. The hall is DIRT (the tinted
 // material, so it carries the biome's colour); the racks are ORE, full-height
@@ -7805,128 +7826,136 @@ function stepEnemy(w, en) {
   if (en.shotFor > 0) en.shotFor--
   // Rate-limited: it stands (or hovers) where it is and does nothing at all.
   if (en.throttled > 0) { en.throttled--; return }
-  if (en.kind === "drone") { stepDrone(w, en); return }
-  if (en.kind === "sniper" && en.state === "seekpost") { seekSniperPost(w, en); return }
-  if ((en.kind === "operator" || en.kind === "sniper") && en.state === "deploy") {
-    stepEnemyDeploy(w, en)
-    return
-  }
-  if (en.kind === "operator" && en.state === "operate") {
-    if (unsupported(w, en)) { en.state = "fall"; en.fall = 0; return }
-    en.anim++
-    if (operatorHasDrone(w, en)) en.timer = 0
-    else if (++en.timer >= 180) launchDrone(w, en)
-    return
-  }
-  if (en.state === "fall") { stepEnemyFall(w, en); return }
-  if (en.state === "walk") { stepEnemyWalk(w, en); return }
-
-  if (en.kind === "sniper" && en.state === "camp") {
-    if (unsupported(w, en)) { en.state = "fall"; en.fall = 0; return }
-    var sniperTarget = enemyTarget(w, en, 55)
-    if (!sniperTarget) { en.targetId = 0; return }
-    en.targetId = sniperTarget.id
-    en.dir = sniperTarget.x >= en.x ? 1 : -1
-    en.lineTo = sniperTarget.x
-    en.lineY = sniperTarget.y - 2
-    en.state = "aim"
-    en.timer = 0
-    return
-  }
-
-  if (en.state === "jet") {
-    en.timer++
-    if (en.jetMode === "rise") {
-      en.x += (en.jetShaftX - en.x) * 0.18
-      en.y -= 0.22
-      en.anim++
-      if (en.y <= en.jetTargetY) {
-        en.y = en.jetTargetY
-        en.jetMode = "land"
-        en.dir = en.jetLandDir
-      }
-      return
-    }
-    var jetX = en.x + en.dir * ENEMY_JET_SPEED
-    var jetY = en.y + (en.jetMode === "land" ? 0.06 : (en.jetMode === "cross" ? 0.02 : ENEMY_JET_SINK))
-    var jetCellX = Math.floor(jetX)
-    if (solid(w, jetCellX, Math.floor(en.y)) || !headroom(w, jetCellX, Math.floor(en.y))) {
-      en.dir = -en.dir
-    } else en.x = jetX
-    // Touching any lower platform cuts the thrusters and resumes the patrol.
-    var oldFeet = Math.floor(en.y)
-    var newFeet = Math.floor(jetY)
-    for (var jy = oldFeet + 1; jy <= newFeet + 1; jy++) {
-      if (!solid(w, Math.floor(en.x), jy)) continue
-      en.y = jy - 1
-      en.state = en.kind === "sniper" ? "deploy" : "walk"
-      if (en.kind === "sniper") en.deployLeft = 5
-      en.timer = 0; en.jetVy = 0; en.jetMode = ""; return
-    }
-    en.y = jetY
-    en.anim++
-    if (en.y >= ROWS - 1 || en.timer > 360) { en.state = "fall"; en.fall = 0 }
-    return
-  }
+  if (stepEnemyMover(w, en)) return
 
   en.timer++
 
-  if (en.state === "aim") {
-    var aimed = enemyTargetById(w, en.targetId)
-    if (!aimed || Math.abs(aimed.y - en.y) > 3
-        || (aimed.x - en.x) * en.dir <= 0
-        || !lineClear(w, Math.floor(en.x), Math.floor(en.y) - 2,
-                      Math.floor(aimed.x), Math.floor(aimed.y) - 2)) {
-      // A moving queue can invalidate a shot during its tell. On level 282 the
-      // regular gunner then paid half a reload, reacquired, aimed, lost that
-      // target too, and spent the level displaying red dots without firing.
-      // Keep the elapsed aim and transfer it to another clear target. The
-      // planted sniper remains deliberate and pays the old reset penalty.
-      var replacement = en.kind === "sniper" ? null
-        : enemyTarget(w, en, en.kind === "harpoon" ? HARPOON_REACH : 28)
-      if (replacement) {
-        aimed = replacement
-        en.targetId = aimed.id
-        en.dir = aimed.x >= en.x ? 1 : -1
-      } else {
-        en.state = "reload"
-        en.timer = en.kind === "sniper" ? Math.round(GUN_RELOAD / 2) : GUN_RELOAD - 8
-        return
-      }
-    }
-    en.lineTo = aimed.x; en.lineY = aimed.y - 2
-    if (en.timer >= (en.kind === "sniper" ? SNIPER_AIM
-                    : (en.kind === "harpoon" ? HARPOON_AIM : GUN_AIM))) {
-      fireEnemyGun(w, en)
-      en.state = "reload"; en.timer = 0
-    }
-    return
-  }
+  if (en.state === "aim") { stepEnemyAim(w, en); return }
 
   if (en.state === "reload"
       && en.timer >= (en.kind === "harpoon" ? HARPOON_RELOAD : GUN_RELOAD)) {
     en.state = en.kind === "sniper" ? "camp" : "walk"; en.timer = 0
   }
-  if (en.state === "recover") {
-    var retreatX = en.x + en.dir * ENEMY_WALK_SPEED * 0.55
-    var retreatCell = Math.floor(retreatX)
-    var retreatY = Math.floor(en.y)
-    var peerBlocked = false
-    for (var ri = 0; ri < w.enemies.length; ri++) {
-      var retreatPeer = w.enemies[ri]
-      if (retreatPeer !== en && !retreatPeer.gone
-          && Math.abs(retreatPeer.y - en.y) < 1.5
-          && Math.abs(retreatPeer.x - retreatX) < 1
-          && Math.abs(retreatPeer.x - retreatX) <= Math.abs(retreatPeer.x - en.x)) {
-        peerBlocked = true
-        break
-      }
-    }
-    if (!peerBlocked && !solid(w, retreatCell, retreatY)
-        && solid(w, retreatCell, retreatY + 1) && headroom(w, retreatCell, retreatY)) en.x = retreatX
+  if (en.state === "recover") stepEnemyRecover(w, en)
+}
+
+// Everything that moves an enemy or holds it to one job, in the order they
+// were always asked. True when one of them took the tick.
+function stepEnemyMover(w, en) {
+  if (en.kind === "drone") { stepDrone(w, en); return true }
+  if (en.kind === "sniper" && en.state === "seekpost") { seekSniperPost(w, en); return true }
+  if ((en.kind === "operator" || en.kind === "sniper") && en.state === "deploy") { stepEnemyDeploy(w, en); return true }
+  if (en.kind === "operator" && en.state === "operate") { stepOperatorOperate(w, en); return true }
+  if (en.state === "fall") { stepEnemyFall(w, en); return true }
+  if (en.state === "walk") { stepEnemyWalk(w, en); return true }
+  if (en.kind === "sniper" && en.state === "camp") { stepSniperCamp(w, en); return true }
+  if (en.state === "jet") { stepEnemyJet(w, en); return true }
+  return false
+}
+
+function stepOperatorOperate(w, en) {
+  if (unsupported(w, en)) { en.state = "fall"; en.fall = 0; return }
+  en.anim++
+  if (operatorHasDrone(w, en)) en.timer = 0
+  else if (++en.timer >= 180) launchDrone(w, en)
+}
+
+function stepSniperCamp(w, en) {
+  if (unsupported(w, en)) { en.state = "fall"; en.fall = 0; return }
+  var sniperTarget = enemyTarget(w, en, 55)
+  if (!sniperTarget) { en.targetId = 0; return }
+  en.targetId = sniperTarget.id
+  en.dir = sniperTarget.x >= en.x ? 1 : -1
+  en.lineTo = sniperTarget.x
+  en.lineY = sniperTarget.y - 2
+  en.state = "aim"
+  en.timer = 0
+}
+
+function stepEnemyJet(w, en) {
+  en.timer++
+  if (en.jetMode === "rise") {
+    en.x += (en.jetShaftX - en.x) * 0.18
+    en.y -= 0.22
     en.anim++
-    if (en.timer >= 75) { en.state = "walk"; en.timer = 0; en.targetId = 0 }
+    if (en.y <= en.jetTargetY) {
+      en.y = en.jetTargetY
+      en.jetMode = "land"
+      en.dir = en.jetLandDir
+    }
+    return
   }
+  var jetX = en.x + en.dir * ENEMY_JET_SPEED
+  var jetY = en.y + (en.jetMode === "land" ? 0.06 : (en.jetMode === "cross" ? 0.02 : ENEMY_JET_SINK))
+  var jetCellX = Math.floor(jetX)
+  if (solid(w, jetCellX, Math.floor(en.y)) || !headroom(w, jetCellX, Math.floor(en.y))) {
+    en.dir = -en.dir
+  } else en.x = jetX
+  // Touching any lower platform cuts the thrusters and resumes the patrol.
+  var oldFeet = Math.floor(en.y)
+  var newFeet = Math.floor(jetY)
+  for (var jy = oldFeet + 1; jy <= newFeet + 1; jy++) {
+    if (!solid(w, Math.floor(en.x), jy)) continue
+    en.y = jy - 1
+    en.state = en.kind === "sniper" ? "deploy" : "walk"
+    if (en.kind === "sniper") en.deployLeft = 5
+    en.timer = 0; en.jetVy = 0; en.jetMode = ""; return
+  }
+  en.y = jetY
+  en.anim++
+  if (en.y >= ROWS - 1 || en.timer > 360) { en.state = "fall"; en.fall = 0 }
+}
+
+function stepEnemyAim(w, en) {
+  var aimed = enemyTargetById(w, en.targetId)
+  if (!aimed || Math.abs(aimed.y - en.y) > 3
+      || (aimed.x - en.x) * en.dir <= 0
+      || !lineClear(w, Math.floor(en.x), Math.floor(en.y) - 2,
+                    Math.floor(aimed.x), Math.floor(aimed.y) - 2)) {
+    // A moving queue can invalidate a shot during its tell. On level 282 the
+    // regular gunner then paid half a reload, reacquired, aimed, lost that
+    // target too, and spent the level displaying red dots without firing.
+    // Keep the elapsed aim and transfer it to another clear target. The
+    // planted sniper remains deliberate and pays the old reset penalty.
+    var replacement = en.kind === "sniper" ? null
+      : enemyTarget(w, en, en.kind === "harpoon" ? HARPOON_REACH : 28)
+    if (replacement) {
+      aimed = replacement
+      en.targetId = aimed.id
+      en.dir = aimed.x >= en.x ? 1 : -1
+    } else {
+      en.state = "reload"
+      en.timer = en.kind === "sniper" ? Math.round(GUN_RELOAD / 2) : GUN_RELOAD - 8
+      return
+    }
+  }
+  en.lineTo = aimed.x; en.lineY = aimed.y - 2
+  if (en.timer >= (en.kind === "sniper" ? SNIPER_AIM
+                  : (en.kind === "harpoon" ? HARPOON_AIM : GUN_AIM))) {
+    fireEnemyGun(w, en)
+    en.state = "reload"; en.timer = 0
+  }
+}
+
+function stepEnemyRecover(w, en) {
+  var retreatX = en.x + en.dir * ENEMY_WALK_SPEED * 0.55
+  var retreatCell = Math.floor(retreatX)
+  var retreatY = Math.floor(en.y)
+  var peerBlocked = false
+  for (var ri = 0; ri < w.enemies.length; ri++) {
+    var retreatPeer = w.enemies[ri]
+    if (retreatPeer !== en && !retreatPeer.gone
+        && Math.abs(retreatPeer.y - en.y) < 1.5
+        && Math.abs(retreatPeer.x - retreatX) < 1
+        && Math.abs(retreatPeer.x - retreatX) <= Math.abs(retreatPeer.x - en.x)) {
+      peerBlocked = true
+      break
+    }
+  }
+  if (!peerBlocked && !solid(w, retreatCell, retreatY)
+      && solid(w, retreatCell, retreatY + 1) && headroom(w, retreatCell, retreatY)) en.x = retreatX
+  en.anim++
+  if (en.timer >= 75) { en.state = "walk"; en.timer = 0; en.targetId = 0 }
 }
 
 // A diver in a current is baggage. The sweep runs before the agent's own state

@@ -1277,3 +1277,25 @@ new functions under 12 CRAP. Rendered both pads through a beam at res 2.
 Cavern, Frost, Foundry still have no mechanism.
 
 **Deployed** after 52 (name="build" content="f4c51999"): exit frames, Spaceship transporters, copy count fix. Browser check clean.
+
+## 53 — 2026-10-12 · Crap: biomeSkin and stepEnemy split
+
+**Why.** Considered a Foundry crane ferrying walkers across a chasm — but a
+chasm already drops the colony safely to the floor below, so it would have
+saved nothing. Took the standing CRAP priority instead.
+
+**Changed.** `biomeSkin` (CRAP 113) is a `BIOME_SKINS` table over one function
+per biome (`skinSpaceship`, `skinIceCave`, `skinFactory`, `skinSkyscraper`,
+`skinJungle`, `skinTrench`, plus the existing Desert / Data Center): now 2,
+the largest piece 26. `stepEnemy` (91) split by state — `stepEnemyMover`,
+`stepOperatorOperate`, `stepSniperCamp`, `stepEnemyJet`, `stepEnemyAim`,
+`stepEnemyRecover` — now 15, the largest piece 16.
+
+**Checked.** Generation golden (600 levels: terrain, decor, hazards, exit,
+hatch, and every 50th played out) identical before and after; full-play
+golden (150 levels played to the end, agents and enemies hashed every 50
+ticks) identical to HEAD. 225 tests pass. Functions over 30: 44 → 42.
+
+**Next.** Review Codex's hero-gear branch when it finishes. More CRAP:
+`stepAgents` (122), `generate` (129), `drawAgent` (86). A mechanism for
+Cavern / Frost / Foundry when a good one comes along.
