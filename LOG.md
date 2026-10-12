@@ -2200,3 +2200,5 @@ reshuffles which hero each level rolls (pick over 23).
 **Next.** The heroes' cost is the real finding. Look at the worst —
 Model Collapse (copies that die count against the colony), Glazier,
 Roundhouse, Chain of Thought — one at a time.
+
+**Deployed** after 79 (name="build" content="7467d3ff"): idle fidgets, hero toolbar fallback, Package Manager. Browser check clean.
