@@ -2132,3 +2132,36 @@ level is a skill-exhaustion case, not a rule bug.
 
 **Next.** Codex on idle animation for agents who are standing still
 (blockers, lift queues, campers). A new hero, or a fourteenth biome.
+
+## 78 — 2026-10-13 · Waiting for CI
+
+**Why.** Blockers, lift queues, camped heroes and hazard-held walkers could
+stand in one pose for hundreds of ticks. Their patience deserved a face.
+
+**Changed.** Draw only: short, deterministic fidgets keyed to agent id and
+world ticks, with quiet intervals taking about four fifths of the schedule.
+Blockers tap a toe, check a watch and fold their arms; queues scroll a lit
+phone, glance up and yawn; campers check the time, glance up and straighten
+a tie; hazard-held walkers drum fingers, fix a tie and yawn. Same-cell stalls
+also fidget, while agents pacing across cells keep walking. Stationary feet
+and heads no longer run a walk cycle. Shots take precedence; frozen colleagues
+have no schedule. Coarse silhouettes work at res 1, with cuffs, watch hands,
+scrolling logs and finger detail at res 2. Split the agent's existing rendering
+passes into small helpers. No simulation changes or draw-time state writes.
+
+**Checked.** `npm test` and `npm run check` pass. New idle tests draw every
+fidget through three schedule slots at both resolutions, in both directions
+and with varied ids, plus divers and the panel's unspecified resolution. They
+check quiet stances, visible gestures, per-agent timing, skipped ticks and
+absence of state writes. Existing res-1 pose hashes pass unchanged. Seeded
+old/new comparison filters idle agents from both renderers: 360 byte-identical
+frames, levels 1–60, ticks 200/500/900, res 1 and 2. Rendered and inspected
+/tmp/codex-idle/sheet.png: all five idle roles over their schedule, at res 2
+scaled up, including Beam Search's camp.
+
+**CRAP.** The fetch was unavailable; used the cached tool locally through
+`npm run crap`. Full over-30 count 30 → 29. Every added or changed function
+is below 30; `drawAgent` 88.5 → 21.5.
+
+**Next.** Watch the fidgets in a long-running colony, especially crowded lift
+queues. No push, deploy or sibling-copy update.

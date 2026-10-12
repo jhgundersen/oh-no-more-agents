@@ -5462,7 +5462,145 @@ var AGENT_POSES = {
   build: drawPoseBuild, bash: drawPoseBash, dig: drawPoseDig
 }
 
-function drawAgentBody(ctx, w, pal, ag, ox, oy, dir, robe, skin, st, bodyDrop, walkLead, squash) {
+// Waiting for CI. Three short gestures per role, with long quiet intervals.
+// Only the literal same-cell stall counts: a walker pacing across a corridor
+// still walks. No draw-time memory or RNG, including for hosts that skip ticks.
+var IDLE_REPERTOIRE = {
+  block: ["tap", "watch", "fold"], wait: ["phone", "glance", "yawn"],
+  camp: ["watch", "glance", "tie"], held: ["drum", "tie", "yawn"],
+  stuck: ["tie", "watch", "fold"]
+}
+function agentIdleKind(ag) {
+  if (ag.id === undefined || ag.shotFor > 0) return ""
+  if (IDLE_REPERTOIRE[ag.state]) return ag.state
+  if (ag.state !== "walk") return ""
+  if (ag.waitFor > 0) return "held"
+  return ag.still > 24 ? "stuck" : ""
+}
+function agentIdle(w, ag) {
+  var kind = agentIdleKind(ag)
+  if (!kind) return null
+  var period = 180 + (ag.id % 3) * 23
+  var clock = w.ticks + ag.id * 47
+  var phase = clock % period
+  var turn = (Math.floor(clock / period) + ag.id) % 3
+  return { kind: kind, phase: phase, pose: phase < 36 ? IDLE_REPERTOIRE[kind][turn] : "" }
+}
+
+// Sleeve rectangles. Hands and props go on after the suit's fine pass, so a
+// lapel cannot paint over a wristwatch. The feet stay together and planted;
+// the tap lifts just the toe, never alternating legs into a walking stride.
+var IDLE_SLEEVES = {
+  watch: [[5, 9, 4, 2], [6, 8, 2, 2]], fold: [[0, 9, 8, 2]],
+  phone: [[6, 9, 3, 2]], glance: [], yawn: [[6, 6, 2, 5]],
+  drum: [[6, 10, 4, 1]], tie: [[5, 8, 2, 3]], tap: []
+}
+function drawIdleBody(ctx, w, pal, ag, ox, oy, dir, robe, drop, idle) {
+  blit(ctx, ox, oy, dir, 1, 7 + Math.max(drop, -1), 6, 6 - Math.max(drop, -1))
+  blit(ctx, ox, oy, dir, 2, 13, 2, 3)
+  var toe = idle.pose === "tap" && idle.phase % 12 < 6 ? 1 : 0
+  blit(ctx, ox, oy, dir, 4, 13, 2, 3 - toe)
+  if (toe) blit(ctx, ox, oy, dir, 6, 14, 1, 1)
+  if (idle.kind === "block" && idle.pose !== "fold") {
+    blit(ctx, ox, oy, dir, -2, 8, 3, 2)
+    if (!idle.pose || idle.pose === "tap") blit(ctx, ox, oy, dir, 7, 8, 3, 2)
+  }
+  var sleeves = IDLE_SLEEVES[idle.pose] || []
+  for (var i = 0; i < sleeves.length; i++) {
+    var r = sleeves[i]
+    blit(ctx, ox, oy, dir, r[0], r[1] + drop, r[2], r[3])
+  }
+}
+function drawIdleFine(ctx, pal, ag, ox, oy, dir, drop, idle) {
+  drawFineHead(ctx, pal, ag, ox, oy, dir, drop - (idle.pose === "glance" ? 1 : 0))
+  drawFineSuit(ctx, pal, ox, oy, dir, 7 + Math.max(drop, -1))
+  var toe = idle.pose === "tap" && idle.phase % 12 < 6 ? 1 : 0
+  drawFineShoes(ctx, pal, ox, oy, dir, 2, 15.5, 4, 15.5 - toe, 2)
+}
+
+var IDLE_GESTURES = {
+  watch: drawIdleWatch, fold: drawIdleFold, phone: drawIdlePhone,
+  yawn: drawIdleYawn, drum: drawIdleDrum, tie: drawIdleTie
+}
+function drawIdleGesture(ctx, w, pal, ag, ox, oy, dir, robe, drop, idle) {
+  if (!idle) return
+  var gesture = IDLE_GESTURES[idle.pose]
+  if (gesture) gesture(ctx, w, pal, ox, oy + drop, dir, robe, idle.phase)
+}
+function drawIdleWatch(ctx, w, pal, ox, oy, dir, robe, phase) {
+  ctx.fillStyle = pal.skin
+  blit(ctx, ox, oy, dir, 7, 9, 2, 1)
+  ctx.fillStyle = pal.eye
+  blit(ctx, ox, oy, dir, 7, 8, 2, 1)
+  ctx.fillStyle = pal.shirt
+  blit(ctx, ox, oy, dir, 7, 8, 1, 1)
+  if ((w.res || 1) < 2) return
+  ctx.fillStyle = pal.eye
+  blitFine(ctx, ox, oy, dir, 7.5, 8, 0.5, 0.5) // the build is still pending
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 6.5, 8.5, 0.5, 0.5)
+}
+function drawIdleFold(ctx, w, pal, ox, oy, dir, robe, phase) {
+  ctx.fillStyle = pal.lapel
+  blit(ctx, ox, oy, dir, 1, 9, 6, 1)
+  ctx.fillStyle = pal.skin
+  blit(ctx, ox, oy, dir, 1, 10, 2, 1)
+  blit(ctx, ox, oy, dir, 5, 9, 2, 1)
+  if ((w.res || 1) < 2) return
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 3, 10, 0.5, 1)
+  blitFine(ctx, ox, oy, dir, 4.5, 9, 0.5, 1)
+}
+function drawIdlePhone(ctx, w, pal, ox, oy, dir, robe, phase) {
+  ctx.fillStyle = pal.eye
+  blit(ctx, ox, oy, dir, 7, 6, 3, 4)
+  ctx.fillStyle = pal.exitLight
+  blit(ctx, ox, oy, dir, 8, 7, 1, 2)
+  ctx.fillStyle = pal.skin
+  blit(ctx, ox, oy, dir, 6, 10, 2, 1)
+  if ((w.res || 1) < 2) return
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 7.5, 6.5, 2, 0.5)
+  blitFine(ctx, ox, oy, dir, 8, 7.5 + (phase >> 3) % 2 * 0.5, 1, 0.5) // scrolling logs
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 7, 9, 0.5, 1)
+}
+function drawIdleYawn(ctx, w, pal, ox, oy, dir, robe, phase) {
+  ctx.fillStyle = pal.skin
+  blit(ctx, ox, oy, dir, 6, 6, 2, 2)
+  if (w.submerged) return
+  ctx.fillStyle = pal.eye
+  blit(ctx, ox, oy, dir, 5, 6, 1, 2)
+  if ((w.res || 1) < 2) return
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 5, 6, 1, 0.5)
+  ctx.fillStyle = pal.lapel
+  blitFine(ctx, ox, oy, dir, 6.5, 8, 1, 0.5)
+}
+function drawIdleDrum(ctx, w, pal, ox, oy, dir, robe, phase) {
+  var finger = (phase >> 2) % 2
+  ctx.fillStyle = pal.skin
+  blit(ctx, ox, oy, dir, 8, 10, 2, 1)
+  blit(ctx, ox, oy, dir, 9, 9 + finger, 1, 1)
+  if ((w.res || 1) < 2) return
+  blitFine(ctx, ox, oy, dir, 8, 9.5 + (1 - finger) * 0.5, 0.5, 0.5)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 7.5, 10, 0.5, 1)
+}
+function drawIdleTie(ctx, w, pal, ox, oy, dir, robe, phase) {
+  ctx.fillStyle = pal.eye
+  blit(ctx, ox, oy, dir, 4, 7, 1, 3)
+  ctx.fillStyle = pal.skin
+  blit(ctx, ox, oy, dir, 4, 8 + (phase >> 3) % 2, 2, 1)
+  if ((w.res || 1) < 2) return
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 5.5, 9, 0.5, 1)
+  ctx.fillStyle = pal.lapel
+  blitFine(ctx, ox, oy, dir, 6, 9, 0.5, 1)
+}
+
+function drawAgentBody(ctx, w, pal, ag, ox, oy, dir, robe, skin, st, bodyDrop, walkLead, squash, idle) {
+  if (idle) return drawIdleBody(ctx, w, pal, ag, ox, oy, dir, robe, bodyDrop, idle)
   if (st === "height" && ag.heightMode === "cushion") return drawPoseTucked(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop)
   if (w.submerged && (st === "walk" || st === "swim")) return drawPoseSwim(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop)
   if (st === "saved") return drawAgentHome(ctx, w, pal, ag, ox, oy, dir, robe, skin)
@@ -8429,76 +8567,10 @@ function drawAgent(ctx, w, pal, ag, opts) {
     oy -= ag.fade + (ag.fade < 7 ? Math.round(Math.sin(ag.fade / 7 * Math.PI) * 2) : 0)
   }
 
-  var robe = pal.robe
-  var hair = pal.hair
-  var skin = pal.skin
+  var colors = agentDrawColors(w, pal, ag, st)
+  var robe = colors.robe, hair = colors.hair, skin = colors.skin
 
-  // A special wears its own colours. Every other agent on the board is the same
-  // green and blue on purpose — the silhouette is the joke — so the one that
-  // isn't reads as the one that isn't from across the room, which is the entire
-  // requirement. It also carries a bright pip on the shoulder, because at this
-  // size a robe colour alone is a few pixels and easy to miss on a busy board.
-  if (ag.special) {
-    var sp = w.specialSpec
-    if (sp) { robe = sp.robe; hair = sp.hair }
-  }
-
-  if (st === "bomb") {
-    // Flash between the theme's urgent color and white on the last seconds.
-    var fast = ag.fuse < 40
-    var on = Math.floor(ag.fuse / (fast ? 3 : 7)) % 2 === 0
-    robe = on ? pal.urgent : pal.robe
-    hair = on ? pal.urgent : pal.hair
-    skin = on ? "#ffffff" : pal.skin
-  }
-
-  // A degraded copy keeps the palette but loses fidelity generation by
-  // generation. Missing pixels and displaced fragments read more clearly at
-  // this scale than simply tinting it a different colour.
-  if (ag.modelGen > 0) {
-    ctx.globalAlpha = Math.max(0.42, 1 - ag.modelGen * 0.16)
-    ctx.fillStyle = hair
-    for (var mg = 0; mg < ag.modelGen + 1; mg++)
-      ctx.fillRect(ox - 2 + ((ag.id + mg * 5) % 13), oy + ((ag.anim + mg * 7) % 16), 1, 1)
-  }
-
-  if (st === "stunned") {
-    ctx.fillStyle = pal.warn
-    ctx.fillRect(ox + 1 + ((ag.stunFor >> 2) % 6), oy - 3, 2, 2)
-    ctx.fillRect(ox + 6 - ((ag.stunFor >> 3) % 5), oy - 6, 1, 1)
-  }
-
-  if (ag.special && w.specialSpec && w.specialSpec.act === "complete" && ag.shotFor > 0) {
-    ctx.fillStyle = hair
-    var cursorX = Math.round(ag.specialX * C)
-    var cursorY = Math.round((ag.specialY + 1) * C) - 8
-    ctx.fillRect(cursorX, cursorY, 2, 9)
-    for (var trail = 0; trail < 4; trail++)
-      ctx.fillRect(cursorX - dir * (trail * 5 + 3), cursorY + 10, 3, 1)
-  }
-
-  // The crawler's web stays fixed to the roof while the sprite descends. Draw
-  // it behind the body so the raised hand appears to be holding the line.
-  if (st === "rappel") {
-    ctx.fillStyle = ag.special ? hair : pal.umbrellaStem
-    var ropeX = Math.round(ag.x * C)
-    var ropeTop = Math.round((ag.ropeY + 1) * C)
-    var ropeBottom = oy + 7
-    ctx.fillRect(ropeX, ropeTop, 1, Math.max(1, ropeBottom - ropeTop))
-  }
-
-
-  if (st === "webup") {
-    ctx.fillStyle = ag.special ? hair : pal.umbrellaStem
-    var webAnchorX = Math.round(ag.specialX * C)
-    var webAnchorY = Math.round((ag.specialY + 1) * C)
-    var webHandX = Math.round(ag.x * C)
-    var webHandY = oy + 5
-    var webSteps = Math.max(1, Math.round(Math.max(Math.abs(webAnchorX - webHandX), Math.abs(webAnchorY - webHandY))))
-    for (var ws = 0; ws <= webSteps; ws++)
-      ctx.fillRect(Math.round(webHandX + (webAnchorX - webHandX) * ws / webSteps),
-                   Math.round(webHandY + (webAnchorY - webHandY) * ws / webSteps), 1, 1)
-  }
+  drawAgentEffects(ctx, w, pal, ag, ox, oy, dir, hair, st, C)
 
   drawUmbrella(ctx, w, pal, ag, ox, oy, st)
 
@@ -8529,6 +8601,173 @@ function drawAgent(ctx, w, pal, ag, opts) {
   // a device with its own silhouette; the movement is deliberately readable
   // at panel scale before the label has to explain it.
   drawAgentHeightGear(ctx, w, pal, ag, ox, oy, dir, robe, hair)
+  var heightBodySaved = drawAgentTransform(ctx, ag, ox, oy, st)
+
+  // Upside down: the whole sprite is mirrored vertically, so the one that
+  // walks on ceilings reads as hanging rather than as floating.
+  spriteFlip = (st === "ceil")
+
+  // The walk cycle, worked out up here because the head rides it. On the
+  // passing frames, legs together, the body is at the top of its stride and
+  // everything above the hips comes up a pixel; for a few ticks after a real
+  // drop it goes the other way, knees taking the landing.
+  var idle = agentIdle(w, ag)
+  var motion = agentDrawMotion(w, ag, st, idle)
+  var walkLead = motion.lead, squash = motion.squash, bodyDrop = motion.drop
+
+  drawAgentHead(ctx, w, pal, ag, ox, oy, dir, hair, skin, st, bodyDrop)
+
+  // Shoulder line. A dark suit has to sit on a dark board: too light and it is
+  // not a suit, too dark and the agent is a face floating in a corridor. What
+  // makes it read either way is one lighter pixel row along the top of the
+  // torso — the sprite carries its own edge instead of borrowing contrast from
+  // whatever happens to be behind it.
+  var lapel = ag.special ? hair : pal.lapel
+
+  // --- body + limbs ------------------------------------------------------
+  ctx.fillStyle = robe
+  // (the shoulder line is laid over the torso once it is drawn, below)
+
+  drawAgentBody(ctx, w, pal, ag, ox, oy, dir, robe, skin, st, bodyDrop, walkLead, squash, idle)
+
+  // --- bomber countdown --------------------------------------------------
+  if (st === "bomb") {
+    ctx.fillStyle = pal.urgent
+    ctx.font = "bold 9px monospace"
+    ctx.textAlign = "center"
+    ctx.fillText(String(Math.ceil(ag.fuse / 30)), ox + SPRITE_W / 2, oy - 3)
+  }
+
+  // The shoulder tips, laid over whichever torso the pose drew. A full lighter
+  // row across the chest was the first attempt and it read as a bib: with the
+  // white shirt directly under it the whole front of the agent went pale. Two
+  // pixels at the corners give the same edge and leave the middle to the shirt.
+  // Upright poses only — on a slide or a sprawl the shoulders are not up there.
+  if (st !== "saved" && st !== "slide" && st !== "stunned" && st !== "webup") {
+    ctx.fillStyle = lapel
+    blit(ctx, ox, oy, dir, 1, 7 + bodyDrop, 1, 1)
+    blit(ctx, ox, oy, dir, 6, 7 + bodyDrop, 1, 1)
+  }
+
+  drawAgentDetail(ctx, w, pal, ag, ox, oy, dir, bodyDrop, walkLead, squash, robe, idle)
+  drawIdleGesture(ctx, w, pal, ag, ox, oy, dir, robe, bodyDrop, idle)
+
+  if (libraryShelfPose(w, ag)) drawShelfGrip(ctx, w, pal, ag, ox, oy, dir, robe)
+
+  drawAgentMarks(ctx, w, pal, ag, ox, oy, dir, st, bodyDrop)
+
+  if (heightBodySaved) ctx.restore()
+
+  drawAgentLabel(ctx, w, pal, ag, ox, oy, st, opts)
+
+  ctx.globalAlpha = 1
+}
+
+function agentDrawColors(w, pal, ag, st) {
+  var robe = pal.robe
+  var hair = pal.hair
+  var skin = pal.skin
+
+  // A special wears its own colours. Every other agent on the board is the same
+  // green and blue on purpose — the silhouette is the joke — so the one that
+  // isn't reads as the one that isn't from across the room, which is the entire
+  // requirement. It also carries a bright pip on the shoulder, because at this
+  // size a robe colour alone is a few pixels and easy to miss on a busy board.
+  if (ag.special) {
+    var sp = w.specialSpec
+    if (sp) { robe = sp.robe; hair = sp.hair }
+  }
+
+  if (st === "bomb") {
+    // Flash between the theme's urgent color and white on the last seconds.
+    var fast = ag.fuse < 40
+    var on = Math.floor(ag.fuse / (fast ? 3 : 7)) % 2 === 0
+    robe = on ? pal.urgent : pal.robe
+    hair = on ? pal.urgent : pal.hair
+    skin = on ? "#ffffff" : pal.skin
+  }
+
+  return { robe: robe, hair: hair, skin: skin }
+}
+
+function agentDrawMotion(w, ag, st, idle) {
+  var walkLead = [0, 1, 0, -1][(ag.anim >> 2) % 4]
+  var squash = st === "walk" ? landSquash(w, ag) : 0
+  var bob = st === "walk" && !w.submerged && !squash && walkLead === 0 ? 1 : 0
+  var bodyDrop = st === "slide" ? 4 : ((st === "dig" || st === "camp") ? 2 : squash - bob)
+
+  if (idle && st === "walk") { walkLead = 0; squash = 0; bodyDrop = 0 }
+
+  return { lead: walkLead, squash: squash, drop: bodyDrop }
+}
+
+function drawAgentDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, squash, robe, idle) {
+  if ((w.res || 1) < 2) return
+  if (!w.submerged) {
+    if (idle) drawIdleFine(ctx, pal, ag, ox, oy, dir, drop, idle)
+    else drawAgentFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w)
+  } else if (ag.state !== "saved") {
+    var swimming = !idle && (ag.state === "walk" || ag.state === "swim")
+    drawDiverFine(ctx, pal, ag, ox, oy, dir, drop + (swimming ? Math.round(Math.sin(ag.anim * 0.22) * 1.2) : 0) - (idle && idle.pose === "glance" ? 1 : 0))
+  }
+}
+
+function drawAgentEffects(ctx, w, pal, ag, ox, oy, dir, hair, st, C) {
+  // A degraded copy keeps the palette but loses fidelity generation by
+  // generation. Missing pixels and displaced fragments read more clearly at
+  // this scale than simply tinting it a different colour.
+  if (ag.modelGen > 0) {
+    ctx.globalAlpha = Math.max(0.42, 1 - ag.modelGen * 0.16)
+    ctx.fillStyle = hair
+    for (var mg = 0; mg < ag.modelGen + 1; mg++)
+      ctx.fillRect(ox - 2 + ((ag.id + mg * 5) % 13), oy + ((ag.anim + mg * 7) % 16), 1, 1)
+  }
+
+  if (st === "stunned") {
+    ctx.fillStyle = pal.warn
+    ctx.fillRect(ox + 1 + ((ag.stunFor >> 2) % 6), oy - 3, 2, 2)
+    ctx.fillRect(ox + 6 - ((ag.stunFor >> 3) % 5), oy - 6, 1, 1)
+  }
+
+  if (ag.special && w.specialSpec && w.specialSpec.act === "complete" && ag.shotFor > 0) {
+    ctx.fillStyle = hair
+    var cursorX = Math.round(ag.specialX * C)
+    var cursorY = Math.round((ag.specialY + 1) * C) - 8
+    ctx.fillRect(cursorX, cursorY, 2, 9)
+    for (var trail = 0; trail < 4; trail++)
+      ctx.fillRect(cursorX - dir * (trail * 5 + 3), cursorY + 10, 3, 1)
+  }
+
+  drawAgentRopes(ctx, w, pal, ag, ox, oy, dir, hair, st, C)
+}
+
+function drawAgentRopes(ctx, w, pal, ag, ox, oy, dir, hair, st, C) {
+  // The crawler's web stays fixed to the roof while the sprite descends. Draw
+  // it behind the body so the raised hand appears to be holding the line.
+  if (st === "rappel") {
+    ctx.fillStyle = ag.special ? hair : pal.umbrellaStem
+    var ropeX = Math.round(ag.x * C)
+    var ropeTop = Math.round((ag.ropeY + 1) * C)
+    var ropeBottom = oy + 7
+    ctx.fillRect(ropeX, ropeTop, 1, Math.max(1, ropeBottom - ropeTop))
+  }
+
+
+  if (st === "webup") {
+    ctx.fillStyle = ag.special ? hair : pal.umbrellaStem
+    var webAnchorX = Math.round(ag.specialX * C)
+    var webAnchorY = Math.round((ag.specialY + 1) * C)
+    var webHandX = Math.round(ag.x * C)
+    var webHandY = oy + 5
+    var webSteps = Math.max(1, Math.round(Math.max(Math.abs(webAnchorX - webHandX), Math.abs(webAnchorY - webHandY))))
+    for (var ws = 0; ws <= webSteps; ws++)
+      ctx.fillRect(Math.round(webHandX + (webAnchorX - webHandX) * ws / webSteps),
+                   Math.round(webHandY + (webAnchorY - webHandY) * ws / webSteps), 1, 1)
+  }
+
+}
+
+function drawAgentTransform(ctx, ag, ox, oy, st) {
   var heightBodySaved = st === "height" && (ag.heightMode === "cushion" || ag.heightMode === "helicopter")
   if (heightBodySaved) {
     ctx.save()
@@ -8550,19 +8789,12 @@ function drawAgent(ctx, w, pal, ag, opts) {
     }
   }
 
-  // Upside down: the whole sprite is mirrored vertically, so the one that
-  // walks on ceilings reads as hanging rather than as floating.
-  spriteFlip = (st === "ceil")
+  return heightBodySaved
+}
 
-  // The walk cycle, worked out up here because the head rides it. On the
-  // passing frames, legs together, the body is at the top of its stride and
-  // everything above the hips comes up a pixel; for a few ticks after a real
-  // drop it goes the other way, knees taking the landing.
-  var walkLead = [0, 1, 0, -1][(ag.anim >> 2) % 4]
-  var squash = st === "walk" ? landSquash(w, ag) : 0
-  var bob = st === "walk" && !w.submerged && !squash && walkLead === 0 ? 1 : 0
-  var bodyDrop = st === "slide" ? 4 : ((st === "dig" || st === "camp") ? 2 : squash - bob)
-
+function drawAgentHead(ctx, w, pal, ag, ox, oy, dir, hair, skin, st, bodyDrop) {
+  var idle = agentIdle(w, ag)
+  if (idle && idle.pose === "glance") bodyDrop--
   // --- hair + head -------------------------------------------------------
   // Which way it is looking has to survive the shades. The old sprite said it
   // with one eye pixel sitting on the leading side; a band across the whole
@@ -8576,7 +8808,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   if (w.submerged && st !== "saved") {
     // The helmet rides the kick with the torso, off the same sine as the legs
     // below: a head that stays level while the body bobs has come off.
-    var headLift = (st === "walk" || st === "swim")
+    var headLift = !agentIdleKind(ag) && (st === "walk" || st === "swim")
       ? Math.round(Math.sin(ag.anim * 0.22) * 1.2) : 0
     drawDiverBubbles(ctx, w, pal, ag, ox, oy, bodyDrop + headLift)
     drawDiverHead(ctx, w, pal, ag, ox, oy, dir, bodyDrop + headLift)
@@ -8604,48 +8836,14 @@ function drawAgent(ctx, w, pal, ag, opts) {
   // shirt front painted per-pose would not: there are a dozen torsos below.
   if (st !== "saved") {
     ctx.fillStyle = pal.shirt
-    var collarLift = (w.submerged && (st === "walk" || st === "swim"))
+    var collarLift = (!agentIdleKind(ag) && w.submerged && (st === "walk" || st === "swim"))
       ? Math.round(Math.sin(ag.anim * 0.22) * 1.2) : 0
     blit(ctx, ox, oy, dir, 3, 6 + bodyDrop + collarLift, 2, 4)
   }
 
-  // Shoulder line. A dark suit has to sit on a dark board: too light and it is
-  // not a suit, too dark and the agent is a face floating in a corridor. What
-  // makes it read either way is one lighter pixel row along the top of the
-  // torso — the sprite carries its own edge instead of borrowing contrast from
-  // whatever happens to be behind it.
-  var lapel = ag.special ? hair : pal.lapel
+}
 
-  // --- body + limbs ------------------------------------------------------
-  ctx.fillStyle = robe
-  // (the shoulder line is laid over the torso once it is drawn, below)
-
-  drawAgentBody(ctx, w, pal, ag, ox, oy, dir, robe, skin, st, bodyDrop, walkLead, squash)
-
-  // --- bomber countdown --------------------------------------------------
-  if (st === "bomb") {
-    ctx.fillStyle = pal.urgent
-    ctx.font = "bold 9px monospace"
-    ctx.textAlign = "center"
-    ctx.fillText(String(Math.ceil(ag.fuse / 30)), ox + SPRITE_W / 2, oy - 3)
-  }
-
-  // The shoulder tips, laid over whichever torso the pose drew. A full lighter
-  // row across the chest was the first attempt and it read as a bib: with the
-  // white shirt directly under it the whole front of the agent went pale. Two
-  // pixels at the corners give the same edge and leave the middle to the shirt.
-  // Upright poses only — on a slide or a sprawl the shoulders are not up there.
-  if (st !== "saved" && st !== "slide" && st !== "stunned" && st !== "webup") {
-    ctx.fillStyle = lapel
-    blit(ctx, ox, oy, dir, 1, 7 + bodyDrop, 1, 1)
-    blit(ctx, ox, oy, dir, 6, 7 + bodyDrop, 1, 1)
-  }
-
-  if ((w.res || 1) >= 2 && !w.submerged) drawAgentFine(ctx, pal, ag, ox, oy, dir, bodyDrop, walkLead, squash, robe, w)
-  else if ((w.res || 1) >= 2 && st !== "saved") drawDiverFine(ctx, pal, ag, ox, oy, dir, bodyDrop + (headLift || 0))
-
-  if (libraryShelfPose(w, ag)) drawShelfGrip(ctx, w, pal, ag, ox, oy, dir, robe)
-
+function drawAgentMarks(ctx, w, pal, ag, ox, oy, dir, st, bodyDrop) {
   // A pip on the shoulder in the special's second colour. The robe alone is a
   // handful of pixels on a board that already has a lot going on.
   if (ag.special && st !== "saved") {
@@ -8673,8 +8871,9 @@ function drawAgent(ctx, w, pal, ag, opts) {
     }
   }
 
-  if (heightBodySaved) ctx.restore()
+}
 
+function drawAgentLabel(ctx, w, pal, ag, ox, oy, st, opts) {
   // --- optional label ----------------------------------------------------
   // What it's doing when it's doing something, and who it is the rest of the
   // time. The trait is the more interesting half: watching two agents reach
@@ -8698,7 +8897,6 @@ function drawAgent(ctx, w, pal, ag, opts) {
     }
   }
 
-  ctx.globalAlpha = 1
 }
 
 function actionLabel(st) {
