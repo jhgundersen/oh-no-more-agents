@@ -2246,3 +2246,5 @@ colony measured apart (160 levels, paired against no hero).
 **Next.** Guard Rails and Vector Van Damme still cost the *rest* of the
 colony ~1.3–1.9 points — their moves, not their survival. More heroes now
 end a level alive but stuck.
+
+**Deployed** after 81 (name="build" content="b63f974f"): hero fixes. Browser check clean.
