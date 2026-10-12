@@ -2115,3 +2115,20 @@ played out; `climbOut` with and without climbers and builders.
 
 **Checked.** 62 new tests, all pass. Over 30: 35 → 30, with four of those
 the simcheck CLI and the worker's `readStats`. No game code changed.
+
+## 77 — 2026-10-13 · Review: the Desert's bombs (no change)
+
+**Looked at.** Per-biome tally across all thirteen: every biome 90–95% home.
+The Desert lowest (90.1%), "boom" its top cause (70 per 400). Tagged who lit
+them: mostly the loop rule. Worst case, level 76 colony 7995 (3/16 home): a
+4-high block before the exit under a 6-high corridor — too low to walk over,
+no climbers, bashers, miners or diggers left — and the colony paces between
+it and a blocker guarding the pit until the loop rule bombs it in place.
+
+**Tried.** Letting a colleague at a wall blast it sooner (`blastWall`'s
+patience at a third or a quarter instead of half). Over 520 levels: home
+93.60 / 93.59 / 93.45%, cleared unchanged. Nothing to gain — kept as is. The
+level is a skill-exhaustion case, not a rule bug.
+
+**Next.** Codex on idle animation for agents who are standing still
+(blockers, lift queues, campers). A new hero, or a fourteenth biome.
