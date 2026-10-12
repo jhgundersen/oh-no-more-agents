@@ -1981,3 +1981,17 @@ baselines updated.
 
 **Next.** The sniper is close to harmless (97–98%); look at why it rarely
 gets a shot (camp position? line of sight?) before deploying the next batch.
+
+## 71 — 2026-10-12 · The sniper's shot counts
+
+**Why.** Iteration 70's tally: sniper posts were harmless — 97.7% home
+against 94.9% with no enemies, 0.08 deaths a level. Profiling 89 sniper
+levels: 57% of its time camped, 8.5% aiming, 57 shots, 7 kills. Its shot only
+wounded (the gunner's and the harpooner's are lethal), so a hit needed a
+second one.
+
+**Changed.** Every hostile shot is lethal (`fireEnemyGun`).
+
+**Checked.** Sniper levels 97.7 → 94.5% home, 0.58 deaths a level — a threat,
+the mildest of the four. All enemy levels 89.6 → 88.9%. `sim play` 97% /
+90% (unchanged). Deploying 70–71.

@@ -7865,7 +7865,11 @@ function fireEnemyGun(w, en) {
       if (ag.gone || ag.state === "saved") continue
       if (Math.abs(ag.x - (x + 0.5)) < 0.8 && Math.abs((ag.y - 2) - fy) < 2.5) {
         en.lineTo = ag.x; en.lineY = ag.y - 2; en.shotFor = 8
-        woundFriendly(w, ag, en.x, en.kind === "gun" || en.kind === "harpoon")
+        // Every hostile shot is lethal. The sniper's used to wound, and a post
+        // that aims for over a second to graze somebody was the one red-team
+        // roster the colony did not need to fear: 97.7% home against 94.9%
+        // with no enemies at all, 0.08 deaths a level. Lethal: 94.5%, 0.58.
+        woundFriendly(w, ag, en.x, true)
         return
       }
     }
