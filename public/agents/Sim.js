@@ -780,6 +780,7 @@ function generate(level, attempt, colonySeed) {
     belts: [],        // the Factory's conveyors; see placeBelts
     beltAt: null,     // and which way each feet cell is carried, -1/0/1
     frozen: [],       // the Ice Cave's colleagues in the ice; see placeFrozen
+    pads: [],         // the Spaceship's transporter pairs; see placePads
     k: K,
     decor: [],
     corrGap: CORR_GAP,
@@ -1310,6 +1311,7 @@ function generate(level, attempt, colonySeed) {
   if (w.biome === "Ruins") placeBoulder(w, corridors)
   if (w.biome === "Factory") placeBelts(w, corridors)
   if (w.biome === "Ice Cave") placeFrozen(w, corridors)
+  if (w.biome === "Spaceship") placePads(w, corridors)
 
   // Last, so that everything above this line still cuts freely (see clearCell).
   w.bedFloor = corridors[corridors.length - 1].floorY
@@ -1569,6 +1571,65 @@ function stepFrozen(w) {
     w.toRelease++
     w.released++
     w.lastEvent = "thaw"
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Transporters
+// ---------------------------------------------------------------------------
+//
+// The Spaceship's own mechanism. One pad on a corridor floor, its partner near
+// the start of the corridor below: walk onto the first and you are beamed to
+// the second, skipping the rest of the floor and the drop at its end. Only
+// ever downstream — one corridor nearer the exit — so it is a shortcut and
+// never a trap. It needs a moment to recharge after each use, and whoever
+// walks over it meanwhile simply walks on. Placed from a stream of its own.
+var PAD_RECHARGE = 10      // ticks between beams
+var PAD_FX = 24            // ticks of beam and sparkle, for Draw
+
+function placePads(w, corridors) {
+  if (corridors.length < 2) return
+  var prng = makeRng(w.level * 5381 + 4127)
+  var k = Math.floor(prng() * (corridors.length - 1))
+  var from = corridors[k], to = corridors[k + 1]
+  var ax = padSpot(w, from, from.startX + from.dir * irand(prng, 10, 16))
+  var bx = padSpot(w, to, to.startX + to.dir * 8)
+  if (ax < 0 || bx < 0) return
+  w.pads.push({ ax: ax, ay: from.floorY - 1, bx: bx, by: to.floorY - 1,
+                dir: to.dir, usedAt: -PAD_RECHARGE })
+}
+
+// The nearest cell to `x` on this floor that a walker can stand on, both
+// sides of it too, so the pad is not wedged against a step.
+function padSpot(w, c, x) {
+  var feet = c.floorY - 1
+  for (var r = 0; r < 12; r++)
+    for (var s = -1; s <= 1; s += 2) {
+      var cx = x + r * s
+      if (cx < c.x0 + 2 || cx > c.x1 - 2) continue
+      if (standable(w, cx - 1, feet) && standable(w, cx, feet) && standable(w, cx + 1, feet)
+          && solid(w, cx - 1, feet + 1) && solid(w, cx, feet + 1) && solid(w, cx + 1, feet + 1)) return cx
+    }
+  return -1
+}
+
+function stepPads(w) {
+  for (var i = 0; i < w.pads.length; i++) {
+    var p = w.pads[i]
+    if (w.ticks - p.usedAt < PAD_RECHARGE || !solid(w, p.ax, p.ay + 1)) continue
+    for (var j = 0; j < w.agents.length; j++) {
+      var ag = w.agents[j]
+      if (ag.gone || ag.state !== "walk" || Math.floor(ag.x) !== p.ax || Math.floor(ag.y) !== p.ay) continue
+      if (!standable(w, p.bx, p.by) || !solid(w, p.bx, p.by + 1)) break
+      ag.x = p.bx + 0.5
+      ag.y = p.by
+      ag.dir = p.dir
+      ag.idle = 0
+      p.usedAt = w.ticks
+      p.who = ag.id
+      w.lastEvent = "beam"
+      break
+    }
   }
 }
 
@@ -2558,6 +2619,11 @@ function collapseCopy(w, ag) {
   copy.fade = 0
   w.agents.push(copy)
   w.collapseCopies++
+  // A copy is a colleague like any other: it is released when it appears, so
+  // one that walks home is a rescue out of a colony that included it. Without
+  // this a level could report seventeen home out of sixteen.
+  w.toRelease++
+  w.released++
   return true
 }
 
@@ -8743,6 +8809,7 @@ function step(w) {
   w.wind = windAt(w)
   stepBoulder(w)
   stepFrozen(w)
+  stepPads(w)
   var counts = stepAgents(w)
   // When each agent was lost, for Hot Reload. Everything that kills sets
   // `gone`; nothing else records the moment, and there are a dozen of them.

@@ -1249,3 +1249,29 @@ coverage. Used a local copy of the cached crapper tool.
 biomes — subtle, in style, nothing changes shape — and the diff (an
 `EXIT_FINE` table, one dispatch line in `drawExitBack`). Check 221 pass;
 CRAP count over 30 unchanged at 44.
+
+## 52 — 2026-10-12 · Spaceship transporters; the dips were noise
+
+**Checked first.** Iteration 49's Trench / Ice Cave dips, on fresh seeds
+(600 plays each, before vs after the obstruction fix): Trench 93.19 → 93.20,
+Ice Cave 92.22 → 92.43, Jungle 90.15 → 91.30. Noise; the fix stands.
+
+**Changed.** Spaceship transporters: a pad pair per level, beaming a walker
+from near the start of one corridor to near the start of the next one down
+(`placePads`, `padSpot`, `stepPads`); `drawPadPair` — floor plates whose lamps
+refill as they recharge, a column of light with scan lines rising from the
+sender and settling on the receiver. First placement (mid-floor, 45-tick
+recharge) beamed 1.9 a level and saved nothing; 10-tick recharge 3.4; near
+the floor's start 6.3 a level, Spaceship home 92.76 → 93.08%, avg ticks
+1220 → 1202 (800 plays).
+
+**Found on the way.** The play test failed on level 19: 17 saved of 16
+released. Not the pads — Model Collapse's copies walk home and count as
+saved but were never released. They are now (`toRelease`/`released` bumped
+as the Ice Cave's thawed are). Counter comment updated.
+
+**Checked.** 225 tests pass (4 new); `sim play` 95% / 88%; `inert` passes;
+new functions under 12 CRAP. Rendered both pads through a beam at res 2.
+
+**Next.** Deploy (exit frames + pads). Codex is on hero gear detail.
+Cavern, Frost, Foundry still have no mechanism.

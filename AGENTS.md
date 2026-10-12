@@ -383,6 +383,25 @@ stream.
   the original colony's saves went from 89.9% to 91.6%. Most stay in the ice
   — the colony goes round or over more walls than it goes through.
 
+## The Spaceship
+
+Transporters (`placePads`, `stepPads`, above `placeMission`). One pair per
+level: a pad 10–16 cells into a corridor, its partner 8 cells into the next
+corridor down. A walker on the first is beamed to the second; 10 ticks to
+recharge. Own RNG stream.
+
+- **Only ever downstream**, so it is a shortcut and never a trap; it refuses
+  while either pad's floor is gone.
+- **Near the start of its floor, not the middle.** Mid-floor it caught 1.9
+  agents a level (most of the colony arrives by other routes or behind the
+  recharge) and saved no time. Near the start: 6.3 a level, 93.1% home
+  against 92.8% without, levels ~1.5% shorter (800 plays).
+
+**Colleagues added mid-level are released.** The Ice Cave's thawed and Model
+Collapse's copies both bump `toRelease` and `released`. Copies used not to,
+so a level could report more home than it released — the play test caught it
+on level 19 once the pads changed that level's run.
+
 ## Staying current
 
 A tab is left open for days, so a deploy has to reach it without anyone pressing

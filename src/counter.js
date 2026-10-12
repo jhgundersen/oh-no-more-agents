@@ -1,7 +1,7 @@
 // A report is a batch of up to five finished levels, and the biggest colony
-// is eighteen — twenty on an Ice Cave level that thaws both its frozen
-// colleagues, which the client covers by sealing a batch before it would pass
-// the cap rather than by level count. Clients send one of these per batch
+// is eighteen — more when a level adds colleagues as it goes (the Ice Cave's
+// thawed, Model Collapse's copies, up to twelve), which the client covers by
+// sealing a batch before it would pass the cap rather than by level count. Clients send one of these per batch
 // rather than per level.
 export const MAX_SAVED_PER_REPORT = 90
 export const MAX_REPORTS_PER_MINUTE = 8

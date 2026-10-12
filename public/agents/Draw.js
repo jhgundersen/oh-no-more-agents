@@ -2018,6 +2018,7 @@ function drawActors(ctx, w, pal, opts) {
   if (w.eventSiteFx) drawEventSite(ctx, w, pal, w.eventSiteFx)
   if (w.boulder) drawBoulder(ctx, w, pal, w.boulder)
   if (w.frozen) for (var fz = 0; fz < w.frozen.length; fz++) drawFrozen(ctx, w, pal, w.frozen[fz])
+  if (w.pads) for (var pd = 0; pd < w.pads.length; pd++) drawPadPair(ctx, w, pal, w.pads[pd])
   if (w.nets) for (var ni = 0; ni < w.nets.length; ni++) drawNet(ctx, w, w.nets[ni])
   if (w.reloadFx) drawReloadTrail(ctx, w, w.reloadFx)
 
@@ -4916,6 +4917,54 @@ function drawPrints(ctx, w, pal) {
       ctx.fillRect(px + (p.dir > 0 ? 1 : -1.5), py + 0.5, 0.5, 0.5)   // the toe, forward
     } else ctx.fillRect(px - 1, py, 2, 1)
   }
+  ctx.globalAlpha = 1
+}
+
+// The Spaceship's transporters (Sim's `w.pads`): a plate set in the floor at
+// each end, its lamps filling up as it recharges, and on each beam a column of
+// light with scan lines climbing it — rising out of the sending pad, settling
+// onto the receiving one — so where somebody went is as visible as that they
+// went. The colour is its own, not the theme's: it has to read as the ship's
+// machinery under every palette, like the umbrella and the ladder.
+var PAD_LIGHT = "#6ff3ff", PAD_FX_TICKS = 24, PAD_CHARGE = 10
+function drawPadPair(ctx, w, pal, p) {
+  var since = w.ticks - p.usedAt
+  drawPad(ctx, w, pal, p.ax, p.ay, Math.min(1, since / PAD_CHARGE))
+  drawPad(ctx, w, pal, p.bx, p.by, 1)
+  if (since >= PAD_FX_TICKS) return
+  drawBeam(ctx, w, p.ax, p.ay, since, -1)
+  drawBeam(ctx, w, p.bx, p.by, since, 1)
+}
+
+function drawPad(ctx, w, pal, x, y, charge) {
+  var C = w.k.CELL, px = (x - 1) * C, py = (y + 1) * C
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(px, py - 1, C * 3, 2)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(px + 1, py - 1, C * 3 - 2, 1)
+  ctx.fillStyle = PAD_LIGHT
+  for (var l = 0; l < 4; l++) {
+    ctx.globalAlpha = l < Math.round(charge * 4) ? 0.9 : 0.2
+    ctx.fillRect(px + 2 + l * 2.5, py - 1, 1, (w.res || 1) >= 2 ? 0.5 : 1)
+  }
+  ctx.globalAlpha = 1
+}
+
+// `way` -1 climbs out of the floor, +1 settles down onto it.
+function drawBeam(ctx, w, x, y, age, way) {
+  var C = w.k.CELL, px = (x - 1) * C + 1, base = (y + 1) * C, tall = 18
+  var fade = 1 - age / PAD_FX_TICKS
+  ctx.fillStyle = PAD_LIGHT
+  ctx.globalAlpha = 0.25 * fade
+  ctx.fillRect(px, base - tall, C * 3 - 2, tall)
+  ctx.globalAlpha = 0.8 * fade
+  for (var s = 0; s < 3; s++) {
+    var t = (age * 1.5 + s * 6) % tall
+    ctx.fillRect(px, base - 1 - (way < 0 ? t : tall - t), C * 3 - 2, (w.res || 1) >= 2 ? 0.5 : 1)
+  }
+  ctx.fillStyle = "#ffffff"
+  for (var k = 0; k < 4; k++)
+    ctx.fillRect(px + ((k * 5 + age) % (C * 3 - 3)), base - 3 - ((k * 7 + age * 2) % (tall - 4)), 1, 1)
   ctx.globalAlpha = 1
 }
 
