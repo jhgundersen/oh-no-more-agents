@@ -6361,237 +6361,269 @@ function blit(ctx, ox, oy, dir, x, y, bw, bh) {
   ctx.fillRect(Math.round(sx), Math.round(sy), bw, bh)
 }
 
+// Red-team poses are pure reads. anim advances while moving, timer while
+// aiming/reloading; neither needs a renderer-owned clock or a world write.
+function enemyMotion(w, en) {
+  var moving = ["walk", "recover", "deploy", "seekpost"].indexOf(en.state) >= 0
+  if (en.throttled > 0) return { stride: 0, bob: 0 }
+  var stride = moving ? [0, 1, 0, -1][(en.anim >> 2) % 4] : 0
+  var bob = Math.abs(stride)
+  if (en.kind === "drone" || en.state === "jet") bob = [0, 1, 0, -1][Math.floor(en.anim / 6) % 4]
+  return { stride: stride, bob: bob }
+}
+
+function enemyRecoil(en) {
+  if (en.shotFor > 5) return 2
+  return en.shotFor > 2 ? 1 : 0
+}
+
 function drawEnemy(ctx, w, pal, en, opts) {
-  var C = w.k.CELL
-  var ox = Math.round(en.x * C) - SPRITE_W / 2
-  var oy = Math.round((en.y + 1) * C) - SPRITE_PX
-  var dir = en.dir
-  var red = "#8f1f35"
-  var redLit = "#ff5268"
-  var pale = "#d9d7cf"
-
-  if (en.kind === "drone") {
-    // A compact quadcopter: asymmetric lamp and tail make its direction clear
-    // while the alternating rotors keep it alive at this scale.
-    var rotor = (en.anim >> 1) % 2
-    ctx.fillStyle = "#20232b"
-    ctx.fillRect(ox + 2, oy + 7, 8, 3)
-    ctx.fillRect(ox, oy + 5 + rotor, 4, 1)
-    ctx.fillRect(ox + 8, oy + 6 - rotor, 4, 1)
-    ctx.fillStyle = pale
-    ctx.fillRect(ox + 4, oy + 6, 4, 4)
-    ctx.fillStyle = redLit
-    ctx.fillRect(dir > 0 ? ox + 8 : ox + 3, oy + 7, 2, 2)
-    ctx.fillStyle = "#ff9a35"
-    ctx.fillRect(ox + 5, oy + 10, 2, 2 + rotor)
-    if ((w.res || 1) >= 2) drawDroneFine(ctx, w, ox, oy, dir, rotor)
-    if (opts && opts.labels) {
-      ctx.fillStyle = redLit
-      ctx.font = "7px monospace"
-      ctx.textAlign = "center"
-      ctx.fillText("Remote Execution", ox + 5, oy + 1)
-    }
-    ctx.globalAlpha = 1
-    return
-  }
-
-  if (en.kind === "operator") {
-    // Four broad shapes survive this scale better than a miniature console:
-    // dark helmet, cyan visor, amber coat and square radio pack. The controller
-    // is one bright block held out front, not a collection of tiny controls.
-    var amber = "#c47a24"
-    var amberLit = "#f0b34f"
-    ctx.fillStyle = "#34313a"
-    ctx.fillRect(ox, oy + 1, 9, 5)                 // broad helmet
-    ctx.fillRect(ox - 1, oy + 7, 3, 7)             // square radio pack
-    ctx.fillStyle = "#86d8e8"
-    ctx.fillRect(ox + (dir > 0 ? 4 : 1), oy + 3, 5, 2) // single visor
-    ctx.fillStyle = amber
-    ctx.fillRect(ox + 2, oy + 6, 7, 8)              // one-piece coat
-    ctx.fillStyle = amberLit
-    ctx.fillRect(dir > 0 ? ox + 8 : ox, oy + 9, 4, 3) // controller
-    ctx.fillStyle = "#34313a"
-    var opStride = en.state === "deploy" ? (en.anim >> 2) % 2 : 0
-    ctx.fillRect(ox + 2 + opStride, oy + 14, 2, 3)
-    ctx.fillRect(ox + 7 - opStride, oy + 14, 2, 3)
-    ctx.fillStyle = redLit
-    ctx.fillRect(ox, oy + 9, 1, 2)                  // small red-team lamp
-    if ((w.res || 1) >= 2) drawOperatorFine(ctx, w, ox, oy, dir)
-    if (opts && opts.labels) {
-      ctx.fillStyle = amberLit
-      ctx.font = "7px monospace"
-      ctx.textAlign = "center"
-      ctx.fillText("Drone Operator", ox + 4, oy - 4)
-    }
-    ctx.globalAlpha = 1
-    return
-  }
-
-  // The xenomorph. It has to read as not-an-agent at a glance and from a
-  // silhouette alone, because the whole event turns on noticing that one of
-  // the blue rectangles is now a low, long, wrong-coloured thing. Nothing
-  // about it is square: it crouches, it is longer than it is tall, and the
-  // head is out in front of the body rather than on top of it.
-  if (en.kind === "xeno") {
-    var xg = "#3f7d4a"
-    var xgLit = "#7de37a"
-    var lope = Math.floor(en.anim / 5) % 4
-    var bob = lope === 1 || lope === 3 ? 1 : 0
-
-    ctx.fillStyle = xg
-    blit(ctx, ox, oy, dir, 1, 11 + bob, 8, 4)        // the long body
-    blit(ctx, ox, oy, dir, 7, 8 + bob, 4, 4)         // shoulders, forward
-    ctx.fillStyle = xgLit
-    blit(ctx, ox, oy, dir, 9, 7 + bob, 5, 3)         // the head, out in front
-    ctx.fillStyle = "#0f1a12"
-    blit(ctx, ox, oy, dir, 11, 8 + bob, 2, 1)        // no eyes, just the socket
-
-    // The tail: a counterweight that swings against the legs, which is most
-    // of what makes it read as moving rather than sliding.
-    ctx.fillStyle = xg
-    var sway = Math.round(Math.sin(en.anim * 0.22) * 2)
-    blit(ctx, ox, oy, dir, -3, 10 + sway, 4, 2)
-    blit(ctx, ox, oy, dir, -6, 9 + sway * 2, 3, 2)
-
-    // Legs, out of phase with each other.
-    ctx.fillStyle = "#2c5a35"
-    blit(ctx, ox, oy, dir, 2, 15 + bob, 2, 3 - bob)
-    blit(ctx, ox, oy, dir, 6, 15 + (1 - bob), 2, 3 - (1 - bob))
-    if ((w.res || 1) >= 2) drawXenoFine(ctx, ox, oy, dir, bob, sway)
-
-    if (en.touchCool > 0) {
-      // Sated, briefly. The one moment it is not a threat, and it says so.
-      ctx.globalAlpha = 0.5
-      ctx.fillStyle = xgLit
-      blit(ctx, ox, oy, dir, 9, 5 + bob, 2, 1)
-      ctx.globalAlpha = 1
-    }
-    if (opts && opts.labels) {
-      ctx.fillStyle = xgLit
-      ctx.font = "7px monospace"
-      ctx.textAlign = "center"
-      ctx.fillText("Adversarial Input", ox + 4, oy - 4)
-    }
-    return
-  }
-
-  // The rival salvage crew. A diver in the same period dress as the colony —
-  // that is the joke, and it is why the helmet is the same brass — with a
-  // speargun instead of a shovel. Drawn before the shared aim and tracer code
-  // below, which it deliberately does not use: a spear is a thing that flies,
-  // not a line that appears, so it gets its own projectile with a line paying
-  // out behind it.
-  if (en.kind === "harpoon") {
-    drawEnemyDiver(ctx, w, pal, en, ox, oy, dir, true)
-    if (opts && opts.labels) {
-      ctx.fillStyle = "#c39a45"
-      ctx.font = "7px monospace"
-      ctx.textAlign = "center"
-      ctx.fillText("Spear Phishing", ox + 4, oy - 4)
-    }
-    return
-  }
-
-  // Trigger Warning announces the shot before it happens. The thin blinking
-  // sight is an instruction to flee; the bright tracer is the consequence.
-  if ((en.kind === "gun" || en.kind === "sniper") && en.state === "aim") {
-    ctx.globalAlpha = 0.35 + ((en.timer >> 2) % 2) * 0.35
-    ctx.fillStyle = redLit
-    var aimX = Math.round(en.lineTo * C)
-    var aimY = Math.round((en.lineY + 0.5) * C)
-    var aimFromX = en.kind === "sniper" ? (dir > 0 ? ox + 22 : ox - 12) : ox + 4
-    var aimFromY = en.kind === "sniper" ? oy + 12 : oy + 7
-    var aimSteps = Math.max(1, Math.round(Math.abs(aimX - aimFromX) / 3))
-    for (var ai = 0; ai <= aimSteps; ai++)
-      ctx.fillRect(Math.round(aimFromX + (aimX - aimFromX) * ai / aimSteps),
-                   Math.round(aimFromY + (aimY - aimFromY) * ai / aimSteps), 1, 1)
-    ctx.globalAlpha = 1
-  }
-  if ((en.kind === "gun" || en.kind === "sniper") && en.shotFor > 0) {
-    ctx.globalAlpha = Math.min(1, en.shotFor / 4)
-    ctx.fillStyle = "#ffe68a"
-    var shotX = Math.round(en.lineTo * C)
-    var shotY = Math.round((en.lineY + 0.5) * C)
-    var shotFromX = en.kind === "sniper" ? (dir > 0 ? ox + 22 : ox - 12) : ox + 4
-    var shotFromY = en.kind === "sniper" ? oy + 12 : oy + 8
-    var shotSteps = Math.max(1, Math.round(Math.abs(shotX - shotFromX) / 3))
-    for (var si = 0; si <= shotSteps; si++)
-      ctx.fillRect(Math.round(shotFromX + (shotX - shotFromX) * si / shotSteps),
-                   Math.round(shotFromY + (shotY - shotFromY) * si / shotSteps), 2, 1)
-    ctx.globalAlpha = 1
-  }
-
-  if (en.kind === "sniper") {
-    // Slim while moving, almost horizontal once established. The rifle and
-    // body share one low line in camp so this reads as somebody lying down,
-    // not another square agent carrying an oversized gun.
-    var violet = "#55406f"
-    var posted = en.state === "camp" || en.state === "aim" || en.state === "reload"
-    var rifleX
-    if (posted) {
-      ctx.fillStyle = violet
-      ctx.fillRect(ox + 1, oy + 11, 9, 3)           // prone coat and legs
-      ctx.fillStyle = "#25252b"
-      ctx.fillRect(dir > 0 ? ox + 8 : ox, oy + 9, 4, 4) // hood at the muzzle end
-      ctx.fillStyle = "#b9a59a"
-      ctx.fillRect(dir > 0 ? ox + 9 : ox + 1, oy + 10, 2, 1)
-      rifleX = dir > 0 ? ox + 10 : ox - 12
-      ctx.fillStyle = "#171920"
-      ctx.fillRect(rifleX, oy + 11, 12, 2)
-      ctx.fillRect(dir > 0 ? rifleX + 1 : rifleX + 10, oy + 9, 3, 2)
-    } else {
-      ctx.fillStyle = "#25252b"
-      ctx.fillRect(ox + 2, oy + 2, 5, 4)            // narrow hood
-      ctx.fillStyle = violet
-      ctx.fillRect(ox + 2, oy + 6, 5, 8)            // narrow coat
-      ctx.fillStyle = "#171920"
-      rifleX = dir > 0 ? ox + 6 : ox - 7
-      ctx.fillRect(rifleX, oy + 8, 10, 2)
-      ctx.fillStyle = "#ff8a35"
-      if (en.state === "jet") ctx.fillRect(ox + 2, oy + 14, 2, 3 + ((en.anim >> 1) % 2))
-      ctx.fillStyle = "#25252b"
-      ctx.fillRect(ox + 2, oy + 14, 2, 3)
-      ctx.fillRect(ox + 5, oy + 14, 2, 3)
-    }
-    ctx.fillStyle = redLit
-    ctx.fillRect(dir > 0 ? rifleX + 2 : rifleX + 11, oy + (posted ? 9 : 7), 1, 1)
-    if ((w.res || 1) >= 2) drawSniperFine(ctx, ox, oy, dir, rifleX, posted)
-    if (en.shotFor > 5) {
-      ctx.fillStyle = "#ffe68a"
-      hzTri(ctx, dir > 0 ? rifleX + 13 : rifleX - 4, oy + (posted ? 10 : 7), 3, 5, dir)
-    }
-    if (opts && opts.labels) {
-      ctx.fillStyle = "#a98bd0"
-      ctx.font = "7px monospace"
-      ctx.textAlign = "center"
-      ctx.fillText(posted ? "Long Context" : "Scope Creep", ox + 4, oy - 4)
-    }
-    ctx.globalAlpha = 1
-    return
-  }
-
+  if (en.gone) return
   spriteFlip = false
+  var m = enemyMotion(w, en)
+  var ox = Math.round(en.x * w.k.CELL) - SPRITE_W / 2 - en.dir * enemyRecoil(en)
+  var oy = Math.round((en.y + 1) * w.k.CELL) - SPRITE_PX - m.bob
+  var fn = ENEMY_DRAW[en.kind] || drawGunner
+  fn(ctx, w, pal, en, ox, oy, en.dir, m)
+  if (opts && opts.labels) drawEnemyLabel(ctx, w, en, ox, oy)
+  ctx.globalAlpha = 1
+}
 
-  // Nobody stands on the sea floor in a coat. The roster already keeps the
-  // drone operator and the planted sniper out of the Trench — a quadcopter at
-  // forty atmospheres is not a joke — but the ordinary gunner still turned up
-  // in a hood with a rifle, which is the one thing down here wearing no air.
-  // It gets the same dress as everyone else in the water, and it is the same
-  // enemy underneath: same walk, same aim, same reload, same lethality. Only
-  // the kit and the weapon change, which is exactly how the colony itself is
-  // handled a few hundred lines down.
-  if (w.submerged) {
-    drawEnemyDiver(ctx, w, pal, en, ox, oy, dir, false)
-    if (opts && opts.labels) {
-      ctx.fillStyle = "#c39a45"
-      ctx.font = "7px monospace"
-      ctx.textAlign = "center"
-      ctx.fillText("Salvage Rights", ox + 4, oy - 4)
+var ENEMY_DRAW = { gun: drawGunner, drone: drawDrone, operator: drawOperator,
+  sniper: drawSniper, xeno: drawXeno, harpoon: drawHarpoon }
+
+function drawEnemyLabel(ctx, w, en, ox, oy) {
+  var labels = { drone: "Remote Execution", operator: "Drone Operator", xeno: "Adversarial Input",
+    harpoon: "Spear Phishing", sniper: "Scope Creep", gun: "Trigger Warning" }
+  var label = labels[en.kind]
+  if (en.kind === "sniper" && ["camp", "aim", "reload"].indexOf(en.state) >= 0) label = "Long Context"
+  if (en.kind === "gun" && w.submerged) label = "Salvage Rights"
+  if (en.kind === "gun" && en.state === "jet") {
+    label = { rise: "Stack Ascending", land: "Soft Landing" }[en.jetMode] || "Air-gapped"
+  }
+  var colours = { drone: "#ff5268", operator: "#f0b34f", xeno: "#7de37a",
+    harpoon: "#c39a45", sniper: "#a98bd0", gun: w.submerged ? "#c39a45" : "#ff5268" }
+  ctx.fillStyle = colours[en.kind] || "#ff5268"
+  ctx.font = "7px monospace"; ctx.textAlign = "center"
+  ctx.fillText(label, ox + 4, oy - 4)
+}
+
+// Hips follow the bob, planted boots keep their floor line. The passing foot
+// lifts one pixel, then the other takes its turn. Falls and jets tuck both.
+function drawEnemyFeet(ctx, w, en, ox, oy, dir, m, hip, colour) {
+  var airborne = en.state === "fall" || en.state === "jet"
+  var lifts = [Math.max(0, m.stride), Math.max(0, -m.stride)]
+  var xs = [1 + m.stride, 5 - m.stride]
+  var fin = w.submerged || en.kind === "harpoon"
+  var toe = en.kind === "xeno" ? "#24472b" : (fin ? "#4a1520" : "#16161b")
+  ctx.fillStyle = colour
+  for (var i = 0; i < 2; i++) {
+    var height = airborne ? 2 : 3 + m.bob - lifts[i]
+    blit(ctx, ox, oy, dir, xs[i], hip, 2, height)
+    ctx.fillStyle = toe
+    blit(ctx, ox, oy, dir, xs[i], hip + height - 1, fin ? 4 : 3, 1)
+    if ((w.res || 1) >= 2) {
+      ctx.fillStyle = en.kind === "xeno" ? "#7de37a" : "#6b6874"
+      blitFine(ctx, ox, oy, dir, xs[i] + 1, hip + height - 1, 1.5, 0.5)
     }
-    ctx.globalAlpha = 1
+    ctx.fillStyle = colour
+  }
+}
+
+// A persistent muzzle bracket and raised supporting hand are visible even
+// during the gunner's eight-tick tell. Hotter inner pixels build toward fire.
+function drawEnemyTell(ctx, en, x, y, dir, aimTicks) {
+  if (en.state !== "aim") return
+  var late = en.timer >= aimTicks / 2
+  ctx.fillStyle = "#ff5268"
+  ctx.fillRect(x + dir * 2, y - 3, 1, 2)
+  ctx.fillRect(x + dir * 2, y + 2, 1, 2)
+  ctx.fillRect(x + dir * 3, y - 3, 2, 1)
+  ctx.fillRect(x + dir * 3, y + 3, 2, 1)
+  ctx.fillStyle = late ? "#ffe68a" : "#ff5268"
+  ctx.fillRect(x - (dir < 0 ? 1 : 0), y, 1, 1)
+}
+
+function drawEnemySight(ctx, w, en, x, y) {
+  if (en.state !== "aim" && !(en.shotFor > 0)) return
+  var firing = en.shotFor > 0
+  ctx.globalAlpha = firing ? Math.min(1, en.shotFor / 4) : 0.45 + ((en.timer >> 2) % 2) * 0.25
+  ctx.fillStyle = firing ? "#ffe68a" : "#ff5268"
+  var tx = Math.round(en.lineTo * w.k.CELL), ty = Math.round((en.lineY + 0.5) * w.k.CELL)
+  var steps = Math.max(1, Math.round(Math.abs(tx - x) / 3))
+  for (var i = 0; i <= steps; i++)
+    ctx.fillRect(Math.round(x + (tx - x) * i / steps), Math.round(y + (ty - y) * i / steps), firing ? 2 : 1, 1)
+  ctx.globalAlpha = 1
+}
+
+function drawEnemyDischarge(ctx, en, x, y, dir, wet) {
+  if (en.shotFor > 5) {
+    ctx.fillStyle = wet ? "#d6dde8" : "#ff8a35"
+    hzTri(ctx, x + dir, y - 2, 4, 5, dir)
+    ctx.fillStyle = wet ? "#f4ffff" : "#ffe68a"
+    ctx.fillRect(x + (dir > 0 ? 0 : -2), y - 1, 2, 2)
     return
   }
+  // Reload can also mean an abandoned aim. Those start late in the timer,
+  // beyond this short recovery window, and must never imply a phantom shot.
+  if (en.state !== "reload" || en.timer >= 12 || en.throttled > 0) return
+  ctx.fillStyle = wet ? "#7fb8c4" : "#8a8378"
+  var rise = Math.floor(en.timer / 3)
+  ctx.globalAlpha = (12 - en.timer) / 18
+  ctx.fillRect(x + dir * 2, y - 1 - rise, 1, 1)
+  ctx.fillRect(x + dir * 4, y - 3 - rise, 1, 1)
+  ctx.globalAlpha = 1
+}
 
+function drawDrone(ctx, w, pal, en, ox, oy, dir, m) {
+  var pale = "#d9d7cf", redLit = "#ff5268"
+  var rotor = (en.anim >> 1) % 2
+  ctx.fillStyle = "#20232b"
+  ctx.fillRect(ox + 2, oy + 7, 8, 3)
+  ctx.fillRect(ox, oy + 5 + rotor, 4, 1)
+  ctx.fillRect(ox + 8, oy + 6 - rotor, 4, 1)
+  ctx.fillStyle = pale
+  ctx.fillRect(ox + 4, oy + 6, 4, 4)
+  ctx.fillStyle = redLit
+  ctx.fillRect(dir > 0 ? ox + 8 : ox + 3, oy + 7, 2, 2)
+  ctx.fillStyle = "#ff9a35"
+  ctx.fillRect(ox + 5, oy + 10, 2, 2 + rotor)
+  if ((w.res || 1) >= 2) drawDroneFine(ctx, w, ox, oy, dir, rotor)
+  drawDroneLock(ctx, w, en, ox, oy, dir)
+}
+
+function drawDroneLock(ctx, w, en, ox, oy, dir) {
+  if (en.throttled > 0) return
+  var target = null
+  for (var i = 0; i < w.agents.length; i++) if (w.agents[i].id === en.targetId) target = w.agents[i]
+  if (!target || target.gone || target.state === "saved") return
+  var near = Math.abs(target.x - en.x) + Math.abs(target.y - 2 - en.y) < 7
+  ctx.fillStyle = near ? "#ffe68a" : "#ff5268"
+  var x = dir > 0 ? ox + 10 : ox + 1
+  ctx.fillRect(x, oy + 7, 1, 2)
+  if (!near) return
+  ctx.fillRect(x + dir * 3, oy + 5, 2, 1)
+  ctx.fillRect(x + dir * 3, oy + 10, 2, 1)
+}
+
+function drawOperator(ctx, w, pal, en, ox, oy, dir, m) {
+  var redLit = "#ff5268"
+  var amber = "#c47a24"
+  var amberLit = "#f0b34f"
+  ctx.fillStyle = "#34313a"
+  ctx.fillRect(ox, oy + 1, 9, 5)                 // broad helmet
+  ctx.fillRect(ox - 1, oy + 7, 3, 7)             // square radio pack
+  ctx.fillStyle = "#86d8e8"
+  ctx.fillRect(ox + (dir > 0 ? 4 : 1), oy + 3, 5, 2) // single visor
+  ctx.fillStyle = amber
+  ctx.fillRect(ox + 2, oy + 6, 7, 8)              // one-piece coat
+  var press = en.state === "operate" ? (en.anim >> 3) % 2 : 0
+  ctx.fillStyle = amberLit
+  ctx.fillRect(dir > 0 ? ox + 8 : ox, oy + 9 + press, 4, 3) // controller
+  ctx.fillStyle = "#34313a"
+  drawEnemyFeet(ctx, w, en, ox + 1, oy, dir, m, 14, "#34313a")
+  ctx.fillStyle = redLit
+  ctx.fillRect(ox, oy + 9, 1, 2)                  // small red-team lamp
+  if ((w.res || 1) >= 2) drawOperatorFine(ctx, w, ox, oy, dir, press)
+  drawOperatorSignal(ctx, en, ox, oy, dir, press)
+}
+
+function drawOperatorSignal(ctx, en, ox, oy, dir, press) {
+  if (en.state !== "operate" || en.throttled > 0) return
+  ctx.fillStyle = "#86d8e8"
+  ctx.fillRect(dir > 0 ? ox + 9 : ox + 1, oy + 10 + press, 2, 1)
+  // Sim's replacement-drone wait counts to 180; a live drone resets it to 0.
+  if (en.timer < 144) return
+  ctx.fillStyle = en.timer >= 168 ? "#ffe68a" : "#ff5268"
+  ctx.fillRect(ox - 1, oy - 1, 3, 1)
+  ctx.fillRect(ox - 3, oy - 3, 1, 3)
+  ctx.fillRect(ox + 3, oy - 3, 1, 3)
+}
+
+function drawXeno(ctx, w, pal, en, ox, oy, dir, m) {
+  var xg = "#3f7d4a"
+  var xgLit = "#7de37a"
+
+  ctx.fillStyle = xg
+  blit(ctx, ox, oy, dir, 1, 11, 8, 4)        // the long body
+  blit(ctx, ox, oy, dir, 7, 8, 4, 4)         // shoulders, forward
+  ctx.fillStyle = xgLit
+  blit(ctx, ox, oy, dir, 9, 7, 5, 3)         // the head, out in front
+  ctx.fillStyle = "#0f1a12"
+  blit(ctx, ox, oy, dir, 11, 8, 2, 1)        // no eyes, just the socket
+
+  // The tail: a counterweight that swings against the legs, which is most
+  // of what makes it read as moving rather than sliding.
+  ctx.fillStyle = xg
+  var sway = Math.round(Math.sin(en.anim * 0.22) * 2)
+  blit(ctx, ox, oy, dir, -3, 10 + sway, 4, 2)
+  blit(ctx, ox, oy, dir, -6, 9 + sway * 2, 3, 2)
+
+  // Legs, out of phase with each other.
+  ctx.fillStyle = "#2c5a35"
+  drawEnemyFeet(ctx, w, en, ox, oy, dir, m, 15, "#2c5a35")
+  if ((w.res || 1) >= 2) drawXenoFine(ctx, ox, oy, dir, 0, sway)
+
+  if (en.touchCool > 0) {
+    // Sated, briefly. The one moment it is not a threat, and it says so.
+    ctx.globalAlpha = 0.5
+    ctx.fillStyle = xgLit
+    blit(ctx, ox, oy, dir, 9, 5, 2, 1)
+    ctx.globalAlpha = 1
+  }
+  if (en.targetId && !en.touchCool) {
+    ctx.fillStyle = "#f2f2e6"
+    blit(ctx, ox, oy, dir, 12, 10, 2, 1) // bared jaw on pursuit; it has no gun
+  }
+}
+
+function drawSniper(ctx, w, pal, en, ox, oy, dir, m) {
+  var redLit = "#ff5268"
+  var violet = "#55406f"
+  var posted = en.state === "camp" || en.state === "aim" || en.state === "reload"
+  var rifleX
+  if (posted) {
+    ctx.fillStyle = violet
+    ctx.fillRect(ox + 1, oy + 11, 9, 3)           // prone coat and legs
+    ctx.fillStyle = "#25252b"
+    ctx.fillRect(dir > 0 ? ox + 8 : ox, oy + 9, 4, 4) // hood at the muzzle end
+    ctx.fillStyle = "#b9a59a"
+    ctx.fillRect(dir > 0 ? ox + 9 : ox + 1, oy + 10, 2, 1)
+    rifleX = dir > 0 ? ox + 10 : ox - 12
+    ctx.fillStyle = "#171920"
+    ctx.fillRect(rifleX, oy + 11, 12, 2)
+    ctx.fillRect(dir > 0 ? rifleX + 1 : rifleX + 10, oy + 9, 3, 2)
+  } else {
+    ctx.fillStyle = "#25252b"
+    ctx.fillRect(ox + 2, oy + 2, 5, 4)            // narrow hood
+    ctx.fillStyle = violet
+    ctx.fillRect(ox + 2, oy + 6, 5, 8)            // narrow coat
+    ctx.fillStyle = "#171920"
+    rifleX = dir > 0 ? ox + 6 : ox - 7
+    ctx.fillRect(rifleX, oy + 8, 10, 2)
+    ctx.fillStyle = "#ff8a35"
+    if (en.state === "jet") ctx.fillRect(ox + 2, oy + 14, 2, 3 + ((en.anim >> 1) % 2))
+    ctx.fillStyle = "#25252b"
+    drawEnemyFeet(ctx, w, en, ox, oy, dir, m, 14, "#25252b")
+  }
+  ctx.fillStyle = redLit
+  ctx.fillRect(dir > 0 ? rifleX + 2 : rifleX + 11, oy + (posted ? 9 : 7), 1, 1)
+  if ((w.res || 1) >= 2) drawSniperFine(ctx, ox, oy, dir, rifleX, posted)
+  var mx = dir > 0 ? rifleX + (posted ? 12 : 10) : rifleX - 1
+  var my = oy + (posted ? 12 : 9)
+  drawEnemyTell(ctx, en, mx, my, dir, 36)
+  drawEnemySight(ctx, w, en, mx, my)
+  drawEnemyDischarge(ctx, en, mx, my, dir, false)
+  if (en.state === "reload" && !en.shotFor) {
+    ctx.fillStyle = "#b9a59a"
+    var bolt = (en.timer >> 3) % 2
+    ctx.fillRect(dir > 0 ? rifleX + 2 - bolt : rifleX + 8 + bolt, oy + 13, 2, 1)
+  }
+}
+
+function drawGunner(ctx, w, pal, en, ox, oy, dir, m) {
+  if (w.submerged) { drawEnemyDiver(ctx, w, pal, en, ox, oy, dir, false, m); return }
+  var pale = "#d9d7cf", red = "#8f1f35", redLit = "#ff5268"
   ctx.fillStyle = pale
   blit(ctx, ox, oy, dir, 1, 0, 6, 3)               // pale, hostile crest
   ctx.fillStyle = "#b9a59a"
@@ -6603,13 +6635,8 @@ function drawEnemy(ctx, w, pal, en, opts) {
   ctx.fillStyle = red
   blit(ctx, ox, oy, dir, 1, 7, 6, 6)
 
-  ctx.fillStyle = "#25252b"
-  blit(ctx, ox, oy, dir, 6, 7, 5, 3)                // pistol
-  blit(ctx, ox, oy, dir, 7, 10, 2, 3)
-  if (en.shotFor > 5) {
-    ctx.fillStyle = "#ffe68a"
-    hzTri(ctx, dir > 0 ? ox + 13 : ox - 5, oy + 8, 3, 5, dir)
-  }
+  var gunY = en.state === "aim" || en.shotFor > 0 ? 6 : 8
+  drawGunnerWeapon(ctx, w, en, ox, oy, dir, gunY)
   if (en.state === "jet") {
     // Two uneven exhaust tongues make the tiny pack read even at panel scale.
     var flame = (en.anim >> 1) % 2
@@ -6619,22 +6646,26 @@ function drawEnemy(ctx, w, pal, en, opts) {
     blit(ctx, ox, oy, dir, 1, 14, 1, 2 + (1 - flame))
   }
 
-  ctx.fillStyle = red
-  var stride = (en.anim >> 2) % 2
-  blit(ctx, ox, oy, dir, 1 + stride, 13, 2, 3)
-  blit(ctx, ox, oy, dir, 5 - stride, 13, 2, 3)
-  if ((w.res || 1) >= 2) drawGunnerFine(ctx, ox, oy, dir, stride, en.state === "jet")
+  drawEnemyFeet(ctx, w, en, ox, oy, dir, m, 13, red)
+  if ((w.res || 1) >= 2) drawGunnerFine(ctx, ox, oy, dir, gunY)
+}
 
-  if (opts && opts.labels) {
-    ctx.fillStyle = redLit
-    ctx.font = "7px monospace"
-    ctx.textAlign = "center"
-    var enemyLabel = "Trigger Warning"
-    if (en.state === "jet") enemyLabel = en.jetMode === "rise" ? "Stack Ascending"
-      : (en.jetMode === "land" ? "Soft Landing" : "Air-gapped")
-    ctx.fillText(enemyLabel, ox + 4, oy - 4)
+function drawGunnerWeapon(ctx, w, en, ox, oy, dir, gunY) {
+  ctx.fillStyle = "#25252b"
+  blit(ctx, ox, oy, dir, 6, gunY, 5, 2)
+  blit(ctx, ox, oy, dir, 7, gunY + 2, 2, 3)
+  if (en.state === "aim") {
+    ctx.fillStyle = "#b9a59a"
+    blit(ctx, ox, oy, dir, 8, gunY + 2, 2, 1)
   }
-  ctx.globalAlpha = 1
+  var mx = dir > 0 ? ox + 11 : ox - 4
+  drawEnemyTell(ctx, en, mx, oy + gunY, dir, 8)
+  drawEnemySight(ctx, w, en, mx, oy + gunY)
+  drawEnemyDischarge(ctx, en, mx, oy + gunY, dir, false)
+}
+
+function drawHarpoon(ctx, w, pal, en, ox, oy, dir, m) {
+  drawEnemyDiver(ctx, w, pal, en, ox, oy, dir, true, m)
 }
 
 // The drone at res 2: rotors as blurred discs rather than bars, a seam on the
@@ -6657,7 +6688,7 @@ function drawDroneFine(ctx, w, ox, oy, dir, rotor) {
 
 // The operator at res 2: a streak across the visor, an antenna on the radio
 // pack with a blinking tip, a belt, and two sticks on the controller.
-function drawOperatorFine(ctx, w, ox, oy, dir) {
+function drawOperatorFine(ctx, w, ox, oy, dir, press) {
   ctx.fillStyle = "#ffffff"
   ctx.globalAlpha = 0.7
   ctx.fillRect(ox + (dir > 0 ? 5 : 2), oy + 3, 1.5, 0.5)       // visor streak
@@ -6669,7 +6700,7 @@ function drawOperatorFine(ctx, w, ox, oy, dir) {
   ctx.fillRect(ox - 0.5, oy + 2.5, 0.5, 0.5)
   ctx.fillStyle = "#5a3a12"
   var cx = dir > 0 ? ox + 9 : ox + 1
-  ctx.fillRect(cx, oy + 8.5, 0.5, 0.5); ctx.fillRect(cx + 1.5, oy + 8.5, 0.5, 0.5)   // sticks
+  ctx.fillRect(cx, oy + 8.5 + press, 0.5, 0.5); ctx.fillRect(cx + 1.5, oy + 8.5 + press, 0.5, 0.5)   // sticks
 }
 
 // The sniper at res 2: a scope on the rifle with a lens glint, a darker rim
@@ -6708,7 +6739,7 @@ function drawXenoFine(ctx, ox, oy, dir, bob, sway) {
 // agents got a suit, the red team gets kit: a scarred brow over an eye with a
 // hot core, a shadowed crest, a vest with straps and a buckled belt, vents on
 // the pack, a lit edge along the pistol's slide, and boots.
-function drawGunnerFine(ctx, ox, oy, dir, stride, jet) {
+function drawGunnerFine(ctx, ox, oy, dir, gunY) {
   ctx.fillStyle = "#8a8378"
   blitFine(ctx, ox, oy, dir, 1, 2.5, 6, 0.5)                    // the crest's shadow
   blitFine(ctx, ox, oy, dir, 1, 0, 1.5, 0.5)                    // swept back
@@ -6726,11 +6757,7 @@ function drawGunnerFine(ctx, ox, oy, dir, stride, jet) {
   ctx.fillStyle = "#4a4a55"
   blitFine(ctx, ox, oy, dir, 0.5, 8.5, 1, 0.5)                  // pack vents
   blitFine(ctx, ox, oy, dir, 0.5, 10, 1, 0.5)
-  blitFine(ctx, ox, oy, dir, 6.5, 7, 4.5, 0.5)                  // the slide's lit edge
-  if (jet) return
-  ctx.fillStyle = "#16161b"
-  blitFine(ctx, ox, oy, dir, 1 + stride, 15, 2.5, 1)            // boots
-  blitFine(ctx, ox, oy, dir, 5 - stride, 15, 2.5, 1)
+  blitFine(ctx, ox, oy, dir, 6.5, gunY, 4.5, 0.5)                  // the slide's lit edge
 }
 
 // The rival salvage crew, in the same period dress as the colony — that is the
@@ -6742,87 +6769,93 @@ function drawGunnerFine(ctx, ox, oy, dir, stride, jet) {
 //
 // `big` picks the weapon: the speargun for the harpooner, a diving pistol for
 // the gunner. Everything else is shared, which is the point — one crew.
-function drawEnemyDiver(ctx, w, pal, en, ox, oy, dir, big) {
-  var C = w.k.CELL
-  // Red team, in a diving suit. The first version put them in a colder teal
-  // than the colony's charcoal and it was not enough: at the scale this is
-  // actually played, the difference between two dark blue-greys is nothing and
-  // the only tell left was a single red pixel in the port. Every other hostile
-  // on the board is read by its colour before anything else, so these are too
-  // — the helmet stays brass, because they are the same era and that is the
-  // joke, and the suit under it is the same oxblood the dry-land squad wears.
-  var suit = "#6b1f2e"
-  var suitDark = "#4a1520"
-  var kick = Math.sin(en.anim * 0.22)
-  var lift = Math.round(kick * 1.2)
+function drawEnemyDiver(ctx, w, pal, en, ox, oy, dir, big, m) {
+  drawEnemyBubbles(ctx, w, pal, en, ox, oy)
+  var suit = "#6b1f2e", suitDark = "#4a1520"
+  ctx.fillStyle = suit
+  ctx.fillRect(ox + 1, oy + 6, 7, 7)                     // body
+  ctx.fillStyle = suitDark
+  ctx.fillRect(ox + 1, oy + 6, 7, 1)                     // the shoulder shadow
+  drawEnemyFeet(ctx, w, en, ox, oy, dir, m, 13, suitDark)
+  ctx.fillStyle = "#8c6a2a"
+  ctx.fillRect(ox + 2, oy + 1, 5, 5)                     // helmet
+  ctx.fillStyle = "#c39a45"
+  ctx.fillRect(ox + 2, oy + 1, 3, 1)
+  ctx.fillStyle = "#7fb8c4"
+  ctx.fillRect(dir > 0 ? ox + 5 : ox + 2, oy + 3, 2, 2)  // port
+  ctx.fillStyle = "#ff6b6b"
+  ctx.fillRect(dir > 0 ? ox + 6 : ox + 2, oy + 3, 1, 1)  // the eye in it
 
-  // Exhaust, on the same rule as the colony's: it is what says the thing is
-  // breathing, and an enemy diver that did not bubble would read as a statue.
+  if ((w.res || 1) >= 2) drawEnemyDiverFine(ctx, ox, oy, dir)
+  drawEnemyDiverWeapon(ctx, w, en, ox, oy, dir, big)
+}
+
+function drawEnemyBubbles(ctx, w, pal, en, ox, oy) {
   for (var b = 0; b < 3; b++) {
     var life = (((w.ticks * 0.9 + en.id * 37) + b * 33) % 108) / 108
     ctx.globalAlpha = 0.55 * (1 - life * 0.75)
     ctx.fillStyle = life > 0.5 ? (pal.bubbleLit || "#fff") : (pal.bubble || "#cfe")
     ctx.fillRect(Math.round(ox + 3 + Math.sin(life * 7 + en.id) * 2.5),
-                 Math.round(oy + lift - life * 24), life > 0.62 ? 2 : 1, life > 0.62 ? 2 : 1)
+                 Math.round(oy - life * 24), life > 0.62 ? 2 : 1, life > 0.62 ? 2 : 1)
   }
   ctx.globalAlpha = 1
+}
 
-  ctx.fillStyle = suit
-  ctx.fillRect(ox + 1, oy + 6 + lift, 7, 9)                     // body
-  ctx.fillStyle = suitDark
-  ctx.fillRect(ox + 1, oy + 6 + lift, 7, 1)                     // the shoulder shadow
-  ctx.fillRect(ox + 1, oy + 15 + lift + (kick > 0 ? 1 : 0), 3, 1)   // fins
-  ctx.fillRect(ox + 4, oy + 15 + lift + (kick > 0 ? 0 : 1), 3, 1)
-  ctx.fillStyle = "#8c6a2a"
-  ctx.fillRect(ox + 2, oy + 1 + lift, 5, 5)                     // helmet
+function drawEnemyDiverFine(ctx, ox, oy, dir) {
+  ctx.fillStyle = "#e4bd62"
+  ctx.fillRect(ox + 2.5, oy + 1, 2, 0.5)
+  ctx.fillStyle = "#4f391c"
+  ctx.fillRect(ox + 2, oy + 5.5, 5, 0.5)
+  ctx.fillStyle = "#d6dde8"
+  ctx.fillRect(dir > 0 ? ox + 5 : ox + 2, oy + 3.5, 0.5, 1)
+  ctx.fillStyle = "#4a1520"
+  ctx.fillRect(ox + 2.5, oy + 7, 0.5, 5)
+  ctx.fillRect(ox + 5.5, oy + 7, 0.5, 5)
   ctx.fillStyle = "#c39a45"
-  ctx.fillRect(ox + 2, oy + 1 + lift, 3, 1)
-  ctx.fillStyle = "#7fb8c4"
-  ctx.fillRect(dir > 0 ? ox + 5 : ox + 2, oy + 3 + lift, 2, 2)  // port
-  ctx.fillStyle = "#ff6b6b"
-  ctx.fillRect(dir > 0 ? ox + 6 : ox + 2, oy + 3 + lift, 1, 1)  // the eye in it
+  ctx.fillRect(ox + 3, oy + 12, 2, 0.5)
+}
 
-  var aiming = en.state === "aim"
-  var gunY = oy + (aiming ? 7 : 9) + lift
+function drawEnemyDiverWeapon(ctx, w, en, ox, oy, dir, big) {
+  var aiming = en.state === "aim" || en.shotFor > 0
+  var gunY = oy + (aiming ? 7 : 9)
   var len = big ? 11 : 6
   var gunX = dir > 0 ? ox + 7 : ox - (len - 2)
+  var mx = dir > 0 ? gunX + len : gunX - 1
   ctx.fillStyle = "#171920"
   ctx.fillRect(gunX, gunY, len, 2)
-  ctx.fillRect(dir > 0 ? gunX : gunX + len - 2, gunY + 2, 2, 3)     // grip
-  ctx.fillStyle = "#9aa2b4"
-  if (!en.shotFor) ctx.fillRect(dir > 0 ? gunX + 4 : gunX, gunY - 1, len - 2, 1)  // spear, loaded
-
-  // The tell. A speargun's is the rubber going taut, so it is a short bright
-  // mark at the muzzle rather than a laser down the corridor — this crew has
-  // no lasers, it has forty atmospheres and patience.
-  if (aiming) {
-    ctx.globalAlpha = 0.4 + ((en.timer >> 2) % 2) * 0.5
-    ctx.fillStyle = "#ff6b6b"
-    ctx.fillRect(dir > 0 ? gunX + len : gunX - 3, gunY, 3, 1)
-    ctx.globalAlpha = 1
+  ctx.fillRect(dir > 0 ? gunX : gunX + len - 2, gunY + 2, 2, 3)
+  if (big && !en.shotFor) {
+    ctx.fillStyle = "#9aa2b4"
+    ctx.fillRect(dir > 0 ? gunX + 4 : gunX, gunY - 1, len - 2, 1)
   }
-
-  // The shot: a spear in flight with its line paying out behind it. It travels
-  // rather than appearing at the far end, which is the whole difference
-  // between a spear and a bullet at this scale.
-  if (en.shotFor > 0) {
-    var spearX = Math.round(en.lineTo * C)
-    var spearY = Math.round((en.lineY + 0.5) * C)
-    var fromX = dir > 0 ? gunX + len : gunX - 1
-    var flight = Math.min(1, (8 - en.shotFor) / 5)
-    var tipX = Math.round(fromX + (spearX - fromX) * flight)
-    var tipY = Math.round(gunY + (spearY - gunY) * flight)
-    ctx.fillStyle = "#8a9aa6"
-    var steps = Math.max(1, Math.round(Math.abs(tipX - fromX) / 4))
-    ctx.globalAlpha = 0.55
-    for (var hl = 0; hl <= steps; hl++)
-      ctx.fillRect(Math.round(fromX + (tipX - fromX) * hl / steps),
-                   Math.round(gunY + (tipY - gunY) * hl / steps) + 1, 1, 1)
-    ctx.globalAlpha = 1
-    ctx.fillStyle = "#d6dde8"
-    ctx.fillRect(tipX - (dir > 0 ? 6 : 0), tipY, 7, 1)            // shaft
-    hzTri(ctx, tipX + (dir > 0 ? 1 : -1), tipY, 2, 3, dir)        // barb
+  if (en.state === "aim") {
+    ctx.fillStyle = "#c39a45"
+    ctx.fillRect(dir > 0 ? gunX + 3 : gunX + len - 5, gunY + 2, 2, 1)
   }
+  drawEnemyTell(ctx, en, mx, gunY, dir, big ? 46 : 8)
+  drawEnemyDischarge(ctx, en, mx, gunY, dir, true)
+  if (big) drawEnemySpear(ctx, w, en, mx, gunY, dir)
+  else drawEnemySight(ctx, w, en, mx, gunY)
+}
+
+// Spear and trailing line travel together from the actual raised muzzle.
+function drawEnemySpear(ctx, w, en, fromX, gunY, dir) {
+  if (!(en.shotFor > 0)) return
+  var spearX = Math.round(en.lineTo * w.k.CELL)
+  var spearY = Math.round((en.lineY + 0.5) * w.k.CELL)
+  var flight = Math.min(1, (8 - en.shotFor) / 5)
+  var tipX = Math.round(fromX + (spearX - fromX) * flight)
+  var tipY = Math.round(gunY + (spearY - gunY) * flight)
+  ctx.fillStyle = "#8a9aa6"
+  var steps = Math.max(1, Math.round(Math.abs(tipX - fromX) / 4))
+  ctx.globalAlpha = 0.55
+  for (var hl = 0; hl <= steps; hl++)
+    ctx.fillRect(Math.round(fromX + (tipX - fromX) * hl / steps),
+                 Math.round(gunY + (tipY - gunY) * hl / steps) + 1, 1, 1)
+  ctx.globalAlpha = 1
+  ctx.fillStyle = "#d6dde8"
+  ctx.fillRect(tipX - (dir > 0 ? 6 : 0), tipY, 7, 1)
+  hzTri(ctx, tipX + (dir > 0 ? 1 : -1), tipY, 2, 3, dir)
 }
 
 function drawAgentTrick(ctx, w, pal, ag, ox, oy, dir, robe, hair) {

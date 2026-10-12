@@ -1723,3 +1723,48 @@ list only grows at the end. Over 30: 41 → 39 (Codex's hazard work included).
 **Next.** Deploy (hazard animation + duck).
 
 **Deployed** after 64 (name="build" content="d26329ab"): hazard animation, Rubber Duck. Browser check clean.
+
+## 65 — 2026-10-12 · The red team in motion
+
+**Why.** Hostiles had fine kit at res 2 but mostly slid through patrols and
+held the same pose through a shot. Their warning needs to read at panel scale,
+including the ordinary gunner's eight-tick aim.
+
+**Changed.** Draw only. Gunners, snipers, operators, xenos and the rival divers
+lift alternate feet and bob while a planted foot keeps its floor line; falling
+and jetting bodies tuck their legs. Drones and jetpacks hover in whole pixels.
+Gunners raise and brace the pistol; sniper lasers now originate at the rifle
+muzzle. All three shooters hold red muzzle brackets throughout aim, warm the
+tip toward release, recoil two pixels then one, flash for three ticks and shed
+short smoke or pressure bubbles through reload tick eleven. The sniper works
+the bolt; harpooners keep their travelling spear and paying-out line. Divers
+keep brass helmets and oxblood suits, with moving fins and half-pixel suit
+straps/port glints. Operators press the controller and signal a replacement
+launch; drones brighten the camera and bracket a close contact target. Xenos
+keep the long green body and swinging tail, with opposing steps and a bared
+jaw on pursuit. Small per-kind routines replace the giant enemy dispatcher.
+
+**Checked.** `npm run check` and `npm test` pass; stamps are current and the
+core files stay self-contained. Enemy tests cover every real state, both
+facings/resolutions, underwater gunners, the half-pixel grid, planted feet,
+body bob, hover, the actual Sim shot timings (8/36/46 ticks), recoil/recovery,
+expired and abandoned shots, launch/pursuit tells, absent enemies, unspecified
+panel resolution and no writes to enemy/world state. Enemy res-1 pixels change
+intentionally; there were no enemy pins to update, and every existing non-enemy
+pin passes unchanged. Seeded `Math.random` identically for old/new rendering
+on enemy-free levels 1–11 at ticks 0/200/500/900/1600, both resolutions: all
+110 frames byte-identical. Reviewed `/tmp/codex-enemies/sheet.png`, the res-2
+before/after contact sheet enlarged with hard pixels, plus individual res-1
+and res-2 sheets. Baseline, generation/comparison scripts and check logs are
+alongside it.
+
+**CRAP.** `npm run crap -- --changed`: every changed/new function is below 30,
+maximum `drawSniper` 20.0; the former `drawEnemy` giant falls from 73.6 to 5.0.
+Full reports against HEAD, using the cached tool copied locally: functions
+over 30 fall from 39 to 37 across the repository, and from 7 to 6 in Draw.
+
+**Next.** A timed defeat needs simulation evidence. `killEnemy`, `sinkEnemy`,
+`stepEnemyFall` and `explodeDrone` leave `gone`/`dead`, counts or unlinked
+particles, but no per-enemy death tick; Draw cannot date a defeat from those
+without storing state. Sim remains untouched and gone enemies remain absent.
+Watch the eight-tick gunner tell in crowded colonies before enlarging it.
