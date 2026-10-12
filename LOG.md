@@ -1816,3 +1816,9 @@ Full before/after reports: over-30 count stays 37 across the repository and
 
 **Next.** Watch defeats among crowded colonies on the panel and page before
 enlarging the kit or extending their window.
+
+*Reviewed and merged by the loop:* written by Codex (`codex/defeats`) on the
+enemy death stamps from 65. Looked at every kind and cause frame by frame on
+its sheet: the gunner's cap rolls off as it goes flat, the drone spins down
+smoking and pops, the xeno shrivels, the diver's helmet rises in bubbles.
+Codex's seeded check: 1,198 frames with no recent defeat identical.
