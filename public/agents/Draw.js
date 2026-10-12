@@ -2163,16 +2163,11 @@ function drawLifts(ctx, w, pal) {
 // reason given looks like the game forgot what they were for.
 function drawStandDown(ctx, w, pal) {
   var since = w.ticks - w.stoodDownAt
-  if (!(w.stoodDownAt >= 0) || since > 90) return
-  var k = w.k
-  ctx.save()
-  ctx.font = "9px monospace"
-  ctx.textAlign = "center"
-  ctx.globalAlpha = since < 60 ? 0.95 : 0.95 * (90 - since) / 30
-  ctx.fillStyle = pal.exitLight
-  ctx.fillText("STAND DOWN \u2014 EVERYBODY HOME", (k.COLS * k.CELL) / 2, (k.SKY + 1) * k.CELL)
-  ctx.restore()
-  ctx.globalAlpha = 1
+  if (!(w.stoodDownAt >= 0) || since < 0 || since >= 90) return
+  drawSkyNotice(ctx, w, pal, {
+    text: "STAND DOWN — EVERYBODY HOME", label: "ALL CLEAR",
+    age: since, left: 90 - since, colour: pal.exitLight, warn: false
+  })
 }
 
 // The moment one blocker stands down: a ring going out from it, so each of
@@ -2190,34 +2185,128 @@ function drawReleaseRing(ctx, pal, ag, ox, oy, now) {
   ctx.globalAlpha = 1
 }
 
-function drawEventBanner(ctx, w, pal) {
-  drawStandDown(ctx, w, pal)
-  var warn = w.eventWarnFor > 0
-  var flash = w.eventFlash > 0
-  if (!warn && !flash) return
-  var k = w.k
-  var mid = (k.COLS * k.CELL) / 2
-  var y = (k.SKY + 1) * k.CELL
-
-  ctx.save()
-  ctx.font = "9px monospace"
-  ctx.textAlign = "center"
-  if (warn) {
-    // Blinks while it is coming, and faster as it gets closer.
-    var near = w.eventWarnFor < 25
-    if (Math.floor(w.ticks / (near ? 3 : 7)) % 2 === 0) {
-      ctx.globalAlpha = 0.9
-      ctx.fillStyle = pal.warn
-      ctx.fillText("\u25b2 " + w.eventWarn + " \u25b2", mid, y)
-    }
-  } else {
-    // Held for a moment after it lands, fading out.
-    ctx.globalAlpha = Math.min(1, w.eventFlash / 40)
-    ctx.fillStyle = pal.fireHot
-    ctx.fillText(w.eventWarn, mid, y)
+// Sim decrements the warning on the tick it starts it. The schedule bridges
+// the one tick between a zero countdown and the fire, without a render latch.
+// 75 is the existing telegraph length; 40 is the existing post-event hold.
+function skyEvent(w, pal) {
+  var events = w.events || []
+  for (var i = events.length - 1; i >= 0; i--) {
+    var e = events[i]
+    var age = w.ticks - e.at + 75
+    if (e.spec.name === w.eventWarn && age >= 0 && age < 115 && (age < 75 || e.fired))
+      return skyEventPhase(w, pal, age, e.at - w.ticks)
   }
+  if (w.eventWarnFor > 0) return skyEventPhase(w, pal, 75 - w.eventWarnFor, w.eventWarnFor)
+  if (w.eventFlash > 0) return skyEventPhase(w, pal, 115 - w.eventFlash, 0)
+  return null
+}
+
+function skyEventPhase(w, pal, age, countdown) {
+  var warn = countdown > 0
+  return { text: w.eventWarn, label: warn ? "INCOMING" : "EVENT",
+    age: age, left: 115 - age, colour: warn ? pal.warn : pal.fireHot,
+    warn: warn, countdown: Math.max(0, countdown) }
+}
+
+function drawEventBanner(ctx, w, pal) {
+  var event = skyEvent(w, pal)
+  if (event) drawSkyNotice(ctx, w, pal, event)
+  else drawStandDown(ctx, w, pal)
+}
+
+// A short, integer-pixel lift, not a fade through illegible intermediate text.
+function skySlide(age, left) {
+  return Math.max(0, Math.min(1, age / 12, left / 12))
+}
+
+function skyNoticeAmount(w, pal) {
+  var event = skyEvent(w, pal)
+  if (event) return skySlide(event.age, event.left)
+  var age = w.ticks - w.stoodDownAt
+  if (w.stoodDownAt >= 0 && age >= 0 && age < 90) return skySlide(age, 90 - age)
+  return 0
+}
+
+function skyLayout(w) {
+  var width = w.k.COLS * w.k.CELL
+  var hx = Math.round(w.hatch.x * w.k.CELL)
+  var right = hx < width / 2
+  var x = right ? hx + 20 : 4
+  var end = right ? width - 4 : hx - 20
+  return { x: x, width: end - x, height: w.k.SKY * w.k.CELL - 2, right: right }
+}
+
+function skyClip(ctx, box) {
+  ctx.beginPath()
+  ctx.rect(box.x, 0, box.width, box.height + 2)
+  ctx.clip()
+}
+
+// Cut corners, a whole-pixel bevel and inset shadow remain readable on the
+// panel. Portraits add their hero's hair to the raised edge, robe to the rim.
+function drawSkyPanel(ctx, pal, x, y, width, height, rim, light) {
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 1, y, width - 2, height)
+  ctx.fillRect(x, y + 1, width, height - 2)
+  ctx.fillStyle = rim
+  ctx.fillRect(x + 1, y + 1, width - 2, height - 2)
+  ctx.fillStyle = light
+  ctx.fillRect(x + 2, y + 1, width - 4, 1)
+  ctx.fillRect(x + 1, y + 2, 1, height - 4)
+  ctx.fillStyle = pal.cardBack
+  ctx.fillRect(x + 2, y + 2, width - 4, height - 4)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 2, y + height - 3, width - 4, 1)
+  ctx.fillRect(x + width - 3, y + 2, 1, height - 4)
+}
+
+function skyFitText(ctx, text, width) {
+  if (ctx.measureText(text).width <= width) return text
+  while (text.length && ctx.measureText(text + "…").width > width) text = text.slice(0, -1)
+  return text ? text + "…" : ""
+}
+
+function drawSkyNotice(ctx, w, pal, notice) {
+  var box = skyLayout(w)
+  if (box.width < 40) return
+  var amount = skySlide(notice.age, notice.left)
+  ctx.save()
+  skyClip(ctx, box)
+  ctx.translate(0, -Math.round((1 - amount) * (box.height + 1)))
+  drawSkyPanel(ctx, pal, box.x, 1, box.width, box.height, notice.colour, pal.hatchLip)
+  drawSkyNoticeText(ctx, w, pal, box, notice)
   ctx.restore()
-  ctx.globalAlpha = 1
+}
+
+function drawSkyNoticeText(ctx, w, pal, box, notice) {
+  var x = box.x + 7, width = box.width - 14
+  ctx.textAlign = "left"
+  ctx.font = "bold 8px monospace"
+  ctx.fillStyle = notice.colour
+  ctx.fillText(notice.label, x + 7, 11)
+  var blink = !notice.warn || Math.floor(w.ticks / (notice.countdown < 25 ? 3 : 7)) % 2 === 0
+  ctx.fillStyle = blink ? notice.colour : pal.rigDark
+  ctx.fillRect(x, 5, 3, 3)
+  ctx.font = "9px monospace"
+  ctx.fillStyle = pal.label
+  // Only the message types in; its panel, label and countdown stay steady.
+  var text = skyFitText(ctx, notice.text, width)
+  if (notice.warn) text = text.slice(0, Math.floor(notice.age))
+  ctx.fillText(text, x, 22)
+  drawSkyCountdown(ctx, pal, box, notice)
+}
+
+function drawSkyCountdown(ctx, pal, box, notice) {
+  if (!notice.warn) return
+  ctx.font = "7px monospace"
+  ctx.textAlign = "right"
+  ctx.fillStyle = notice.colour
+  ctx.fillText(String(Math.ceil(notice.countdown / 30)) + "s", box.x + box.width - 7, 11)
+  var width = box.width - 14
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(box.x + 7, 24, width, 1)
+  ctx.fillStyle = notice.colour
+  ctx.fillRect(box.x + 7, 24, Math.round(width * Math.min(1, notice.countdown / 75)), 1)
 }
 
 function drawActors(ctx, w, pal, opts) {
@@ -2565,18 +2654,7 @@ function drawMission(ctx, w, pal) {
   var C = w.k.CELL
 
   ctx.save()
-  // Share the special's title baseline: the mission is level chrome, not a
-  // label attached to whichever cage happened to be placed below it.
-  ctx.font = "bold 8px monospace"
-  ctx.textAlign = "center"
-  var titleAlpha = m.done ? Math.max(0, 1 - (w.ticks - m.openedAt) / 45) : 1
-  if (titleAlpha > 0) {
-    ctx.globalAlpha = titleAlpha
-    ctx.fillStyle = m.done ? pal.exitLight : pal.warn
-    ctx.fillText(m.done ? "MISSION COMPLETE — EXIT ONLINE" : "MISSION: " + m.verb,
-                 w.k.COLS * C / 2, 12)
-    ctx.globalAlpha = 1
-  }
+  drawSkyMission(ctx, w, pal)
 
   for (var i = 0; i < m.targets.length; i++) {
     var t = m.targets[i]
@@ -3546,53 +3624,80 @@ function drawBustFine(px, sp, pal) {
 }
 
 function drawSpecialCard(ctx, w, pal) {
-  if (!w.special) return
+  if (!w.special || !w.specialSpec) return
+  var box = skyLayout(w)
+  if (box.width < 40) return
   var sp = w.specialSpec
-  if (!sp) return
-  var C = w.k.CELL
-  var boardW = w.k.COLS * C
-  var skyH = w.k.SKY * C
+  var amount = Math.min(1, w.ticks / 12) * (1 - skyNoticeAmount(w, pal))
+  ctx.save()
+  skyClip(ctx, box)
+  ctx.translate(0, -Math.round((1 - amount) * (box.height + 1)))
+  drawSkyPanel(ctx, pal, box.x, 1, box.width, box.height, sp.robe, pal.hatchLip)
+  var portraitX = box.right ? box.x + box.width - 24 : box.x + 2
+  drawSkyPanel(ctx, pal, portraitX, 1, 22, box.height, sp.robe, sp.hair)
+  drawBust(ctx, portraitX + 3, 3, sp, pal, w.submerged, (w.res || 1) >= 2)
+  drawSkyCardText(ctx, w, pal, box)
+  ctx.restore()
+}
 
-  // The whole sky, edge to edge. Panelling only the part the hatch was not
-  // using left a notch of bare sky around it that read as a mistake — the band
-  // is one surface, and the hatch is a thing standing on it.
-  ctx.fillStyle = pal.cardBack
-  ctx.fillRect(0, 0, boardW, skyH)
+function skyCardTextBox(box) {
+  return { x: box.x + (box.right ? 6 : 28), width: box.width - 34 }
+}
 
-  // The portrait goes to the outside: hard against whichever wall is furthest
-  // from the hatch, with the text between it and the middle of the board. So
-  // the two of them never crowd each other, and the layout mirrors when the
-  // level does.
-  var onRight = w.hatch.x * C < boardW / 2
-  var bustW = 16
-  var bustX = onRight ? boardW - 8 - bustW : 8
+function skyMissionAlpha(w) {
+  if (!w.mission) return 0
+  if (!w.mission.done) return 1
+  return Math.max(0, 1 - (w.ticks - w.mission.openedAt) / 45)
+}
 
-  ctx.fillStyle = sp.robe
-  ctx.fillRect(onRight ? boardW - 2 : 0, 0, 2, skyH)   // spine, on the outside
+function skyNameWidth(w, width) {
+  if (skyMissionAlpha(w) > 0) return Math.floor(width * 0.43)
+  return width
+}
 
-  drawBust(ctx, bustX, 3, sp, pal, w.submerged, (w.res || 1) >= 2)
-
-  var tx = onRight ? bustX - 8 : bustX + bustW + 8
-  ctx.textAlign = onRight ? "right" : "left"
-
-  ctx.fillStyle = sp.robe
-  ctx.font = "bold 8px monospace"
-  ctx.fillText(sp.name, tx, 12)
-
-  // One line, clipped rather than wrapped — the sky is seven rows and there is
-  // room for exactly one. The space is whatever is left between the portrait
-  // and the hatch.
-  var facts = SPECIAL_FACTS[sp.id] || [""]
-  var fact = facts[(w.factPick || 0) % facts.length]
-  var hatchEdge = onRight ? w.hatch.x * C + 20 : w.hatch.x * C - 20
-  var room = Math.floor((onRight ? tx - hatchEdge : hatchEdge - tx) / 4.25)
-  if (room < 8) return
-  if (fact.length > room) fact = fact.slice(0, Math.max(1, room - 1)) + "\u2026"
-
-  ctx.fillStyle = pal.labelFaint
-  ctx.font = "7px monospace"
-  ctx.fillText(fact, tx, 22)
+function drawSkyCardText(ctx, w, pal, box) {
+  var sp = w.specialSpec, textBox = skyCardTextBox(box)
   ctx.textAlign = "left"
+  ctx.font = "bold 8px monospace"
+  ctx.fillStyle = pal.label
+  ctx.fillText(skyFitText(ctx, sp.name, skyNameWidth(w, textBox.width)), textBox.x, 11)
+  ctx.font = "7px monospace"
+  ctx.fillStyle = pal.label
+  var facts = SPECIAL_FACTS[sp.id] || [""]
+  ctx.fillText(skyFitText(ctx, facts[(w.factPick || 0) % facts.length], textBox.width), textBox.x, 22)
+}
+
+function drawSkyMission(ctx, w, pal) {
+  var alpha = skyMissionAlpha(w)
+  if (alpha <= 0) return
+  var box = skyLayout(w)
+  if (box.width < 40) return
+  var amount = Math.min(1, w.ticks / 12) * (1 - skyNoticeAmount(w, pal))
+  ctx.save()
+  skyClip(ctx, box)
+  ctx.translate(0, -Math.round((1 - amount) * (box.height + 1)))
+  var textBox = { x: box.x + 7, width: box.width - 14 }
+  if (w.special && w.specialSpec) textBox = skyCardTextBox(box)
+  else drawSkyPanel(ctx, pal, box.x, 1, box.width, box.height, pal.warn, pal.hatchLip)
+  drawSkyMissionText(ctx, w, pal, textBox, alpha)
+  ctx.restore()
+}
+
+function drawSkyMissionText(ctx, w, pal, box, alpha) {
+  var x = box.x, width = box.width
+  if (w.special && w.specialSpec) {
+    var nameWidth = skyNameWidth(w, width)
+    x += nameWidth + 9
+    width -= nameWidth + 9
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(x - 5, 4, 1, 7)
+  }
+  ctx.globalAlpha = alpha
+  ctx.font = "bold 8px monospace"
+  ctx.textAlign = "left"
+  ctx.fillStyle = w.mission.done ? pal.exitLight : pal.warn
+  var text = w.mission.done ? "MISSION COMPLETE — EXIT ONLINE" : "MISSION: " + w.mission.verb
+  ctx.fillText(skyFitText(ctx, text, width), x, 11)
 }
 
 // The trapdoor the colony comes out of. Panelled and riveted so it reads as
