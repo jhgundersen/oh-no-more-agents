@@ -1688,3 +1688,10 @@ across the repository, and from 8 to 7 in Draw (the former shark giant was
 
 **Next.** Watch the tells and twelve-tick recovery in crowded colonies on the
 panel and page before making the effects larger; retain the quiet idle.
+
+*Reviewed and merged by the loop:* written by Codex (`codex/hazards`).
+Before/after sheet: before, charge-early and charge-late were pixel-for-
+pixel the same as idle on most kinds — the colony's tell was invisible to
+the audience. After, every kind winds up visibly (the sentry's dotted aim
+line, the dart trap loading, the gun's muzzle warming) and recovers with a
+short afterglow. Codex's seeded check: 1,180 hazard-free frames identical.
