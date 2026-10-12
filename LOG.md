@@ -1199,3 +1199,10 @@ before/after contact sheets and ImageMagick crops, including level 8 at
 Used the cached crapper tool after the first-run download had no network.
 
 **Next.** Review the separate special height-device props at res 2.
+
+*Reviewed and merged by the loop:* written by Codex in a worktree
+(`codex/fine-poses`) while iteration 49 ran on main — the owner OK'd
+parallel Codex runs for art. Read the diff (a table of small per-pose
+functions, inside the existing res-2 guard, no Sim changes), looked at
+before/after pose sheets, re-ran res-1 frames on levels 3, 8, 10 (same),
+`npm run check` (207 pass), CRAP count over 30 unchanged at 44.
