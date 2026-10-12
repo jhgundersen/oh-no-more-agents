@@ -2038,3 +2038,38 @@ control): 94.80% vs 93.78% home, avg ticks 1186 vs 1248, fall deaths 25 vs
 biome now has a mechanism of its own.
 
 **Deployed** after 73 (name="build" content="ff335bea"): powder snow, sinkholes. Browser check clean.
+
+## 74 — 2026-10-12 · A look for the Library
+
+**Why.** The thirteenth biome had stacks and free shelf climbing, but the
+renderer still supplied generic scenery and its exit-detail test failed.
+
+**Changed.** Draw only: dim receding stacks and fine spine labels; deterministic
+cloth bindings with varied heights and gilt bands; timber boards and uprights
+instead of dirt grain. Library ladders, reading lamps and book piles replace
+the generic decor, with warm pools of light and drifting dust that disappear
+when a lamp loses its support. An oak arch and card-catalogue jambs frame the
+exit's SILENCE plaque; the guard booth says STACK OVERFLOW. Shelf climbers
+brace their knees and grip actual board edges, retaining that pose across
+boards; bare-wood and downward climbs keep their normal pose. No footprints:
+the existing prints belong to snow and sand. Sim.js and Palette.js unchanged.
+
+**Checked.** `npm test` and `npm run check` pass, including the Library exit
+in all five themes. Backdrop and mote tests now cover every biome; new tests
+check deterministic bindings, detail staying inside solid cells, all four
+props, lamp support and motion, and shelf poses without world mutation. No
+whole-frame pins. Seeded old/new rendering: 480 byte-identical frames on the
+other twelve biomes, levels 1–65, ticks 0/200/500/900, resolutions 1 and 2.
+Rendered levels 13, 26, 39 and 78 at both resolutions with tools/shoot.js;
+reviewed /tmp/codex-library/sheet.png, including a live shelf climb on 26
+(seed 3, tick 630).
+
+**CRAP.** The network fetch in `npm run crap` was unavailable; used a local
+copy of the cached tool. Baseline coverage was produced despite the known
+failing exit test and scored with `--use-existing-coverage`. Full over-30
+count stays 35 → 35; all new rendering functions are below 10. Extracted the
+unchanged Data Center exit drawing to keep `drawExitBack` at 29. The seeded
+comparison verifies its pixels too.
+
+**Next.** The Library art is ready on this branch. No deploy, push or sibling
+copy updates.
