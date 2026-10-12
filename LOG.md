@@ -1475,3 +1475,8 @@ All 27 added functions have 100% coverage. Existing touched dispatchers:
 `drawWaterLife` 14.0. Used a local copy of the cached crapper tool.
 
 **Next.** Review distant sky stars and skyline detail at res 2.
+
+*Reviewed and merged by the loop:* written by Codex (`codex/backdrops`).
+Zoomed before/after on Ruins, Foundry, Jungle at res 2 — quiet, as asked:
+mortar on the columns, girder recesses, bark; agents unaffected. Seeded res-1
+comparison, 180 frames old vs merged Draw.js: identical.
