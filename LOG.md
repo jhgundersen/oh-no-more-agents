@@ -1995,3 +1995,5 @@ second one.
 **Checked.** Sniper levels 97.7 → 94.5% home, 0.58 deaths a level — a threat,
 the mildest of the four. All enemy levels 89.6 → 88.9%. `sim play` 97% /
 90% (unchanged). Deploying 70–71.
+
+**Deployed** after 71 (name="build" content="68437f95"): red-team balance. Browser check clean.
