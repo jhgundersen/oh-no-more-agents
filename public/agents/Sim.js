@@ -8444,118 +8444,12 @@ function stepAgents(w) {
     w.acting = ag
     if (ag.cool > 0) ag.cool--
     if (ag.infected > 0 && --ag.infected === 0) { turnAgent(w, ag); continue }
-    if (ag.blockFor > 0) ag.blockFor--
-    if (ag.coveredFor > 0) ag.coveredFor--
-    if (ag.mineCool > 0) ag.mineCool--
-    if (ag.waitFor > 0) ag.waitFor--
-    if (ag.shieldFor > 0) {
-      ag.shieldHeld++
-      if (--ag.shieldFor === 0) {
-        ag.shieldHeld = 0
-        var sspec = specOf(ag)
-        ag.cool = sspec ? sspec.cool : 0
-      }
-    }
-    if (ag.shotFor > 0) ag.shotFor--
-    if (ag.throttleFor > 0) ag.throttleFor--
-    if (ag.netFor > 0) ag.netFor--
-    if (ag.reloadFor > 0) ag.reloadFor--
-    if (ag.gunCool > 0) ag.gunCool--
-    if (ag.shoveCool > 0) ag.shoveCool--
-    if (ag.hazardGrace > 0) ag.hazardGrace--
-    if (ag.sweptFor > 0) { ag.sweptFor--; stepSweep(w, ag) }
-    if (ag.chilledFor > 0) ag.chilledFor--
+    tickAgentTimers(w, ag)
 
-    // A sniper takes a position it can see something from. Camping at the first
-    // wall it happened to meet put it on a different floor from the danger on
-    // nearly every level, where it could never see the one thing it is for.
-    if (ag.special && ag.state === "walk") {
-      var sact = specOf(ag).act
-      specialCountersHazard(w, ag, sact)
-      var seesDanger = sightsHazard(w, ag)
-      var seesRed = visibleEnemyAhead(w, ag, 30)
-      // Sees the danger, or sees the red team, or is simply getting close to
-      // one: same answer either way, and the last of those is the one that
-      // matters — cover is worth nothing raised after the first shot.
-      if (sact === "shield" && (seesDanger || seesRed || threatAhead(w, ag, 14))) raiseShield(w, ag)
-      // Not gated on sightsHazard or visibleEnemyAhead, which look one way or
-      // at fixtures only: inReach already asks for a clear line, both ways,
-      // and waiting to be facing the thing meant it acted on almost nothing.
-      if (sact === "throttle" && ag.cool <= 0) throttleHazard(w, ag)
-      if (sact === "net" && ag.cool <= 0) deployNet(w, ag)
-      if (sact === "reload" && ag.cool <= 0) reloadColleague(w, ag)
-
-      if (sact === "camp" && (seesDanger || seesRed)) {
-        ag.state = "camp"
-        ag.cool = 0
-      } else if (sact === "rocket" && ag.cool <= 0) {
-        var rocketDir = rocketRangedTarget(w, ag)
-        if (rocketDir) {
-          ag.dir = rocketDir
-          ag.state = "trick"
-          ag.timer = 0
-        }
-      } else if (sact === "spray" && ag.cool <= 0
-                 && ((seesDanger && hazardIsAhead(w, ag, 30)) || seesRed)) {
-        // It opens up the moment it has the thing in view. Waiting for a wall
-        // meant it fired once or twice a level, always at the map edge, and
-        // never once at the danger — which is half of what it is for.
-        ag.state = "trick"
-        ag.timer = 0
-      }
-    }
+    if (ag.special && ag.state === "walk") specialReacts(w, ag)
     if (ag.rescueCool > 0) ag.rescueCool--
-
-    // Stuck inside one cell. Not "getting nowhere" in the goalDist sense — the
-    // literal same cell, tick after tick, which is what pacing in a pocket
-    // looks like and what the bucket counter can never see.
-    var cell = Math.floor(ag.x) + "," + Math.floor(ag.y)
-    if (ag.state !== "walk") { ag.cell = cell; ag.still = 0 }
-    else if (cell === ag.cell) ag.still++
-    else { ag.cell = cell; ag.still = 0 }
-    if (ag.still > JUMP_STILL && ag.state === "walk" && canJump(w, ag)) startJump(w, ag)
-
-    if (ag.still > STILL_ESCAPE && ag.state === "walk") {
-      ag.still = 0
-      forceEscape(w, ag)
-      if (!ag.special && ag.state === "walk") condemn(w, ag)
-    }
-
-    // The beacon moves when a mission opens or closes under an agent, and
-    // markD is the closest it has ever been to whichever beacon it was
-    // watching. Carried across, the old number makes the first step toward the
-    // new one read as standing still — and standing still is what ends in a
-    // bomb. A change of destination is a fresh start, like arriving anywhere.
-    var goalNow = goalX(w, ag)
-    if (goalNow !== ag.goalMark) { ag.goalMark = goalNow; ag.markD = Infinity }
-
-    var dist = goalDist(w, ag, goalNow)
-    if (dist < ag.markD - 2) {
-      ag.markD = dist
-      ag.idle = 0
-      ag.turns = 0
-      // Progress wipes the pacing record. Everything the loop check knows is
-      // about the stretch since the agent last got anywhere.
-      ag.passes = {}
-      ag.bucket = ""
-    } else {
-      ag.idle++
-    }
-
-    // Getting nowhere for long enough: stop waiting for the budget to allow it
-    // (see forceEscape). Only from a walk, so it never interrupts work already
-    // under way.
-    if (ag.state === "walk" && ag.idle > PATIENCE - traitOf(ag).digBias) forceEscape(w, ag)
-
-    // Recovery gets first refusal. On a long corridor the fifth pass and the
-    // patience limit can land on the same tick; counting first condemned the
-    // agent before forceEscape could hand it the tool this counter exists to
-    // lead up to. If recovery started work, countPass ignores it above.
-    countPass(w, ag)
-
-    // Still nowhere, well after the shovel. Stuck on the spot rather than
-    // pacing between two places, which the bucket count above cannot see.
-    if (ag.state === "walk" && ag.idle > STUCK_LIMIT) condemn(w, ag)
+    watchStill(w, ag)
+    watchProgress(w, ag)
 
     var dirBeforeStep = ag.dir
     regularSidearm(w, ag)
@@ -8652,6 +8546,126 @@ function stepAgents(w) {
     if (ag.state !== "walk" || ag.idle < 300) moving++
   }
   return { active: active, blockers: blockers, moving: moving }
+}
+
+// Every per-agent countdown that only ever runs down. (`cool` and `infected`
+// run in stepAgents itself: one of them can end the agent's turn.)
+var AGENT_COUNTDOWNS = ["blockFor", "coveredFor", "mineCool", "waitFor", "shotFor", "throttleFor",
+  "netFor", "reloadFor", "gunCool", "shoveCool", "hazardGrace"]
+function tickAgentTimers(w, ag) {
+  for (var i = 0; i < AGENT_COUNTDOWNS.length; i++) if (ag[AGENT_COUNTDOWNS[i]] > 0) ag[AGENT_COUNTDOWNS[i]]--
+  if (ag.shieldFor > 0) {
+    ag.shieldHeld++
+    if (--ag.shieldFor === 0) {
+      ag.shieldHeld = 0
+      var sspec = specOf(ag)
+      ag.cool = sspec ? sspec.cool : 0
+    }
+  }
+  // Swept along before the chill wears off: the sweep walks it at its pace.
+  if (ag.sweptFor > 0) { ag.sweptFor--; stepSweep(w, ag) }
+  if (ag.chilledFor > 0) ag.chilledFor--
+}
+
+// A sniper takes a position it can see something from. Camping at the first
+// wall it happened to meet put it on a different floor from the danger on
+// nearly every level, where it could never see the one thing it is for.
+function specialReacts(w, ag) {
+  var sact = specOf(ag).act
+  specialCountersHazard(w, ag, sact)
+  var seesDanger = sightsHazard(w, ag)
+  var seesRed = visibleEnemyAhead(w, ag, 30)
+  // Sees the danger, or sees the red team, or is simply getting close to
+  // one: same answer either way, and the last of those is the one that
+  // matters — cover is worth nothing raised after the first shot.
+  if (sact === "shield" && (seesDanger || seesRed || threatAhead(w, ag, 14))) raiseShield(w, ag)
+  // Not gated on sightsHazard or visibleEnemyAhead, which look one way or
+  // at fixtures only: inReach already asks for a clear line, both ways,
+  // and waiting to be facing the thing meant it acted on almost nothing.
+  if (sact === "throttle" && ag.cool <= 0) throttleHazard(w, ag)
+  if (sact === "net" && ag.cool <= 0) deployNet(w, ag)
+  if (sact === "reload" && ag.cool <= 0) reloadColleague(w, ag)
+  specialTakesAim(w, ag, sact, seesDanger, seesRed)
+}
+
+// The specials whose act is a stance or a shot: settle in, or open fire.
+function specialTakesAim(w, ag, sact, seesDanger, seesRed) {
+  if (sact === "camp" && (seesDanger || seesRed)) {
+    ag.state = "camp"
+    ag.cool = 0
+  } else if (sact === "rocket" && ag.cool <= 0) {
+    var rocketDir = rocketRangedTarget(w, ag)
+    if (rocketDir) {
+      ag.dir = rocketDir
+      ag.state = "trick"
+      ag.timer = 0
+    }
+  } else if (sact === "spray" && ag.cool <= 0
+             && ((seesDanger && hazardIsAhead(w, ag, 30)) || seesRed)) {
+    // It opens up the moment it has the thing in view. Waiting for a wall
+    // meant it fired once or twice a level, always at the map edge, and
+    // never once at the danger — which is half of what it is for.
+    ag.state = "trick"
+    ag.timer = 0
+  }
+}
+
+// Stuck inside one cell. Not "getting nowhere" in the goalDist sense — the
+// literal same cell, tick after tick, which is what pacing in a pocket
+// looks like and what the bucket counter can never see.
+function watchStill(w, ag) {
+  var cell = Math.floor(ag.x) + "," + Math.floor(ag.y)
+  if (ag.state !== "walk") { ag.cell = cell; ag.still = 0 }
+  else if (cell === ag.cell) ag.still++
+  else { ag.cell = cell; ag.still = 0 }
+  if (ag.still > JUMP_STILL && ag.state === "walk" && canJump(w, ag)) startJump(w, ag)
+
+  if (ag.still > STILL_ESCAPE && ag.state === "walk") {
+    ag.still = 0
+    forceEscape(w, ag)
+    if (!ag.special && ag.state === "walk") condemn(w, ag)
+  }
+}
+
+// Is it getting anywhere? Progress toward its goal resets every counter the
+// stall rules read; none for long enough hands it to forceEscape, then to
+// countPass, then to condemn.
+function watchProgress(w, ag) {
+  // The beacon moves when a mission opens or closes under an agent, and
+  // markD is the closest it has ever been to whichever beacon it was
+  // watching. Carried across, the old number makes the first step toward the
+  // new one read as standing still — and standing still is what ends in a
+  // bomb. A change of destination is a fresh start, like arriving anywhere.
+  var goalNow = goalX(w, ag)
+  if (goalNow !== ag.goalMark) { ag.goalMark = goalNow; ag.markD = Infinity }
+
+  var dist = goalDist(w, ag, goalNow)
+  if (dist < ag.markD - 2) {
+    ag.markD = dist
+    ag.idle = 0
+    ag.turns = 0
+    // Progress wipes the pacing record. Everything the loop check knows is
+    // about the stretch since the agent last got anywhere.
+    ag.passes = {}
+    ag.bucket = ""
+  } else {
+    ag.idle++
+  }
+
+  // Getting nowhere for long enough: stop waiting for the budget to allow it
+  // (see forceEscape). Only from a walk, so it never interrupts work already
+  // under way.
+  if (ag.state === "walk" && ag.idle > PATIENCE - traitOf(ag).digBias) forceEscape(w, ag)
+
+  // Recovery gets first refusal. On a long corridor the fifth pass and the
+  // patience limit can land on the same tick; counting first condemned the
+  // agent before forceEscape could hand it the tool this counter exists to
+  // lead up to. If recovery started work, countPass ignores it above.
+  countPass(w, ag)
+
+  // Still nowhere, well after the shovel. Stuck on the spot rather than
+  // pacing between two places, which the bucket count above cannot see.
+  if (ag.state === "walk" && ag.idle > STUCK_LIMIT) condemn(w, ag)
 }
 
 function stepMission(w) {

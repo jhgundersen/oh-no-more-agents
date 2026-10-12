@@ -148,3 +148,16 @@ for (const spec of S.SPECIALS.filter(s => S.SPECIAL_CUTS[s.act])) {
       assert.equal(steel.w.terrain[y * S.COLS + x], S.STEEL, `${spec.act} left steel alone`)
   })
 }
+
+test("every special reacts on the walk without throwing", () => {
+  for (const spec of S.SPECIALS) for (const level of [3, 19]) {
+    const w = S.generate(level, 0, 11)
+    for (let t = 0; t < 200; t++) S.step(w)
+    const ag = S.spawn(w)
+    ag.special = spec.id; ag.state = "walk"; ag.cool = 0
+    ag.x = w.hatch.x; ag.y = w.corridors[0].floorY - 1
+    w.agents.push(ag)
+    S.specialReacts(w, ag)
+    assert.ok(typeof ag.state === "string", spec.id)
+  }
+})

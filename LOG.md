@@ -1321,3 +1321,20 @@ or bend existing ones (wind, belts), don't close them.
 
 **Next.** Merge Codex's hero gear when it is done; deploy. CRAP:
 `stepAgents`, `generate`, `drawAgent`.
+
+## 55 — 2026-10-12 · Crap: stepAgents
+
+**Changed.** Out of `stepAgents` (CRAP 122): `tickAgentTimers` (the plain
+countdowns as an `AGENT_COUNTDOWNS` list; shield and sweep kept explicit, and
+the chill still wears off after the sweep, which walks at the agent's pace),
+`specialReacts` + `specialTakesAim` (what a special does when it sees
+something), `watchStill` (stuck in one cell) and `watchProgress` (getting
+nowhere → forceEscape → countPass → condemn, in the same order). Now 58.
+
+**Checked.** Full-play golden (150 levels to the end, agents and enemies
+every 50 ticks) identical to before. A new test runs `specialReacts` for
+every special on two levels — the first cut left it at 33% coverage and
+pushed it over 30. 226 tests pass; over 30: 42 (it went to 44 mid-way, with
+the split pieces untested).
+
+**Next.** Codex's hero gear branch. `generate` (129), `drawAgent` (86).
