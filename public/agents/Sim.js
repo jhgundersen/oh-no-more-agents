@@ -73,7 +73,11 @@ var HARPOON_RELOAD = 130
 var HARPOON_REACH = 40
 var SIDEARM_RELOAD = 600  // ordinary agents get one hurried shot, not a firing stance
 var SIDEARM_RANGE = 20
-var SIDEARM_ENEMY_HIT = 1
+// One hurried shot in a hundred hit a walking hostile, and a single gunner
+// took 3.3 colleagues a level for 0.4 of itself: the colony could see it
+// coming and had no answer. At 15 the gunner still takes nearly two a level
+// and the red team stays the thing to fear; at 30 a sniper post was harmless.
+var SIDEARM_ENEMY_HIT = 15
 var SIDEARM_HAZARD_HIT = 1
 // A drone is the one hostile a hurried shot has a chance against: small, slow
 // and coming straight at you. 118 launched over 42 operator runs killed 92 and

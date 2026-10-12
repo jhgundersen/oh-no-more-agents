@@ -1962,3 +1962,22 @@ syncs it); it will show the plate without the closing wipe until its panel
 sets `doneHold`.
 
 **Deployed** after 69 (name="build" content="130d5988"): level intros and results. Browser check clean.
+
+## 70 — 2026-10-12 · The red team gets an answer
+
+**Why.** Per-roster tally over 1,800 levels: no enemies 94.9% home; a single
+gunner 76–77%, killing 3.3 colleagues a level and losing 0.09–0.39 of itself;
+an operator 84%; a harpooner 88–90%; a sniper 97–98% (harmless). The
+colony sees a gunner coming — its aim tell is drawn — and has no answer:
+`SIDEARM_ENEMY_HIT` was 1 (drones, since iteration 31, are hit at 35).
+
+**Changed.** `SIDEARM_ENEMY_HIT` 1 → 15.
+
+**Checked.** Sweep of 1 / 15 / 30 on every enemy level in 12–1800: enemy
+levels 83.8 → 89.6 → 91.7% home; gunner 76.3 → 84.7 → 87.7, still killing
+1.9 a level at 15; at 30 the red team stops being a threat. 15 keeps them the
+thing to fear. `sim play` 96 → 97% cleared, 88 → 90% home. AGENTS.md
+baselines updated.
+
+**Next.** The sniper is close to harmless (97–98%); look at why it rarely
+gets a shot (camp position? line of sight?) before deploying the next batch.
