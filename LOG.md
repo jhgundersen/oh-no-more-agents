@@ -1420,3 +1420,5 @@ second model. Looked at the before/after sheet for all 28 items (detail stays
 inside each silhouette); merged over iterations 52–56 (log and stamps were the
 only conflicts). Res-1: 180 frames (levels 1–60 at three ticks, Math.random
 seeded, 88 with a special on screen) byte-identical old vs merged Draw.js.
+
+**Deployed** after 57 (name="build" content="49f0ff05"): refactors 53–56, hero gear detail. Browser check clean.
