@@ -1787,6 +1787,7 @@ function drawActors(ctx, w, pal, opts) {
   if (w.prints && w.prints.length) drawPrints(ctx, w, pal)
   if (w.eventSiteFx) drawEventSite(ctx, w, pal, w.eventSiteFx)
   if (w.boulder) drawBoulder(ctx, w, pal, w.boulder)
+  if (w.frozen) for (var fz = 0; fz < w.frozen.length; fz++) drawFrozen(ctx, w, pal, w.frozen[fz])
   if (w.nets) for (var ni = 0; ni < w.nets.length; ni++) drawNet(ctx, w, w.nets[ni])
   if (w.reloadFx) drawReloadTrail(ctx, w, w.reloadFx)
 
@@ -4685,6 +4686,46 @@ function drawPrints(ctx, w, pal) {
       ctx.fillRect(px + (p.dir > 0 ? 1 : -1.5), py + 0.5, 0.5, 0.5)   // the toe, forward
     } else ctx.fillRect(px - 1, py, 2, 1)
   }
+  ctx.globalAlpha = 1
+}
+
+// A colleague in the Ice Cave's ice (Sim's `w.frozen`): the ordinary sprite,
+// standing, under a pane of ice with a shine across it — seen through the
+// wall, not standing in front of it. When the wall is opened the ice goes in
+// shards and steam for a second while they walk off.
+var FROZEN_FX = 30
+function drawFrozen(ctx, w, pal, f) {
+  if (f.thawedAt >= 0) { drawThaw(ctx, w, pal, f, w.ticks - f.thawedAt); return }
+  var C = w.k.CELL
+  drawAgent(ctx, w, pal, { x: f.x + 0.5, y: f.y, dir: f.dir, state: "wait", anim: 0, fade: 0 }, {})
+  var x = f.x * C - 1, top = (f.y + 1) * C - SPRITE_PX - 1, wide = C * 2 + 2, tall = SPRITE_PX + 1
+  ctx.fillStyle = pal.decorLit
+  ctx.globalAlpha = 0.45
+  ctx.fillRect(x, top, wide, tall)
+  ctx.globalAlpha = 0.9                                            // its edges
+  ctx.fillRect(x, top, wide, 1)
+  ctx.fillRect(x, top, 1, tall)
+  ctx.fillRect(x + wide - 1, top, 1, tall)
+  ctx.globalAlpha = 0.8
+  ctx.fillStyle = "#ffffff"
+  var fine = (w.res || 1) >= 2 ? 0.5 : 1
+  for (var i = 0; i < 4; i++) ctx.fillRect(x + 2 + i * fine, top + 9 - i * 2 * fine, fine, fine * 2)  // the shine
+  ctx.globalAlpha = 1
+}
+
+function drawThaw(ctx, w, pal, f, age) {
+  if (age > FROZEN_FX) return
+  var C = w.k.CELL, cx = (f.x + 0.5) * C, cy = (f.y + 1) * C - 8
+  ctx.globalAlpha = 1 - age / FROZEN_FX
+  ctx.fillStyle = pal.decorLit
+  for (var k = 0; k < 8; k++) {
+    var vx = ((k * 29) % 7 - 3) * 0.45, vy = -0.8 - (k % 3) * 0.4
+    ctx.fillRect(Math.round(cx + vx * age), Math.round(cy + vy * age + age * age * 0.08), 2, 1 + (k % 2))
+  }
+  ctx.fillStyle = "#ffffff"
+  ctx.globalAlpha *= 0.5
+  for (var p = 0; p < 3; p++)                                        // steam
+    ctx.fillRect(Math.round(cx - 3 + p * 3 + Math.sin(age * 0.3 + p) * 1.5), Math.round(cy - age * 0.5 - p * 2), 2, 2)
   ctx.globalAlpha = 1
 }
 

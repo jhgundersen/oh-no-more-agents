@@ -779,6 +779,7 @@ function generate(level, attempt, colonySeed) {
     boulder: null,    // the Ruins' rolling stone; see placeBoulder
     belts: [],        // the Factory's conveyors; see placeBelts
     beltAt: null,     // and which way each feet cell is carried, -1/0/1
+    frozen: [],       // the Ice Cave's colleagues in the ice; see placeFrozen
     k: K,
     decor: [],
     corrGap: CORR_GAP,
@@ -1308,6 +1309,7 @@ function generate(level, attempt, colonySeed) {
   if (w.biome === "Jungle") placeVines(w, corridors)
   if (w.biome === "Ruins") placeBoulder(w, corridors)
   if (w.biome === "Factory") placeBelts(w, corridors)
+  if (w.biome === "Ice Cave") placeFrozen(w, corridors)
 
   // Last, so that everything above this line still cuts freely (see clearCell).
   w.bedFloor = corridors[corridors.length - 1].floorY
@@ -1506,6 +1508,68 @@ function beltUnder(w, ag) {
   if (fy < 0 || fy >= ROWS - 1) return 0
   var d = w.beltAt[fy * COLS + cx]
   return d && solid(w, cx, fy + 1) ? d : 0
+}
+
+// ---------------------------------------------------------------------------
+// Frozen colleagues
+// ---------------------------------------------------------------------------
+//
+// The Ice Cave's own mechanism. The last colony through here did not all make
+// it: one or two of them are standing in the ice of a wall that blocks a
+// corridor, visible through it. The ice does not let them go until the colony
+// opens the wall around them — a bash, a mine, a bomb — and then they thaw,
+// step out and join the queue. A reward for getting through, not a puzzle:
+// nobody goes looking for them, and the colony is not told they are there.
+// They count as released when they thaw, so "home" is out of everyone who was
+// ever walking. Placed from a stream of its own.
+var FROZEN_MAX = 2
+var FROZEN_THAW_FX = 30   // ticks of steam and shards, for Draw
+
+function placeFrozen(w, corridors) {
+  var frng = makeRng(w.level * 6007 + 2903)
+  for (var ci = 0; ci < corridors.length && w.frozen.length < FROZEN_MAX; ci++) {
+    var c = corridors[ci]
+    for (var oi = 0; oi < c.obstacles.length && w.frozen.length < FROZEN_MAX; oi++) {
+      var x = c.obstacles[oi] + 1
+      if (!frozenFits(w, x, c.floorY - 1) || frng() < 0.4) continue
+      w.frozen.push({ x: x, y: c.floorY - 1, dir: c.dir, thawedAt: -1 })
+    }
+  }
+}
+
+// Solid all the way up the corridor, two cells wide: a wall, not a step.
+function frozenFits(w, x, feet) {
+  for (var y = feet - CORR_H + 1; y <= feet; y++)
+    if (!solid(w, x, y) || !solid(w, x + 1, y) || at(w, x, y) === STEEL) return false
+  return true
+}
+
+// Any cell of the body opened is enough: a basher coming off a ledge cuts the
+// wall at head height and leaves the feet in it, and a colleague standing
+// half out of the ice is not still frozen.
+function frozenEncased(w, f) {
+  for (var y = f.y - AGENT_H + 1; y <= f.y; y++) if (!solid(w, f.x, y)) return false
+  return true
+}
+
+function stepFrozen(w) {
+  for (var i = 0; i < w.frozen.length; i++) {
+    var f = w.frozen[i]
+    if (f.thawedAt >= 0 || frozenEncased(w, f)) continue
+    f.thawedAt = w.ticks
+    // The ice they were standing in goes with them, or a colleague freed at
+    // the head would step out with their feet still in the wall.
+    for (var y = f.y - AGENT_H + 1; y <= f.y; y++) clearCell(w, f.x, y)
+    var ag = spawn(w)
+    ag.x = f.x + 0.5
+    ag.y = f.y
+    ag.dir = f.dir
+    ag.state = "walk"
+    w.agents.push(ag)
+    w.toRelease++
+    w.released++
+    w.lastEvent = "thaw"
+  }
 }
 
 function placeMission(w, corridors) {
@@ -8660,6 +8724,7 @@ function step(w) {
 
   w.wind = windAt(w)
   stepBoulder(w)
+  stepFrozen(w)
   var counts = stepAgents(w)
   // When each agent was lost, for Hot Reload. Everything that kills sets
   // `gone`; nothing else records the moment, and there are a dozen of them.

@@ -366,6 +366,23 @@ stream, so the rest of the level is unchanged.
   without, levels about 5% longer, timeouts 3 against 1. Walkers spend about
   15% of their walking time on a belt — it is seen, and it barely costs.
 
+## The Ice Cave
+
+Frozen colleagues (`placeFrozen` … `stepFrozen`, above `placeMission`). Up to
+two per level, standing in the ice of a full-height wall obstacle; own RNG
+stream.
+
+- **They thaw when any cell of the body opens**, not just the feet: a basher
+  off a ledge cuts the wall at head height. On thaw the body column is
+  cleared, or they step out with their feet still in the wall.
+- **A thawed colleague is released**: `toRelease` and `released` both go up,
+  so the level-end and stall rules see them like anyone else, and a level can
+  report twenty saved. `src/counter.js`'s cap of 90 still holds because the
+  client seals a batch by saved count, not by level count.
+- Measured over 240 Ice Cave plays: 282 placed, 105 thawed, 89 of those home;
+  the original colony's saves went from 89.9% to 91.6%. Most stay in the ice
+  — the colony goes round or over more walls than it goes through.
+
 ## Staying current
 
 A tab is left open for days, so a deploy has to reach it without anyone pressing

@@ -1089,3 +1089,28 @@ without; avg ticks 1229 / 1163; timeouts 3 / 1. Walkers are on a belt for
 mechanism of their own; the exit frames at finer pixels.
 
 **Deployed** after 46 (name="build" content="ad86fe51"): decor detail, Factory conveyors. Browser check clean.
+
+## 47 — 2026-10-12 · Ice Cave: colleagues frozen in the walls
+
+**Why.** Next biome without a mechanism. Everything so far taxes or bends the
+route (wind, belts, boulder, updraft); this one is a reward you see coming —
+a figure in the ice of the wall the colony is about to dig through.
+
+**Changed.** Sim: `placeFrozen` (own stream) stands up to two former
+colleagues in full-height walls on corridor floors; `stepFrozen` thaws one
+when any of its body cells is opened, melts the column it stood in, and
+spawns it walking the corridor's way, counted into `toRelease`/`released`.
+Draw: `drawFrozen` — the ordinary sprite under a pane of ice with a lit edge
+and a shine; `drawThaw` — shards and steam for a second.
+
+**Checked.** First thaw rule (feet cells only) left half-exposed figures in
+the ice; widening it to the whole body made agents spawn into solid ice when
+cut at the head — they stuck. Clearing the column fixed it: 89 of 105 thawed
+get home. Ice Cave, 240 plays: original colony 89.9% → 91.6% saved.
+Rendered frozen and thawing at res 2. Checked the stats cap
+(`MAX_SAVED_PER_REPORT` 90) against a 20-agent level: the client seals
+batches by saved count, fine; comment updated. `sim play` 95 / 88; `inert`,
+`gravity` pass; 4 new tests; new functions under 10 CRAP.
+
+**Next.** Cavern, Frost, Foundry, Spaceship still without a mechanism. Exit
+frames at finer pixels. Deploy after the next iteration.
