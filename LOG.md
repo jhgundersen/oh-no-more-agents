@@ -2019,3 +2019,20 @@ became lethal in 71 — one caller still grazes) and `stepDrone` (the play
 sample stopped reaching an operator after the hero list grew). Tests for
 both: a graze, a second graze, a lethal shot and no double count; three
 operator levels played to the end with drones launched. Over 30: 31.
+
+## 73 — 2026-10-12 · Cavern: sinkholes
+
+**Why.** The last biome without a mechanism. Opens a route, per the lesson of
+54: a way down where there was rock.
+
+**Changed.** Sim: `placeSinkholes` (own stream) marks a three-cell crust on
+60% of corridors over rock that runs solid to the next corridor's open air;
+`stepSinkholes` opens the whole column under the first walker on it — one
+corridor gap, always survivable — and leaves it open. Draw: `drawSinkhole`,
+a sagging crust with a crack, then the slab's chunks dropping down the shaft.
+
+**Checked.** 400 Cavern plays on / off (same levels, sinkholes removed as
+control): 94.80% vs 93.78% home, avg ticks 1186 vs 1248, fall deaths 25 vs
+25; 308 opened. Rendered one opening at res 2. `sim play` 97% / 90%;
+`inert`, `gravity` pass; tests for placement, opening and drawing. Every
+biome now has a mechanism of its own.

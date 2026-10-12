@@ -793,6 +793,7 @@ function generate(level, attempt, colonySeed) {
     beltAt: null,     // and which way each feet cell is carried, -1/0/1
     frozen: [],       // the Ice Cave's colleagues in the ice; see placeFrozen
     pads: [],         // the Spaceship's transporter pairs; see placePads
+    sinkholes: [],    // the Cavern's thin floors; see placeSinkholes
     k: K,
     decor: [],
     corrGap: CORR_GAP,
@@ -1357,7 +1358,8 @@ var BIOME_MECHANISMS = {
   "Factory": placeBelts,
   "Ice Cave": placeFrozen,
   "Spaceship": placePads,
-  "Foundry": placeChains
+  "Foundry": placeChains,
+  "Cavern": placeSinkholes
 }
 
 // The Jungle's own mechanism: some walls have a vine down their face, and a
@@ -1685,6 +1687,73 @@ function stepPads(w) {
       break
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Sinkholes
+// ---------------------------------------------------------------------------
+//
+// The Cavern's own mechanism. Here and there the rock between one corridor
+// and the next has been eaten hollow from below, and the floor over it is a
+// crust: cracked, and drawn so. The first walker on it goes through, down a
+// shaft to the corridor below — a drop of one corridor gap, the same drop as
+// every handoff, so always survivable — and the hole stays open for whoever
+// comes after to take or not as they see fit. A route down that was not there,
+// on a stream of its own.
+var SINK_CHANCE = 0.6      // per corridor
+var SINK_W = 3
+
+function placeSinkholes(w, corridors) {
+  var srng = makeRng(w.level * 3571 + 6089)
+  for (var ci = 0; ci < corridors.length - 1; ci++) {
+    if (srng() >= SINK_CHANCE) continue
+    var c = corridors[ci], below = corridors[ci + 1]
+    var lo = Math.min(c.startX, c.handoffX) + 6, hi = Math.max(c.startX, c.handoffX) - 6
+    if (hi <= lo) continue
+    var start = irand(srng, lo, hi)
+    for (var n = 0; n < hi - lo; n++) {
+      var x = lo + (start - lo + n) % (hi - lo)
+      if (!sinkholeFits(w, x, c.floorY, below.floorY)) continue
+      w.sinkholes.push({ x: x, top: c.floorY, bottom: below.floorY - 1, openedAt: -1 })
+      break
+    }
+  }
+}
+
+// Walkable crust on top, solid fill all the way down to the lower corridor's
+// open air, and floor to land on at the bottom.
+function sinkholeFits(w, x, top, lowerFloor) {
+  for (var dx = 0; dx < SINK_W; dx++) {
+    var cx = x + dx
+    if (!standable(w, cx, top - 1) || !solid(w, cx, top) || !solid(w, cx, lowerFloor)) return false
+    if (!standable(w, cx, lowerFloor - 1)) return false
+    var y = top
+    while (y < lowerFloor && solid(w, cx, y)) y++
+    for (var oy = y; oy < lowerFloor; oy++) if (solid(w, cx, oy)) return false
+    if (y >= lowerFloor - 1) return false
+  }
+  return true
+}
+
+function stepSinkholes(w) {
+  for (var i = 0; i < w.sinkholes.length; i++) {
+    var s = w.sinkholes[i]
+    if (s.openedAt >= 0 || !sinkholeStoodOn(w, s)) continue
+    s.openedAt = w.ticks
+    for (var x = s.x; x < s.x + SINK_W; x++)
+      for (var y = s.top; y <= s.bottom && solid(w, x, y); y++) clearCell(w, x, y)
+    addDust(w, s.x + SINK_W / 2, s.top, 18)
+    w.lastEvent = "sinkhole"
+  }
+}
+
+function sinkholeStoodOn(w, s) {
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state !== "walk" || Math.floor(ag.y) !== s.top - 1) continue
+    if (ag.x >= s.x && ag.x < s.x + SINK_W) return true
+  }
+  return false
 }
 
 function placeMission(w, corridors) {
@@ -8941,6 +9010,7 @@ function step(w) {
   stepBoulder(w)
   stepFrozen(w)
   stepPads(w)
+  stepSinkholes(w)
   var counts = stepAgents(w)
   var active = counts.active
   var blockers = counts.blockers

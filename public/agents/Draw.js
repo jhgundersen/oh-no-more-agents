@@ -2334,6 +2334,7 @@ function drawActors(ctx, w, pal, opts) {
   if (w.boulder) drawBoulder(ctx, w, pal, w.boulder)
   if (w.frozen) for (var fz = 0; fz < w.frozen.length; fz++) drawFrozen(ctx, w, pal, w.frozen[fz])
   if (w.pads) for (var pd = 0; pd < w.pads.length; pd++) drawPadPair(ctx, w, pal, w.pads[pd])
+  if (w.sinkholes) for (var sk = 0; sk < w.sinkholes.length; sk++) drawSinkhole(ctx, w, pal, w.sinkholes[sk])
   if (w.nets) for (var ni = 0; ni < w.nets.length; ni++) drawNet(ctx, w, w.nets[ni])
   if (w.reloadFx) drawReloadTrail(ctx, w, w.reloadFx)
   if (w.debugFx) drawDebugFx(ctx, w, w.debugFx)
@@ -6045,6 +6046,30 @@ function drawPowderBursts(ctx, w, pal) {
       ctx.fillRect(Math.round(cx + vx * age), Math.round(by + vy * age + age * age * 0.06), k % 2 + 1, 1)
     }
   }
+  ctx.globalAlpha = 1
+}
+
+// The Cavern's sinkholes (Sim's `w.sinkholes`): before, a crust with a crack
+// running through it and a darker sag in the middle — readable as "do not
+// trust this" from across the board; after, the slab's chunks dropping down the
+// new shaft for a moment.
+var SINK_FX = 22
+function drawSinkhole(ctx, w, pal, s) {
+  var C = w.k.CELL, x0 = s.x * C, wide = 3 * C, top = s.top * C
+  if (s.openedAt < 0) {
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(x0 + 2, top, wide - 4, 1)                         // the sag
+    for (var i = 0; i < wide - 1; i += 2)                            // the crack
+      ctx.fillRect(x0 + i, top + 1 + ((i * 7) % 3 === 0 ? 1 : 0), 2, 1)
+    if ((w.res || 1) >= 2) { ctx.fillStyle = pal.decorLit; ctx.fillRect(x0 + 1, top + 0.5, 0.5, 0.5); ctx.fillRect(x0 + wide - 2, top + 0.5, 0.5, 0.5) }
+    return
+  }
+  var age = w.ticks - s.openedAt
+  if (age > SINK_FX) return
+  ctx.fillStyle = pal.rock
+  ctx.globalAlpha = 1 - age / SINK_FX
+  for (var k = 0; k < 9; k++)
+    ctx.fillRect(x0 + ((k * 5) % (wide - 2)), top + age * age * 0.12 + (k % 3) * 3, 2 + (k % 2), 2)
   ctx.globalAlpha = 1
 }
 

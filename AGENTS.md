@@ -416,6 +416,16 @@ Measured over 800 Frost plays: umbrellas spent 8.4 → 2.9 a level, splats
 13 → 5, levels ~3% shorter, home 94.5 → 94.3% (noise). Tried before it and
 reverted: thin ice over chasms (iteration 54) — it closed a route.
 
+## The Cavern
+
+Sinkholes (`placeSinkholes` … `stepSinkholes`). On 60% of corridors (not the
+last), a three-cell crust over rock that runs solid down to the next
+corridor's open air. The first walker on it opens the whole column: a drop
+of one corridor gap — the handoff's drop, always survivable — and the shaft
+stays for later arrivals to take or not. Own stream. Measured over 400
+Cavern plays: 94.80% home with sinkholes vs 93.78%, levels ~5% shorter, no
+change in fall deaths; 308 of ~676 opened.
+
 ## Staying current
 
 A tab is left open for days, so a deploy has to reach it without anyone pressing

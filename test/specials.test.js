@@ -197,3 +197,17 @@ test("powder bursts draw for a long landing in Frost and not after", async () =>
     assert.equal(Buffer.from(img.buf).toString("base64") !== blank, drawn, `age ${age}`)
   }
 })
+
+test("a sinkhole draws closed, opening, and not after", async () => {
+  const { canvas, themeOf } = await import("../tools/render.js")
+  const D = loadCore("Draw.js"), P = loadCore("Palette.js")
+  const theme = themeOf("tokyo-night"), w = S.generate(61, 0, 3), s = { x: 22, top: 26, bottom: 35, openedAt: -1 }
+  for (const [opened, ticks, drawn] of [[-1, 50, true], [100, 105, true], [100, 130, false]]) for (const res of [1, 2]) {
+    s.openedAt = opened; w.ticks = ticks; w.res = res
+    const img = canvas(400 * res, 248 * res, theme.background)
+    img.ctx.setTransform(res, 0, 0, res, 0, 0)
+    const blank = Buffer.from(img.buf).toString("base64")
+    D.drawSinkhole(img.ctx, w, P.build(theme.theme, 1), s)
+    assert.equal(Buffer.from(img.buf).toString("base64") !== blank, drawn)
+  }
+})

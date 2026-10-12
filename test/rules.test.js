@@ -115,3 +115,21 @@ test("a graze stuns and knocks back; a second one, or a lethal shot, kills", () 
   S.woundFriendly(w, other, 20, true)
   assert.equal(w.lost, lost + 2, "no double count")
 })
+
+test("Cavern sinkholes: a crust over a hollow that opens under the first walker", () => {
+  let found = 0
+  for (let lv = 1; lv <= 96; lv++) {
+    const w = S.generate(lv, 0, 5)
+    if (w.biome !== "Cavern") { assert.equal(w.sinkholes.length, 0, `level ${lv}`); continue }
+    found += w.sinkholes.length
+  }
+  assert.ok(found > 0)
+  const w = S.generate(61, 0, 3), s = w.sinkholes[0]
+  const ag = S.spawn(w)
+  ag.state = "walk"; ag.x = s.x + 1.5; ag.y = s.top - 1
+  w.agents = [ag]
+  S.stepSinkholes(w)
+  assert.equal(s.openedAt, w.ticks)
+  for (let x = s.x; x < s.x + 3; x++) assert.ok(!S.solid(w, x, s.top), "the crust is gone")
+  assert.ok(S.solid(w, s.x, s.bottom + 1), "and there is floor to land on")
+})
