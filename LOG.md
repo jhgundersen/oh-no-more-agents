@@ -1480,3 +1480,19 @@ All 27 added functions have 100% coverage. Existing touched dispatchers:
 Zoomed before/after on Ruins, Foundry, Jungle at res 2 — quiet, as asked:
 mortar on the columns, girder recesses, bark; agents unaffected. Seeded res-1
 comparison, 180 frames old vs merged Draw.js: identical.
+
+## 59 — 2026-10-12 · Deaths carry their cause
+
+**Why.** Groundwork for death animations (next Codex task): an agent that
+dies just stops being drawn, whatever killed it. Draw needs to know how.
+
+**Changed.** `noteDeaths` (out of `step`, run after the whole tick) stamps
+`diedAt` and a render-only `diedBy` — the tick's last event — on every agent
+that went that tick. It used to run before `finishWorldStep`, so deaths in
+the hazards' and enemies' step got the next tick's stamp and an empty event
+(75 of 220 deaths in a 120-level sample); now every one has a cause: boom,
+red team, hazard, fell, drone strike, splat, stand down, crushed, turned.
+
+**Checked.** `sim play` 95% / 88%, home 3023 (unchanged); check passes.
+Hot Reload's revival window now counts from the true tick for those deaths
+(one tick earlier) — no measurable effect.

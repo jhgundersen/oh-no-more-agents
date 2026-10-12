@@ -8882,18 +8882,29 @@ function step(w) {
   stepFrozen(w)
   stepPads(w)
   var counts = stepAgents(w)
-  // When each agent was lost, for Hot Reload. Everything that kills sets
-  // `gone`; nothing else records the moment, and there are a dozen of them.
-  for (var di = 0; di < w.agents.length; di++) {
-    var dag = w.agents[di]
-    if (dag.gone && dag.diedAt === undefined && dag.state !== "saved") dag.diedAt = w.ticks
-  }
   var active = counts.active
   var blockers = counts.blockers
   var moving = counts.moving
 
 
   finishWorldStep(w, active, blockers, moving)
+  noteDeaths(w)
 
   return w
+}
+
+// When each agent was lost, for Hot Reload, and how, for Draw's death
+// animations. Everything that kills sets `gone`; nothing else records the
+// moment, and there are a dozen of them. After the whole tick, so a death
+// in the hazards' or the enemies' step is stamped with its own tick and its
+// own event rather than the next tick's empty one. The cause is the tick's
+// last event: two deaths on one tick share it, which is right more often
+// than not.
+function noteDeaths(w) {
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (!ag.gone || ag.diedAt !== undefined || ag.state === "saved") continue
+    ag.diedAt = w.ticks
+    ag.diedBy = w.lastEvent || ""
+  }
 }
