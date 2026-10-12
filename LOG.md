@@ -2073,3 +2073,25 @@ comparison verifies its pixels too.
 
 **Next.** The Library art is ready on this branch. No deploy, push or sibling
 copy updates.
+
+## 75 — 2026-10-12 · The Library (merged)
+
+**What.** A thirteenth biome, built on a branch so main stayed deployable:
+Sim + Palette by the loop (74's commit on `library`), art by Codex (74's
+log entry), the shelf record by the loop.
+
+**Fixed before merging.** `sim inert` failed on the branch: the free shelf
+climb read the terrain material (ORE), and materials must be paint. The
+books are now recorded in `w.shelves` by `skinLibrary`; the climb reads
+that. Inert passes.
+
+**Checked.** 436 tests pass; `sim play` 98% cleared, 91% home (was 97 / 90
+— the reshuffle moves every level's biome, so not like-for-like); `inert`,
+`gravity` pass. Library alone: 94% / 91% in the per-biome sweep; the free
+climb +0.4 points with fewer climbers spent. Codex's seeded comparison: the
+other twelve biomes' frames unchanged.
+
+**CRAP.** Over 30: 31 → 35, all coverage, none new code — the reshuffle
+changed which hazards and events the played test levels reach (`drawCroc`
+248, `eventInfect`, `infectAgent`, `specialAtEdge`, `climbOut`). Next: tests
+that reach them on purpose, not by level number.

@@ -426,6 +426,18 @@ stays for later arrivals to take or not. Own stream. Measured over 400
 Cavern plays: 94.80% home with sinkholes vs 93.78%, levels ~5% shorter, no
 change in fall deaths; 308 of ~676 opened.
 
+## The Library
+
+The thirteenth biome. `skinLibrary`: floor-to-ceiling stacks — uprights on a
+pitch, shelf boards every third row, books between. Its mechanism is
+`shelfClimb`: a wall of books is climbed without spending a climber. The
+book cells are recorded in `w.shelves` at generation and the climb reads
+that, never the material — materials are paint (`sim inert`), and the first
+version, reading ORE, failed it. Measured over 400 Library plays: 94.19% home
+with the free climb vs 93.77%, climbers spent 5.59 → 5.24 a level.
+Adding it reshuffled every level number's biome; tests now find levels by
+biome (`test/levels.js`, `levelWith`) instead of pinning numbers.
+
 ## Staying current
 
 A tab is left open for days, so a deploy has to reach it without anyone pressing
