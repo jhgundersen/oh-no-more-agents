@@ -1546,3 +1546,8 @@ down from 48.2. Used a local copy of the cached crapper tool.
 
 **Next.** Watch the short poses against overlapping live colonies and blasts
 in normal play before adding any further detail.
+
+*Reviewed and merged by the loop:* written by Codex (`codex/deaths`) on the
+`diedBy` groundwork from 59. Looked at every cause frame by frame at both
+resolutions on its contact sheet: comic, short (32 ticks), nothing that
+reads as a living agent. Check and CRAP below; deployed with 58–59.
