@@ -1960,3 +1960,5 @@ Codex's seeded check; 417 tests pass. The Omarchy plugin copy is not synced
 by this loop (it has drifted since iteration 1, deliberately — the owner
 syncs it); it will show the plate without the closing wipe until its panel
 sets `doneHold`.
+
+**Deployed** after 69 (name="build" content="130d5988"): level intros and results. Browser check clean.
