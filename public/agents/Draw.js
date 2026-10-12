@@ -2255,6 +2255,7 @@ function drawActorLadders(ctx, w, pal) {
     var lspan = Math.round((lad.bottom - lad.top + 1) * k.CELL * lgrow)
     var stile = lad.side > 0 ? lx - 3 : lx + 1
     if (lad.vine) { drawVine(ctx, pal, stile, lbot, lspan, lad.x); continue }
+    if (lad.chain) { drawChain(ctx, w, pal, stile, lbot, lspan); continue }
 
     ctx.fillStyle = pal.rigDark
     ctx.fillRect(stile, lbot - lspan, 2, lspan)
@@ -5547,6 +5548,26 @@ function drawBoulderShards(ctx, w, pal, b, age) {
     ctx.fillRect(Math.round(cx + vx * age), Math.round(cy + vy * age + age * age * 0.09), 2 + (k % 2), 2)
   }
   ctx.globalAlpha = 1
+}
+
+// A Foundry hoist chain down a wall face (a ladder in everything but looks):
+// links that alternate face-on and edge-on, a hook at the top, and at res 2
+// a glint on each face-on link.
+function drawChain(ctx, w, pal, stile, lbot, lspan) {
+  var fine = (w.res || 1) >= 2
+  for (var y = 0; y < lspan; y += 3) {
+    var top = lbot - y - 3, face = (y / 3) % 2 === 0
+    ctx.fillStyle = pal.steelShade
+    if (face) {
+      ctx.fillRect(stile, top, 3, 3)
+      ctx.fillStyle = pal.rigDark
+      ctx.fillRect(stile + 1, top + 1, 1, 1)              // the hole
+      if (fine) { ctx.fillStyle = pal.steelEdge; ctx.fillRect(stile + 0.5, top + 0.5, 0.5, 1) }
+    } else ctx.fillRect(stile + 1, top, 1, 3)
+  }
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(stile, lbot - lspan - 2, 3, 1)               // the hook
+  ctx.fillRect(stile + 2, lbot - lspan - 1, 1, 2)
 }
 
 // A Jungle vine down a wall face (a ladder in everything but looks): a

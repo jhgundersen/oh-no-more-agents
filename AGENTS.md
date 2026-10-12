@@ -625,6 +625,16 @@ Failures that have actually happened here. None produced an error at the time.
   length of `BIOMES` does the same thing — run the sweep a second time with
   `BIOMES` and `Palette`'s modulus reverted to the old count.
 
+- **Some tests pin res-1 pixels of one component** (poses in
+  `agents.test.js`, exits, backdrops, gear): the guard that half-pixel work
+  never touches the Omarchy panel. Change res-1 art on purpose and you update
+  those hashes on purpose. Never pin a whole frame — every later change to
+  anything on the board breaks it (the deaths test did, on the first new
+  feature after it).
+- **Frames are not deterministic run to run**: Sim uses `Math.random` for
+  particles and blood. To compare two renderers, seed `Math.random` the same
+  way for both from the same world state.
+
 ## Checking gameplay changes
 
 ```bash

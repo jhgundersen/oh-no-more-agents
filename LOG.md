@@ -1553,3 +1553,25 @@ resolutions on its contact sheet: comic, short (32 ticks), nothing that
 reads as a living agent. Check and CRAP below; deployed with 58–59.
 
 **Deployed** after 60 (name="build" content="3b5aa723"): backdrops and ambience detail, death causes and animations. Browser check clean.
+
+## 61 — 2026-10-12 · Foundry hoist chains
+
+**Why.** Last iteration's lesson: a mechanism should add a route. The
+Jungle's vines do (a ladder the colony meets on a wall face); the Foundry
+gets the same rule in iron.
+
+**Changed.** `placeVines` and new `placeChains` share `placeWallRopes`
+(own stream each; vines byte-identical — 550 non-Foundry levels compared,
+terrain and ladders). Foundry walls get a hoist chain at 45% of eligible
+faces, ~2 a level; `drawChain` — alternating face-on and edge-on links, a
+hook, a glint at res 2.
+
+**Checked.** 800 Foundry plays: 91.70% home with chains vs 91.49%, levels
+~4% longer, climbers spent 5.96 → 5.59 a level. `sim play` 95% / 88%;
+`inert` passes. Rendered a climber on a chain at res 2.
+
+**Also.** Codex's deaths test pinned a hash of whole frames; the chains broke
+it at once. Replaced with what it meant: a death past its window draws
+exactly as if the agent were not in the list. AGENTS.md now says which
+pinned hashes are deliberate (res-1, one component) and that whole frames
+must not be pinned.

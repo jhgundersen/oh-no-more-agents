@@ -1344,7 +1344,8 @@ var BIOME_MECHANISMS = {
   "Ruins": placeBoulder,
   "Factory": placeBelts,
   "Ice Cave": placeFrozen,
-  "Spaceship": placePads
+  "Spaceship": placePads,
+  "Foundry": placeChains
 }
 
 // The Jungle's own mechanism: some walls have a vine down their face, and a
@@ -1356,7 +1357,18 @@ var BIOME_MECHANISMS = {
 // the corridor.
 var VINE_CHANCE = 0.5
 function placeVines(w, corridors) {
-  var vrng = makeRng(w.level * 2654435 + 7741)
+  placeWallRopes(w, corridors, makeRng(w.level * 2654435 + 7741), VINE_CHANCE, "vine")
+}
+
+// The Foundry's: a hoist chain down a wall face. The vine's rule exactly —
+// a ladder the colony meets coming along the corridor — in iron, and on a
+// stream of its own.
+var CHAIN_CHANCE = 0.45
+function placeChains(w, corridors) {
+  placeWallRopes(w, corridors, makeRng(w.level * 4256233 + 9157), CHAIN_CHANCE, "chain")
+}
+
+function placeWallRopes(w, corridors, vrng, chance, kind) {
   for (var ci = 0; ci < corridors.length; ci++) {
     var c = corridors[ci], fy = c.floorY - 1
     var lo = Math.min(c.startX, c.handoffX), hi = Math.max(c.startX, c.handoffX)
@@ -1364,8 +1376,10 @@ function placeVines(w, corridors) {
       if (!solid(w, x, fy) || solid(w, x - c.dir, fy) || !solid(w, x - c.dir, fy + 1)) continue
       var h = wallHeight(w, x, fy)
       if (h < 2 || h > LADDER_MAX || fy - h < SKY) continue
-      if (vrng() >= VINE_CHANCE || ladderAt(w, x, c.dir, fy)) continue
-      w.ladders.push({ x: x, side: c.dir, bottom: fy, top: fy - h, t: 14, vine: true })
+      if (vrng() >= chance || ladderAt(w, x, c.dir, fy)) continue
+      var rope = { x: x, side: c.dir, bottom: fy, top: fy - h, t: 14 }
+      rope[kind] = true
+      w.ladders.push(rope)
     }
   }
 }

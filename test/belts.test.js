@@ -53,3 +53,24 @@ test("belts draw at both resolutions", () => {
     assert.notEqual(Buffer.from(img.buf).toString("base64"), blank)
   }
 })
+
+test("hoist chains are a Foundry thing, stand on a wall face, and draw", () => {
+  let found = 0
+  for (let lv = 1; lv <= 96; lv++) {
+    const w = S.generate(lv, 0, 5)
+    const chains = w.ladders.filter(l => l.chain)
+    if (w.biome !== "Foundry") { assert.equal(chains.length, 0, `level ${lv}`); continue }
+    for (const c of chains) { found++; assert.ok(S.solid(w, c.x, c.bottom), "against a wall") }
+  }
+  assert.ok(found > 0)
+  const theme = themeOf("tokyo-night"), pal = P.build(theme.theme, 1)
+  const w = S.generate(4, 0, 3)
+  for (const res of [1, 2]) {
+    w.res = res
+    const img = canvas(400 * res, 248 * res, theme.background)
+    img.ctx.setTransform(res, 0, 0, res, 0, 0)
+    const blank = Buffer.from(img.buf).toString("base64")
+    D.drawChain(img.ctx, w, pal, 50, 120, 16)
+    assert.notEqual(Buffer.from(img.buf).toString("base64"), blank)
+  }
+})
