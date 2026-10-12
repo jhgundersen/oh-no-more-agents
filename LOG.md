@@ -1775,3 +1775,44 @@ a red dotted aim line, a muzzle flash with recoil, and the colleague hit now
 plays its new death animation. Codex reported that a defeat animation needed
 a death tick Sim did not record; `noteDeaths` now stamps `diedAt` / `diedBy`
 on enemies too (render-only), for a follow-up.
+
+## 66 — 2026-10-12 · The red team takes a bow
+
+**Why.** Sim now leaves a render-only death tick and last-event hint on gone
+enemies. Their disappearance can have the same comic punctuation as the colony's
+deaths without giving Draw state or changing the game.
+
+**Changed.** Draw only. One kind table dispatches 32-tick defeats at the enemy's
+last position and facing: gunners knocked flat with rolling caps; snipers with
+dropping, bouncing rifles; operators with sparking controllers that go dark;
+xenos shrinking into a curled stump; rival divers and underwater gunners with
+empty oxblood suits and brass helmets bobbing up through a burst of bubbles.
+Shot-down drones tumble in crisp quarter turns trailing smoke, then pop;
+contact strikes pop immediately. Mines scatter sparks, splashes shed bubbles
+(a dry gunner leaves only its cap), and force pushes throw the defeat away from
+its facing. Other events keep the kind's normal defeat, with a gunner fallback
+for unknown kinds. Whole-pixel silhouettes at res 1, half-pixel kit at res 2;
+the final ten ticks fade and tick 32 draws nothing. Sim is untouched.
+
+**Checked.** `npm run check` (including `npm test`) passes; stamps and core
+self-containment pass. New tests cover all six kinds at every age, both
+facings, panel/page resolution, causes and unknown/prototype-name fallbacks,
+changing poses, underwater gunners, drone impact versus shoot-down, expiry,
+context restoration, no state writes, and actor dispatch of Sim's actual stamp.
+The living renderer's unstamped-gone test now describes that narrower guard.
+Seeded `Math.random` identically against HEAD: all 992 living-enemy poses
+(all six kinds/states/facings/resolutions, dry and wet) and 1,198 full frames
+across levels 1–120 at five ages are byte-identical. Two frames with recent
+enemy deaths excluded; 188 compared frames contain living hostiles and 36
+contain expired defeats. No whole-frame hashes added to tests. Reviewed
+`/tmp/codex-defeats/sheet.png`: every kind, underwater gunner, cause variants,
+eight ages including expiry, res 2 enlarged with hard pixels. Baseline,
+comparison/review scripts and validation reports are alongside it.
+
+**CRAP.** `npm run crap -- --changed`: every changed/new function below 30;
+`drawActors` remains 24.7, new functions peak at `drawEnemyDefeat` 9.0.
+Full before/after reports: over-30 count stays 37 across the repository and
+6 in Draw. Used the cached tool copied into this worktree.
+
+**Next.** Watch defeats among crowded colonies on the panel and page before
+enlarging the kit or extending their window.

@@ -2258,10 +2258,9 @@ function drawActors(ctx, w, pal, opts) {
   }
   for (var ei = 0; ei < w.enemies.length; ei++) {
     var enemy = w.enemies[ei]
-    if (!enemy.gone) {
-      drawEnemy(ctx, w, pal, enemy, opts)
-      if (enemy.throttled > 0) drawThrottled(ctx, w, enemy.x * w.k.CELL, (enemy.y - 4) * w.k.CELL - 4, enemy.throttled)
-    }
+    if (enemy.gone) { drawEnemyDefeat(ctx, w, pal, enemy); continue }
+    drawEnemy(ctx, w, pal, enemy, opts)
+    if (enemy.throttled > 0) drawThrottled(ctx, w, enemy.x * w.k.CELL, (enemy.y - 4) * w.k.CELL - 4, enemy.throttled)
   }
   // Last, over everybody: whoever is standing in a fireball is behind it.
   if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
@@ -6391,6 +6390,261 @@ function drawEnemy(ctx, w, pal, en, opts) {
 
 var ENEMY_DRAW = { gun: drawGunner, drone: drawDrone, operator: drawOperator,
   sniper: drawSniper, xeno: drawXeno, harpoon: drawHarpoon }
+
+// Like colony deaths, these are dated poses at the last position, not actors.
+// The last event is only a hint: unrecognised events keep the kind's defeat.
+var ENEMY_DEFEAT_TICKS = 32
+var ENEMY_DEFEAT_DRAW = { gun: drawDefeatGunner, drone: drawDefeatDrone,
+  operator: drawDefeatOperator, sniper: drawDefeatSniper,
+  xeno: drawDefeatXeno, harpoon: drawDefeatDiver }
+var ENEMY_DEFEAT_CAUSE = { "mine boom": drawDefeatBlast,
+  "drone strike": drawDefeatBlast, "red team splash": drawDefeatBubbles }
+
+function drawEnemyDefeat(ctx, w, pal, en) {
+  if (!en.gone || en.diedAt === undefined) return
+  var age = w.ticks - en.diedAt
+  if (age < 0 || age >= ENEMY_DEFEAT_TICKS) return
+  var draw = Object.prototype.hasOwnProperty.call(ENEMY_DEFEAT_DRAW, en.kind)
+    ? ENEMY_DEFEAT_DRAW[en.kind] : drawDefeatGunner
+  ctx.save()
+  ctx.translate(Math.round(en.x * w.k.CELL), Math.round((en.y + 1) * w.k.CELL))
+  ctx.scale(en.dir === -1 ? -1 : 1, 1)
+  ctx.globalAlpha = Math.min(1, (ENEMY_DEFEAT_TICKS - age) / 10)
+  // A force push throws the kit away from the facing, without moving Sim.
+  if (en.diedBy === "force pushed") ctx.translate(-Math.min(12, Math.floor(age / 2)), 0)
+  draw(ctx, w, pal, age, en)
+  if (Object.prototype.hasOwnProperty.call(ENEMY_DEFEAT_CAUSE, en.diedBy))
+    ENEMY_DEFEAT_CAUSE[en.diedBy](ctx, w, pal, age)
+  ctx.restore()
+}
+
+function drawDefeatBody(ctx, w, age, coat, head) {
+  // Two hand-stepped poses: a knock backwards, then boots/head spread flat.
+  var lean = Math.min(3, Math.floor(age / 3))
+  ctx.fillStyle = coat
+  if (age < 10) {
+    ctx.fillRect(-3 - lean, -10 + lean, 5, 5)
+    ctx.fillRect(-2, -5, 5, 3)
+    ctx.fillStyle = head
+    ctx.fillRect(-4 - lean, -14 + lean * 2, 4, 3)
+  } else {
+    ctx.fillRect(-6, -4, 8, 3)
+    ctx.fillStyle = head
+    ctx.fillRect(-10, -4, 4, 3)
+  }
+  ctx.fillStyle = "#16161b"
+  ctx.fillRect(1, -2, 4, 2)
+  ctx.fillRect(-1, -1, 3, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = "#ff5268"
+    ctx.fillRect(-3, -3.5, 1, 0.5)
+  }
+}
+
+function drawDefeatCap(ctx, w, age) {
+  var x = 3 + Math.floor(age / 3)
+  var y = -3 - Math.max(0, 11 - Math.floor(age / 2))
+  var edge = Math.floor(age / 4) % 2
+  ctx.fillStyle = "#d9d7cf"
+  ctx.fillRect(x, y, 4 - edge * 2, 2 + edge * 2)
+  ctx.fillRect(x - 1, y + 2, 6 - edge * 3, 1)
+  ctx.fillStyle = "#8a8378"
+  ctx.fillRect(x, y + 2, 3, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(x + 0.5, y, 1.5, 0.5)
+  }
+}
+
+function drawDefeatGunner(ctx, w, pal, age, en) {
+  if (w.submerged) { drawDefeatDiver(ctx, w, pal, age, en); return }
+  if (en.diedBy === "red team splash") {
+    drawDefeatCap(ctx, w, age)
+    return
+  }
+  drawDefeatBody(ctx, w, age, "#8f1f35", "#b9a59a")
+  drawDefeatCap(ctx, w, age)
+  if (age < 18) drawDeathDust(ctx, pal, age, 5)
+}
+
+function drawDefeatRifle(ctx, w, pal, age) {
+  // Barrel drops first, stock follows, then a last two-pixel bounce.
+  var y = -10 + Math.min(8, Math.floor(age / 2))
+  var bounce = age >= 16 && age < 22 ? 1 : 0
+  ctx.fillStyle = "#25252b"
+  ctx.fillRect(5, y - bounce, 11, 1)
+  ctx.fillRect(4, y - 1 - bounce, 4, 2)
+  ctx.fillRect(8, y - 2 - bounce, 3, 1)
+  ctx.fillStyle = "#8a8f9c"
+  ctx.fillRect(12, y - bounce, 4, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = "#9fd6ff"
+    ctx.fillRect(10.5, y - 2 - bounce, 0.5, 0.5)
+  }
+  if (age >= 16 && age < 24) {
+    ctx.fillStyle = pal.fireHot
+    ctx.fillRect(17, -4, 1, 2)
+    ctx.fillRect(19, -2, 2, 1)
+  }
+}
+
+function drawDefeatSniper(ctx, w, pal, age) {
+  drawDefeatBody(ctx, w, age, "#55406f", "#34313a")
+  drawDefeatRifle(ctx, w, pal, age)
+}
+
+function drawDefeatOperator(ctx, w, pal, age) {
+  drawDefeatBody(ctx, w, age, "#c47a24", "#34313a")
+  var x = 5 + Math.floor(age / 5)
+  var y = -3 - Math.max(0, 6 - Math.floor(age / 2))
+  ctx.fillStyle = "#f0b34f"
+  ctx.fillRect(x, y, 5, 3)
+  ctx.fillStyle = age < 12 ? "#86d8e8" : "#34313a"
+  ctx.fillRect(x + 1, y + 1, 3, 1)
+  ctx.fillStyle = "#34313a"
+  ctx.fillRect(x, y - 2, 1, 2)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = "#5a3a12"
+    ctx.fillRect(x + 1.5, y + 2, 0.5, 0.5)
+  }
+  if (age < 10) {
+    ctx.fillStyle = "#86d8e8"
+    ctx.fillRect(x - 2, y - 3, 1, 2)
+    ctx.fillRect(x + 6, y - 1, 2, 1)
+    ctx.fillRect(x + 3, y - 4, 1, 1)
+  }
+}
+
+function drawDefeatXeno(ctx, w, pal, age) {
+  var height = Math.max(2, 8 - Math.floor(age / 4))
+  var width = Math.max(3, 10 - Math.floor(age / 4))
+  var curl = Math.floor(age / 4)
+  ctx.fillStyle = "#3f7d4a"
+  ctx.fillRect(-width, -height, width + 2, height - 1)
+  ctx.fillRect(-width - 4 + Math.min(4, curl), -3, 4, 2)
+  ctx.fillStyle = "#7de37a"
+  ctx.fillRect(1, -height - 3, Math.max(2, 5 - curl), 3)
+  ctx.fillStyle = "#0f1a12"
+  ctx.fillRect(2, -height - 2, 1, 1)
+  ctx.fillRect(-2, -2, 2, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = "#24472b"
+    for (var r = -width + 1; r < 0; r += 2) ctx.fillRect(r, -height + 0.5, 0.5, height - 1)
+    ctx.fillStyle = "#9df59a"
+    ctx.fillRect(1.5, -height - 3, 1.5, 0.5)
+  }
+}
+
+function drawDefeatHelmet(ctx, w, age) {
+  var x = Math.floor(age / 5) % 3 - 1
+  var y = -15 - Math.floor(age / 2)
+  ctx.fillStyle = "#8c6a2a"
+  ctx.fillRect(x - 2, y, 4, 1)
+  ctx.fillRect(x - 3, y + 1, 6, 4)
+  ctx.fillRect(x - 2, y + 5, 4, 1)
+  ctx.fillStyle = "#c39a45"
+  ctx.fillRect(x - 2, y + 1, 4, 1)
+  ctx.fillStyle = "#7fb8c4"
+  ctx.fillRect(x, y + 2, 2, 2)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = "#e4bd62"
+    ctx.fillRect(x - 1.5, y + 0.5, 2, 0.5)
+    ctx.fillStyle = "#f4ffff"
+    ctx.fillRect(x + 0.5, y + 2, 0.5, 1)
+  }
+}
+
+function drawDefeatDiver(ctx, w, pal, age, en) {
+  // Empty oxblood suit crumples while the sealed helmet escapes its collar.
+  drawDefeatBody(ctx, w, age + 10, "#6b1f2e", "#4a1520")
+  drawDefeatHelmet(ctx, w, age)
+  if (en.diedBy !== "red team splash") drawDefeatBubbles(ctx, w, pal, age)
+  ctx.fillStyle = "#171920"
+  ctx.fillRect(5, -2, en.kind === "harpoon" ? 11 : 6, 1)
+}
+
+function drawDefeatBubbles(ctx, w, pal, age) {
+  for (var i = 0; i < 5; i++) {
+    var x = (i - 2) * (2 + Math.floor(age / 8))
+    var y = -8 - Math.floor(age / 2) - (i % 3) * 4
+    ctx.fillStyle = pal.bubble || "#7fb8c4"
+    ctx.fillRect(x, y, 2, 2)
+    ctx.fillStyle = pal.bubbleLit || "#f4ffff"
+    ctx.fillRect(x, y, 1, 1)
+    if ((w.res || 1) >= 2) {
+      ctx.fillStyle = "#1c3548"
+      ctx.fillRect(x + 0.5, y + 0.5, 1, 1)
+    }
+  }
+}
+
+function drawDefeatBlast(ctx, w, pal, age) {
+  if (age >= 12) return
+  var reach = 3 + Math.floor(age / 2)
+  ctx.fillStyle = "#ff8a35"
+  ctx.fillRect(-reach - 2, -9, 2, 1)
+  ctx.fillRect(reach, -9, 2, 1)
+  ctx.fillRect(0, -12 - reach, 1, 3)
+  ctx.fillStyle = pal.fireHot
+  ctx.fillRect(-reach, -12, 1, 2)
+  ctx.fillRect(reach, -5, 1, 2)
+}
+
+function drawDefeatDrone(ctx, w, pal, age, en) {
+  // A contact strike pops at once; a shoot-down tumbles in quarter turns.
+  var popAt = en.diedBy === "drone strike" ? 0 : 18
+  if (age >= popAt) {
+    drawDefeatDronePop(ctx, w, pal, age - popAt)
+    return
+  }
+  drawDefeatSmoke(ctx, pal, age)
+  ctx.save()
+  ctx.translate(Math.floor(age / 6), -8 + Math.floor(age / 3))
+  ctx.rotate((Math.floor(age / 3) % 4) * Math.PI / 2)
+  ctx.fillStyle = "#20232b"
+  ctx.fillRect(-6, -1, 12, 1)
+  ctx.fillRect(-5, -3, 3, 1)
+  ctx.fillRect(3, 1, 3, 1)
+  ctx.fillStyle = "#d9d7cf"
+  ctx.fillRect(-2, -2, 4, 4)
+  ctx.fillStyle = "#ff5268"
+  ctx.fillRect(2, -1, 2, 2)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = "#3a3e49"
+    ctx.fillRect(-2, 0.5, 4, 0.5)
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(2.5, -1, 0.5, 0.5)
+  }
+  ctx.restore()
+}
+
+function drawDefeatSmoke(ctx, pal, age) {
+  ctx.fillStyle = pal.dust
+  for (var i = 0; i < 3; i++) {
+    var x = Math.floor(age / 6) - i * 2
+    var y = -11 - i * 3 + Math.floor(age / 6)
+    ctx.fillRect(x - 1, y, 3, 2)
+    ctx.fillRect(x, y - 1, 1, 1)
+  }
+}
+
+function drawDefeatDronePop(ctx, w, pal, age) {
+  if (age < 8) {
+    ctx.fillStyle = "#ff8a35"
+    ctx.fillRect(-3, -7, 6, 4)
+    ctx.fillRect(-1, -9, 2, 8)
+    ctx.fillStyle = "#ffe68a"
+    ctx.fillRect(-2, -6, 4, 2)
+    drawDefeatBlast(ctx, w, pal, age)
+  }
+  var spread = 3 + Math.floor(age / 3)
+  ctx.fillStyle = "#d9d7cf"
+  ctx.fillRect(-spread, -5, 3, 1)
+  ctx.fillRect(spread, -3, 2, 2)
+  ctx.fillStyle = "#ff5268"
+  ctx.fillRect(0, -2, 2, 1)
+  drawDefeatSmoke(ctx, pal, age)
+}
 
 function drawEnemyLabel(ctx, w, en, ox, oy) {
   var labels = { drone: "Remote Execution", operator: "Drone Operator", xeno: "Adversarial Input",
