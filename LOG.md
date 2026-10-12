@@ -1206,3 +1206,5 @@ parallel Codex runs for art. Read the diff (a table of small per-pose
 functions, inside the existing res-2 guard, no Sim changes), looked at
 before/after pose sheets, re-ran res-1 frames on levels 3, 8, 10 (same),
 `npm run check` (207 pass), CRAP count over 30 unchanged at 44.
+
+**Deployed** after 50 (name="build" content="1616e35e"): obstruction fix, action-pose detail. Browser check clean.
