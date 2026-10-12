@@ -1087,3 +1087,5 @@ without; avg ticks 1229 / 1163; timeouts 3 / 1. Walkers are on a belt for
 
 **Next.** Cavern, Frost, Foundry, Ice Cave and Spaceship still have no
 mechanism of their own; the exit frames at finer pixels.
+
+**Deployed** after 46 (name="build" content="ad86fe51"): decor detail, Factory conveyors. Browser check clean.
