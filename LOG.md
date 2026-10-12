@@ -1825,6 +1825,7 @@ Codex's seeded check: 1,198 frames with no recent defeat identical.
 
 **Deployed** after 66 (name="build" content="ca21c87b"): enemy animation and defeats. Browser check clean.
 
+<<<<<<< HEAD
 ## 67 — 2026-10-12 · Crap: the untested rules
 
 **Why.** Several functions scored high on CRAP not because they are complex
@@ -1844,3 +1845,64 @@ house in every biome at both resolutions.
 **Checked.** Over 30: 37 → 31 — and four of those 31 are `tools/simcheck`
 CLI commands and the worker's `readStats`, which the tests never run. No
 game code changed.
+=======
+## 67 — 2026-10-12 · A little air, a little interface
+
+**Why.** The sky's portrait and captions were flat rectangles, the mission
+could collide with the special's name, and an event blinked its entire message
+on and off over the first corridor. The hatch already looked like a machine;
+the rest of the strip needed to belong to the same game.
+
+**Changed.** Draw only. Cut-corner panels with whole-pixel bevels, inset shadows
+and a portrait rim in the hero's robe/hair colours. The hatch keeps twenty art
+pixels of clearance on either side; the portrait stays at the outer edge.
+Names and facts use brighter existing palette ink and their existing fonts.
+Measured ellipses keep the fact within its lane, and a separate top-row slot
+holds the mission beside the name. Cards enter over twelve ticks, slide away
+for notices and return as notices leave. Events type their names into a steady
+panel, blink only a warning lamp (faster near firing), and show seconds plus a
+shrinking countdown rail. Stand-down uses the same panel. All chrome clips to
+the 28-pixel sky; no new panel covers the hatch or the earth. Timing comes from
+world ticks, event schedules/counters and stoodDownAt; there is no render state.
+The event schedule also bridges Sim's one tick with zero warning before firing.
+
+**Checked.** `npm run check` (including `npm test`) passes; stamps and core
+self-containment pass. New tests exercise every portrait, both hatch sides,
+panel/page detail, text fitting, separate mission/name lanes, slide boundaries,
+warning/flash fallbacks, lamp cadence, completion/expiry, tight/absent chrome,
+context restoration and no world writes. They run Sim's actual telegraph through
+the zero-counter gap and firing. No whole-frame pins. Seeded Math.random
+identically against the captured baseline: all 1,680 frames on levels 1–120 at
+seven ages, both resolutions, match in rows 28–247 with the repo rasteriser.
+It skips text: the original event/stand-down baseline was 32, and those glyphs
+have deliberately moved into the sky to clear the corridor. Flagged this
+conflict between keeping all lower pixels and keeping banners inside the band;
+continued with the latter as the working assumption. A second comparison with
+native Skia canvas, including text, matches all 1,180 frames without a notice;
+twenty notice frames were excluded from that stricter comparison. Reviewed
+`/tmp/codex-sky/sheet.png`, a before/after sheet of both resolutions enlarged
+with hard pixels: entry/return, mission/completion, six countdown/firing/exit
+points, stand-down, mirrored layouts, divers, dark robes and long names.
+Also reviewed enlarged mission and countdown details. Used installed Skia
+canvas for real text because the Chromium connection was unavailable. Baseline,
+render/comparison scripts and reports are alongside the sheet.
+
+**CRAP.** Full before/after over-30 count stays 37 across the repository and
+6 in Draw. Every changed/new function is below 30: maximum `skyEvent` 10.0;
+`drawMission` is 9.1. `npm run crap -- --changed` passes the same
+bounds. Used the cached tool copied into this worktree.
+
+**Next.** Watch the twelve-tick handoff during play on the panel and page.
+There is no dedicated special release tick or level-end tick on the world:
+the card enters from level ticks and yields to dated notices, rather than
+inventing either timestamp. The existing telegraph/flash durations (75/40)
+are mirrored in Draw; keep those together if the simulation durations change.
+>>>>>>> codex/skyband
+
+*Reviewed and merged by the loop:* written by Codex (`codex/skyband`).
+Before/after sheet across card, mission, every event phase, stand-down,
+mirrored, diver, long names: before, the event banner was printed over the
+card's text and its last line fell into the corridor; now the event takes
+the panel (typewriter, countdown, "EVENT" when it fires) and slides out, and
+the card's frame is the hero's colour. The only pixels below the band that
+changed are that old banner text, which no longer lands there.
