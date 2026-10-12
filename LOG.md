@@ -2095,3 +2095,5 @@ other twelve biomes' frames unchanged.
 changed which hazards and events the played test levels reach (`drawCroc`
 248, `eventInfect`, `infectAgent`, `specialAtEdge`, `climbOut`). Next: tests
 that reach them on purpose, not by level number.
+
+**Deployed** after 75 (name="build" content="b96b9a83"): the Library. Browser check clean.
