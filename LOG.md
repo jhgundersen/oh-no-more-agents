@@ -1906,3 +1906,5 @@ card's text and its last line fell into the corridor; now the event takes
 the panel (typewriter, countdown, "EVENT" when it fires) and slides out, and
 the card's frame is the hero's colour. The only pixels below the band that
 changed are that old banner text, which no longer lands there.
+
+**Deployed** after 68 (name="build" content="25ba062a"): rule tests, sky band. Browser check clean.
