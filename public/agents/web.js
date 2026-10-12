@@ -445,6 +445,7 @@
     level = Math.max(1, n)
     world = generate(level, 0)
     world.res = RES
+    world.doneHold = DONE_HOLD
     completionLine = ""
     lastTerrainVersion = 0
     rebuildPalette()

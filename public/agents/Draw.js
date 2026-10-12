@@ -2353,6 +2353,136 @@ function drawActors(ctx, w, pal, opts) {
   }
   // Last, over everybody: whoever is standing in a fireball is behind it.
   if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
+  drawLevelTransition(ctx, w, pal)
+}
+
+// Board transitions belong to the per-tick layer in every host. No timers,
+// random draws or writes to the world: a paused/repainted frame stays itself.
+var LEVEL_INTRO_TICKS = 40
+var LEVEL_OPEN_TICKS = 12
+var LEVEL_CLOSE_TICKS = 25
+
+// A tiny 3x5 ROM font, drawn as rectangles so QML, browsers and the offline
+// renderer all get the same hard pixels. The large lines use two art pixels
+// per dot; the small labels use one, with no dependence on an installed font.
+var TRANSITION_GLYPHS = {
+  A: [2,5,7,5,5], B: [6,5,6,5,6], C: [3,4,4,4,3], D: [6,5,5,5,6],
+  E: [7,4,6,4,7], F: [7,4,6,4,4], G: [3,4,5,5,3], H: [5,5,7,5,5],
+  I: [7,2,2,2,7], J: [1,1,1,5,2], K: [5,5,6,5,5], L: [4,4,4,4,7],
+  M: [5,7,7,5,5], N: [5,7,7,7,5], O: [2,5,5,5,2], P: [6,5,6,4,4],
+  Q: [2,5,5,3,1], R: [6,5,6,5,5], S: [3,4,2,1,6], T: [7,2,2,2,2],
+  U: [5,5,5,5,7], V: [5,5,5,5,2], W: [5,5,7,7,5], X: [5,5,2,5,5],
+  Y: [5,5,2,2,2], Z: [7,1,2,4,7],
+  "0": [7,5,5,5,7], "1": [2,6,2,2,7], "2": [6,1,2,4,7],
+  "3": [6,1,2,1,6], "4": [5,5,7,1,1], "5": [7,4,6,1,6],
+  "6": [3,4,7,5,7], "7": [7,1,2,2,2], "8": [7,5,7,5,7], "9": [7,5,7,1,6],
+  " ": [0,0,0,0,0], "·": [0,0,2,0,0], "/": [1,1,2,4,4],
+  "!": [2,2,2,0,2], "?": [6,1,2,0,2]
+}
+
+function drawTransitionGlyph(ctx, rows, x, y, size) {
+  for (var row = 0; row < 5; row++) for (var col = 0; col < 3; col++) {
+    if (rows[row] & (4 >> col)) ctx.fillRect(x + col * size, y + row * size, size, size)
+  }
+}
+
+function drawTransitionText(ctx, text, cx, y, size) {
+  var x = Math.round(cx - (text.length * 4 - 1) * size / 2)
+  for (var i = 0; i < text.length; i++) {
+    drawTransitionGlyph(ctx, TRANSITION_GLYPHS[text[i]] || TRANSITION_GLYPHS["?"], x + i * 4 * size, y, size)
+  }
+}
+
+function drawTransitionPlate(ctx, w, pal, x, y, height) {
+  ctx.fillStyle = pal.hatchMouth
+  ctx.fillRect(x + 3, y + 3, 272, height)
+  ctx.fillStyle = pal.dirtEdge
+  ctx.fillRect(x + 3, y, 266, height)
+  ctx.fillRect(x, y + 3, 272, height - 6)
+  ctx.fillStyle = pal.cardBack
+  ctx.fillRect(x + 3, y + 3, 266, height - 6)
+  ctx.fillStyle = pal.rockEdge
+  ctx.fillRect(x + 6, y + height - 4, 260, 1)
+  ctx.fillStyle = pal.label
+  ctx.fillRect(x + 5, y + 5, 1, 1)
+  ctx.fillRect(x + 266, y + 5, 1, 1)
+  ctx.fillRect(x + 5, y + height - 6, 1, 1)
+  ctx.fillRect(x + 266, y + height - 6, 1, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = pal.decorLit
+    ctx.fillRect(x + 6, y + 1, 260, 0.5)
+    ctx.fillRect(x + 1, y + 6, 0.5, height - 12)
+  }
+}
+
+// A stepped diamond iris, made of four-pixel scan bands. Opening at the hatch
+// exposes the first drop immediately; the whole board is open by tick twelve.
+function drawLevelIris(ctx, w, pal, cx, cy, open) {
+  if (open >= 1) return
+  var width = w.k.COLS * w.k.CELL, height = w.k.ROWS * w.k.CELL
+  var reach = Math.max(cx, width - cx) + Math.max(cy, height - cy) + 4
+  var radius = reach * Math.max(0, open)
+  ctx.fillStyle = pal.hatchMouth
+  for (var y = 0; y < height; y += 4) {
+    var span = Math.max(0, radius - Math.abs(y + 2 - cy))
+    var left = Math.max(0, Math.min(width, Math.floor((cx - span) / 4) * 4))
+    var right = Math.max(0, Math.min(width, Math.ceil((cx + span) / 4) * 4))
+    // No aperture on this band, including at the fully closed endpoint.
+    if (span === 0) { ctx.fillRect(0, y, width, 4); continue }
+    ctx.fillRect(0, y, left, 4)
+    ctx.fillRect(right, y, width - right, 4)
+  }
+}
+
+function drawLevelIntro(ctx, w, pal) {
+  var width = w.k.COLS * w.k.CELL, height = w.k.ROWS * w.k.CELL
+  drawLevelIris(ctx, w, pal, w.hatch.x * w.k.CELL, w.hatch.y * w.k.CELL, w.ticks / LEVEL_OPEN_TICKS)
+  var slide = Math.round(Math.max(0, (w.ticks - 24) / 16) * (width / 2 + 136))
+  var cx = Math.round(width / 2) + slide, y = Math.round(height / 2) - 20
+  drawTransitionPlate(ctx, w, pal, cx - 136, y, 40)
+  ctx.fillStyle = pal.decorLit
+  drawTransitionText(ctx, "DEPLOYING AGENTS", cx, y + 8, 1)
+  ctx.fillStyle = pal.label
+  drawTransitionText(ctx, "LEVEL " + w.level + " · " + w.biome.toUpperCase(), cx, y + 21, 2)
+}
+
+function levelVerdict(w) {
+  if (w.saved === 0) return "OH NO! NO AGENTS"
+  if (w.saved >= w.toRelease) return "ALL AGENTS ACCOUNTED FOR"
+  if (w.saved * 2 >= w.toRelease) return "ACCEPTABLE COLLATERAL"
+  return "MORE AGENTS REQUIRED"
+}
+
+function drawLevelResults(ctx, w, pal) {
+  var cx = Math.round(w.k.COLS * w.k.CELL / 2)
+  var y = Math.round(w.k.ROWS * w.k.CELL / 2) - 31 + Math.max(0, 10 - w.doneTicks) * 2
+  drawTransitionPlate(ctx, w, pal, cx - 136, y, 62)
+  ctx.fillStyle = pal.decorLit
+  drawTransitionText(ctx, "LEVEL " + w.level + " · REPORT", cx, y + 8, 1)
+  ctx.fillStyle = pal.label
+  drawTransitionText(ctx, w.saved + " / " + w.toRelease + " HOME", cx, y + 22, 2)
+  ctx.fillStyle = w.saved === 0 ? pal.urgent : pal.exitLight
+  drawTransitionText(ctx, levelVerdict(w), cx, y + 43, 1)
+}
+
+function drawLevelClosing(ctx, w, pal) {
+  // doneHold belongs to the host, not Sim. Undefined means keep the report up.
+  if (!(w.doneHold > 0)) return
+  var remaining = w.doneHold - w.doneTicks
+  drawLevelIris(ctx, w, pal, w.k.COLS * w.k.CELL / 2, w.k.ROWS * w.k.CELL / 2, remaining / LEVEL_CLOSE_TICKS)
+}
+
+function drawLevelTransition(ctx, w, pal) {
+  if (w.done) {
+    ctx.save()
+    drawLevelResults(ctx, w, pal)
+    drawLevelClosing(ctx, w, pal)
+    ctx.restore()
+  } else if (w.ticks >= 0 && w.ticks < LEVEL_INTRO_TICKS) {
+    ctx.save()
+    drawLevelIntro(ctx, w, pal)
+    ctx.restore()
+  }
 }
 
 function drawActorMines(ctx, w, pal) {
