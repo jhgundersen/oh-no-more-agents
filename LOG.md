@@ -1951,3 +1951,12 @@ directory and branch.
 **Next.** Watch the short title handoff and result hold in normal play. Sync the
 shared renderer when sibling updates are in scope; let the panel supply its own
 hold if it wants the same closing wipe.
+
+*Reviewed and merged by the loop:* written by Codex (`codex/transitions`).
+Sheet: a diamond iris opens on a "LEVEL 2 · RUINS" plate that slides away by
+tick 40; at the end a "12 / 13 HOME" report plate with a verdict, then a
+closing iris timed by the host's `doneHold`. Mid-level frames unchanged per
+Codex's seeded check; 417 tests pass. The Omarchy plugin copy is not synced
+by this loop (it has drifted since iteration 1, deliberately — the owner
+syncs it); it will show the plate without the closing wipe until its panel
+sets `doneHold`.
