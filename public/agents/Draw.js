@@ -260,9 +260,9 @@ var BACKDROPS = {
 
 function drawBackdrop(ctx, w, pal) {
   var fn = BACKDROPS[w.biome]
-  if (!fn) return
   var top = w.k.SKY * w.k.CELL
-  fn(ctx, backRng(w), { x: 0, y: top, w: w.k.COLS * w.k.CELL, h: w.k.ROWS * w.k.CELL - top, world: w }, pal)
+  if (fn) fn(ctx, backRng(w), { x: 0, y: top, w: w.k.COLS * w.k.CELL, h: w.k.ROWS * w.k.CELL - top, world: w }, pal)
+  if ((w.res || 1) >= 2) drawBackdropFine(ctx, w, pal)
 }
 
 // A pixel position in open air, so a prop is hung where it can be seen rather
@@ -503,6 +503,140 @@ function backTrench(ctx, r, b, pal) {
     var kx = Math.floor(r() * b.w), kh = 20 + Math.floor(r() * 60)
     ctx.fillStyle = pal.backLit
     for (var y = 0; y < kh; y += 2) ctx.fillRect(kx + Math.round(Math.sin(y / 7 + k) * 2), b.y + b.h - y, 1, 2)
+  }
+}
+
+// Fine wall detail follows the existing rectangles, including their seeded
+// placement. Replaying the static recipe into a tiny recording context avoids
+// a second copy of every placement rule. Only the three back shades qualify:
+// the Desert's sun and the ship's stars keep their existing light and shape.
+// Every mark stays inside its rectangle, under the terrain and the actors.
+var BACKDROP_FINE = {
+  "Cavern": backCavernFine, "Ruins": backRuinsFine, "Frost": backFrostFine,
+  "Foundry": backFoundryFine, "Jungle": backJungleFine, "Ice Cave": backIceCaveFine,
+  "Spaceship": backSpaceshipFine, "Factory": backFactoryFine,
+  "Skyscraper": backSkyscraperFine, "Trench": backTrenchFine,
+  "Desert": backDesertFine, "Data Center": backDataCenterFine
+}
+
+function drawBackdropFine(ctx, w, pal) {
+  var fn = BACKDROP_FINE[w.biome]
+  if (!fn) return
+  var top = w.k.SKY * w.k.CELL
+  var b = { x: 0, y: top, w: w.k.COLS * w.k.CELL, h: w.k.ROWS * w.k.CELL - top, world: w }
+  ctx.save()
+  ctx.globalAlpha = 0.4
+  var recipe = BACKDROPS[w.biome]
+  if (!recipe) fn(ctx, b, pal)
+  else recipe(backFineRecorder(ctx, fn, pal), backRng(w), b, pal)
+  ctx.restore()
+}
+
+function backFineRecorder(ctx, fn, pal) {
+  return { fillStyle: pal.back, globalAlpha: 1,
+    fillRect: function (x, y, width, height) {
+      if (width < 1 || height < 1) return
+      if (this.fillStyle !== pal.back && this.fillStyle !== pal.backDim && this.fillStyle !== pal.backLit) return
+      fn(ctx, { x: x, y: y, w: width, h: height }, pal)
+    }
+  }
+}
+
+function backCavernFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + b.w - 0.5, b.y + 0.5, 0.5, b.h - 0.5) // split edge
+  ctx.fillRect(b.x + 0.5, b.y + 1, Math.min(2, b.w - 0.5), 0.5) // mineral seam
+}
+
+function backRuinsFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  for (var y = b.y + 4.5; y < b.y + b.h; y += 9) ctx.fillRect(b.x + 0.5, y, b.w - 0.5, 0.5) // mortar
+  ctx.fillRect(b.x + b.w - 0.5, b.y + 0.5, 0.5, b.h - 0.5) // fluted shadow
+}
+
+function backFrostFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  if (b.h > 3) ctx.fillRect(b.x + 0.5, b.y + 2.5, 0.5, Math.min(5, b.h - 2.5)) // far ridge crevice
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(b.x + 0.5, b.y + 0.5, b.w - 1, 0.5) // narrow snow lip
+}
+
+function backFoundryFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + 0.5, b.y + 0.5, 0.5, b.h - 0.5) // girder recess, hollow chain link
+  if (b.h < 10 || b.w < 2) return
+  ctx.fillStyle = pal.backLit
+  for (var y = b.y + 8.5; y < b.y + b.h; y += 24) ctx.fillRect(b.x + 1, y, 0.5, 0.5) // fixings
+}
+
+function backJungleFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + 0.5, b.y + 0.5, 0.5, b.h - 0.5) // bark and vine edge
+  if (b.w < 3) return
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(b.x + 1, b.y + 1, b.w - 2, 0.5) // a short leaf vein
+}
+
+function backIceCaveFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + b.w - 0.5, b.y, 0.5, b.h) // darker crystal face
+  if (b.w < 3) return
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(b.x + 1.5, b.y + 0.5, 0.5, 0.5) // a split in the lit facet
+}
+
+function backSpaceshipFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  if (b.w === 6 && b.h === 8) {
+    ctx.fillRect(b.x + 0.5, b.y + 0.5, b.w - 1, 0.5) // port top and bottom, clear of the stars
+    ctx.fillRect(b.x + 0.5, b.y + b.h - 0.5, b.w - 1, 0.5)
+    return
+  }
+  ctx.fillRect(b.x + b.w - 0.5, b.y + 0.5, 0.5, b.h - 0.5) // rib channel / port rim
+  if (b.h < 12) return
+  ctx.fillStyle = pal.backLit
+  for (var y = b.y + 12.5; y < b.y + b.h; y += 32) ctx.fillRect(b.x + 0.5, y, Math.min(2, b.w - 0.5), 0.5) // rib joints
+}
+
+function backFactoryFine(ctx, b, pal) {
+  ctx.fillStyle = pal.back
+  ctx.fillRect(b.x + 0.5, b.y + 0.5, b.w - 0.5, 0.5) // recessed mortar / glazing edge
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + b.w - 0.5, b.y + 0.5, 0.5, b.h - 0.5)
+}
+
+function backSkyscraperFine(ctx, b, pal) {
+  // The tower has a skyline, but no coarse wall. Keep the interior quieter
+  // than the city: recessed office panel joints, without new lit windows.
+  ctx.fillStyle = pal.backDim
+  for (var x = b.x + 24.5; x < b.x + b.w; x += 48) {
+    ctx.fillRect(x, b.y, 0.5, b.h)
+    for (var y = b.y + 16.5; y < b.y + b.h; y += 32) ctx.fillRect(x, y, 12, 0.5)
+  }
+}
+
+function backTrenchFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + b.w - 0.5, b.y + 0.5, 0.5, b.h - 0.5) // spire erosion / kelp midrib
+  if (b.w < 4) return
+  ctx.fillRect(b.x + 1.5, b.y + 1, Math.min(3, b.w - 2), 0.5) // sediment ledge
+}
+
+function backDesertFine(ctx, b, pal) {
+  // Long mesa faces get strata; dune slices keep only a soft half-pixel lip.
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + 0.5, b.y + 0.5, b.w - 0.5, 0.5)
+  if (b.w < 20) return
+  for (var y = b.y + 8.5; y < b.y + b.h; y += 17) ctx.fillRect(b.x + 1, y, b.w - 2, 0.5)
+}
+
+function backDataCenterFine(ctx, b, pal) {
+  if (b.w < 4) return // retain the dim status dots
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + b.w - 0.5, b.y, 0.5, b.h) // cabinet seam
+  for (var y = b.y + 3.5; y + 1.5 <= b.y + b.h; y += 12) {
+    ctx.fillRect(b.x + 1.5, y, b.w - 3, 0.5) // vent slots
+    ctx.fillRect(b.x + 1.5, y + 1, b.w - 3, 0.5)
   }
 }
 
@@ -1291,7 +1425,8 @@ function drawWaterLife(ctx, w, pal) {
     var my = ((next() % tall) + t * speed) % tall
     // A sway, so it drifts rather than drops.
     mx += Math.sin((t * 0.01) + m) * 3
-    ctx.fillRect(Math.round(mx), Math.round(my), 1, 1)
+    if ((w.res || 1) >= 2) AMBIENCE_FINE[w.biome](ctx, w, pal, Math.round(mx * 2) / 2, Math.round(my * 2) / 2)
+    else ctx.fillRect(Math.round(mx), Math.round(my), 1, 1)
   }
   ctx.globalAlpha = 1
 
@@ -1365,10 +1500,13 @@ var AMBIENCE = {
 
 function drawAmbience(ctx, w, pal) {
   if (w.wind) drawGust(ctx, w, pal)
-  var fields = AMBIENCE[w.biome]
+  var fields = AMBIENCE[w.biome] || ((w.res || 1) >= 2 && AMBIENCE_FINE_ONLY[w.biome])
   if (!fields) return
+  var fineOnly = !AMBIENCE[w.biome]
+  if (fineOnly) ctx.save()
   for (var f = 0; f < fields.length; f++) drawMotes(ctx, w, pal, fields[f], f)
   ctx.globalAlpha = 1
+  if (fineOnly) ctx.restore()
 }
 
 // A gust in the Desert (see `windAt` in Sim.js): streaks of sand down every
@@ -1408,8 +1546,111 @@ function drawMotes(ctx, w, pal, spec, salt) {
     var px = Math.floor(x), py = Math.floor(y)
     if (w.terrain[Math.floor(py / C) * k.COLS + Math.floor(px / C)] !== k.EMPTY) continue
     ctx.globalAlpha = spec.alpha
-    ctx.fillRect(px, py, spec.size, spec.size)
+    if ((w.res || 1) >= 2) AMBIENCE_FINE[w.biome](ctx, w, pal, Math.floor(x * 2) / 2, Math.floor(y * 2) / 2, spec, i)
+    else ctx.fillRect(px, py, spec.size, spec.size)
   }
+}
+
+// Shapes replace the squares only at res 2, on the same drift/blink recipe.
+// The small core is always inside the old particle's size; no glowing halo.
+var AMBIENCE_FINE_ONLY = {
+  "Skyscraper": [{ n: 20, vx: 0.02, vy: 0.04, sway: 1, size: 1, col: "dust", alpha: 0.22 }]
+}
+var AMBIENCE_FINE = {
+  "Cavern": drawMoteCavernFine, "Ruins": drawMoteRuinsFine, "Frost": drawMoteFrostFine,
+  "Foundry": drawMoteFoundryFine, "Jungle": drawMoteJungleFine, "Ice Cave": drawMoteIceFine,
+  "Spaceship": drawMoteSpaceshipFine, "Factory": drawMoteFactoryFine,
+  "Skyscraper": drawMoteSkyscraperFine, "Trench": drawMoteTrenchFine,
+  "Desert": drawMoteDesertFine, "Data Center": drawMoteDataFine
+}
+
+// Check the complete half-pixel footprint: the motion can put a corner into
+// the next cell even when the particle's anchor is still in open air.
+function moteFineRect(ctx, w, x, y, width, height) {
+  var k = w.k, C = k.CELL
+  for (var yy = Math.floor(y / C); yy <= Math.floor((y + height - 0.5) / C); yy++)
+    for (var xx = Math.floor(x / C); xx <= Math.floor((x + width - 0.5) / C); xx++) {
+      if (xx < 0 || yy < 0 || xx >= k.COLS || yy >= k.ROWS || w.terrain[yy * k.COLS + xx] !== k.EMPTY) return
+    }
+  ctx.fillRect(x, y, width, height)
+}
+
+function drawMoteCavernFine(ctx, w, pal, x, y) {
+  moteFineRect(ctx, w, x, y, 1, 0.5) // a flake of dust with a heavy corner
+  moteFineRect(ctx, w, x + 0.5, y + 0.5, 0.5, 0.5)
+}
+
+function drawMoteRuinsFine(ctx, w, pal, x, y) {
+  moteFineRect(ctx, w, x, y, 0.5, 1) // chipped stone dust
+  moteFineRect(ctx, w, x + 0.5, y, 0.5, 0.5)
+}
+
+function drawMoteFrostFine(ctx, w, pal, x, y, spec) {
+  var half = (spec.size - 0.5) / 2
+  // Three-pixel flakes at size 1; crossed arms on the larger flakes.
+  var arm = Math.floor(half * 2) / 2
+  moteFineRect(ctx, w, x + arm, y, 0.5, spec.size)
+  moteFineRect(ctx, w, x, y + arm, spec.size, 0.5)
+}
+
+function drawMoteFoundryFine(ctx, w, pal, x, y, spec) {
+  ctx.fillStyle = pal.fire
+  moteFineRect(ctx, w, x, y, 0.5, 1) // rising ember's cooler tip
+  ctx.fillStyle = pal[spec.col]
+  moteFineRect(ctx, w, x + 0.5, y + 0.5, 0.5, 0.5)
+  ctx.fillStyle = pal.fireHot
+  moteFineRect(ctx, w, x, y + 0.5, 0.5, 0.5) // hot core
+  ctx.fillStyle = pal[spec.col]
+}
+
+function drawMoteJungleFine(ctx, w, pal, x, y, spec, i) {
+  if (spec.size === 1) {
+    moteFineRect(ctx, w, x, y + 0.5, 1, 0.5) // firefly wings
+    moteFineRect(ctx, w, x + 0.5, y, 0.5, 0.5)
+    return
+  }
+  var curl = Math.floor(w.ticks / 12 + i) % 2 * 0.5
+  moteFineRect(ctx, w, x + curl, y, 1.5 - curl, 0.5)
+  moteFineRect(ctx, w, x + 0.5, y + 0.5, 1, 1)
+  ctx.fillStyle = pal.decorDim
+  moteFineRect(ctx, w, x + 1, y + 0.5, 0.5, 1.5) // vein and stem
+  ctx.fillStyle = pal[spec.col]
+}
+
+function drawMoteIceFine(ctx, w, pal, x, y, spec) {
+  if (spec.blink) {
+    moteFineRect(ctx, w, x, y + 0.5, 1, 0.5) // tiny asymmetric glint
+    moteFineRect(ctx, w, x + 0.5, y, 0.5, 0.5)
+  } else moteFineRect(ctx, w, x, y, 0.5, 1) // drifting ice splinter
+}
+
+function drawMoteSpaceshipFine(ctx, w, pal, x, y) {
+  moteFineRect(ctx, w, x, y, 0.5, 0.5) // weightless fleck, faint trailing corner
+  moteFineRect(ctx, w, x + 0.5, y + 0.5, 0.5, 0.5)
+}
+
+function drawMoteFactoryFine(ctx, w, pal, x, y) {
+  moteFineRect(ctx, w, x, y + 0.5, 1, 0.5) // flat soot flake
+  moteFineRect(ctx, w, x + 0.5, y, 0.5, 0.5)
+}
+
+function drawMoteSkyscraperFine(ctx, w, pal, x, y) {
+  moteFineRect(ctx, w, x, y, 0.5, 1) // quiet indoor dust
+}
+
+function drawMoteTrenchFine(ctx, w, pal, x, y) {
+  moteFineRect(ctx, w, x, y, 0.5, 1) // irregular marine snow
+  moteFineRect(ctx, w, x + 0.5, y + 0.5, 0.5, 0.5)
+}
+
+function drawMoteDesertFine(ctx, w, pal, x, y, spec) {
+  moteFineRect(ctx, w, x, y + 0.5, spec.size, 0.5) // wind-polished grain
+  moteFineRect(ctx, w, x + 0.5, y, 0.5, 0.5)
+}
+
+function drawMoteDataFine(ctx, w, pal, x, y) {
+  moteFineRect(ctx, w, x, y, 0.5, 1) // cool vent dust, light across one corner
+  moteFineRect(ctx, w, x + 0.5, y, 0.5, 0.5)
 }
 
 // Status lights on every rack face in the Data Center: one in five rack cells
