@@ -2707,8 +2707,10 @@ function drawHatch(ctx, w, pal) {
   ctx.fillRect(x - 16, y - 2, 32, 4)
 
   // The lamp: blinking while there are agents still to come, dark after.
-  ctx.fillStyle = releasing && Math.floor(w.ticks / 8) % 2 === 0 ? pal.exitLight : pal.rigDark
+  var lit = releasing && Math.floor(w.ticks / 8) % 2 === 0
+  ctx.fillStyle = lit ? pal.exitLight : pal.rigDark
   ctx.fillRect(x - 1, y - 13, 3, 3)
+  if ((w.res || 1) >= 2) drawHatchFine(ctx, pal, x, y, lit)
 
   // The mouth, and the light of a drop going through it.
   ctx.fillStyle = pal.hatchMouth
@@ -2728,6 +2730,46 @@ function drawHatch(ctx, w, pal) {
     ctx.fillRect(x - 9 + dx, y + 2 + dy, 1, 2)
     ctx.fillRect(x + 8 - dx, y + 2 + dy, 1, 2)
   }
+}
+
+// The hatch at half-pixel detail: each panel bevelled — light on its top and
+// left, shadow on its right — rivets along the roof, a bolt at each end of the
+// lip, and a glass lamp with a glint and, when lit, a halo.
+function drawHatchFine(ctx, pal, x, y, lit) {
+  for (var p = -14; p < 14; p += 7) {
+    ctx.fillStyle = pal.hatchLip
+    ctx.globalAlpha = 0.45
+    ctx.fillRect(x + p + (p > -14 ? 1 : 0), y - 8, 6 - (p > -14 ? 1 : 0), 0.5)
+    ctx.fillRect(x + p + (p > -14 ? 1 : 0), y - 8, 0.5, 6)
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(x + p + 6.5, y - 7.5, 0.5, 5.5)
+    ctx.globalAlpha = 1
+  }
+  ctx.fillStyle = pal.hatchLip
+  for (var r = -12; r <= 12; r += 4) ctx.fillRect(x + r, y - 9.5, 0.5, 0.5)
+  ctx.fillStyle = "#ffffff"
+  ctx.globalAlpha = 0.35
+  ctx.fillRect(x - 16, y - 2, 32, 0.5)                        // light on the lip
+  ctx.fillStyle = pal.rigDark
+  ctx.globalAlpha = 0.6
+  ctx.fillRect(x - 16, y + 1.5, 32, 0.5)                      // and its underside
+  ctx.globalAlpha = 1
+  for (var bt = -14.5; bt <= 14; bt += 28.5) {                // a bolt at each end
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(x + bt, y - 1, 1, 1)
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(x + bt, y - 1, 0.5, 0.5)
+  }
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(x - 0.5, y - 12.5, 0.5, 0.5)                    // the lamp's glint
+  if (!lit) return
+  ctx.fillStyle = pal.exitLight
+  ctx.globalAlpha = 0.55
+  ctx.fillRect(x - 2.5, y - 14.5, 6, 0.5)
+  ctx.fillRect(x - 2.5, y - 10.5, 6, 0.5)
+  ctx.fillRect(x - 2.5, y - 14, 0.5, 3.5)
+  ctx.fillRect(x + 3, y - 14, 0.5, 3.5)
+  ctx.globalAlpha = 1
 }
 
 function drawEnemyHatch(ctx, w, pal, opts) {

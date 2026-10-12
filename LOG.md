@@ -1021,3 +1021,25 @@ new function under 30 CRAP.
 **Next.** Deploy after the next iteration. Ideas: civilians on a mission
 floor ignore the boulder (it rolls through them); finer-pixel pass on what is
 left coarse (decor? the hatch?).
+
+## 44 — 2026-10-12 · Boulder off the prisoners, a riveted hatch
+
+**Changed.**
+- The boulder no longer goes on the mission corridor: prisoners neither run
+  nor step aside, and in iteration 43's shots it rolled straight through
+  three caged civilians. All 31 mission levels sampled still get a boulder,
+  on another floor.
+- `drawHatchFine` (res ≥ 2): each housing panel bevelled (light top and left,
+  shadow right), rivets along the roof, light along the lip and shadow under
+  it, a bolt at each end, a glint and a halo on the lamp. The hatch was the
+  last big plain-block thing on screen — every level starts with it in view.
+  A first go put warning paint on the lip; at size it read as dirt, so I
+  replaced it with the bolts.
+
+**Checked.** Hatch at 6×, lamp lit and dark, before/after. Boulder test was
+pinned to level 38's boulder rolling far; it moved floors with this change,
+so it now asks only that the boulder moved. `sim play` 95 / 88; check passes
+(183 tests); headless page check clean.
+
+**Next.** Decor at finer pixels (spires, tufts, clumps are the chunkiest
+thing left); look for a hero or mechanic gap.

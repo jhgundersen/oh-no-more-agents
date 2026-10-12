@@ -1356,7 +1356,10 @@ function placeBoulder(w, corridors) {
   var brng = makeRng(w.level * 7919 + 3301)
   var first = 1 + Math.floor(brng() * Math.max(1, corridors.length - 1))
   for (var n = 0; n < corridors.length - 1; n++) {
-    var c = corridors[1 + (first - 1 + n) % (corridors.length - 1)]
+    var ci = 1 + (first - 1 + n) % (corridors.length - 1)
+    // Not through the prisoners: they neither run nor get out of the way.
+    if (w.mission && ci === w.exitCorridor) continue
+    var c = corridors[ci]
     var x = c.startX - c.dir * 1.5
     if (!boulderFits(w, x, c.floorY - 1)) continue
     w.boulder = {
