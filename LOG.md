@@ -1243,3 +1243,9 @@ ImageMagick crops enlarged 500%. Contact sheet:
 coverage. Used a local copy of the cached crapper tool.
 
 **Next.** Review the separate special height-device props at res 2.
+
+*Reviewed and merged by the loop:* written by Codex in a worktree
+(`codex/exit-frames`). Looked at the before/after sheet for all twelve
+biomes — subtle, in style, nothing changes shape — and the diff (an
+`EXIT_FINE` table, one dispatch line in `drawExitBack`). Check 221 pass;
+CRAP count over 30 unchanged at 44.
