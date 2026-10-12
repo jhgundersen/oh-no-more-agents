@@ -2202,3 +2202,22 @@ Model Collapse (copies that die count against the colony), Glazier,
 Roundhouse, Chain of Thought — one at a time.
 
 **Deployed** after 79 (name="build" content="7467d3ff"): idle fidgets, hero toolbar fallback, Package Manager. Browser check clean.
+
+## 80 — 2026-10-13 · Model Collapse: the copies land with it
+
+**Why.** The costliest hero in 79's ranking (−3.4 points against no hero).
+On the original colony alone it cost 1.2; the rest was its copies dying —
+334 made in 160 levels, 270 home, most deaths stall-rule bombs. A copy was
+made at the take-off, facing back, on the near side of the obstacle the
+original had just jumped.
+
+**Changed.** `collapseCopy` puts the copy at the landing, a step ahead of the
+original and facing its way (falling back to the landing cell if that step
+is a wall).
+
+**Checked.** Same 160 levels: a step behind the landing first — worse, 57%
+of copies home (often over the gap); a step ahead — copies 84% home, colony
+as counted 89.84 → 90.67%, original colony 91.29 → 91.58%. It drops out of
+the five costliest heroes. 510 tests pass.
+
+**Next.** Glazier, Roundhouse, Chain of Thought (−2.3 to −2.9).

@@ -2787,13 +2787,22 @@ function specialLanding(w, ag, reach) {
   return null
 }
 
-function collapseCopy(w, ag) {
+// The copy comes out where the original lands, a step ahead of it and facing
+// the same way. It used to be left at the take-off, facing back the way they
+// came — on the near side of the very obstacle the original had just crossed,
+// with nothing but the stall rules to get it over: 82 of its 166 deaths in a
+// 160-level sample were their bombs. A step *behind* the landing was worse
+// (57% home — that is often over the gap just crossed); ahead, 84%.
+function collapseCopy(w, ag, land) {
   if ((ag.modelGen || 0) >= 3 || w.collapseCopies >= 12) return false
   var copy = {}
   for (var key in ag) if (ag.hasOwnProperty(key)) copy[key] = ag[key]
   copy.id = w.nextId++
-  copy.x = ag.x - ag.dir * (1.2 + ag.modelGen * 0.3)
-  copy.dir = -ag.dir
+  var at0 = land || { x: ag.x, y: ag.y }
+  copy.x = at0.x + ag.dir * (1.2 + (ag.modelGen || 0) * 0.3)
+  copy.y = at0.y
+  if (!standable(w, Math.floor(copy.x), Math.floor(copy.y))) copy.x = at0.x   // not into a wall
+  copy.dir = ag.dir
   copy.state = "walk"
   copy.modelGen = (ag.modelGen || 0) + 1
   copy.cool = specialSpec("collapse").cool + copy.modelGen * 35
@@ -2900,7 +2909,7 @@ function specialTraverse(w, ag, act, dry) {
       linked[i].state = "walk"
       linked[i].fall = 0
     }
-  } else if (act === "collapse") collapseCopy(w, ag)
+  } else if (act === "collapse") collapseCopy(w, ag, land)
 
   ag.x = land.x
   ag.y = land.y
