@@ -4924,10 +4924,25 @@ function blitFine(ctx, ox, oy, dir, x, y, bw, bh) {
 // the coarse sprite already draws, so at res 1 nothing is missing and at res 2
 // the same figure turns out to be wearing something: a tie, lapels, buttons,
 // shoes, glasses with arms that reach the ear and a glint on the lens.
-// Upright poses only — the rest move the parts around.
-var FINE_POSES = { walk: true, block: true, ride: true, bash: true, wait: true, camp: true, trick: true }
+// Each action keeps its own limb coordinates, just like AGENT_POSES. The
+// umbrella already has a fine canopy; its passenger uses the fall detail.
+var FINE_POSES = {
+  walk: drawAgentUprightFine, block: drawAgentUprightFine, ride: drawAgentUprightFine,
+  bash: drawAgentUprightFine, wait: drawAgentUprightFine, camp: drawAgentUprightFine, trick: drawAgentUprightFine,
+  climb: drawFineClimb, webup: drawFineWebUp, rappel: drawFineRappel,
+  build: drawFineBuild, dig: drawFineDig, fall: drawFineFall, height: drawFineHeight,
+  slide: drawFineSlide, stunned: drawFineStunned,
+  bomb: drawFineStride, jump: drawFineStride, ceil: drawFineStride
+}
 function drawAgentFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe) {
-  if (!FINE_POSES[ag.state]) return
+  var pose = FINE_POSES[ag.state]
+  if (!pose) return
+  if (pose !== drawAgentUprightFine) drawFineHead(ctx, pal, ag, ox, oy, dir, drop)
+  pose(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe)
+}
+
+// Keep the original upright pass intact: its head rides the walking bob.
+function drawAgentUprightFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe) {
   var hy = drop
   ctx.fillStyle = pal.lapel
   blitFine(ctx, ox, oy, dir, 2.5, 0.5 + hy, 2.5, 0.5)       // light on the hair
@@ -4959,6 +4974,154 @@ function drawAgentFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe) {
   blitFine(ctx, ox, oy, dir, l1, 15, 2.5, 1)
   blitFine(ctx, ox, oy, dir, l2, 15, 2.5, 1)
   ctx.fillStyle = robe
+}
+
+
+// These marks are opaque half pixels. Raised climbing hands cover the front
+// of the face, so leave its glasses and mouth behind that arm.
+function drawFineHead(ctx, pal, ag, ox, oy, dir, drop) {
+  ctx.fillStyle = pal.lapel
+  blitFine(ctx, ox, oy, dir, 2.5, 0.5 + drop, 2.5, 0.5)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 1.5, 3 + drop, 0.5, 0.5)
+  ctx.fillStyle = pal.eye
+  blitFine(ctx, ox, oy, dir, 1.5, 3.5 + drop, 1, 0.5)
+  if (ag.state === "climb") return
+  blitFine(ctx, ox, oy, dir, 5, 6 + drop, 0.5, 0.5)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 5.5, 4 + drop, 0.5, 0.5)
+}
+
+// A short shirt front and tie fit even the folded torsos. All callers give
+// the actual top of their coat, not the head's drop.
+function drawFineSuit(ctx, pal, ox, oy, dir, top) {
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 3, top, 2, 1)
+  ctx.fillStyle = pal.eye
+  blitFine(ctx, ox, oy, dir, 3.5, top, 0.5, 2)
+  ctx.fillStyle = pal.lapel
+  blitFine(ctx, ox, oy, dir, 2.5, top + 0.5, 0.5, 1)
+  blitFine(ctx, ox, oy, dir, 5, top + 0.5, 0.5, 1)
+  blitFine(ctx, ox, oy, dir, 4.5, top + 3, 0.5, 0.5)
+}
+
+// Soles stop at the edge of each existing leg; a half-pixel toe must not
+// make the silhouette wider. Coordinates follow the coarse pose exactly.
+function drawFineShoes(ctx, pal, ox, oy, dir, x1, y1, x2, y2, width) {
+  ctx.fillStyle = pal.eye
+  blitFine(ctx, ox, oy, dir, x1, y1, width, 0.5)
+  blitFine(ctx, ox, oy, dir, x2, y2, width, 0.5)
+  ctx.fillStyle = pal.lapel
+  blitFine(ctx, ox, oy, dir, x1 + width - 0.5, y1 - 0.5, 0.5, 0.5)
+  blitFine(ctx, ox, oy, dir, x2 + width - 0.5, y2 - 0.5, 0.5, 0.5)
+}
+
+function drawFineClimb(ctx, pal, ag, ox, oy, dir) {
+  drawFineSuit(ctx, pal, ox, oy, dir, 7)
+  var hand = 3 + (ag.anim >> 3) % 2
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 6, hand, 0.5, 1)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 5.5, hand + 1, 1, 0.5)
+  ctx.fillStyle = pal.eye
+  blitFine(ctx, ox, oy, dir, 3.5, 15.5, 2.5, 0.5)
+  ctx.fillStyle = pal.lapel
+  blitFine(ctx, ox, oy, dir, 5, 14.5, 0.5, 0.5)          // bent knee
+}
+
+function drawFineWebUp(ctx, pal, ag, ox, oy, dir) {
+  drawFineSuit(ctx, pal, ox, oy, dir, 9)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 3.5, 2, 0.5, 1)
+  blitFine(ctx, ox, oy, dir, 4.5, 3.5, 0.5, 1)          // two grips on the line
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 3.5, 3, 0.5, 0.5)
+  blitFine(ctx, ox, oy, dir, 4.5, 4.5, 0.5, 0.5)
+  drawFineShoes(ctx, pal, ox, oy, dir, 0, 13.5, 5, 15.5, 3)
+}
+
+function drawFineRappel(ctx, pal, ag, ox, oy, dir) {
+  drawFineSuit(ctx, pal, ox, oy, dir, 8)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 3.5, 3, 1, 1)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 3.5, 4, 1, 0.5)
+  drawFineShoes(ctx, pal, ox, oy, dir, 1, 13.5, 5, 14.5, 3)
+}
+
+function drawFineBuild(ctx, pal, ag, ox, oy, dir) {
+  drawFineSuit(ctx, pal, ox, oy, dir, 7)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 6.5, 8.5, 0.5, 1)          // cuff behind the brick
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 7, 8.5, 1.5, 0.5)
+  ctx.fillStyle = pal.dirt
+  blitFine(ctx, ox, oy, dir, 8.5, 9.5, 4, 0.5)          // brick face, rim stays lit
+  ctx.fillStyle = pal.dirtShade
+  blitFine(ctx, ox, oy, dir, 10.5, 10, 0.5, 1)          // joint
+  drawFineShoes(ctx, pal, ox, oy, dir, 2, 15.5, 4, 15.5, 2)
+}
+
+function drawFineDig(ctx, pal, ag, ox, oy, dir, drop) {
+  drawFineSuit(ctx, pal, ox, oy, dir, 7 + drop)
+  // Alternate the grip inside the two coarse sleeves on the stroke clock.
+  var grip = (ag.timer % 6) < 3 ? 0 : 0.5
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 0.5, 11.5 + drop, 1, 0.5)
+  blitFine(ctx, ox, oy, dir, 6.5, 11.5 + drop, 1, 0.5)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 0.5, 12 + drop + grip, 1, 0.5)
+  blitFine(ctx, ox, oy, dir, 6.5, 12.5 + drop - grip, 1, 0.5)
+  drawFineShoes(ctx, pal, ox, oy, dir, 2, 15.5, 4, 15.5, 2)
+}
+
+function drawFineFall(ctx, pal, ag, ox, oy, dir) {
+  drawFineSuit(ctx, pal, ox, oy, dir, 7)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 0.5, 4.5, 0.5, 1)
+  blitFine(ctx, ox, oy, dir, 7, 4.5, 0.5, 1)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 0.5, 5.5, 0.5, 0.5)
+  blitFine(ctx, ox, oy, dir, 7, 5.5, 0.5, 0.5)
+  drawFineShoes(ctx, pal, ox, oy, dir, 2, 15.5, 4, 15.5, 2)
+}
+
+function drawFineHeight(ctx, pal, ag, ox, oy, dir) {
+  if (ag.heightMode !== "cushion") return drawFineFall(ctx, pal, ag, ox, oy, dir)
+  drawFineSuit(ctx, pal, ox, oy, dir, 7)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 0.5, 9, 1, 0.5)
+  blitFine(ctx, ox, oy, dir, 6.5, 9, 1, 0.5)            // hands around the knees
+  ctx.fillStyle = pal.lapel
+  blitFine(ctx, ox, oy, dir, 2.5, 11.5, 3.5, 0.5)       // folded trouser seam
+  drawFineShoes(ctx, pal, ox, oy, dir, 2, 14.5, 5, 14.5, 2)
+}
+
+function drawFineSlide(ctx, pal, ag, ox, oy, dir, drop) {
+  drawFineSuit(ctx, pal, ox, oy, dir, 8 + drop)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 7.5, 9.5 + drop, 0.5, 1)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 8, 10 + drop, 1.5, 0.5)
+  ctx.fillStyle = pal.eye
+  blitFine(ctx, ox, oy, dir, 0, 13.5 + drop, 3, 0.5)
+  ctx.fillStyle = pal.lapel
+  blitFine(ctx, ox, oy, dir, 1, 12.5 + drop, 2, 0.5)      // knee crease
+}
+
+function drawFineStunned(ctx, pal, ag, ox, oy, dir) {
+  drawFineSuit(ctx, pal, ox, oy, dir, 9)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 0.5, 11.5, 1, 0.5)         // resting hand
+  drawFineShoes(ctx, pal, ox, oy, dir, 1, 14.5, 5, 14.5, 3)
+}
+
+// Bomb, jump and ceiling-walk all use the ordinary stride without a bob.
+// The coat stays in its flashing colour on a bomber; only its tailoring is
+// picked out. Ceiling detail goes through blitFine's existing vertical flip.
+function drawFineStride(ctx, pal, ag, ox, oy, dir, drop, lead) {
+  drawFineSuit(ctx, pal, ox, oy, dir, 7 + Math.max(drop, -1))
+  drawFineShoes(ctx, pal, ox, oy, dir, 2 + lead, 15.5, 4 - lead, 15.5, 2)
 }
 
 function blit(ctx, ox, oy, dir, x, y, bw, bh) {
@@ -5959,6 +6122,20 @@ function drawGearPiledrive(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
 // information the head used to carry with its nose and lens, and it has to
 // survive the change or a colony walking left looks exactly like a colony
 // walking right.
+// Fin edges and seams ride the same kick as drawPoseSwim, including the
+// offset between its two legs and the lean of the trailing sleeve.
+function drawFineSwim(ctx, pal, ag, ox, oy, dir) {
+  var kick = Math.sin(ag.anim * 0.22), lift = Math.round(kick * 1.2)
+  var lean = ag.state === "swim" ? (ag.swimUp ? -1 : 1) : 0
+  ctx.fillStyle = pal.lapel
+  blitFine(ctx, ox, oy, dir, 0.5, 8.5 + lift + lean, 1, 0.5)  // swept-back cuff
+  blitFine(ctx, ox, oy, dir, 2.5, 13 + lift, 0.5, 2)          // trouser seams
+  blitFine(ctx, ox, oy, dir, 4.5, 13 + lift + (kick > 0 ? 1 : -1), 0.5, 2)
+  ctx.fillStyle = pal.eye
+  blitFine(ctx, ox, oy, dir, 0.5, 15.5 + lift + (kick > 0 ? 1 : 0), 2, 0.5)
+  blitFine(ctx, ox, oy, dir, 0.5, 16.5 + lift + (kick > 0 ? 0 : 1), 2, 0.5)
+}
+
 // The diver at res 2 (the dry-land detail is drawAgentFine): rivets round
 // the collar, a dark ring framing the port and two bars of grille across it,
 // a second highlight following the helmet's curve, and a weight belt with
@@ -5976,6 +6153,7 @@ function drawDiverFine(ctx, pal, ag, ox, oy, dir, drop) {
   blitFine(ctx, ox, oy, dir, 1, 11.5 + drop, 6, 1)                                        // weight belt
   ctx.fillStyle = "#6a6f7a"
   blitFine(ctx, ox, oy, dir, 1.5, 11.5 + drop, 1, 1); blitFine(ctx, ox, oy, dir, 5.5, 11.5 + drop, 1, 1)
+  if (ag.state === "walk" || ag.state === "swim") drawFineSwim(ctx, pal, ag, ox, oy, dir)
 }
 
 function drawDiverHead(ctx, w, pal, ag, ox, oy, dir, drop) {

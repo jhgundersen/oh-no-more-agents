@@ -1,5 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
+import { createHash } from "node:crypto"
 import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf } from "../tools/render.js"
 
@@ -9,7 +10,7 @@ import { canvas, themeOf } from "../tools/render.js"
 // as each special. Nothing may throw and every pose must put something down.
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
 const STATES = ["walk", "fall", "climb", "height", "rappel", "webup", "slide", "stunned", "block", "build",
-  "bash", "dig", "swim", "saved", "bomb", "camp", "ride", "trick", "ceil", "wait"]
+  "bash", "dig", "swim", "saved", "bomb", "camp", "ride", "trick", "ceil", "wait", "jump"]
 
 for (const submerged of [false, true]) {
   test(`every agent pose draws${submerged ? " under water" : ""}`, () => {
@@ -59,3 +60,85 @@ test("a block with the floor a step higher behind it is a block, not a wall to t
   ag.x = 76.5; ag.y = 52; ag.dir = 1
   assert.equal(S.obstructionAhead(w, ag), 3)
 })
+
+// Pin the panel pixels from before the fine-pose pass, including the absent
+// w.res used by QML. Varied limbs, umbrella, countdown and height transforms
+// keep this a byte check of the actual coarse output, not just the res guard.
+const FINE_STATES = ["climb", "webup", "build", "dig", "fall", "bomb", "rappel", "height",
+  "slide", "stunned", "jump", "ceil", "swim"]
+const FINE_PHASES = [0, 3, 8, 15]
+const HEIGHT_MODES = ["jetpack", "cushion", "helicopter"]
+
+function fineSample(state, dir, phase, mode) {
+  return {
+    id: 5, x: 10, y: 15, dir, state, anim: phase, timer: phase,
+    floater: phase > 3, fall: 6, heightMode: mode, heightTick: phase + 5, heightTicks: 40,
+    heightFromX: 9, heightFromY: 5, heightToX: 13, heightToY: 19,
+    fuse: phase * 4 + 15, stunFor: phase, ropeY: 7, specialX: 14, specialY: 10, liftIx: -1
+  }
+}
+
+test("new fine poses leave res 1 and unspecified res byte-identical", () => {
+  const hash = createHash("sha256"), w = S.generate(8, 0, 3)
+  const theme = themeOf("tokyo-night"), pal = P.build(theme.theme, 8)
+  w.ticks = 77
+  for (const res of [undefined, 1]) for (const state of FINE_STATES)
+    for (const dir of [1, -1]) for (const phase of FINE_PHASES) for (const mode of HEIGHT_MODES) {
+      w.res = res; w.submerged = state === "swim"
+      const img = canvas(80, 80, theme.background)
+      D.drawAgent(img.ctx, w, pal, fineSample(state, dir, phase, mode), {})
+      hash.update(img.buf)
+    }
+  assert.equal(hash.digest("hex"), "d8cb2f2e05d2d55f873ca9b1c67d400b19e45eb28db3e072e2c81bf1e2c569cf")
+})
+
+for (const state of FINE_STATES) {
+  test(`${state} fine detail draws at both resolutions inside the coarse silhouette`, () => {
+    const w = S.generate(8, 0, 3), theme = themeOf("tokyo-night"), pal = P.build(theme.theme, 8)
+    w.ticks = 77; w.submerged = state === "swim"
+    for (const res of [1, 2]) for (const dir of [1, -1]) for (const phase of FINE_PHASES)
+      for (const mode of HEIGHT_MODES) {
+        w.res = res
+        const img = canvas(80 * res, 80 * res, theme.background)
+        img.ctx.setTransform(res, 0, 0, res, 0, 0)
+        const ag = fineSample(state, dir, phase, mode)
+        ag.swimUp = phase === 3
+        assert.doesNotThrow(() => D.drawAgent(img.ctx, w, pal, ag, {}))
+      }
+
+    // Draw the fine marks alone onto a black mask and ask whether each pixel
+    // already belonged to the res-1 figure, rasterised at res 2. This also
+    // catches a misplaced toe or cuff even when the complete sprite looks OK.
+    for (const dir of [1, -1]) for (const phase of FINE_PHASES) for (const mode of ["jetpack", "cushion"]) {
+      const ag = fineSample(state, dir, phase, mode)
+      ag.floater = false; ag.swimUp = phase === 3
+      const coarse = canvas(160, 160, "#000000"), fine = canvas(160, 160, "#000000")
+      coarse.ctx.setTransform(2, 0, 0, 2, 0, 0); fine.ctx.setTransform(2, 0, 0, 2, 0, 0)
+      const fill = fine.ctx.fillRect.bind(fine.ctx)
+      fine.ctx.fillRect = (x, y, width, height) => {
+        for (const n of [x, y, width, height]) assert.equal(n * 2, Math.round(n * 2), "half-pixel grid")
+        assert.equal(fine.ctx.globalAlpha, 1, "opaque detail")
+        fill(x, y, width, height)
+      }
+      // Full height spins are checked above; use an unrotated tucked frame
+      // here so both masks share sprite coordinates.
+      ag.heightTick = 0
+      w.res = 1
+      D.drawAgent(coarse.ctx, w, pal, ag, {})
+      if (state === "swim") D.drawFineSwim(fine.ctx, pal, ag, 36, 48, dir)
+      else {
+        const drop = state === "slide" ? 4 : (state === "dig" ? 2 : 0)
+        const lead = [0, 1, 0, -1][(phase >> 2) % 4]
+        D.drawAgentFine(fine.ctx, pal, ag, 36, 48, dir, drop, lead, 0, pal.robe)
+      }
+      let marks = 0
+      for (let i = 0; i < fine.buf.length; i += 3) {
+        if (!(fine.buf[i] || fine.buf[i + 1] || fine.buf[i + 2])) continue
+        marks++
+        assert.ok(coarse.buf[i] || coarse.buf[i + 1] || coarse.buf[i + 2],
+          `${state} dir ${dir} phase ${phase} ${mode}: fine pixel outside silhouette at ${i / 3 % 160},${Math.floor(i / 480)}`)
+      }
+      assert.ok(marks > 0, `${state}: missing fine pass`)
+    }
+  })
+}

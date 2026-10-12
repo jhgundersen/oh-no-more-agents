@@ -1170,3 +1170,32 @@ Cave 91.2 → 90.8 the only dips. `sim play` 95% / 88%, home 3003 → 3011;
 
 **Next.** Trench and Ice Cave dipped — check whether earlier charges there
 are wasted. A biome mechanism for Cavern / Frost / Foundry / Spaceship.
+
+## 50 — 2026-10-12 · Half-pixel action poses
+
+**Changed.** `FINE_POSES` now dispatches small per-pose functions. Climb,
+webup and rappel get grips, cuffs and braced shoes; build gets a cuff, hand
+and brick face/joint; dig gets alternating grips; fall (including umbrellas)
+and height get raised hands or tucked knees. Slide and stunned get compact
+coat detail, hands and soles; bomb, jump and ceil get tailoring and shoes.
+Swimmers get seams and fin edges following their kick. The original upright
+pass is retained. New marks use palette colours and opaque half-pixel steps
+inside the coarse silhouette, with the existing res-2 guard.
+
+**Checked.** `npm run check` / `npm test` pass. The new tests render all
+thirteen action states at both resolutions, both facings and varied phases,
+including height transforms and swimming up/down; they check silhouette
+containment and the opaque half-pixel grid. The pre-edit res-1 hash matches
+624 pose samples with `w.res` absent or 1; 30 full frames on levels 7, 8, 9,
+10 and 100 also match byte for byte from identical world states. Reviewed
+before/after contact sheets and ImageMagick crops, including level 8 at
+400/712 ticks and level 10 at 670. Asset and build stamps refreshed.
+
+**CRAP.** `drawFineBuild`, `drawFineClimb`, `drawFineFall`, `drawFineRappel`,
+`drawFineShoes`, `drawFineSlide`, `drawFineStride`, `drawFineStunned`,
+`drawFineSuit`, `drawFineWebUp`: 1.0 each. `drawFineDig`, `drawFineHead`,
+`drawFineHeight`: 2.0 each. `drawFineSwim`: 6.0. Dispatcher `drawAgentFine`:
+3.0; retained `drawAgentUprightFine`: 5.0; extended `drawDiverFine`: 4.0.
+Used the cached crapper tool after the first-run download had no network.
+
+**Next.** Review the separate special height-device props at res 2.
