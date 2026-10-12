@@ -1822,3 +1822,5 @@ enemy death stamps from 65. Looked at every kind and cause frame by frame on
 its sheet: the gunner's cap rolls off as it goes flat, the drone spins down
 smoking and pops, the xeno shrivels, the diver's helmet rises in bubbles.
 Codex's seeded check: 1,198 frames with no recent defeat identical.
+
+**Deployed** after 66 (name="build" content="ca21c87b"): enemy animation and defeats. Browser check clean.
