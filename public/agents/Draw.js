@@ -2247,6 +2247,7 @@ function drawActors(ctx, w, pal, opts) {
   if (w.pads) for (var pd = 0; pd < w.pads.length; pd++) drawPadPair(ctx, w, pal, w.pads[pd])
   if (w.nets) for (var ni = 0; ni < w.nets.length; ni++) drawNet(ctx, w, w.nets[ni])
   if (w.reloadFx) drawReloadTrail(ctx, w, w.reloadFx)
+  if (w.debugFx) drawDebugFx(ctx, w, w.debugFx)
 
   for (var i = 0; i < w.agents.length; i++) {
     var ag = w.agents[i]
@@ -3209,6 +3210,18 @@ function drawCroc(ctx, w, pal, p, px, pw, sy) {
 // Three per special, picked by level number so it is the same line every time
 // you come back to level 42 — the same rule the rest of the level runs on.
 var SPECIAL_FACTS = {
+  rubberduck: [
+    "explains the problem slowly, out loud, to a duck.",
+    "has never once needed to hear the duck reply.",
+    "you were stuck. Now you are stuck with an audience.",
+    "the bug was in your assumptions. It usually is.",
+    "squeak. That is the whole code review.",
+    "pairs with anyone. The duck pairs with everyone.",
+    "works out loud so you do not have to.",
+    "did you try describing what it actually does?",
+    "a second pair of eyes, painted on.",
+    "closes tickets it never opened."
+  ],
   hotreload: [
     "restarts the process. The process was a colleague.",
     "your changes have been applied without losing state.",
@@ -5548,6 +5561,43 @@ function drawReloadTrail(ctx, w, fx) {
   ctx.globalAlpha = 1
 }
 
+// Rubber Duck's duck, held up at arm's length while it explains: a yellow
+// body, an orange beak, an eye, bobbing as it squeaks. The colour is the
+// duck's, not the theme's, like the umbrella.
+var DUCK_YELLOW = "#ffd23f", DUCK_BEAK = "#ff8a1f"
+function drawDuck(ctx, ag, ox, oy, dir) {
+  var bob = (ag.debugFor >> 2) % 2, x = dir > 0 ? ox + 8 : ox - 5, y = oy + 3 - bob
+  ctx.fillStyle = DUCK_YELLOW
+  ctx.fillRect(x, y + 2, 5, 3)                                  // body
+  ctx.fillRect(x + (dir > 0 ? 2 : 1), y, 2, 2)                  // head
+  ctx.fillStyle = DUCK_BEAK
+  ctx.fillRect(dir > 0 ? x + 4 : x, y + 1, 1, 1)
+  ctx.fillStyle = "#1a1a20"
+  ctx.fillRect(x + (dir > 0 ? 3 : 1), y, 1, 1)
+}
+
+// The duck's effect (Sim's debugFx): a squeak of rings off the duck, and over
+// the colleague a "?" that turns into a "!" when the answer lands — or stays
+// a "?" if all the duck could do was listen.
+function drawDebugFx(ctx, w, fx) {
+  var age = w.ticks - fx.t, C = w.k.CELL
+  if (age > 40) return
+  ctx.globalAlpha = 1 - age / 40
+  ctx.fillStyle = DUCK_YELLOW
+  for (var r = 0; r < 2; r++) {
+    var rr = 3 + r * 3 + age * 0.3
+    for (var a = 0; a < 8; a++)
+      ctx.fillRect(Math.round(fx.fromX * C + Math.cos(a / 8 * Math.PI * 2) * rr), Math.round((fx.fromY - 3) * C + Math.sin(a / 8 * Math.PI * 2) * rr * 0.6), 1, 1)
+  }
+  var bx = Math.round(fx.x * C) - 1, by = Math.round((fx.y - 5) * C) - age * 0.15
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(bx - 2, by - 7, 7, 8)                             // the bubble
+  ctx.fillStyle = "#1a1a20"
+  if (fx.helped && age > 10) { ctx.fillRect(bx + 1, by - 6, 1, 4); ctx.fillRect(bx + 1, by - 1, 1, 1) }
+  else { ctx.fillRect(bx, by - 6, 3, 1); ctx.fillRect(bx + 2, by - 5, 1, 1); ctx.fillRect(bx + 1, by - 4, 1, 2); ctx.fillRect(bx + 1, by - 1, 1, 1) }
+  ctx.globalAlpha = 1
+}
+
 // The gesture: a circular arrow over its head while it does it.
 function drawReloadSign(ctx, ag, ox, oy, hair) {
   ctx.fillStyle = hair
@@ -7055,6 +7105,7 @@ var GEAR_DRAW = {
   jetpack: drawGearJetpack, helicopter: drawGearHelicopter,
   cushion: drawGearCushion, conning: drawGearConning, web: drawGearWeb,
   chain: drawGearWeb, balloon: drawGearBalloon, promptchute: drawGearPromptchute,
+  duckfloat: drawGearDuckfloat,
   extender: drawGearExtender, shieldglider: drawGearShieldglider,
   backoff: drawGearBackoff, glasswing: drawGearGlasswing, tractor: drawGearTractor,
   steps: drawGearSteps, logchute: drawGearLogchute, recoil: drawGearRecoil,
@@ -7151,6 +7202,22 @@ function drawGearWeb(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
 function drawGearBalloon(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
   ctx.fillRect(ox - 2, oy - 11, 12, 8)
   ctx.fillStyle = robe; ctx.fillRect(ox, oy - 4, 1, 6); ctx.fillRect(ox + 7, oy - 4, 1, 6)
+}
+
+// Rubber Duck's way down: sat on an inflatable duck, which bobs. The duck's
+// own yellow, like the one it carries (drawDuck).
+function drawGearDuckfloat(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var bob = Math.round(Math.sin((fr.hp || 0) * Math.PI * 6)), y = oy + 11 + bob
+  var head = dir > 0 ? ox + 9 : ox - 4
+  ctx.fillStyle = DUCK_YELLOW
+  ctx.fillRect(ox - 3, y, 14, 5)                                  // the ring of its body
+  ctx.fillRect(head, y - 5, 4, 5)                                 // neck and head
+  ctx.fillStyle = DUCK_BEAK
+  ctx.fillRect(dir > 0 ? head + 4 : head - 2, y - 3, 2, 1)
+  ctx.fillStyle = "#1a1a20"
+  ctx.fillRect(head + (dir > 0 ? 2 : 1), y - 4, 1, 1)
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(ox - 1, y + 1, 3, 1)                               // a shine on the plastic
 }
 
 function drawGearPromptchute(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
@@ -7875,6 +7942,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   drawReleaseRing(ctx, pal, ag, ox, oy, w.ticks)
   if (ag.netFor > 0) drawNetThrow(ctx, w, ag, ox, oy, dir, hair)
   if (ag.reloadFor > 0) drawReloadSign(ctx, ag, ox, oy, hair)
+  if (ag.debugFor > 0) drawDuck(ctx, ag, ox, oy, dir)
   drawCampShot(ctx, w, pal, ag, ox, oy, dir, st, w.k.CELL)
 
   // No special borrows the colony's umbrella. At a lethal height each carries

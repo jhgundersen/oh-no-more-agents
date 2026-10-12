@@ -2631,6 +2631,11 @@ var SPECIALS = [
   // reverses deaths without a cap is a special that makes the level pointless.
   // Its own way down is to stop existing at the top and resume at the bottom.
   ,{ id: "hotreload", name: "Hot Reload", act: "reload", height: "teleport", cool: 420, robe: "#e8e8ef", hair: "#ff5b8a" }
+  // Talks a stuck colleague through it. Somebody on its floor who has been
+  // getting nowhere for half the colony's patience gets the escape the stall
+  // rules would only have handed out at the end of it — before the bomb, not
+  // after. It explains the problem to a duck; the colleague hears the answer.
+  ,{ id: "rubberduck", name: "Rubber Duck", act: "debug", height: "duckfloat", cool: 150, robe: "#3b5bb5", hair: "#f2c12e" }
 ]
 
 function specialSpec(id) {
@@ -6435,6 +6440,27 @@ function reloadColleague(w, ag) {
   return true
 }
 
+// Rubber Duck. Within a short walk on the same floor; stuck meaning in a walk
+// and past half its patience, which is where forceEscape is still only a
+// threat. Whatever forceEscape can buy it buys now, and the duck's record of
+// it is render-only (`debugFx`, and `debugFor` for the pose).
+var DUCK_REACH = 18
+function rubberDuck(w, ag) {
+  for (var i = 0; i < w.agents.length; i++) {
+    var a = w.agents[i]
+    if (a === ag || a.gone || a.special || a.state !== "walk") continue
+    if (Math.abs(a.y - ag.y) > 2 || Math.abs(a.x - ag.x) > DUCK_REACH) continue
+    if (a.idle * 2 <= PATIENCE - traitOf(a).digBias) continue
+    forceEscape(w, a)
+    ag.cool = specOf(ag).cool
+    ag.debugFor = 30
+    w.debugFx = { x: a.x, y: a.y, fromX: ag.x, fromY: ag.y, t: w.ticks, helped: a.state !== "walk" }
+    w.lastEvent = "rubber duck"
+    return true
+  }
+  return false
+}
+
 // Fallback. Reach is a corridor's worth either side, measured to where the
 // faller is now; the net lasts long enough for a drop of a whole storey and
 // is gone soon after, so it is a catch and not a new floor.
@@ -6836,7 +6862,8 @@ function specialDropLanding(w, ag, nx, depth, mode) {
     recoil: -3, cyclone: 4, web: 0, logchute: 3, balloon: -4,
     promptchute: 2, piledrive: 0, helicopter: 7, glasswing: 5,
     ghost: -3, gunwing: 4, tractor: 1, steps: 3, chain: 5,
-    jetpack: 7, cushion: 2, extender: 0, shieldglider: 5, backoff: 1, bungee: 0, teleport: 0
+    jetpack: 7, cushion: 2, extender: 0, shieldglider: 5, backoff: 1, bungee: 0, teleport: 0,
+    duckfloat: 2
   }[mode] || 0
   var footY = Math.floor(ag.y) + depth
   var baseX = Math.floor(nx)
@@ -6884,6 +6911,7 @@ function startSpecialHeight(w, ag, nx, depth, far) {
   if (spec.height === "balloon") ag.heightTicks += 25
   if (spec.height === "backoff") ag.heightTicks += 40
   if (spec.height === "bungee") ag.heightTicks += 30
+  if (spec.height === "duckfloat") ag.heightTicks += 20
   ag.x = nx
   ag.timer = 0
   w.lastEvent = spec.height === "cushion" ? "copies, cushion!" : spec.height
@@ -6984,7 +7012,8 @@ function stepSpecialHeight(w, ag) {
     recoil: -2, cyclone: 3, web: 0.4, logchute: 2, balloon: -3,
     promptchute: 1.5, piledrive: 0, helicopter: 5, glasswing: 3,
     ghost: -2, gunwing: 2.5, tractor: 0.8, steps: 1.5, chain: 3,
-    jetpack: 4, cushion: 1.5, extender: 0, shieldglider: 3, backoff: 0.5, bungee: 0.3
+    jetpack: 4, cushion: 1.5, extender: 0, shieldglider: 3, backoff: 0.5, bungee: 0.3,
+    duckfloat: 1.2
   }[ag.heightMode] || 0
   ag.x += ag.dir * sway * Math.sin(moveP * Math.PI)
   if (ag.heightMode === "helicopter") {
@@ -8592,7 +8621,7 @@ function stepAgents(w) {
 
 // Every per-agent countdown that only ever runs down. (`cool` and `infected`
 // run in stepAgents itself: one of them can end the agent's turn.)
-var AGENT_COUNTDOWNS = ["blockFor", "coveredFor", "mineCool", "waitFor", "shotFor", "throttleFor",
+var AGENT_COUNTDOWNS = ["blockFor", "coveredFor", "mineCool", "waitFor", "shotFor", "throttleFor", "debugFor",
   "netFor", "reloadFor", "gunCool", "shoveCool", "hazardGrace"]
 function tickAgentTimers(w, ag) {
   for (var i = 0; i < AGENT_COUNTDOWNS.length; i++) if (ag[AGENT_COUNTDOWNS[i]] > 0) ag[AGENT_COUNTDOWNS[i]]--
@@ -8627,6 +8656,7 @@ function specialReacts(w, ag) {
   if (sact === "throttle" && ag.cool <= 0) throttleHazard(w, ag)
   if (sact === "net" && ag.cool <= 0) deployNet(w, ag)
   if (sact === "reload" && ag.cool <= 0) reloadColleague(w, ag)
+  if (sact === "debug" && ag.cool <= 0) rubberDuck(w, ag)
   specialTakesAim(w, ag, sact, seesDanger, seesRed)
 }
 

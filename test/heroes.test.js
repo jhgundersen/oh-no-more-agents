@@ -161,3 +161,19 @@ test("every special reacts on the walk without throwing", () => {
     assert.ok(typeof ag.state === "string", spec.id)
   }
 })
+
+test("Rubber Duck talks a stuck colleague out early, and leaves the rest alone", () => {
+  const w = S.generate(70, 0, 2177)
+  while (w.ticks < 300) S.step(w)
+  const duck = S.spawn(w), stuck = S.spawn(w), fine = S.spawn(w)
+  duck.special = "rubberduck"; duck.state = "walk"; duck.cool = 0
+  for (const a of [duck, stuck, fine]) { a.x = w.hatch.x; a.y = w.corridors[0].floorY - 1; a.state = "walk" }
+  stuck.x += 4; fine.x -= 4
+  fine.idle = 10
+  w.agents = [duck, fine]
+  assert.equal(S.rubberDuck(w, duck), false, "nobody stuck")
+  stuck.idle = S.PATIENCE
+  w.agents.push(stuck)
+  assert.equal(S.rubberDuck(w, duck), true)
+  assert.ok(duck.cool > 0 && duck.debugFor > 0 && w.debugFx)
+})

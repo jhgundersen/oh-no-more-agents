@@ -23,7 +23,10 @@ test("special devices at res 1 and unspecified res match the pre-detail bytes", 
   const hash = createHash("sha256"), w = S.generate(3, 0, 99)
   for (const name of Object.keys(THEMES)) {
     const theme = themeOf(name), pal = P.build(theme.theme, 3)
-    for (const res of [undefined, 1]) for (const spec of S.SPECIALS)
+    // The specials that existed when this was pinned. The list only grows at
+    // the end, so later heroes do not move the hash; they have tests of their
+    // own in specials.test.js.
+    for (const res of [undefined, 1]) for (const spec of S.SPECIALS.slice(0, 21))
       for (const dir of [1, -1]) for (const phase of phases) for (const state of ["height", "trick"]) {
         w.res = res; w.specialSpec = spec
         const img = canvas(240, 180, theme.background)

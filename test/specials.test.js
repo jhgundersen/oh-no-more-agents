@@ -50,7 +50,7 @@ test("Rate Limiter freezes a fixture and the colony stops treating it as lethal"
 test("every special has its own flight gear, and a trick unless it never does one", () => {
   const D = loadCore("Draw.js")
   // These never enter the `trick` state: they act while walking, or camp.
-  const noTrick = new Set(["ceiling", "camp", "shield", "throttle", "net", "reload"])
+  const noTrick = new Set(["ceiling", "camp", "shield", "throttle", "net", "reload", "debug"])
   for (const spec of S.SPECIALS) {
     assert.ok(D.GEAR_DRAW[spec.height], spec.name + " has no drawing for " + spec.height)
     if (!noTrick.has(spec.act)) assert.ok(D.TRICK_DRAW[spec.act], spec.name + " has no drawing for " + spec.act)
@@ -163,5 +163,21 @@ test("the reload trail draws over its life and stops", async () => {
     D.drawReloadTrail(img.ctx, w, { fromX: 30, fromY: 40, t: 100 })
     const drew = Buffer.from(img.buf).toString("base64") !== blank
     assert.equal(drew, age <= 45, `age ${age}`)
+  }
+})
+
+test("Rubber Duck's duck and its squeak draw, asked and answered", async () => {
+  const { canvas, themeOf } = await import("../tools/render.js")
+  const D = loadCore("Draw.js")
+  const theme = themeOf("tokyo-night"), w = S.generate(3, 0, 99)
+  for (const helped of [false, true]) for (const age of [0, 15, 39, 41]) for (const res of [1, 2]) {
+    w.res = res; w.ticks = 100 + age
+    w.debugFx = { x: 40, y: 30, fromX: 50, fromY: 30, t: 100, helped }
+    const img = canvas(400 * res, 248 * res, theme.background)
+    img.ctx.setTransform(res, 0, 0, res, 0, 0)
+    const blank = Buffer.from(img.buf).toString("base64")
+    D.drawDebugFx(img.ctx, w, w.debugFx)
+    D.drawDuck(img.ctx, { debugFor: 30 - age % 30 }, 100, 80, helped ? 1 : -1)
+    assert.notEqual(Buffer.from(img.buf).toString("base64"), blank)
   }
 })

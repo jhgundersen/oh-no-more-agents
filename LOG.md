@@ -1695,3 +1695,29 @@ pixel the same as idle on most kinds — the colony's tell was invisible to
 the audience. After, every kind winds up visibly (the sentry's dotted aim
 line, the dart trap loading, the gun's muzzle warming) and recovers with a
 short afterglow. Codex's seeded check: 1,180 hazard-free frames identical.
+
+## 64 — 2026-10-12 · A new hero: Rubber Duck
+
+**Why.** The per-biome tally again: bombs are still among the top causes of
+death everywhere, and most of them are the stall rules clearing an agent
+that has been getting nowhere. Nothing on the board acts *before* that.
+
+**Changed.** Sim: special `rubberduck` (act `debug`, own way down
+`duckfloat`). On cooldown (150), a colleague on its floor within 18 cells
+that is walking and past half its patience gets `forceEscape` now, instead of
+at the end of its patience — the paid escapes the stall rules would hand
+out anyway, sooner. Render-only `debugFx` / `debugFor`. Draw: it holds up a
+rubber duck that bobs as it squeaks (rings off the duck), a "?" over the
+colleague that turns to "!" when the escape lands; it floats down sat on an
+inflatable duck. Ten fact lines for the sky card.
+
+**Checked.** Paired on the 445 of the first 600 levels that roll a special,
+same colony each way: its own special 91.37% home and 197 bomb deaths; the
+duck in that slot 91.93% and 155; no special at all 91.65% and 186. It acts
+0.84 times a level. Hero suit first yellow — vanished into its own duck;
+now blue with yellow hair. Adding a special changes which one each level
+rolls (pick over 22). `sim play` 96% / 88% (cleared 190 → 191). The gear
+test pinned every special's res-1 pixels; it now pins the first 21, since the
+list only grows at the end. Over 30: 41 → 39 (Codex's hazard work included).
+
+**Next.** Deploy (hazard animation + duck).
