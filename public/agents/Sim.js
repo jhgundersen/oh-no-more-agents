@@ -790,6 +790,7 @@ function generate(level, attempt, colonySeed) {
     submerged: BIOMES[(level - 1) % BIOMES.length] === "Trench",
     wind: 0,          // the Desert's gust, -1..1 along x; set every tick by windAt
     updraft: null,    // the Data Center's rising columns, per x; see skinDataCenter
+    shelves: null,    // the Library's book cells, per cell; see skinLibrary
     boulder: null,    // the Ruins' rolling stone; see placeBoulder
     belts: [],        // the Factory's conveyors; see placeBelts
     beltAt: null,     // and which way each feet cell is carried, -1/0/1
@@ -1760,10 +1761,13 @@ function sinkholeStoodOn(w, s) {
 
 // The Library's own mechanism: a wall of books is a ladder. Climbing the
 // shelves costs no climber — anyone can do it — wherever the face the agent
-// meets is shelving (ORE, the books) rather than an upright or a board. The
-// same decision as any climb (hitWall), with the toolbar left out of it.
+// meets is shelving (`w.shelves`, recorded by skinLibrary) rather than an
+// upright or a board. The same decision as any climb (hitWall), with the
+// toolbar left out of it.
 function shelfClimb(w, ag) {
-  return w.biome === "Library" && at(w, Math.floor(ag.x) + ag.dir, Math.floor(ag.y)) === ORE
+  var x = Math.floor(ag.x) + ag.dir, y = Math.floor(ag.y)
+  return !!w.shelves && x >= 0 && x < COLS && y >= 0 && y < ROWS
+    && w.shelves[y * COLS + x] === 1 && solid(w, x, y)
 }
 
 function placeMission(w, corridors) {
@@ -2223,12 +2227,16 @@ function skinTrench(w, rng) {
 // is what makes the Library's mechanism (`shelfClimb`) worth having.
 function skinLibrary(w, rng) {
   var x, y
+  // Where the books are, kept apart from the material: materials are paint
+  // (`sim inert` checks it), and the climb must not depend on the paint.
+  w.shelves = new Uint8Array(COLS * ROWS)
   var pitch = irand(rng, 8, 11), offset = irand(rng, 0, pitch - 1), board = irand(rng, 0, 2)
   for (y = SKY; y < ROWS - 2; y++)
     for (x = 3; x < COLS - 3; x++) {
       if (at(w, x, y) === STEEL) continue
-      var upright = (x + offset) % pitch === 0
-      setCell(w, x, y, upright ? DIRT : ((y + board) % 3 === 0 ? ROCK : ORE))
+      var upright = (x + offset) % pitch === 0, books = !upright && (y + board) % 3 !== 0
+      setCell(w, x, y, upright ? DIRT : (books ? ORE : ROCK))
+      if (books) w.shelves[y * COLS + x] = 1
     }
 }
 
