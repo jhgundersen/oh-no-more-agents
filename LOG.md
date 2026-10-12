@@ -1575,3 +1575,53 @@ it at once. Replaced with what it meant: a death past its window draws
 exactly as if the agent were not in the list. AGENTS.md now says which
 pinned hashes are deliberate (res-1, one component) and that whole frames
 must not be pinned.
+
+## 62 — 2026-10-12 · Biome mechanisms in motion
+
+**Why.** The mechanisms worked but their first drawings were plain. Small
+moving marks needed clearer silhouettes and direction at the panel's res 1,
+with half-pixel detail added for the page's res 2.
+
+**Changed.** Draw only; no simulation changes. Ruins boulders now roll three
+carved cracks and an off-centre fossil under fixed upper-left sandstone
+lighting, rumble with dust at both feet, leave a fading dust trail, and break
+into shaded shards that settle at floor height with an impact cloud. Factory
+belts have jointed treads, an opposing return run and rotating drum marks that
+follow their own belt's direction at both resolutions; a missing end floor
+also removes its drum. Ice panes have clipped corners, facets, frosty edges
+and a restrained glint; thawing throws small lit shards, drips into a shallow
+meltwater strip and releases mist. Spaceship pads have bevels, emitter studs
+and four sequential recharge lamps. Their beam scans a head, shoulders, tie
+and split boots away at the sending pad and assembles the traveller's outline
+at its actual moving position. Fresh pads no longer show a phantom beam.
+Jungle vines gain cupped leaves, shaded stems and a little anchored sway;
+Foundry chains gain lit alternating links, a fixed hook and a loose-end sway.
+Desert sand streaks have bright heads, fading stepped tails and a gentle curl;
+Data Center updrafts have rising wisps with visible whole-pixel marks at res 1.
+Both clip each mark to open air, including tails and half-pixel accents.
+
+**Checked.** `npm run check` (including `npm test`) passes; core files stay
+self-contained and stamps are current. Existing mechanism tests and all
+component pixel pins pass unchanged; no pins needed updating. Five new tests
+check belt and drum direction, missing floors, wind/updraft clipping, fresh
+pads, arrival lifetime, both resolutions and rendering without state writes.
+Seeded `Math.random` identically for the before/after renderers on twelve
+Cavern, Frost and Trench levels at ticks 0, 200, 500, 900 and 1600: all 120
+frames are byte-identical across res 1 and res 2. Stepped actual play to capture
+the boulder's wake/roll/shatter, an Ice Cave thaw and a transporter use; also
+captured belts, ropes, both wind directions and updrafts across several frames.
+Reviewed every mechanism at both resolutions, enlarged without smoothing.
+Before/after contact sheet: `/tmp/codex-mech/sheet.png` (240 crops); individual
+mechanism sheets, capture script and seeded comparison are in that directory.
+
+**CRAP.** `npm run crap -- --changed`, using a local copy of the cached tool.
+All sixteen new functions are below 30: `drawBeamOutline` 10.0,
+`drawSandStreak` 9.0, `drawDraftWisp` 8.0, `drawBeamArrival` and
+`drawBeltTreads` 7.0, `drawBoulderDust` 6.1, `drawIceFacets` 6.0,
+`drawChainLink`, `drawPadLamps`, `drawThawDrips` and `mechanismAir` 5.0,
+`drawVineLeaf` 4.0, `drawBeamGrains`, `drawBoulderBody` and
+`drawBoulderImpact` 3.0, `drawIcePane` 1.0. Existing touched functions also
+stay below 30; the largest is `drawActors` at 21.9.
+
+**Next.** Watch these short effects in crowded colonies on the panel and page
+before adding more detail; keep the mechanism silhouettes readable at res 1.
