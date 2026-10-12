@@ -188,7 +188,7 @@ test("throttling stills gait/hover and suppresses launch and pursuit tells", () 
   assert.deepEqual(pixels(img), blank)
 })
 
-test("gone enemies stay absent; Sim supplies no defeat timestamp to animate", () => {
+test("unstamped gone enemies stay absent from the living enemy renderer", () => {
   const w = setup()
   for (const kind of Object.keys(POSES)) {
     const en = enemy(kind)
