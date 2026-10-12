@@ -50,7 +50,7 @@ test("Rate Limiter freezes a fixture and the colony stops treating it as lethal"
 test("every special has its own flight gear, and a trick unless it never does one", () => {
   const D = loadCore("Draw.js")
   // These never enter the `trick` state: they act while walking, or camp.
-  const noTrick = new Set(["ceiling", "camp", "shield", "throttle", "net", "reload", "debug"])
+  const noTrick = new Set(["ceiling", "camp", "shield", "throttle", "net", "reload", "debug", "restock"])
   for (const spec of S.SPECIALS) {
     assert.ok(D.GEAR_DRAW[spec.height], spec.name + " has no drawing for " + spec.height)
     if (!noTrick.has(spec.act)) assert.ok(D.TRICK_DRAW[spec.act], spec.name + " has no drawing for " + spec.act)
@@ -209,5 +209,17 @@ test("a sinkhole draws closed, opening, and not after", async () => {
     const blank = Buffer.from(img.buf).toString("base64")
     D.drawSinkhole(img.ctx, w, P.build(theme.theme, 1), s)
     assert.equal(Buffer.from(img.buf).toString("base64") !== blank, drawn)
+  }
+})
+
+test("Package Manager's crate and delivery draw", async () => {
+  const { canvas, themeOf } = await import("../tools/render.js")
+  const D = loadCore("Draw.js"), P = loadCore("Palette.js")
+  const theme = themeOf("tokyo-night"), w = S.generate(3, 0, 3), pal = P.build(theme.theme, 3)
+  for (const age of [0, 20, 39]) {
+    w.ticks = 100 + age
+    const img = canvas(400, 248, theme.background), blank = Buffer.from(img.buf).toString("base64")
+    D.drawRestockFx(img.ctx, w, pal, { x: 50, y: 30, skill: "basher", t: 100 })
+    assert.notEqual(Buffer.from(img.buf).toString("base64"), blank)
   }
 })

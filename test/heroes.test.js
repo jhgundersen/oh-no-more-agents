@@ -177,3 +177,30 @@ test("Rubber Duck talks a stuck colleague out early, and leaves the rest alone",
   assert.equal(S.rubberDuck(w, duck), true)
   assert.ok(duck.cool > 0 && duck.debugFor > 0 && w.debugFx)
 })
+
+test("Package Manager restocks the first spent tool, three times a level at most", () => {
+  const w = S.generate(5, 0, 3)
+  const pm = S.spawn(w)
+  pm.special = "pkgmanager"; pm.state = "walk"
+  for (const k of Object.keys(w.skills)) w.skills[k] = 0
+  for (let i = 0; i < 3; i++) { pm.cool = 0; assert.equal(S.restockTool(w, pm), true); w.skills.basher = 0 }
+  assert.equal(w.skills.basher, 0)
+  pm.cool = 0
+  assert.equal(S.restockTool(w, pm), false, "three is the limit")
+  const full = S.generate(5, 0, 3), pm2 = S.spawn(full)
+  pm2.special = "pkgmanager"
+  for (const k of Object.keys(full.skills)) full.skills[k] = 3
+  assert.equal(S.restockTool(full, pm2), false, "nothing to restock")
+})
+
+test("a hero whose own way out fails falls back on the colony's tools", () => {
+  const w = S.generate(5, 0, 3)
+  for (let t = 0; t < 200; t++) S.step(w)
+  const hero = S.spawn(w)
+  hero.special = "pkgmanager"; hero.state = "walk"; hero.rescueCool = 0
+  hero.x = w.corridors[1].startX + w.corridors[1].dir * 5; hero.y = w.corridors[1].floorY - 1
+  w.agents.push(hero)
+  S.forceEscape(w, hero)
+  assert.equal(typeof hero.state, "string")
+  assert.equal(w.acting, null, "the toolbar is barred to it again afterwards")
+})

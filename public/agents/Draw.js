@@ -2341,6 +2341,7 @@ function drawActors(ctx, w, pal, opts) {
   if (w.nets) for (var ni = 0; ni < w.nets.length; ni++) drawNet(ctx, w, w.nets[ni])
   if (w.reloadFx) drawReloadTrail(ctx, w, w.reloadFx)
   if (w.debugFx) drawDebugFx(ctx, w, w.debugFx)
+  if (w.restockFx) drawRestockFx(ctx, w, pal, w.restockFx)
 
   if (w.biome === "Frost") drawPowderBursts(ctx, w, pal)
   for (var i = 0; i < w.agents.length; i++) {
@@ -3422,6 +3423,18 @@ function drawCroc(ctx, w, pal, p, px, pw, sy) {
 // Three per special, picked by level number so it is the same line every time
 // you come back to level 42 — the same rule the rest of the level runs on.
 var SPECIAL_FACTS = {
+  pkgmanager: [
+    "ran out of bashers. Ran npm install.",
+    "added 1 package, and 1,412 dependencies.",
+    "works on its machine. Ships its machine.",
+    "found 0 vulnerabilities. Did not look.",
+    "pinned nothing. Everything still works. For now.",
+    "delivers tools to colleagues who never asked.",
+    "the lockfile is a suggestion.",
+    "restocks the toolbar three times, then goes offline.",
+    "peer dependency: a colleague who is still alive.",
+    "your tool is in the post. The post is a crate."
+  ],
   rubberduck: [
     "explains the problem slowly, out loud, to a duck.",
     "has never once needed to hear the duck reply.",
@@ -5979,6 +5992,25 @@ function drawDebugFx(ctx, w, fx) {
   ctx.globalAlpha = 1
 }
 
+// Package Manager's delivery (Sim's restockFx): a parcel thrown up off its
+// hands that arcs toward the toolbar end of the sky and is gone, with the
+// tool it installed written under it — "+1 basher" — for a second.
+function drawRestockFx(ctx, w, pal, fx) {
+  var age = w.ticks - fx.t, C = w.k.CELL
+  if (age > 40) return
+  var x = fx.x * C + age * 1.2, y = (fx.y - 4) * C - age * 2 + age * age * 0.03
+  ctx.globalAlpha = 1 - age / 40
+  ctx.fillStyle = CRATE_WOOD
+  ctx.fillRect(Math.round(x) - 2, Math.round(y) - 2, 5, 4)
+  ctx.fillStyle = CRATE_DARK
+  ctx.fillRect(Math.round(x) - 2, Math.round(y), 5, 1)
+  ctx.fillStyle = pal.label
+  ctx.font = "5px monospace"
+  ctx.textAlign = "center"
+  ctx.fillText("+1 " + fx.skill, Math.round(fx.x * C), Math.round((fx.y - 5) * C) - Math.min(age, 10))
+  ctx.globalAlpha = 1
+}
+
 // The gesture: a circular arrow over its head while it does it.
 function drawReloadSign(ctx, ag, ox, oy, hair) {
   ctx.fillStyle = hair
@@ -7823,7 +7855,7 @@ var GEAR_DRAW = {
   jetpack: drawGearJetpack, helicopter: drawGearHelicopter,
   cushion: drawGearCushion, conning: drawGearConning, web: drawGearWeb,
   chain: drawGearWeb, balloon: drawGearBalloon, promptchute: drawGearPromptchute,
-  duckfloat: drawGearDuckfloat,
+  duckfloat: drawGearDuckfloat, crate: drawGearCrate,
   extender: drawGearExtender, shieldglider: drawGearShieldglider,
   backoff: drawGearBackoff, glasswing: drawGearGlasswing, tractor: drawGearTractor,
   steps: drawGearSteps, logchute: drawGearLogchute, recoil: drawGearRecoil,
@@ -7920,6 +7952,20 @@ function drawGearWeb(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
 function drawGearBalloon(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
   ctx.fillRect(ox - 2, oy - 11, 12, 8)
   ctx.fillStyle = robe; ctx.fillRect(ox, oy - 4, 1, 6); ctx.fillRect(ox + 7, oy - 4, 1, 6)
+}
+
+// Package Manager's way down: stood in an open shipping crate, slats and a
+// stencilled arrow, that it rides down and then is simply not in any more.
+var CRATE_WOOD = "#b7864b", CRATE_DARK = "#7a5530"
+function drawGearCrate(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var y = oy + 9
+  ctx.fillStyle = CRATE_WOOD
+  ctx.fillRect(ox - 2, y, 12, 8)
+  ctx.fillStyle = CRATE_DARK
+  ctx.fillRect(ox - 2, y, 12, 1); ctx.fillRect(ox - 2, y + 4, 12, 1)       // slats
+  ctx.fillRect(ox - 2, y, 1, 8); ctx.fillRect(ox + 9, y, 1, 8)
+  ctx.fillStyle = "#1a1a20"
+  ctx.fillRect(ox + 3, y + 1, 2, 2); ctx.fillRect(ox + 2, y + 2, 4, 1)      // "this way up"
 }
 
 // Rubber Duck's way down: sat on an inflatable duck, which bobs. The duck's

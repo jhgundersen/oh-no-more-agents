@@ -2755,6 +2755,11 @@ var SPECIALS = [
   // rules would only have handed out at the end of it — before the bomb, not
   // after. It explains the problem to a duck; the colleague hears the answer.
   ,{ id: "rubberduck", name: "Rubber Duck", act: "debug", height: "duckfloat", cool: 150, robe: "#3b5bb5", hair: "#f2c12e" }
+  // Restocks the toolbar. When the colony has run out of a tool, it installs
+  // one more — three times a level at most — which is the commonest way a
+  // colony that was doing everything right still fails: the last basher was
+  // spent two walls ago. Its way down is a crate it unpacks itself out of.
+  ,{ id: "pkgmanager", name: "Package Manager", act: "restock", height: "crate", cool: 360, robe: "#c43d3d", hair: "#f4f1e8" }
 ]
 
 function specialSpec(id) {
@@ -6564,6 +6569,27 @@ function reloadColleague(w, ag) {
   return true
 }
 
+// Package Manager. The first spent tool in RESTOCK_ORDER — the ones a stuck
+// colony most often lacks first — gets one more. Render-only `restockFx` and
+// `restockFor` for the parcel and the pose.
+var RESTOCK_ORDER = ["basher", "builder", "climber", "digger", "miner", "floater"]
+var RESTOCK_MAX = 3
+function restockTool(w, ag) {
+  if ((w.restocks || 0) >= RESTOCK_MAX) return false
+  for (var i = 0; i < RESTOCK_ORDER.length; i++) {
+    var skill = RESTOCK_ORDER[i]
+    if ((w.skills[skill] || 0) > 0) continue
+    w.skills[skill] = 1
+    w.restocks = (w.restocks || 0) + 1
+    ag.cool = specOf(ag).cool
+    ag.restockFor = 30
+    w.restockFx = { x: ag.x, y: ag.y, skill: skill, t: w.ticks }
+    w.lastEvent = "npm install " + skill
+    return true
+  }
+  return false
+}
+
 // Rubber Duck. Within a short walk on the same floor; stuck meaning in a walk
 // and past half its patience, which is where forceEscape is still only a
 // threat. Whatever forceEscape can buy it buys now, and the duck's record of
@@ -6987,7 +7013,7 @@ function specialDropLanding(w, ag, nx, depth, mode) {
     promptchute: 2, piledrive: 0, helicopter: 7, glasswing: 5,
     ghost: -3, gunwing: 4, tractor: 1, steps: 3, chain: 5,
     jetpack: 7, cushion: 2, extender: 0, shieldglider: 5, backoff: 1, bungee: 0, teleport: 0,
-    duckfloat: 2
+    duckfloat: 2, crate: 1
   }[mode] || 0
   var footY = Math.floor(ag.y) + depth
   var baseX = Math.floor(nx)
@@ -7036,6 +7062,7 @@ function startSpecialHeight(w, ag, nx, depth, far) {
   if (spec.height === "backoff") ag.heightTicks += 40
   if (spec.height === "bungee") ag.heightTicks += 30
   if (spec.height === "duckfloat") ag.heightTicks += 20
+  if (spec.height === "crate") ag.heightTicks += 24
   ag.x = nx
   ag.timer = 0
   w.lastEvent = spec.height === "cushion" ? "copies, cushion!" : spec.height
@@ -7137,7 +7164,7 @@ function stepSpecialHeight(w, ag) {
     promptchute: 1.5, piledrive: 0, helicopter: 5, glasswing: 3,
     ghost: -2, gunwing: 2.5, tractor: 0.8, steps: 1.5, chain: 3,
     jetpack: 4, cushion: 1.5, extender: 0, shieldglider: 3, backoff: 0.5, bungee: 0.3,
-    duckfloat: 1.2
+    duckfloat: 1.2, crate: 0.4
   }[ag.heightMode] || 0
   ag.x += ag.dir * sway * Math.sin(moveP * Math.PI)
   if (ag.heightMode === "helicopter") {
@@ -8461,8 +8488,22 @@ function forceEscape(w, ag) {
     if (ag.rescueCool > 0) return
     ag.rescueCool = 90
     specialEscape(w, ag)
+    if (ag.state !== "walk") return
+    // Its own way out failed. A special is barred from the toolbar so that it
+    // is seen to do its own thing — but a hero stuck with nothing left was the
+    // one colleague the stall rules always ended up bombing: heroes got home
+    // 80% of the time against 94% for everyone else. This once, the colony's
+    // tools are its tools too.
+    var acting = w.acting
+    w.acting = null
+    forceEscapeOrdinary(w, ag)
+    w.acting = acting
     return
   }
+  forceEscapeOrdinary(w, ag)
+}
+
+function forceEscapeOrdinary(w, ag) {
   var footY = Math.floor(ag.y)
   var ahead = Math.floor(ag.x) + ag.dir
 
@@ -8749,7 +8790,7 @@ function stepAgents(w) {
 
 // Every per-agent countdown that only ever runs down. (`cool` and `infected`
 // run in stepAgents itself: one of them can end the agent's turn.)
-var AGENT_COUNTDOWNS = ["blockFor", "coveredFor", "mineCool", "waitFor", "shotFor", "throttleFor", "debugFor",
+var AGENT_COUNTDOWNS = ["blockFor", "coveredFor", "mineCool", "waitFor", "shotFor", "throttleFor", "debugFor", "restockFor",
   "netFor", "reloadFor", "gunCool", "shoveCool", "hazardGrace"]
 function tickAgentTimers(w, ag) {
   for (var i = 0; i < AGENT_COUNTDOWNS.length; i++) if (ag[AGENT_COUNTDOWNS[i]] > 0) ag[AGENT_COUNTDOWNS[i]]--
@@ -8785,6 +8826,7 @@ function specialReacts(w, ag) {
   if (sact === "net" && ag.cool <= 0) deployNet(w, ag)
   if (sact === "reload" && ag.cool <= 0) reloadColleague(w, ag)
   if (sact === "debug" && ag.cool <= 0) rubberDuck(w, ag)
+  if (sact === "restock" && ag.cool <= 0) restockTool(w, ag)
   specialTakesAim(w, ag, sact, seesDanger, seesRed)
 }
 

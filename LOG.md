@@ -2171,3 +2171,32 @@ all five idle roles over time: tap / watch / fold for the blocker (the fold
 is brief, so a blocker still reads as one), phone / glance / yawn in a lift
 queue, drumming and tie-straightening when held at a hazard. Non-idle frames
 identical per Codex's seeded check; over 30: 30 → 29.
+
+## 79 — 2026-10-13 · Heroes cost the colony; a new one, and a fallback
+
+**Found.** Measuring a new hero paired against "no hero" on the same levels
+showed every hero costing the colony: on 160 levels, no hero 92.34% home;
+20 of 22 heroes worse, by up to 3.4 points (Model Collapse), only Force
+Push clearly better. Heroes themselves got home 80% of the time against 94%
+for everyone else — half of their deaths bombs from the stall rules. A
+special is barred from the toolbar, so when its own escape (`specialEscape`)
+failed it had nothing left.
+
+**Changed.**
+- `forceEscape`: if a hero's own way out fails, it falls back on the
+  ordinary escape with the colony's tools, this once (`forceEscapeOrdinary`,
+  with `w.acting` cleared so `take` allows it). Over 600 levels: heroes home
+  80.3 → 83.3%; levels with a hero 92.82 → 93.06%.
+- New hero: Package Manager (`restock`, way down `crate`) — when the colony
+  has run out of a tool it installs one more, basher first, three times a
+  level at most. Paired: 90.70% vs 92.34% with no hero — no worse than the
+  average hero, and it targets the skill exhaustion iteration 77 found.
+  Draw: it rides down in a shipping crate; a parcel arcs up off its hands
+  with "+1 basher" under it. Ten fact lines.
+
+**Checked.** 510 tests pass; `sim play` / `inert` below. Adding a special
+reshuffles which hero each level rolls (pick over 23).
+
+**Next.** The heroes' cost is the real finding. Look at the worst —
+Model Collapse (copies that die count against the colony), Glazier,
+Roundhouse, Chain of Thought — one at a time.
