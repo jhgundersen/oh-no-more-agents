@@ -280,6 +280,25 @@ The third biome with a mechanism. The rules live in the Wind block under
   against 90.0% without, timeouts 5 against 1 — a mild tax on what was one of
   the easier biomes, not a wall.
 
+## The Ruins
+
+The boulder (`placeBoulder` … `shatterBoulder`, above `placeMission`). One per
+Ruins level, on a corridor below the first, against its back wall; placed from
+its own stream, so the rest of the level is unchanged.
+
+- **It wakes on the first walker on its floor, not on a plate.** A plate a few
+  strides from the corridor's start was crossed on 24 of 68 plays: the colony
+  mostly arrives on a floor far along it, by a special or a dig. The rumble
+  (`BOULDER_RUMBLE`) is the warning, and agents already run during it.
+- **It takes at most one.** It shatters on the first body, blocker, special,
+  wall or edge it meets. Agents in `fall` are never hit — they land in front
+  and get to run like everyone else. Before that rule, and before running in
+  the rumble, it took 26 in 204 plays, most of them people who could not have
+  seen it; after, 16, and Ruins home is 92.4% against 93.5% without it.
+- Running is `ag.sprintUntil`, read by `walkStep` (`BOULDER_SPRINT`). Draw reads
+  `w.boulder` for `drawBoulder`, in fixed sandstone colours: the biome's rock
+  is the backdrop's colour.
+
 
 The one biome with a mechanism rather than a skin. The rules it needs are
 gathered above `cutHoistway`.

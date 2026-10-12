@@ -354,7 +354,8 @@ function traitOf(ag) { return TRAITS[ag.trait] || TRAITS.steady }
 function walkStep(ag, w) {
   var swim = w && w.submerged ? SWIM_PACE : 1
   var wind = w && w.wind ? 1 + w.wind * ag.dir * WIND_PUSH : 1
-  return WALK_SPEED * (traitOf(ag).pace || 1) * (ag.chilledFor > 0 ? 0.48 : 1) * swim * wind
+  var run = w && w.ticks < (ag.sprintUntil || 0) ? BOULDER_SPRINT : 1
+  return WALK_SPEED * (traitOf(ag).pace || 1) * (ag.chilledFor > 0 ? 0.48 : 1) * swim * wind * run
 }
 
 // ---------------------------------------------------------------------------
@@ -774,6 +775,7 @@ function generate(level, attempt, colonySeed) {
     submerged: BIOMES[(level - 1) % BIOMES.length] === "Trench",
     wind: 0,          // the Desert's gust, -1..1 along x; set every tick by windAt
     updraft: null,    // the Data Center's rising columns, per x; see skinDataCenter
+    boulder: null,    // the Ruins' rolling stone; see placeBoulder
     k: K,
     decor: [],
     corrGap: CORR_GAP,
@@ -1301,6 +1303,7 @@ function generate(level, attempt, colonySeed) {
   }
 
   if (w.biome === "Jungle") placeVines(w, corridors)
+  if (w.biome === "Ruins") placeBoulder(w, corridors)
 
   // Last, so that everything above this line still cuts freely (see clearCell).
   w.bedFloor = corridors[corridors.length - 1].floorY
@@ -1329,6 +1332,123 @@ function placeVines(w, corridors) {
       w.ladders.push({ x: x, side: c.dir, bottom: fy, top: fy - h, t: 14, vine: true })
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// The boulder
+// ---------------------------------------------------------------------------
+//
+// The Ruins' own mechanism. One corridor below the first has a stone resting
+// against its back wall. The first agent to walk that floor sets it off: it
+// rocks in place for a moment, then rolls the way the corridor runs — faster
+// than a walk, slower than a run — and anyone
+// on that floor ahead of it and in sight of it runs. It takes at most one: it
+// shatters on the first body, blocker, wall or edge it meets. Placed from a
+// stream of its own, so the terrain and every other roll on a Ruins level are
+// what they were.
+var BOULDER_SPEED = 0.40   // cells per tick: 1.4x a walk
+var BOULDER_SPRINT = 1.8   // pace of an agent running from it
+var BOULDER_RUMBLE = 36    // ticks it rocks in place before it goes
+var BOULDER_SIGHT = 26     // how far ahead of it an agent notices and runs
+var BOULDER_R = 1.5        // cells
+
+function placeBoulder(w, corridors) {
+  var brng = makeRng(w.level * 7919 + 3301)
+  var first = 1 + Math.floor(brng() * Math.max(1, corridors.length - 1))
+  for (var n = 0; n < corridors.length - 1; n++) {
+    var c = corridors[1 + (first - 1 + n) % (corridors.length - 1)]
+    var x = c.startX - c.dir * 1.5
+    if (!boulderFits(w, x, c.floorY - 1)) continue
+    w.boulder = {
+      x: x, y: c.floorY - 1, dir: c.dir,
+      state: "rest", spin: 0, wokeAt: -1, endedAt: -1, crushed: 0
+    }
+    return
+  }
+}
+
+function boulderFits(w, x, feet) {
+  for (var cx = Math.floor(x - BOULDER_R); cx <= Math.floor(x + BOULDER_R); cx++) {
+    if (!solid(w, cx, feet + 1)) return false
+    for (var cy = feet - 2; cy <= feet; cy++) if (solid(w, cx, cy)) return false
+  }
+  return true
+}
+
+function stepBoulder(w) {
+  var b = w.boulder
+  if (!b || b.state === "done") return
+  if (b.state === "rest") {
+    if (boulderTripped(w, b)) { b.state = "wake"; b.wokeAt = w.ticks; w.lastEvent = "boulder" }
+    return
+  }
+  if (b.state === "wake") {
+    boulderMeetsAgents(w, b, false)
+    if (w.ticks - b.wokeAt >= BOULDER_RUMBLE) b.state = "roll"
+    return
+  }
+  b.x += b.dir * BOULDER_SPEED
+  b.spin += BOULDER_SPEED / BOULDER_R
+  if (!boulderFollowFloor(w, b)) { shatterBoulder(w, b); return }
+  boulderMeetsAgents(w, b, true)
+}
+
+function boulderTripped(w, b) {
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state !== "walk" || Math.abs(ag.y - b.y) > 1) continue
+    if ((ag.x - b.x) * b.dir > BOULDER_R) return true
+  }
+  return false
+}
+
+// Up a one-cell step, down a drop of up to two; anything else stops it.
+function boulderFollowFloor(w, b) {
+  var lead = Math.floor(b.x + b.dir * BOULDER_R), feet = Math.floor(b.y)
+  if (lead < 1 || lead >= COLS - 1) return false
+  if (solid(w, lead, feet)) {
+    if (solid(w, lead, feet - 1) || solid(w, lead, feet - 2) || solid(w, lead, feet - 3)) return false
+    b.y -= 1
+    return true
+  }
+  var cx = Math.floor(b.x)
+  for (var d = 0; d <= 2; d++) if (solid(w, cx, feet + 1 + d)) { b.y += d; return true }
+  return false
+}
+
+// Somebody in mid-air is not hit: they come down in front of it, on their
+// feet, and get the same chance to run as everybody else. The rumble is
+// warning enough to start running, which is what it is for.
+function boulderMeetsAgents(w, b, rolling) {
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state === "saved" || ag.state === "fall" || Math.abs(ag.y - b.y) > 2) continue
+    var ahead = (ag.x - b.x) * b.dir
+    if (rolling && ahead > -BOULDER_R && ahead < BOULDER_R + 0.5) {
+      if (ag.state !== "block" && !ag.special) crushAgent(w, b, ag)
+      shatterBoulder(w, b)
+      return
+    }
+    if (ahead > 0 && ahead < BOULDER_SIGHT && ag.state === "walk") {
+      ag.dir = b.dir
+      ag.sprintUntil = w.ticks + 2
+    }
+  }
+}
+
+function crushAgent(w, b, ag) {
+  addBlood(w, ag.x, ag.y - 1.5, 16)
+  ag.gone = true
+  ag.state = "dead"
+  w.lost++
+  b.crushed++
+  w.lastEvent = "crushed"
+}
+
+function shatterBoulder(w, b) {
+  b.state = "done"
+  b.endedAt = w.ticks
+  addDust(w, b.x, b.y - 1, 24)
 }
 
 function placeMission(w, corridors) {
@@ -8482,6 +8602,7 @@ function step(w) {
   }
 
   w.wind = windAt(w)
+  stepBoulder(w)
   var counts = stepAgents(w)
   // When each agent was lost, for Hot Reload. Everything that kills sets
   // `gone`; nothing else records the moment, and there are a dozen of them.

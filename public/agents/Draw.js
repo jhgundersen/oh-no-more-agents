@@ -1631,6 +1631,7 @@ function drawActors(ctx, w, pal, opts) {
   ctx.globalAlpha = 1
   if (w.prints && w.prints.length) drawPrints(ctx, w, pal)
   if (w.eventSiteFx) drawEventSite(ctx, w, pal, w.eventSiteFx)
+  if (w.boulder) drawBoulder(ctx, w, pal, w.boulder)
   if (w.nets) for (var ni = 0; ni < w.nets.length; ni++) drawNet(ctx, w, w.nets[ni])
   if (w.reloadFx) drawReloadTrail(ctx, w, w.reloadFx)
 
@@ -4486,6 +4487,74 @@ function drawPrints(ctx, w, pal) {
       ctx.fillRect(px - 1, py + 0.5, 2, 1)
       ctx.fillRect(px + (p.dir > 0 ? 1 : -1.5), py + 0.5, 0.5, 0.5)   // the toe, forward
     } else ctx.fillRect(px - 1, py, 2, 1)
+  }
+  ctx.globalAlpha = 1
+}
+
+// The Ruins' boulder (Sim's `w.boulder`): a carved stone ball with a cross cut
+// into it, the cross turning as it rolls so the roll reads at a glance. Rocks
+// on its seat while it wakes, kicks up dust as it goes, and flies apart where
+// it stops. Half-pixel moss and a rim of light at res 2.
+// Its own sandstone, not the biome's rock: the rock is the backdrop's colour,
+// and a stone the colour of the wall behind it is a stone nobody sees coming.
+var BOULDER_ROWS = [2, 4, 5, 5, 6, 6, 6, 6, 5, 5, 4, 2]   // half-width per row
+var BOULDER_STONE = "#a8946f", BOULDER_LIT = "#dcc9a0", BOULDER_SHADE = "#6b5a42", BOULDER_CUT = "#3b3024"
+var BOULDER_SHARDS = 10
+function drawBoulder(ctx, w, pal, b) {
+  var C = w.k.CELL
+  if (b.state === "done") { drawBoulderShards(ctx, w, pal, b, w.ticks - b.endedAt); return }
+  var waking = b.state === "wake" ? w.ticks - b.wokeAt : -1
+  var cx = Math.round(b.x * C) + (waking >= 0 ? Math.round(Math.sin(waking * 1.3)) : 0)
+  var bot = (Math.floor(b.y) + 1) * C, top = bot - BOULDER_ROWS.length
+  for (var r = 0; r < BOULDER_ROWS.length; r++) {
+    var hw = BOULDER_ROWS[r]
+    ctx.fillStyle = BOULDER_STONE
+    ctx.fillRect(cx - hw, top + r, hw * 2, 1)
+    ctx.fillStyle = r < 6 ? BOULDER_LIT : BOULDER_SHADE          // lit above, shade below
+    ctx.fillRect(r < 6 ? cx - hw : cx + hw - 2, top + r, 2, 1)
+  }
+  drawBoulderGlyph(ctx, pal, cx, top + 6, b.spin)
+  if ((w.res || 1) >= 2) drawBoulderFine(ctx, pal, cx, top)
+  if (b.state === "roll" || waking >= 0) {
+    ctx.fillStyle = pal.dust
+    ctx.globalAlpha = 0.6
+    for (var d = 0; d < 3; d++)
+      ctx.fillRect(cx - b.dir * (5 + ((w.ticks + d * 3) % 7)), bot - 1 - (d % 2) * 2, 2, 1)
+    ctx.globalAlpha = 1
+  }
+}
+
+// The cross: two cuts through the centre, at right angles, at the roll angle.
+function drawBoulderGlyph(ctx, pal, cx, cy, spin) {
+  ctx.fillStyle = BOULDER_CUT
+  for (var arm = 0; arm < 4; arm++) {
+    var a = spin + arm * Math.PI / 2
+    for (var t = 1; t <= 4; t++)
+      ctx.fillRect(Math.round(cx + Math.cos(a) * t) - 0.5, Math.round(cy + Math.sin(a) * t) - 0.5, 1, 1)
+  }
+}
+
+function drawBoulderFine(ctx, pal, cx, top) {
+  ctx.fillStyle = "#fff1cf"
+  ctx.fillRect(cx - 3, top + 0.5, 3, 0.5)                 // rim light
+  ctx.fillRect(cx - 4.5, top + 1.5, 1, 0.5)
+  ctx.fillRect(cx - 5.5, top + 3, 0.5, 1.5)
+  ctx.fillStyle = pal.decor
+  ctx.fillRect(cx + 1, top, 2, 0.5)                       // moss on the crown
+  ctx.fillRect(cx + 2.5, top + 0.5, 1.5, 0.5)
+  ctx.fillStyle = BOULDER_SHADE
+  ctx.fillRect(cx - 2.5, top + 9.5, 0.5, 0.5)             // pits
+  ctx.fillRect(cx + 3, top + 4, 0.5, 0.5)
+}
+
+function drawBoulderShards(ctx, w, pal, b, age) {
+  if (age > 24) return
+  var C = w.k.CELL, cx = b.x * C, cy = (Math.floor(b.y) + 1) * C - 6
+  ctx.globalAlpha = 1 - age / 24
+  for (var k = 0; k < BOULDER_SHARDS; k++) {
+    var vx = ((k * 37) % 9 - 4) * 0.35 - b.dir * 0.3, vy = -1.2 - (k % 4) * 0.35
+    ctx.fillStyle = k % 3 ? BOULDER_STONE : BOULDER_LIT
+    ctx.fillRect(Math.round(cx + vx * age), Math.round(cy + vy * age + age * age * 0.09), 2 + (k % 2), 2)
   }
   ctx.globalAlpha = 1
 }

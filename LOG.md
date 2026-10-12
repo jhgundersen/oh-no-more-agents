@@ -991,3 +991,33 @@ test draws every kind with and without fine detail.
 **Deployed** with 41 (below).
 
 **Deployed** after 42 (name="build" content="77eaad9c"): xeno and creature detail. Browser check clean.
+
+## 43 — 2026-10-12 · The Ruins get a boulder
+
+**Why.** The last open idea in the log: Ruins was a skin with three events and
+a hazard, but nothing of its own that the colony has to live with the way the
+Trench has water, the Desert wind and the Data Center updrafts.
+
+**Changed.** Sim: `w.boulder`, one per Ruins level on a corridor below the
+first, against the back wall (`placeBoulder`, own RNG stream). The first agent
+walking that floor wakes it; it rocks for 36 ticks, then rolls the corridor's
+way at 1.4× a walk, up one-cell steps and down two-cell drops. Agents ahead of
+it and within 26 cells turn and run (`sprintUntil`, 1.8× pace in `walkStep`).
+It shatters on the first body, blocker, wall or edge — at most one crushed.
+Draw: `drawBoulder` — a sandstone ball with a carved cross that turns as it
+rolls, rocking while it wakes, dust behind it, shards where it stops; rim
+light, moss and pits at res 2.
+
+**Checked.** First version used a plate near the corridor start: rolled on
+24 of 68 plays (the colony mostly lands far along the floor). Switched to the
+first walker. Then it took 26 in 204 plays, 12 in mid-fall and 9 in the
+first tick of rolling; sparing fallers and running during the rumble brought
+that to 16. Ruins home 92.4% against 93.5% with the boulder removed (same
+levels, same colonies). First drawing was in the biome's rock — the
+backdrop's colour, invisible; fixed sandstone instead. Rendered rest, roll and
+shatter at res 2. `sim play` 95 / 88, `inert` passes, 6 new tests, every
+new function under 30 CRAP.
+
+**Next.** Deploy after the next iteration. Ideas: civilians on a mission
+floor ignore the boulder (it rolls through them); finer-pixel pass on what is
+left coarse (decor? the hatch?).
