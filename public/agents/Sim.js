@@ -6285,7 +6285,11 @@ function stepDig(w, ag) {
 // gets dug far more than anywhere else — more than half of its splats.
 // Stopping on the last layer leaves the hole for someone with an umbrella.
 function digOpensDeath(w, ag, cx, footY) {
-  if (solid(w, cx, footY + 2) || ag.floater || (w.skills.floater || 0) > 0) return false
+  // A hero cannot take one from the toolbar (see take), so the colony's
+  // umbrellas are no comfort to it: Guard Rails dug itself to its death in a
+  // tenth of the levels it played, every time with umbrellas still in stock.
+  var umbrellas = ag.special ? 0 : (w.skills.floater || 0)
+  if (solid(w, cx, footY + 2) || ag.floater || umbrellas > 0) return false
   return dropDepth(w, cx, footY + 1) > killingFall(w)
 }
 
