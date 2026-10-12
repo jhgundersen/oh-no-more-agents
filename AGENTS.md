@@ -111,6 +111,10 @@ Production is `https://oh-no-more-agents.com`.
   pixel is drawn at half-pixel coordinates (0.5 steps) and only shows at
   res 2 — keep the silhouette readable at res 1. `npm run shot ... --res 2`
   renders the way the page does.
+- **`w.doneHold` is host-provided, like `w.res`.** The page sets its finished
+  level hold in ticks when creating a world. Draw uses the last 25 ticks for
+  a closing wipe; a host that leaves it undefined (currently the Omarchy panel)
+  gets the results plate without a closing wipe. The intro uses level ticks.
 - **Animated scenery cannot live in `drawDecor`.** That runs inside
   `drawTerrain`, which only repaints on `terrainVersion`. Use `drawMachines`,
   called from `drawActors` — the per-tick pass every host already calls.

@@ -1906,3 +1906,48 @@ the card's frame is the hero's colour. The only pixels below the band that
 changed are that old banner text, which no longer lands there.
 
 **Deployed** after 68 (name="build" content="25ba062a"): rule tests, sky band. Browser check clean.
+
+## 69 — 2026-10-12 · Deploying agents, counting survivors
+
+**Why.** A level appeared without an introduction and cut to the next board
+after the finished hold. Its outcome lived outside the canvas, where the
+Omarchy panel could not share it.
+
+**Changed.** Draw's last actor pass now opens a stepped diamond iris from the
+hatch over twelve ticks, with a bevelled title plate naming the level and biome.
+The title slides off between ticks 24 and 40; the first release is already in
+the clear. A finished world gets a rising results plate with saved / toRelease
+and a short verdict computed from those counts. All lettering uses a 3x5 bitmap
+font in palette ink, with integer art pixels at res 1 and half-pixel bevels at
+res 2. The page supplies `world.doneHold = DONE_HOLD` beside `world.res`; the
+last 25 hold ticks close an iris over the plate. An unspecified hold leaves the
+plate visible indefinitely. AGENTS.md documents this host field. No simulation
+changes, cross-core calls, world writes, RNG draws or render-owned timing.
+
+**Checked.** `npm test` and `npm run check` pass; core self-containment and
+stamps pass. Transition tests cover twelve biomes, five themes, both resolutions
+and the unspecified panel resolution; intro ages and boundaries, either hatch
+and the first drop, all verdicts, extra colleagues in the total, context/world
+preservation, bitmap glyphs, absent holds, several host hold lengths, the exact
+closing window and its fully closed endpoint. No whole-frame pins. Seeded
+Math.random identically against the captured baseline: all 1,200 mid-level
+frames on levels 1–120 at six ages and both resolutions match byte for byte.
+Another 1,200 native Skia Canvas comparisons, including text and gradients,
+also match. Completed worlds were excluded from these mid-level comparisons.
+Reviewed `/tmp/codex-trans/sheet.png`: six intro and six outro frames at each
+resolution, with res 1 enlarged by nearest neighbour; also inspected individual
+native frames. Scripts, baseline and reports are alongside the sheet.
+
+**CRAP.** Full before/after over-30 count stays 31 across the repository.
+Every new function is below 5; `drawActors` stays 24.7. Changed-file report
+also checked. Used a local copy of the cached tool.
+
+**Sibling copies.** `npm run sync:check` reports Sim.js and Draw.js drift,
+already present before this iteration. This change should be shared with the
+panel, which will get the intro and results without the closing wipe until its
+host sets doneHold. No sibling writes: the task explicitly limits work to this
+directory and branch.
+
+**Next.** Watch the short title handoff and result hold in normal play. Sync the
+shared renderer when sibling updates are in scope; let the panel supply its own
+hold if it wants the same closing wipe.
