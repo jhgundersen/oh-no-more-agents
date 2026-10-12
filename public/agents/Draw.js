@@ -5836,6 +5836,7 @@ function drawAgentTrick(ctx, w, pal, ag, ox, oy, dir, robe, hair) {
     var fn = TRICK_DRAW[tsp && tsp.act]
     if (fn) fn(ctx, w, pal, ag, ox, oy, dir, robe, hair, { C: C, tsp: tsp, reach: reach, tx: tx, mid: mid })
     ctx.globalAlpha = 1
+    drawTrickFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, { C: C, tsp: tsp, reach: reach, tx: tx, mid: mid })
   }
 
   // The camped sniper's shot: a thin line from the muzzle to whatever it hit,
@@ -6066,6 +6067,7 @@ function drawAgentHeightGear(ctx, w, pal, ag, ox, oy, dir, robe, hair) {
     ctx.fillStyle = hc
     var fn = GEAR_DRAW[hm]
     if (fn) fn(ctx, w, pal, ag, ox, oy, dir, robe, hair, { C: C, hm: hm, hp: hp, hc: hc })
+    drawHeightGearFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, { C: C, hm: hm, hp: hp, hc: hc })
   }
 
   // Model Collapse commits to the stunt: one full salto between the ledge and
@@ -6337,6 +6339,364 @@ function drawGearGhost(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
 
 function drawGearPiledrive(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
   ctx.fillRect(ox - 3, oy + 14, 14, 3)
+}
+
+// Detail belongs to the device, not the body pose. These marks follow the
+// coarse drawing's own coordinates (most vehicles do not turn with the rider).
+// Save the post-device state: teleport deliberately leaves the body faded.
+var GEAR_FINE = {
+  bungee: drawGearBungeeFine, teleport: drawGearTeleportFine,
+  jetpack: drawGearJetpackFine, helicopter: drawGearHelicopterFine,
+  cushion: drawGearCushionFine, conning: drawGearConningFine,
+  web: drawGearWebFine, chain: drawGearChainFine,
+  balloon: drawGearBalloonFine, promptchute: drawGearPromptchuteFine,
+  extender: drawGearExtenderFine, shieldglider: drawGearShieldgliderFine,
+  backoff: drawGearBackoffFine, glasswing: drawGearGlasswingFine,
+  tractor: drawGearTractorFine, steps: drawGearStepsFine,
+  logchute: drawGearLogchuteFine, recoil: drawGearRecoilFine,
+  gunwing: drawGearGunwingFine, cyclone: drawGearCycloneFine,
+  piledrive: drawGearPiledriveFine
+}
+
+function drawHeightGearFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  if ((w.res || 1) < 2) return
+  var fn = GEAR_FINE[fr.hm]
+  if (!fn) return
+  ctx.save(); ctx.globalAlpha = 1
+  fn(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr)
+  ctx.restore()
+}
+
+function gearFineRect(ctx, ox, oy, x, y, width, height) {
+  ctx.fillRect(Math.round((ox + x) * 2) / 2, Math.round((oy + y) * 2) / 2, width, height)
+}
+
+function drawGearBungeeFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var top = Math.round((ag.heightFromY - 3) * fr.C) - oy
+  ctx.fillStyle = pal.rigDark
+  for (var y = top; y < 6; y += 2)
+    gearFineRect(ctx, ox, oy, 4.5 + (((y + oy) >> 2) % 2), y + 0.5, 0.5, 0.5)
+  ctx.fillStyle = pal.label
+  gearFineRect(ctx, ox, oy, 2.5, top - 1, 0.5, 0.5)
+  gearFineRect(ctx, ox, oy, 5.5, top - 1, 0.5, 0.5) // anchor bolts
+  gearFineRect(ctx, ox, oy, 3.5, 9, 1, 0.5)       // harness buckle
+}
+
+function drawGearTeleportFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var hp = fr.hp, half = hp < 0.5 ? hp * 2 : (1 - hp) * 2
+  ctx.fillStyle = robe
+  for (var i = 0; i < 10; i++) {
+    var x = ((i * 7) % 10) - 1 + Math.round(Math.sin(i * 2.1 + hp * 9) * half * 6)
+    var y = ((i * 5) % 16) + Math.round(Math.cos(i * 1.3 + hp * 7) * half * 4)
+    gearFineRect(ctx, ox, oy, x, y, 0.5, 0.5) // bright corner of each reassembly pixel
+  }
+}
+
+function drawGearJetpackFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var x = -dir * 2, pulse = (ag.anim >> 1) % 2
+  ctx.fillStyle = pal.rig
+  gearFineRect(ctx, ox, oy, x + 0.5, 7.5, 0.5, 6)
+  gearFineRect(ctx, ox, oy, x + 1, 14, 1.5, 0.5) // nozzle rim
+  ctx.fillStyle = hair
+  gearFineRect(ctx, ox, oy, x + 1.5, 8, 0.5, 0.5) // valve
+  ctx.fillStyle = "#ffe68a"
+  gearFineRect(ctx, ox, oy, x + 0.5, 15.5, 0.5, 2.5 + pulse)
+  ctx.fillStyle = "#ff8a35"
+  gearFineRect(ctx, ox, oy, x + 1.5, 16, 0.5, 2 + pulse)
+}
+
+function drawGearHelicopterFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var pulse = (ag.anim >> 1) % 2
+  ctx.fillStyle = pal.rigDark
+  gearFineRect(ctx, ox, oy, -2.5, 11, 14, 0.5) // cabin sill
+  gearFineRect(ctx, ox, oy, -10, 8, 7.5, 0.5)
+  gearFineRect(ctx, ox, oy, 7.5, 5, 0.5, 4) // cockpit mullion
+  ctx.fillStyle = "#91d7e8"
+  gearFineRect(ctx, ox, oy, -12.5, 3, 0.5, 2) // tail rotor edge
+  gearFineRect(ctx, ox, oy, 6, 5.5, 1.5, 0.5)
+  ctx.fillStyle = pal.label
+  gearFineRect(ctx, ox, oy, 8.5, 5.5, 1.5, 0.5) // glass glint
+  gearFineRect(ctx, ox, oy, -9.5 - pulse * 3, -3, 27 + pulse * 6, 0.5)
+  gearFineRect(ctx, ox, oy, 3.5, -1, 0.5, 4) // mast
+  gearFineRect(ctx, ox, oy, 0, 13, 12, 0.5) // skid lip
+  for (var x = -1.5; x < 5; x += 3) gearFineRect(ctx, ox, oy, x, 10, 0.5, 0.5)
+}
+
+function drawGearCushionFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var py = Math.round((ag.heightToY + 1) * fr.C) - 3 - oy
+  var px = Math.round(ag.heightToX * fr.C) - ox
+  var heights = [3, 5, 3], alphas = [0.75, 0.55, 0.35]
+  for (var i = 0; i < 3; i++) {
+    var x = px - 10 + i * 7, y = py - heights[i]
+    ctx.globalAlpha = alphas[i]
+    ctx.fillStyle = hair
+    gearFineRect(ctx, ox, oy, x + 0.5, y + 0.5, 5, 0.5) // compressed collar
+    ctx.fillStyle = pal.rigDark
+    gearFineRect(ctx, ox, oy, x + 4, y - 1, 0.5, 0.5) // each copy still has glasses
+    gearFineRect(ctx, ox, oy, x + 3.5, y + 1, 0.5, 1)
+  }
+}
+
+function drawGearConningFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var blade = Math.floor(ag.heightTick * 0.4) % 2 === 0
+  ctx.fillStyle = robe
+  gearFineRect(ctx, ox, oy, -4.5, 12, 17, 0.5) // hull seam
+  for (var x = -3.5; x < 13; x += 3) gearFineRect(ctx, ox, oy, x, 6, 0.5, 0.5)
+  gearFineRect(ctx, ox, oy, 9.5, 7.5, 0.5, 2) // port's shaded rim
+  ctx.fillStyle = pal.bubbleLit || "#ffffff"
+  gearFineRect(ctx, ox, oy, -4, 5.5, 7, 0.5) // curved hull's lit shoulder
+  gearFineRect(ctx, ox, oy, 7.5, 7.5, 1, 0.5) // lens
+  gearFineRect(ctx, ox, oy, 3, -2.5, 0.5, 1.5) // periscope
+  gearFineRect(ctx, ox, oy, 15, blade ? 6.5 : 8.5, 0.5, blade ? 4.5 : 1)
+  ctx.fillStyle = hair
+  gearFineRect(ctx, ox, oy, 1.5, 0.5, 4, 0.5) // tower hatch
+}
+
+function drawGearWebFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var ax = Math.round((ag.heightUp ? ag.heightToX : ag.heightFromX) * fr.C)
+  var ay = Math.round(((ag.heightUp ? ag.heightToY : ag.heightFromY) - 2) * fr.C)
+  var steps = Math.max(1, Math.round(Math.abs(ay - (oy + 7)) / 3))
+  ctx.fillStyle = pal.rigDark
+  for (var i = 0; i <= steps; i++)
+    gearFineRect(ctx, 0, 0, Math.round(ax + (ox + 4 - ax) * i / steps) + 0.5,
+      Math.round(ay + (oy + 7 - ay) * i / steps) + 0.5, 0.5, 1)
+}
+
+function drawGearChainFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var ax = Math.round((ag.heightUp ? ag.heightToX : ag.heightFromX) * fr.C)
+  var ay = Math.round(((ag.heightUp ? ag.heightToY : ag.heightFromY) - 2) * fr.C)
+  var steps = Math.max(1, Math.round(Math.abs(ay - (oy + 7)) / 3))
+  ctx.fillStyle = robe
+  for (var i = 0; i <= steps; i++)
+    gearFineRect(ctx, 0, 0, Math.round(ax + (ox + 4 - ax) * i / steps),
+      Math.round(ay + (oy + 7 - ay) * i / steps) + 0.5, 0.5, 1) // hollow link
+}
+
+function drawGearBalloonFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  ctx.fillStyle = robe
+  gearFineRect(ctx, ox, oy, 1, -10.5, 0.5, 6.5) // panel seams
+  gearFineRect(ctx, ox, oy, 6.5, -10.5, 0.5, 6.5)
+  gearFineRect(ctx, ox, oy, -1.5, -3.5, 11, 0.5)
+  ctx.fillStyle = pal.label
+  gearFineRect(ctx, ox, oy, -0.5, -10, 1.5, 0.5) // curved glint
+  gearFineRect(ctx, ox, oy, -1, -9.5, 0.5, 1.5)
+  gearFineRect(ctx, ox, oy, 0, -2, 0.5, 3) // rope edges
+  gearFineRect(ctx, ox, oy, 7, -2, 0.5, 3)
+}
+
+function drawGearPromptchuteFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  ctx.fillStyle = robe
+  gearFineRect(ctx, ox, oy, -5.5, -4.5, 19, 0.5) // stitched hem
+  for (var x = -4; x < 14; x += 4) gearFineRect(ctx, ox, oy, x, -9.5, 0.5, 1.5)
+  ctx.fillStyle = pal.label
+  gearFineRect(ctx, ox, oy, -5, -9.5, 18, 0.5) // folded leading edge, above LAND
+}
+
+function drawGearExtenderFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  ctx.fillStyle = robe
+  gearFineRect(ctx, ox, oy, -2, -2.5, 0.5, 21)
+  gearFineRect(ctx, ox, oy, 10, -2.5, 0.5, 21) // recessed telescopic channels
+  for (var y = 0; y < 22; y += 5) {
+    gearFineRect(ctx, ox, oy, -0.5, y + 0.5, 9, 0.5) // tread underside
+    ctx.fillStyle = pal.label
+    gearFineRect(ctx, ox, oy, -2.5, y, 0.5, 0.5)
+    gearFineRect(ctx, ox, oy, 9.5, y, 0.5, 0.5) // rung bolts
+    ctx.fillStyle = robe
+  }
+}
+
+function drawGearShieldgliderFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  ctx.fillStyle = robe
+  gearFineRect(ctx, ox, oy, -7.5, -4.5, 23, 0.5) // plate bevel
+  gearFineRect(ctx, ox, oy, -4.5, -2.5, 17, 0.5)
+  gearFineRect(ctx, ox, oy, 3.5, -6.5, 1, 3) // central spar
+  ctx.fillStyle = pal.label
+  for (var x = -6; x < 16; x += 5) gearFineRect(ctx, ox, oy, x, -6, 0.5, 0.5)
+}
+
+function drawGearBackoffFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var dropping = Math.floor(fr.hp * 11) % 2 === 0 || fr.hp >= 1
+  ctx.fillStyle = dropping ? robe : THROTTLE_AMBER
+  gearFineRect(ctx, ox, oy, -0.5, -13.5, 9, 0.5) // sign rim
+  gearFineRect(ctx, ox, oy, -2.5, -11, 0.5, 6)
+  gearFineRect(ctx, ox, oy, 10, -11, 0.5, 6)
+  gearFineRect(ctx, ox, oy, -0.5, -3, 9, 0.5)
+  ctx.fillStyle = pal.label
+  gearFineRect(ctx, ox, oy, 1.5, -9.5, 0.5, 0.5)
+  gearFineRect(ctx, ox, oy, 5.5, -9.5, 0.5, 0.5) // pause lamps
+  gearFineRect(ctx, ox, oy, 0, -1, 0.5, 2)
+  gearFineRect(ctx, ox, oy, 7, -1, 0.5, 2)
+}
+
+function drawGearGlasswingFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  ctx.globalAlpha = 0.55
+  ctx.fillStyle = robe
+  gearFineRect(ctx, ox, oy, -9.5, 9, 9, 0.5)
+  gearFineRect(ctx, ox, oy, 8.5, 9, 9, 0.5)
+  gearFineRect(ctx, ox, oy, -5, 2.5, 0.5, 6)
+  gearFineRect(ctx, ox, oy, 12.5, 2.5, 0.5, 6) // glass panel ribs
+  ctx.fillStyle = hair
+  gearFineRect(ctx, ox, oy, -9, 3, 2, 0.5)
+  gearFineRect(ctx, ox, oy, 9, 3, 2, 0.5) // glass reflections
+}
+
+function drawGearTractorFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  ctx.fillStyle = robe
+  gearFineRect(ctx, ox, oy, -6.5, -8, 21, 0.5) // emitter underside
+  ctx.fillStyle = hair
+  for (var x = -5; x < 15; x += 4) gearFineRect(ctx, ox, oy, x, -8.5, 0.5, 0.5)
+  ctx.globalAlpha = 0.5
+  var beat = (ag.anim >> 1) % 2
+  for (var y = -5 + beat; y < 15; y += 5) {
+    gearFineRect(ctx, ox, oy, -3.5, y, 0.5, 2) // beam's moving edge pulses
+    gearFineRect(ctx, ox, oy, 11, y, 0.5, 2)
+  }
+}
+
+function drawGearStepsFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  for (var i = 0; i < 4; i++) {
+    var x = -dir * i * 5, y = 18 - i * 4
+    ctx.fillStyle = robe
+    gearFineRect(ctx, ox, oy, x + 0.5, y + 1.5, 6, 0.5)
+    ctx.fillStyle = pal.label
+    gearFineRect(ctx, ox, oy, x + 0.5, y, 5.5, 0.5) // tread lip
+  }
+}
+
+function drawGearLogchuteFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  ctx.fillStyle = "#8a4b22"
+  for (var x = -3; x < 12; x += 5) gearFineRect(ctx, ox, oy, x, 16, 2, 0.5) // grain breaks
+  ctx.fillStyle = "#c8843f"
+  gearFineRect(ctx, ox, oy, -6.5, 15.5, 0.5, 3) // end grain
+  gearFineRect(ctx, ox, oy, 13.5, 15.5, 0.5, 3)
+  gearFineRect(ctx, ox, oy, -4, 18, 13, 0.5)
+}
+
+function drawGearRecoilFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var x = -dir * 8
+  ctx.fillStyle = pal.rigDark
+  gearFineRect(ctx, ox, oy, x + 0.5, 10, 8, 0.5) // barrel underside
+  ctx.fillStyle = pal.label
+  gearFineRect(ctx, ox, oy, x + 1, 8, 6, 0.5) // barrel glint
+  ctx.fillStyle = "#ff8a35"
+  gearFineRect(ctx, ox, oy, -dir * 11 + 0.5, 10, 3, 0.5) // flash edge
+}
+
+function drawGearGunwingFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var ix = Math.min(w.k.GUNWING_SHOTS - 1, Math.floor(fr.hp * w.k.GUNWING_SHOTS))
+  var aim = w.k.SPRAY_SLOPES[ix % w.k.SPRAY_SLOPES.length] * 8
+  var len = Math.sqrt(aim * aim + 1), ux = aim / len, uy = 1 / len
+  var grip = 3 + (ux < -0.05 ? -3 : (ux > 0.05 ? 3 : 0))
+  ctx.fillStyle = pal.rigDark
+  for (var i = 1; i <= 6; i += 2)
+    gearFineRect(ctx, ox, oy, Math.round(grip + ux * i) + 1.5,
+      Math.round(9 + uy * i) + 0.5, 0.5, 1) // moving barrel's shaded edge
+  ctx.fillStyle = pal.label
+  gearFineRect(ctx, ox, oy, Math.round(grip + ux * 5), Math.round(9 + uy * 5), 1, 0.5)
+  ctx.fillStyle = robe
+  gearFineRect(ctx, ox, oy, grip + 0.5, 8.5, 1, 0.5) // grip strap
+}
+
+function drawGearCycloneFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var beat = (ag.anim >> 1) % 2
+  ctx.globalAlpha = 0.35
+  ctx.fillStyle = hair
+  for (var x = -6 + beat; x < 15; x += 5) gearFineRect(ctx, ox, oy, x, 5.5, 2, 0.5)
+  for (var x2 = -2 + beat; x2 < 11; x2 += 5) gearFineRect(ctx, ox, oy, x2, 12.5, 2, 0.5)
+}
+
+function drawGearPiledriveFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  ctx.fillStyle = robe
+  gearFineRect(ctx, ox, oy, -2.5, 16, 13, 0.5) // weight's bevel
+  gearFineRect(ctx, ox, oy, 3.5, 14.5, 1, 1) // piston recess
+  ctx.fillStyle = pal.label
+  for (var x = -1.5; x < 10; x += 4) gearFineRect(ctx, ox, oy, x, 14.5, 0.5, 0.5)
+}
+
+var TRICK_FINE = {
+  rocket: drawTrickRocketFine, spray: drawTrickSprayFine,
+  quarry: drawTrickQuarryFine, slab: drawTrickSlabFine,
+  chain: drawTrickChainFine, stack: drawTrickStackFine, sap: drawTrickSapFine
+}
+
+function drawTrickFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  if ((w.res || 1) < 2) return
+  var fn = TRICK_FINE[fr.tsp && fr.tsp.act]
+  if (!fn) return
+  ctx.save(); ctx.globalAlpha = 1
+  fn(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr)
+  ctx.restore()
+}
+
+function drawTrickRocketFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var x = fr.tx - ox - (dir > 0 ? 4 : 8)
+  ctx.fillStyle = pal.rig
+  gearFineRect(ctx, ox, oy, x + 0.5, 4.5, 10, 0.5) // launch tube seam
+  ctx.fillStyle = pal.label
+  gearFineRect(ctx, ox, oy, x + 2, 5.5, 0.5, 0.5) // sight screw
+  ctx.fillStyle = pal.rigDark
+  gearFineRect(ctx, ox, oy, fr.tx - ox + (dir > 0 ? 6.5 : -7.5), 5.5, 2, 0.5) // muzzle bore
+}
+
+function drawTrickSprayFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var x = fr.tx - ox - (dir > 0 ? 0 : 9)
+  ctx.fillStyle = pal.rig
+  gearFineRect(ctx, ox, oy, x + 0.5, 7, 8, 0.5) // receiver edge
+  gearFineRect(ctx, ox, oy, x + (dir > 0 ? -2.5 : 8.5), 11, 2.5, 0.5) // grip grooves
+  gearFineRect(ctx, ox, oy, x + (dir > 0 ? -2.5 : 8.5), 12.5, 2.5, 0.5)
+  ctx.fillStyle = pal.label
+  gearFineRect(ctx, ox, oy, x + (dir > 0 ? 1.5 : 6.5), 8, 1, 0.5) // breech
+}
+
+function drawTrickQuarryFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var wide = Math.round(28 * fr.reach)
+  var x = fr.tx - ox + (dir > 0 ? wide - 2 : -wide)
+  ctx.fillStyle = hair
+  gearFineRect(ctx, ox, oy, x + 0.5, -11.5, 0.5, 27) // cutting frame's bright rail
+  ctx.fillStyle = pal.rigDark
+  for (var y = -10; y < 16; y += 5) gearFineRect(ctx, ox, oy, x + 1, y, 0.5, 0.5)
+}
+
+function drawTrickSlabFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var wide = Math.round(24 * fr.reach)
+  if (wide < 1) return
+  var x = fr.tx - ox - (dir > 0 ? 0 : wide)
+  ctx.fillStyle = hair
+  gearFineRect(ctx, ox, oy, x, 14, wide, 0.5) // glazed upper lip
+  ctx.fillStyle = pal.rigDark
+  gearFineRect(ctx, ox, oy, x, 18, wide, 0.5)
+  for (var i = 2; i < wide; i += 5) gearFineRect(ctx, ox, oy, x + i, 15, 0.5, 2.5)
+}
+
+function drawTrickChainFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  for (var i = 0; i < 5; i++) {
+    var x = 4 + dir * i * 7, y = -2 - (i % 2) * 2
+    ctx.fillStyle = hair
+    gearFineRect(ctx, ox, oy, x + 0.5, y + 0.5, 2.5, 0.5)
+    ctx.fillStyle = pal.rigDark
+    gearFineRect(ctx, ox, oy, x + 1, y + 2, 2, 0.5) // inset bubble edges
+  }
+}
+
+function drawTrickStackFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var rungs = Math.min(7, 1 + Math.floor(fr.reach * 7))
+  var x = fr.tx - ox + dir * 2 - (dir < 0 ? 5 : 0)
+  for (var i = 0; i < rungs; i++) {
+    var y = 12 - i * 5
+    ctx.fillStyle = hair
+    gearFineRect(ctx, ox, oy, x + 0.5, y, 5, 0.5) // tread lip
+    ctx.fillStyle = pal.rigDark
+    gearFineRect(ctx, ox, oy, x + 0.5, y + 1, 0.5, 0.5)
+    gearFineRect(ctx, ox, oy, x + 5, y + 1, 0.5, 0.5) // fixings
+  }
+}
+
+function drawTrickSapFine(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  ctx.fillStyle = hair
+  for (var i = 0; i < 4; i++) {
+    var x = fr.tx - ox + dir * (5 + i * 5) - (dir < 0 ? 4 : 0)
+    gearFineRect(ctx, ox, oy, x + 0.5, 1 + i * 4, 2, 0.5) // terminal strokes
+  }
 }
 
 // A standard diving dress of about 1870: a spherical copper helmet with one

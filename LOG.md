@@ -1249,3 +1249,64 @@ coverage. Used a local copy of the cached crapper tool.
 biomes — subtle, in style, nothing changes shape — and the diff (an
 `EXIT_FINE` table, one dispatch line in `drawExitBack`). Check 221 pass;
 CRAP count over 30 unchanged at 44.
+
+## 52 — 2026-10-12 · Half-pixel hero gear
+
+**Changed.** `GEAR_FINE` and `TRICK_FINE` dispatch small per-item overlays
+only at res 2. The dispatchers preserve the coarse pass's canvas state,
+including Hot Reload's body fade; Ghost remains a body fade without a prop.
+Every new rectangle is on the half-pixel grid inside the existing silhouette.
+
+Bungee gets cable shading, anchor bolts and a harness buckle; teleport gets
+bright corners on its moving reassembly pixels; jetpack gets a valve, tank
+edge, nozzle rim and flame core. Helicopter gets cockpit mullions and glints,
+cabin rivets and seams, mast, rotor and skid edges. Cushion copies get
+compressed collars, glasses and ties. Conning gets hull seams and rivets,
+a port glint/rim, periscope edge, tower hatch and turning screw detail.
+Web gets a shaded cable edge; chain gets hollow links along its existing route.
+
+Balloon gets panel seams, a glint and rope edges; promptchute gets a folded
+edge, panel stitches and hem; extender gets recessed rail channels, tread
+edges and rung bolts. Shieldglider gets plate bevels, a spar and rivets;
+backoff gets a rim following its lit/dark phases, lamp glints and straps.
+Glasswing gets panel ribs, edges and reflections; tractor gets emitter
+detail and beam-edge pulses; steps get tread lips and shading. The retained
+logchute drawing gets grain breaks and end grain. Recoil gets barrel edges
+and a flash edge; gunwing gets barrel shading and a grip strap following
+its existing aim; cyclone gets fine streaks; piledrive gets bevels, a piston
+recess and rivets.
+
+The trick props get matching detail: rocket a tube seam, sight screw and
+muzzle bore; spray a receiver edge, grip grooves and breech; quarry a lit
+cutting rail and fixings; slab glazed lips and panel joints; chain inset
+bubble edges; stack tread lips and fixings; sap crisper terminal strokes.
+
+**Checked.** `npm run check` / `npm test` pass; 250 tests also pass with
+Node's test isolation disabled to expose the individual test results.
+Twenty-nine new tests pin the pre-edit res-1 hash across every hero in all
+five themes, and exercise every detailed item at both resolutions, both
+facings and five phases. They verify visible fine pixels, silhouette
+containment, half-pixel rectangles and preserved canvas state; a zero-length
+slab correctly has no overlay. The retained logchute has its own sample.
+Compared directly with `git show HEAD:public/agents/Draw.js`: 3,700 prop
+rasters and 144 complete frames (levels 1–12, two seeds, three tick counts,
+absent or explicit res 1) match byte for byte. Rendered and reviewed every
+changed item before/after at two phases, plus enlarged crops. Contact sheet:
+`/tmp/codex-gear/sheet.png`. Asset and build stamps refreshed.
+
+**CRAP.** `gearFineRect`, `drawGearBalloonFine`, `drawGearGlasswingFine`,
+`drawGearJetpackFine`, `drawGearRecoilFine`: 1.0 each.
+`drawGearBungeeFine`, `drawGearCushionFine`, `drawGearExtenderFine`,
+`drawGearHelicopterFine`, `drawGearLogchuteFine`, `drawGearPiledriveFine`,
+`drawGearPromptchuteFine`, `drawGearShieldgliderFine`, `drawGearStepsFine`,
+`drawTrickChainFine`: 2.0 each. `drawGearBackoffFine`, `drawGearCycloneFine`,
+`drawGearTeleportFine`, `drawGearTractorFine`, `drawTrickQuarryFine`,
+`drawTrickRocketFine`, `drawTrickSapFine`, `drawTrickStackFine`: 3.0 each.
+`drawGearChainFine`, `drawGearGunwingFine`, `drawGearWebFine`,
+`drawHeightGearFine`, `drawTrickSlabFine`: 4.0 each. `drawTrickFine`,
+`drawTrickSprayFine`: 5.0 each; `drawGearConningFine`: 5.1. The two existing
+dispatchers score 5.0 (`drawAgentHeightGear`) and 7.0 (`drawAgentTrick`).
+Used a local copy of the cached crapper tool.
+
+**Next.** Review the heroes' walking signature props beside their detailed
+flight devices at res 2.
