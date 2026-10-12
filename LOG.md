@@ -1721,3 +1721,5 @@ test pinned every special's res-1 pixels; it now pins the first 21, since the
 list only grows at the end. Over 30: 41 → 39 (Codex's hazard work included).
 
 **Next.** Deploy (hazard animation + duck).
+
+**Deployed** after 64 (name="build" content="d26329ab"): hazard animation, Rubber Duck. Browser check clean.
