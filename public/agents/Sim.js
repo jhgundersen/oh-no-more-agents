@@ -6772,7 +6772,10 @@ function stepCamp(w, ag) {
 function specialAtWall(w, ag) {
   var spec = specOf(ag)
 
-  // Digs in where it stands and stays there.
+  // Digs in where it stands and stays there — until the colony has stood
+  // down. Digging in at the next wall after that was the other half of how
+  // Beam Search was bombed at the end of most levels it played.
+  if (spec.act === "camp" && w.stoodDown) { turnAround(w, ag); return }
   if (spec.act === "camp") {
     ag.state = "camp"
     ag.cool = 0
@@ -8841,7 +8844,10 @@ function specialReacts(w, ag) {
 
 // The specials whose act is a stance or a shot: settle in, or open fire.
 function specialTakesAim(w, ag, sact, seesDanger, seesRed) {
-  if (sact === "camp" && (seesDanger || seesRed)) {
+  // Not after the colony has stood down: it would see the danger again, go
+  // straight back to its post, and — the stand-down being spent — be bombed
+  // where it lay (see specialAtWall for the other way back to its post).
+  if (sact === "camp" && (seesDanger || seesRed) && !w.stoodDown) {
     ag.state = "camp"
     ag.cool = 0
   } else if (sact === "rocket" && ag.cool <= 0) {
