@@ -589,6 +589,11 @@ Failures that have actually happened here. None produced an error at the time.
 - **The corridor gap is constrained, not chosen.** The handoff at the end of a
   corridor is a drop of exactly one gap, and a drop past `SAFE_FALL` kills — so
   more floors pack closer rather than reach deeper.
+- **`obstructionAhead` measures to the first column you could stand in**,
+  level or a step up (`standable`). It counted any solid cell in the body's
+  height, so a raised floor beyond a block read as wall to the exit, too deep
+  to blast, and the colony was bombed by the loop rule instead (level 569:
+  0/18 home before, 17/18 after).
 - **A digger checks the drop before the last stroke** (`digOpensDeath`). It used
   to break through any floor and fall: over the deep soft fill of the Desert
   that was more than half its fall deaths (52 of 1200 plays; 9 after). It

@@ -49,3 +49,13 @@ test("a digger stops on the last layer over a fatal drop unless an umbrella is g
   w.terrain[(foot + 6) * S.COLS + x] = S.DIRT
   assert.ok(!S.digOpensDeath(w, ag, x, foot), "a short drop: go on")
 })
+
+test("a block with the floor a step higher behind it is a block, not a wall to the exit", () => {
+  // Level 569: a three-cell block under a low roof, and beyond it the floor
+  // one step up all the way to the door. It used to measure as wall to the
+  // exit — too deep to blast — and the colony paced in front of it.
+  const w = S.generate(569, 0, 24326)
+  const ag = S.spawn(w)
+  ag.x = 76.5; ag.y = 52; ag.dir = 1
+  assert.equal(S.obstructionAhead(w, ag), 3)
+})

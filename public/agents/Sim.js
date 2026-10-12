@@ -4223,15 +4223,23 @@ function hitWall(w, ag) {
 //
 // Returns the depth in columns, or 0 if the way is genuinely clear (which is
 // the fractional-stride case the old guard existed to catch, and still does).
+// Where a walker could stand: open at the feet with room for the body, on the
+// level or one step up. obstructionAhead used to call any solid cell in the
+// body's height a wall — so a corridor whose floor beyond a low block was a
+// step higher read as wall all the way to the exit, too deep for any charge,
+// and a Jungle colony with eighteen bombs and no bashers paced in front of a
+// three-cell block until the loop rule bombed it one agent at a time.
+function standable(w, x, footY) {
+  return !solid(w, x, footY) && headroom(w, x, footY)
+}
+
 function obstructionAhead(w, ag) {
   var footY = Math.floor(ag.y)
   var here = Math.floor(ag.x)
   var depth = 0
   for (var d = 1; d <= MINE_RADIUS + 1; d++) {
     var x = here + ag.dir * d
-    var blocked = false
-    for (var j = 0; j <= AGENT_H; j++) if (solid(w, x, footY - j)) blocked = true
-    if (!blocked) break
+    if (standable(w, x, footY) || standable(w, x, footY - 1)) break
     depth++
   }
   return depth

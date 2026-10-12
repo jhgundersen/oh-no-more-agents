@@ -1142,3 +1142,31 @@ better. `sim play` 95% / 88% (cleared 189 → 190, home 2992 → 3003),
 cause — look at why it bombs. Deploy now (47 + 48).
 
 **Deployed** after 48 (name="build" content="f899c3ad"): Ice Cave frozen colleagues, dig safety. Browser check clean.
+
+## 49 — 2026-10-12 · Review: why the Jungle bombs itself
+
+**Why.** Iteration 48 left the Jungle weakest (88.4% home), with "boom" its
+top cause. Tagged every bomb by who lit it: in the Jungle 69 of 80 were
+`condemn` — the stall rules clearing stuck agents — and of those almost all
+came from the loop detector (agents pacing one stretch). Vines on/off made no
+difference.
+
+**Found.** Worst case, level 569 colony 24326: 0 of 18 home. A three-cell
+block under a low roof stands in front of the exit, bashers and diggers are
+spent, eighteen bombs are left. `blastWall` would open it — but
+`obstructionAhead` counted any solid cell in the body's height as wall, and
+the floor beyond the block is one step higher, so every column to the exit
+measured as obstruction: deeper than `MINE_RADIUS`, so no charge. Tried and
+reverted first: capping growth events by headroom (a growth event was my
+first guess; it never triggered in 1200 plays — that level had none).
+
+**Changed.** `obstructionAhead` stops at the first column a walker could
+stand in, level or one step up (`standable`).
+
+**Checked.** Level 569: 0/18 → 17/18. Per-biome (600 × 2): Jungle 88.4 →
+89.4%, booms 73 → 56; Skyscraper 92.4 → 93.1; Trench 93.3 → 92.7 and Ice
+Cave 91.2 → 90.8 the only dips. `sim play` 95% / 88%, home 3003 → 3011;
+`inert`, `heights` pass; regression test on level 569.
+
+**Next.** Trench and Ice Cave dipped — check whether earlier charges there
+are wasted. A biome mechanism for Cavern / Frost / Foundry / Spaceship.
