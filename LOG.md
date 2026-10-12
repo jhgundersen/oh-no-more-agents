@@ -2036,3 +2036,5 @@ control): 94.80% vs 93.78% home, avg ticks 1186 vs 1248, fall deaths 25 vs
 25; 308 opened. Rendered one opening at res 2. `sim play` 97% / 90%;
 `inert`, `gravity` pass; tests for placement, opening and drawing. Every
 biome now has a mechanism of its own.
+
+**Deployed** after 73 (name="build" content="ff335bea"): powder snow, sinkholes. Browser check clean.
