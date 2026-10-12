@@ -1114,3 +1114,29 @@ batches by saved count, fine; comment updated. `sim play` 95 / 88; `inert`,
 
 **Next.** Cavern, Frost, Foundry, Spaceship still without a mechanism. Exit
 frames at finer pixels. Deploy after the next iteration.
+
+## 48 — 2026-10-12 · Review: what is killing the Desert
+
+**Why.** Looked at exit frames at finer pixels first — the doorway already
+has its res-2 shimmer and the frames are per-biome bespoke; not worth an
+iteration. Ran a per-biome cause-of-death tally instead (600 levels × 2).
+Desert stood out: splats 52, more than any other biome. Wind on/off on 300
+Desert plays: 112 splats with wind against 50 without, 90.7% vs 92.9% home.
+
+**Found.** Not the wind directly: profiling each splat by the state before the
+fall, about four in five were diggers. `stepDig` cleared the last layer of a
+floor without asking what was under it, and in the Desert's soft fill that
+is often a drop past `SAFE_FALL`. The wind makes the colony dig more.
+
+**Changed.** `digOpensDeath`: on the stroke that would break through, if the
+drop beneath is fatal and there is no umbrella in hand or on the toolbar,
+stop and turn round. With an umbrella the old path is untouched.
+
+**Checked.** Per-biome tally: Desert splats 52 → 9, home 90.5 → 92.3%;
+Jungle splats 20 → 12; Spaceship 23 → off the top five. Desert bombs rose
+39 → 53 (some stranded diggers are bombed by the stall rule) — net clearly
+better. `sim play` 95% / 88% (cleared 189 → 190, home 2992 → 3003),
+`inert`, `heights` pass; new test.
+
+**Next.** Jungle is now the weakest biome (88.4%): "boom" 73 is its top
+cause — look at why it bombs. Deploy now (47 + 48).

@@ -5983,7 +5983,7 @@ function stepDig(w, ag) {
   var footY = Math.floor(ag.y)
   var cx = Math.floor(ag.x)
 
-  if (hitsSteel(w, cx - 1, footY + 1, cx + 1, footY + 1)) {
+  if (hitsSteel(w, cx - 1, footY + 1, cx + 1, footY + 1) || digOpensDeath(w, ag, cx, footY)) {
     ag.state = "walk"
     turnAround(w, ag)
     return
@@ -5997,6 +5997,16 @@ function stepDig(w, ag) {
   if (!exitBelow(w, ag)) { ag.state = "walk"; return }
 
   if (!solid(w, cx, Math.floor(ag.y) + 1)) beginUncontrolledFall(w, ag)
+}
+
+// The last stroke before a floor gives way, over a drop nobody could survive,
+// with no umbrella in hand or on the toolbar. A digger went through it anyway
+// and fell: it was the commonest death in the Desert, whose soft sandstone
+// gets dug far more than anywhere else — more than half of its splats.
+// Stopping on the last layer leaves the hole for someone with an umbrella.
+function digOpensDeath(w, ag, cx, footY) {
+  if (solid(w, cx, footY + 2) || ag.floater || (w.skills.floater || 0) > 0) return false
+  return dropDepth(w, cx, footY + 1) > killingFall(w)
 }
 
 // Nothing under it. Anything that has planted itself — a blocker, a camped

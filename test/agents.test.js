@@ -35,3 +35,17 @@ for (const submerged of [false, true]) {
     }
   })
 }
+
+test("a digger stops on the last layer over a fatal drop unless an umbrella is going", () => {
+  const w = S.generate(11, 0, 3), x = 50, foot = 20
+  for (let y = foot + 2; y < S.ROWS; y++) w.terrain[y * S.COLS + x] = S.EMPTY
+  w.terrain[(foot + 1) * S.COLS + x] = S.DIRT
+  const ag = S.spawn(w)
+  w.skills.floater = 0
+  assert.ok(S.digOpensDeath(w, ag, x, foot), "no umbrellas: stop")
+  w.skills.floater = 1
+  assert.ok(!S.digOpensDeath(w, ag, x, foot), "an umbrella on the toolbar: go on")
+  w.skills.floater = 0
+  w.terrain[(foot + 6) * S.COLS + x] = S.DIRT
+  assert.ok(!S.digOpensDeath(w, ag, x, foot), "a short drop: go on")
+})

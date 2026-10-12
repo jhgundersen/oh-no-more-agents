@@ -589,6 +589,11 @@ Failures that have actually happened here. None produced an error at the time.
 - **The corridor gap is constrained, not chosen.** The handoff at the end of a
   corridor is a drop of exactly one gap, and a drop past `SAFE_FALL` kills — so
   more floors pack closer rather than reach deeper.
+- **A digger checks the drop before the last stroke** (`digOpensDeath`). It used
+  to break through any floor and fall: over the deep soft fill of the Desert
+  that was more than half its fall deaths (52 of 1200 plays; 9 after). It
+  stops only with no umbrella in hand or on the toolbar — with one, the fall
+  code takes it on the way down, as it always did.
 - **Changing how much RNG a generation step consumes reshuffles every level.**
   Levels are a pure function of their number, so one added `rng()` call early
   changes the whole catalogue. Before/after clear rates across such a change are
