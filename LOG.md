@@ -1140,3 +1140,5 @@ better. `sim play` 95% / 88% (cleared 189 → 190, home 2992 → 3003),
 
 **Next.** Jungle is now the weakest biome (88.4%): "boom" 73 is its top
 cause — look at why it bombs. Deploy now (47 + 48).
+
+**Deployed** after 48 (name="build" content="f899c3ad"): Ice Cave frozen colleagues, dig safety. Browser check clean.
