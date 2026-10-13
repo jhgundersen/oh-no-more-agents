@@ -2501,3 +2501,5 @@ ladder, a route home) — and sent them off at a sprint.
 
 **Checked.** Boulder test updated (runs if going its way; not turned if
 facing it). Check passes; `sim play` below. AGENTS.md's boulder section notes it.
+
+**Deployed** after 92 (name="build" content="59310364"): boulder flee. Browser check clean.
