@@ -5873,6 +5873,7 @@ function drawPoseBlock(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
 }
 
 function drawPoseBuild(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  if ((w.res || 1) >= 2) return drawWorkingBuilder(ctx, w, pal, ag, ox, oy, dir, robe)
   blit(ctx, ox, oy, dir, 1, 7, 6, 6)
   blit(ctx, ox, oy, dir, 6, 8, 3, 2)
   ctx.fillStyle = pal.dirtEdge
@@ -7245,15 +7246,104 @@ function drawFineRappel(ctx, pal, ag, ox, oy, dir) {
 
 function drawFineBuild(ctx, pal, ag, ox, oy, dir) {
   drawFineSuit(ctx, pal, ox, oy, dir, 7)
-  ctx.fillStyle = pal.shirt
-  blitFine(ctx, ox, oy, dir, 6.5, 8.5, 0.5, 1)          // cuff behind the brick
-  ctx.fillStyle = pal.skin
-  blitFine(ctx, ox, oy, dir, 7, 8.5, 1.5, 0.5)
-  ctx.fillStyle = pal.dirt
-  blitFine(ctx, ox, oy, dir, 8.5, 9.5, 4, 0.5)          // brick face, rim stays lit
-  ctx.fillStyle = pal.dirtShade
-  blitFine(ctx, ox, oy, dir, 10.5, 10, 0.5, 1)          // joint
   drawFineShoes(ctx, pal, ox, oy, dir, 2, 15.5, 4, 15.5, 2)
+}
+
+// Work is read by the tool and its stroke, not by dust alone. The panel keeps
+// its old silhouettes; page tools use half pixels and the simulation's timer.
+// No sparks are invented here: the simulation already supplies impact dust.
+var WORK_TOOL_DRAW = { bash: drawWorkBash, dig: drawWorkDig }
+
+function drawWorkTools(ctx, w, pal, ag, ox, oy, dir) {
+  if ((w.res || 1) < 2) return
+  var draw = WORK_TOOL_DRAW[ag.state]
+  if (!draw) return
+  ctx.save()
+  draw(ctx, pal, ag, ox, oy, dir)
+  ctx.restore()
+}
+
+// Stair-step a handle on the half-pixel grid. Unlike rotating a thin
+// rectangle this stays crisp at every stroke and in either facing direction.
+function drawWorkHandle(ctx, pal, ox, oy, dir, x0, y0, x1, y1) {
+  var steps = Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) * 2)
+  ctx.fillStyle = pal.rig
+  for (var i = 0; i <= steps; i++) {
+    var p = steps ? i / steps : 0
+    blitFine(ctx, ox, oy, dir, x0 + (x1 - x0) * p, y0 + (y1 - y0) * p, 1, 1)
+  }
+}
+
+function drawWorkBash(ctx, pal, ag, ox, oy, dir) {
+  var strike = ag.timer % 6 >= 3
+  var handY = strike ? 11 : 9
+  var headX = strike ? 12 : 9, headY = strike ? 9 : 4
+  drawWorkHandle(ctx, pal, ox, oy, dir, 8, handY, headX, headY)
+  // A curved steel pick, with a bright upper edge and a dark socket.
+  ctx.fillStyle = pal.steelShade
+  blitFine(ctx, ox, oy, dir, headX - 2, headY, 5, 1.5)
+  ctx.fillStyle = pal.steelEdge
+  blitFine(ctx, ox, oy, dir, headX - 2, headY, 5, 0.5)
+  blitFine(ctx, ox, oy, dir, headX - 2.5, headY + 0.5, 0.5, 1)
+  blitFine(ctx, ox, oy, dir, headX + 3, headY + 0.5, 0.5, 1)
+  ctx.fillStyle = pal.eye
+  blitFine(ctx, ox, oy, dir, headX, headY + 0.5, 1, 1)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 7, handY, 1, 0.5)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 8, handY, 1.5, 1)
+}
+
+function drawWorkDig(ctx, pal, ag, ox, oy, dir) {
+  var lift = ag.timer % 7 >= 4
+  var bladeX = lift ? 11 : 9, bladeY = lift ? 11 : 15
+  drawWorkHandle(ctx, pal, ox, oy, dir, 7, lift ? 10 : 12, bladeX, bladeY)
+  // A broad spade with clipped shoulders and a tapered cutting edge.
+  ctx.fillStyle = pal.steelShade
+  blitFine(ctx, ox, oy, dir, bladeX - 1, bladeY, 3, 2)
+  blitFine(ctx, ox, oy, dir, bladeX - 0.5, bladeY + 2, 2, 0.5)
+  ctx.fillStyle = pal.steelEdge
+  blitFine(ctx, ox, oy, dir, bladeX - 1, bladeY, 1, 1.5)
+  blitFine(ctx, ox, oy, dir, bladeX - 0.5, bladeY + 2, 2, 0.5)
+  ctx.fillStyle = pal.rigDark
+  blitFine(ctx, ox, oy, dir, bladeX + 0.5, bladeY + 0.5, 0.5, 1)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 6.5, 12, 1, 0.5)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 7, lift ? 11 : 12.5, 1.5, 1)
+}
+
+function builderLoad(ag) {
+  var phase = Math.floor(((ag.timer || 0) % 6) / 2)
+  return [{ x: 8, y: 9 }, { x: 10, y: 12 }, { x: 11, y: 14 }][phase]
+}
+
+function drawWorkingBuilder(ctx, w, pal, ag, ox, oy, dir, robe) {
+  if ((w.res || 1) < 2) return
+  ctx.save()
+  var load = builderLoad(ag)
+  ctx.fillStyle = robe
+  blit(ctx, ox, oy, dir, 1, 7, 6, 6)
+  blit(ctx, ox, oy, dir, 2, 13, 2, 3)
+  blit(ctx, ox, oy, dir, 4, 13, 2, 3)
+  // The sleeve follows the brick down; the palm supports it from below.
+  blitFine(ctx, ox, oy, dir, 6, 8.5, 1.5, load.y - 7)
+  blitFine(ctx, ox, oy, dir, 7, load.y, load.x - 6, 1)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, load.x - 1, load.y + 0.5, 1, 0.5)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, load.x, load.y + 1, 2, 0.5)
+  ctx.fillStyle = pal.dirtEdge
+  blitFine(ctx, ox, oy, dir, load.x, load.y, 4.5, 1.5)
+  ctx.fillStyle = pal.dirt
+  blitFine(ctx, ox, oy, dir, load.x, load.y + 0.5, 4, 0.5)
+  ctx.fillStyle = pal.dirtShade
+  blitFine(ctx, ox, oy, dir, load.x + 4, load.y + 0.5, 0.5, 1)
+  blitFine(ctx, ox, oy, dir, load.x, load.y + 1, 4, 0.5)
+  blitFine(ctx, ox, oy, dir, load.x + 2, load.y + 0.5, 0.5, 0.5)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, load.x, load.y + 1.5, 2, 0.5)
+  ctx.restore()
 }
 
 function drawFineDig(ctx, pal, ag, ox, oy, dir, drop) {
@@ -9260,6 +9350,7 @@ function drawAgentDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, squash, robe,
     drawDiverFine(ctx, pal, ag, ox, oy, dir, drop + (swimming ? Math.round(Math.sin(ag.anim * 0.22) * 1.2) : 0) - (idle && idle.pose === "glance" ? 1 : 0))
   }
   drawTraitDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, idle)
+  drawWorkTools(ctx, w, pal, ag, ox, oy, dir)
 }
 
 function drawAgentEffects(ctx, w, pal, ag, ox, oy, dir, hair, st, C) {
