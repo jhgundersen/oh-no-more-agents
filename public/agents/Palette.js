@@ -87,6 +87,7 @@ var SAND = { r: 0.95, g: 0.76, b: 0.48 }
 var TERMINAL = { r: 0.20, g: 0.82, b: 0.66 }
 var PARCHMENT = { r: 0.72, g: 0.52, b: 0.32 }
 var MANILA = { r: 0.86, g: 0.56, b: 0.42 }
+var HIVIS = { r: 0.94, g: 0.80, b: 0.10 }
 var ABYSS = { r: 0.01, g: 0.05, b: 0.09 }
 var LAVA = { r: 0.88, g: 0.26, b: 0.06 }
 var COOLANT = { r: 0.20, g: 0.80, b: 0.76 }
@@ -100,7 +101,7 @@ var VOID = { r: 0, g: 0, b: 0 }
 // number by the same rule, which is how every other per-biome difference in
 // this game stays in step across two files that cannot call each other.
 function poolTint(level) {
-  switch ((level - 1) % 14) {
+  switch ((level - 1) % 15) {
     case 1: return WATER      // Ruins: a flooded cistern
     case 3: return LAVA       // Foundry: what the place is for
     case 4: return WATER      // Jungle: the swamp, and what lives in it
@@ -113,12 +114,13 @@ function poolTint(level) {
     // 11, the Data Center, is dry: a floor tile lifted, and the void under it.
     // 12, the Library, is dry: the stacks go down further than anyone reads.
     // 13, the Mail Room, is dry: a chute to the basement, and nothing in it.
+    // 14, the Building Site, is dry: a foundation dug and not yet poured.
     default: return WATER     // dry biomes; unused, but never undefined
   }
 }
 
 function biomeTint(theme, level) {
-  switch ((level - 1) % 14) {
+  switch ((level - 1) % 15) {
     case 0: return theme.accent                              // Cavern
     case 1: return theme.urgent                              // Ruins
     case 2: return lighter(theme.accent, 1.7)                // Frost
@@ -147,7 +149,10 @@ function biomeTint(theme, level) {
     case 12: return toward(theme.muted, PARCHMENT, 0.85)          // Library
     // Manila envelopes, with the post office's red pulled through them so it
     // is not the Library's brown or the Desert's sand.
-    default: return toward(theme.accent, MANILA, 0.82)            // Mail Room
+    case 13: return toward(theme.accent, MANILA, 0.82)            // Mail Room
+    // Hi-vis yellow on grey concrete: more saturated than the Desert's sand,
+    // greener than the Factory's brass. The one colour a site is painted in.
+    default: return toward(theme.muted, HIVIS, 0.78)              // Building Site
   }
 }
 
