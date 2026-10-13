@@ -576,6 +576,13 @@ and apply new migrations with `npm run db:remote` first.
 
 Failures that have actually happened here. None produced an error at the time.
 
+- **Most gaps are the colony's way down.** Anything that acts at *every* gap
+  costs: paving it (Auto Complete), leaping it (Speculative Decoder, Model
+  Collapse), carrying riders over it (the first crane), or icing it over
+  (thin ice). Make such moves at lethal drops only (`depth > killingFall(w)`),
+  and before a hero's own height move, which otherwise takes every lethal
+  drop first (iterations 54, 98, 102, 103).
+
 - **The core files must never call each other.** `Sim.js`, `Draw.js`,
   `Palette.js` and `Outcome.js` carry no imports, which is what lets identical
   files run in a browser and in the Omarchy plugin's QML engine. In a browser they share one
