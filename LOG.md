@@ -3416,3 +3416,18 @@ CRAP over-30 count **21 → 21**; every new or changed function is below 30
 (highest: `drawMachines`, **29.6**). Committed on `codex/rooftops`.
 
 Next: review the Rooftops art and rides before merging the branch.
+
+Reviewed and merged by the loop. The night terrace reads: brick and slate,
+rain, chimneys, aerials, pigeons, the front-door exit. Two fixes in review:
+
+- **The rider** was a custom half-size figure (an 8-px body under a 9-px
+  umbrella, squeezed into the corridor's headroom) and did not read as an agent.
+  Now the closed umbrella is six pixels, crook over the cable, and the whole
+  16-px agent — hat, shades, suit — hangs from it by both hands, legs trailing
+  with the swing. Its feet reach the lip's floor line, which is fine: there is
+  a pit under it.
+- **Washing** hung from nearly every ceiling in bright white and was the
+  brightest thing on the board. Now one rail in three carries washing, in the
+  steel edge colour with the sock in the warning colour; the rest are gutters.
+
+Tests 675 pass.
