@@ -3187,3 +3187,27 @@ paint only; `sim inert` passes. Frame cost at res 2: actors 2.87 ms against
 the Building Site's 1.88 (software canvas), well inside a frame.
 
 **Deployed** after 112 (name="build" content="ff46ec77"): the Clock Tower. Browser check clean.
+
+## 113 — 2026-10-13 · Depth in the earth (loop restarted)
+
+The user restarted the loop with a wider brief: keep the idea (agents fighting
+their way home), the retro look and the umbrellas; everything else is open.
+
+**Looked at first:** all sixteen biomes at res 2 with fresh eyes. The natural
+biomes read as a flat patchwork: thick rock between corridors has the same
+weight as the ledge the colony stands on, so the eye has nowhere to settle.
+
+**Change:** `drawTerrainDepth` (res 2 and above, natural biomes only). Solid
+ground darkens in posterised steps (0.08 → 0.38 black) with its Chebyshev
+distance from open air. The two cells next to air keep full colour, so every
+walkable lip and wall face is still bright and the mass between corridors
+recedes. Built biomes (BUILT) are skipped: plate and office wall are hollow,
+and on them depth looked like a vignette. It is on the cached terrain layer,
+so it costs nothing per tick; a dig repaints it like everything else there.
+
+**Reviewed:** before/after of Jungle (21) whole and zoomed, and the full biome
+sheet. A first version (shade from the second cell, 0.14 → 0.42) made raised
+blocks look like pillows; the gentler, longer ramp reads as a rock crust over a
+darker core. Desert and Ruins gain the most; built biomes are unchanged.
+Res 1 is untouched by construction. Tests 645 → 647 (`test/depth.test.js`);
+the new functions are CRAP 6–9.

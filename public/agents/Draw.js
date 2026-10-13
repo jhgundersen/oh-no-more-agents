@@ -206,6 +206,7 @@ function drawTerrain(ctx, w, pal) {
   if ((w.res || 1) >= 2) drawTerrainFine(ctx, w, pal)
 
   drawFactoryPlates(ctx, w, pal)
+  if ((w.res || 1) >= 2 && !BUILT[w.biome]) drawTerrainDepth(ctx, w)
 
   var wash = ctx.createLinearGradient(0, k.SKY * C, 0, rows * C)
   wash.addColorStop(0, pal.washTop)
@@ -390,6 +391,61 @@ function drawTerrainFine(ctx, w, pal) {
       }
     }
   }
+}
+
+// Depth in the earth, res 2 and above. Solid ground darkens in steps with its
+// distance from open air, so the corridors the colony walks stand out and the
+// mass between them recedes instead of reading as a flat patchwork. Steps,
+// not a smooth falloff: posterised bands keep the retro look. The distance is
+// Chebyshev (eight neighbours), counted from the nearest empty cell; the board
+// edge counts as solid so the outer walls sink too.
+var DEPTH_SHADE = [0, 0, 0.08, 0.17, 0.25, 0.32, 0.38]
+
+function terrainDepth(w) {
+  var k = w.k, cols = k.COLS, rows = k.ROWS, T = w.terrain
+  var max = DEPTH_SHADE.length - 1
+  var d = new Uint8Array(cols * rows)
+  for (var i = 0; i < d.length; i++) d[i] = T[i] === k.EMPTY ? 0 : max
+  for (var pass = 0; pass < max; pass++) {
+    for (var y = 0; y < rows; y++) {
+      for (var x = 0; x < cols; x++) {
+        var n = y * cols + x
+        if (d[n] <= 1) continue
+        d[n] = Math.min(d[n], nearestDepth(d, cols, rows, x, y) + 1)
+      }
+    }
+  }
+  return d
+}
+
+function nearestDepth(d, cols, rows, x, y) {
+  var best = 255
+  for (var dy = -1; dy <= 1; dy++) {
+    var yy = y + dy
+    if (yy < 0 || yy >= rows) continue
+    for (var dx = -1; dx <= 1; dx++) {
+      var xx = x + dx
+      if ((dx || dy) && xx >= 0 && xx < cols) best = Math.min(best, d[yy * cols + xx])
+    }
+  }
+  return best
+}
+
+function drawTerrainDepth(ctx, w) {
+  var k = w.k, C = k.CELL, cols = k.COLS, d = terrainDepth(w)
+  ctx.fillStyle = "#000"
+  for (var y = 0; y < k.ROWS; y++) {
+    var x = 0
+    while (x < cols) {
+      var level = d[y * cols + x]
+      if (level < 2) { x++; continue }
+      var start = x
+      while (x < cols && d[y * cols + x] === level) x++
+      ctx.globalAlpha = DEPTH_SHADE[level]
+      ctx.fillRect(start * C, y * C, (x - start) * C, C)
+    }
+  }
+  ctx.globalAlpha = 1
 }
 
 // ---------------------------------------------------------------------------
