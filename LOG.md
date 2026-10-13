@@ -2752,3 +2752,5 @@ hanging by the collar. One fix in review: every hanging fitting was the
 "SAFETY FIRST · 0 DAYS SINCE INCIDENT" board, four to a level, and its second
 line overflowed the board. Now one fitting in three is the board ("0 DAYS
 SAFE"), and the rest are caged work lamps.
+
+**Deployed** after 100 (name="build" content="03add31b"): the Building Site. Browser check clean.
