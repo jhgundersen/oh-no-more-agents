@@ -8603,7 +8603,10 @@ function runDirector(w) {
   var bestD = Infinity
   for (var i = 0; i < w.agents.length; i++) {
     var ag = w.agents[i]
-    if (ag.gone || ag.state === "saved") continue
+    // Never the hero: the director reaches through the same toolbar gate as
+    // everyone, a special is barred from it, and a rescue aimed at the one
+    // colleague that cannot take it is a rescue nobody gets.
+    if (ag.gone || ag.state === "saved" || ag.special) continue
     var d = Math.abs(ag.x - w.exit.x) + Math.abs(ag.y - w.exit.y) * 2
     if (d < bestD) { bestD = d; best = ag }
   }

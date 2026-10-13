@@ -2270,3 +2270,21 @@ killingFall`). The kick sends the block to pieces where it lands.
 
 **Next.** What is left is a ~1 point cost every hero has on the rest of the
 colony, kick or no kick. Find out what it is.
+
+## 83 — 2026-10-13 · The director stops trying to rescue the hero
+
+**Looked for** the ~1 point every hero still cost the rest of the colony.
+- The director (`runDirector`) rescues a stalled level by handing a tool to
+  the colleague nearest the exit — often the hero, who is barred from the
+  toolbar, so the rescue was nobody's. It now skips specials. Paired, rest
+  of the colony: Vector Van Damme 91.45 → 91.89%, Hal Lucination 91.01 →
+  91.19%, Chain of Thought unchanged. Kept.
+- Death causes of the rest of the colony with and without a hero: a few more
+  drone strikes and shots with one. Tried giving heroes the colony's
+  sidearm (an ordinary colleague in that slot would shoot back): +0.0–0.1.
+  Not kept.
+
+**Where it stands.** What remains is ½–1 point on 160 levels (~2,300 agents,
+where one point is ~23 of them) — near the noise. Stopping here on heroes:
+across 79–83 the worst went from −3.4 to about −1, Beam Search and Guard
+Rails from heavy costs to near even, and heroes get home far more often.
