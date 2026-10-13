@@ -126,6 +126,7 @@ function drawAnimatedLight(ctx, w, pal) {
 }
 
 function drawHazardLight(ctx, w, pal, h) {
+  if (w.eventBoost > 0 && w.eventMult === 0) return
   if (h.kind === "brazier") {
     drawLightPool(ctx, w, pal.fireHot, (h.zx0 + h.zx1 + 1) * w.k.CELL / 2,
       h.zy0 * w.k.CELL + 5, 16, 13, 0.12 + 0.025 * Math.sin(w.ticks * 0.8 + h.zx0))
@@ -2478,6 +2479,7 @@ function drawActors(ctx, w, pal, opts) {
   clearLayer(ctx, w)
   drawAnimatedLight(ctx, w, pal)
   drawMachines(ctx, w, pal)
+  drawActiveEventAir(ctx, w, pal)
   drawLifts(ctx, w, pal)
   drawPits(ctx, w, pal)
   drawSpecialCard(ctx, w, pal)
@@ -5584,10 +5586,10 @@ function drawHazard(ctx, w, pal, h, opts) {
     for (var hk in h) resting[hk] = h[hk]
     resting.phase = "rest"
     resting.lineTo = -1
-    drawHazardKind(ctx, w, pal, resting)
+    drawEventHazard(ctx, w, pal, resting)
     drawThrottled(ctx, w, cx, y0 - 6, h.throttled)
   } else {
-    drawHazardKind(ctx, w, pal, h)
+    drawEventHazard(ctx, w, pal, h)
   }
   if (opts && opts.labels) {
     ctx.fillStyle = h.wrecked ? pal.labelFaint : pal.warn
@@ -6197,6 +6199,174 @@ function drawReloadSign(ctx, ag, ox, oy, hair) {
     ctx.fillRect(Math.round(cx + Math.cos(ang) * 3), Math.round(cy + Math.sin(ang) * 3), 1, 1)
   }
   ctx.fillRect(Math.round(cx + Math.cos(turn) * 3) - 1, Math.round(cy + Math.sin(turn) * 3), 2, 1)
+}
+
+// Persistent rule changes live on the actor layer, below hazards and agents.
+// These are visual durations only (guarded against EVENTS by the tests), so a
+// direct fireEvent and a scheduled one fade alike without a renderer clock.
+var EVENT_VISUAL_SPANS = {
+  boost: { Ruins: 420, Foundry: 360, Factory: 380, Skyscraper: 400, "Data Center": 300, "Mail Room": 360 },
+  sight: { Cavern: 420, Frost: 480, "Ice Cave": 450, Desert: 460, Library: 420 },
+  fall: { Spaceship: 400 }
+}
+
+function activeEventFade(w, kind) {
+  var left = kind === "boost" ? w.eventBoost : w.eventDrift
+  if (!(left > 0)) return 0
+  var full = EVENT_VISUAL_SPANS[kind][w.biome] || left + 24
+  return Math.max(0, Math.min(1, (full - left + 1) / 24, left / 30))
+}
+
+function drawActiveEventAir(ctx, w, pal) {
+  if (!(w.eventDrift > 0)) return
+  if (w.driftWhat !== "sight" && w.driftWhat !== "fall") return
+  var fade = activeEventFade(w, w.driftWhat)
+  ctx.save()
+  if (w.driftWhat === "sight") drawEventHaze(ctx, w, pal, fade)
+  if (w.driftWhat === "fall") drawEventFloatDust(ctx, w, pal, fade)
+  ctx.restore()
+}
+
+function eventHazeClear(w, x, y) {
+  // A small clear pocket around each living colleague. Fixtures are painted
+  // afterwards, so even the thickest part never conceals their warning lamps.
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (!ag.gone && Math.abs(ag.x * w.k.CELL - x) < 19 && Math.abs(ag.y * w.k.CELL - y) < 16) return 0.22
+  }
+  return 1
+}
+
+function drawEventHaze(ctx, w, pal, fade) {
+  var wide = w.k.COLS * w.k.CELL, t = w.ticks
+  var colour = w.biome === "Desert" ? pal.dust : pal.label
+  var samples = Math.floor(96 / w.corridors.length)
+  for (var row = 0; row < w.corridors.length; row++) {
+    var floor = w.corridors[row].floorY * w.k.CELL
+    // Ninety-six coarse samples in total, never a board-sized pixel loop.
+    for (var i = 0; i < samples; i++) {
+      var x = (Math.floor(i * wide / samples) + row * 11 + Math.floor(t / 5)) % (wide - 12) + 3
+      var y = floor - 23 + (i * 7 + row * 3 + Math.floor(t / 11)) % 18
+      if (!mechanismAir(w, x, y)) continue
+      var clear = eventHazeClear(w, x, y)
+      ctx.fillStyle = colour
+      ctx.globalAlpha = fade * clear * 0.12
+      var span = mechanismAir(w, x + 12, y) ? 12 : 2
+      ctx.fillRect(x, y, span, 2)
+      ctx.globalAlpha = fade * clear * 0.48
+      drawEventHazeGlyph(ctx, w, pal, x, y, i)
+    }
+  }
+}
+
+function drawEventHazeGlyph(ctx, w, pal, x, y, i) {
+  if (w.biome === "Cavern") {
+    // A body and two staggered wing rows, rather than black flecks of fog.
+    var flap = Math.floor(w.ticks / 6 + i) % 2
+    ctx.fillStyle = pal.rig
+    ctx.fillRect(x + 3, y, 2, 2)
+    ctx.fillRect(x, y - flap, 3, 1)
+    ctx.fillRect(x + 5, y - flap, 3, 1)
+  } else if (w.biome === "Ice Cave") {
+    ctx.fillStyle = pal.decorLit
+    ctx.fillRect(x, y, 4, 1); ctx.fillRect(x, y + 3, 4, 1)
+    ctx.fillRect(x, y + 1, 1, 2); ctx.fillRect(x + 3, y + 1, 1, 2)
+  } else {
+    ctx.fillRect(x, y, 2, 1); ctx.fillRect(x + 5, y + 2, 1, 1)
+    if (w.biome === "Frost") ctx.fillRect(x + 1, y - 1, 1, 3)
+  }
+  if ((w.res || 1) >= 2) ctx.fillRect(x + 8.5, y + 0.5, 0.5, 0.5)
+}
+
+function drawEventFloatDust(ctx, w, pal, fade) {
+  var C = w.k.CELL, wide = w.k.COLS * C, top = w.k.SKY * C
+  var tall = w.k.ROWS * C - top - 4
+  for (var i = 0; i < 80; i++) {
+    var x = 3 + (i * 73 + w.level * 19 + Math.round(Math.sin(w.ticks / 25 + i) * 3)) % (wide - 8)
+    var y = top + (i * 43 + w.level * 7 + tall - Math.floor(w.ticks * 0.4) % tall) % tall
+    if (!mechanismAir(w, x, y)) continue
+    ctx.fillStyle = i % 4 === 0 ? pal.steelEdge : pal.dust
+    ctx.globalAlpha = fade * 0.6
+    ctx.fillRect(x, y, i % 4 === 0 ? 3 : 1, i % 4 === 0 ? 2 : 1)
+    ctx.globalAlpha = fade * 0.22
+    ctx.fillRect(x, y + 2, 1, 3)
+    if ((w.res || 1) >= 2) ctx.fillRect(x + 0.5, y - 0.5, 0.5, 0.5)
+  }
+}
+
+function eventFloatBob(w, ag) {
+  if (!(w.eventDrift > 0) || w.driftWhat !== "fall" || ag.state !== "fall" || ag.gone) return 0
+  var res = w.res || 1
+  return Math.round(Math.sin(w.ticks / 9 + ag.x) * activeEventFade(w, "fall") * res) / res
+}
+
+function drawEventHazard(ctx, w, pal, h) {
+  if (!(w.eventBoost > 0)) { drawHazardKind(ctx, w, pal, h); return }
+  var fade = activeEventFade(w, "boost")
+  if (w.eventMult === 0) drawEventQuietHazard(ctx, w, pal, h, fade)
+  else {
+    // Speed the idle motion as well as the phase clock already sped by Sim.
+    var hotWorld = Object.create(w)
+    hotWorld.ticks = w.ticks * w.eventMult
+    drawHazardKind(ctx, hotWorld, pal, h)
+  }
+  drawEventHazardStatus(ctx, w, pal, h, fade)
+}
+
+function drawEventQuietHazard(ctx, w, pal, h, fade) {
+  var quiet = Object.create(h), still = Object.create(w), dark = Object.create(pal)
+  quiet.phase = "idle"; quiet.t = 0; quiet.fired = 0; quiet.lineTo = -1
+  still.ticks = h.zx0
+  dark.warn = eventDimColour(pal.warn, pal.rigDark, fade)
+  dark.fireHot = eventDimColour(pal.fireHot, pal.rigDark, fade)
+  dark.fire = eventDimColour(pal.fire, pal.rigDark, fade)
+  dark.rig = eventDimColour(pal.rig, pal.rigDark, fade * 0.55)
+  ctx.save()
+  ctx.globalAlpha = 1 - 0.45 * fade
+  drawHazardKind(ctx, still, dark, quiet)
+  ctx.restore()
+}
+
+function eventDimColour(colour, shade, fade) {
+  // Palette emits rgba strings. Blend their channels, keeping hard edges:
+  // the lamps cool and relight gradually even when a fixture resets alpha.
+  var a = colour.match(/[\d.]+/g), b = shade.match(/[\d.]+/g), channels = []
+  for (var i = 0; i < 3; i++) channels.push(Math.round(Number(a[i]) * (1 - fade) + Number(b[i]) * fade))
+  return "rgba(" + channels.join(",") + "," + a[3] + ")"
+}
+
+function drawEventHazardStatus(ctx, w, pal, h, fade) {
+  if (!(w.eventBoost > 0) || h.wrecked || h.throttled > 0) return
+  var C = w.k.CELL, x = Math.round((h.zx0 + h.zx1 + 1) * C / 2)
+  var y = h.mount === "ceiling" ? h.zy0 * C + 2 : (h.zy1 + 1) * C - 5
+  var stopped = w.eventMult === 0
+  ctx.save()
+  ctx.globalAlpha = fade
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 3, y - 2, 6, 4)
+  ctx.fillStyle = stopped ? pal.rig : pal.fireHot
+  ctx.fillRect(x - 2, y - 1, 4, 1)
+  if (stopped) {
+    ctx.fillStyle = pal.labelFaint
+    ctx.fillRect(x - 2, y + 1, 1, 1); ctx.fillRect(x + 1, y + 1, 1, 1)
+  } else {
+    ctx.globalAlpha = fade * (Math.floor(w.ticks / 3) % 2 ? 0.35 : 1)
+    ctx.fillRect(x - 2, y, 4, 1)
+    drawEventHeat(ctx, w, pal, x, y, fade, h.mount === "ceiling" ? 1 : -1)
+  }
+  ctx.restore()
+}
+
+function drawEventHeat(ctx, w, pal, x, y, fade, dir) {
+  for (var i = 0; i < 10; i++) {
+    var rise = (w.ticks * 2 + i * 7) % 23
+    var sx = x - 12 + (i * 11 + Math.floor(rise / 4)) % 24, sy = y + dir * (3 + rise)
+    if (!mechanismAir(w, sx, sy) || !mechanismAir(w, sx, sy + 1)) continue
+    ctx.globalAlpha = fade * (1 - rise / 26) * 0.8
+    ctx.fillStyle = i % 3 ? pal.warn : pal.fireHot
+    ctx.fillRect(sx, sy, 1, 2)
+    if ((w.res || 1) >= 2 && mechanismAir(w, sx, sy - 0.5)) ctx.fillRect(sx + 0.5, sy - 0.5, 0.5, 0.5)
+  }
 }
 
 // Where an event is about to land (Sim's eventSiteFx), through the
@@ -8922,6 +9092,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   var oy = rideCar
     ? Math.round(w.lifts[ag.liftIx].car * C) - SPRITE_PX
     : Math.round((ag.y + 1) * C) - SPRITE_PX
+  oy += eventFloatBob(w, ag)
 
   if (st === "saved") {
     // A short rise and fade into the portal, so getting home reads as an
