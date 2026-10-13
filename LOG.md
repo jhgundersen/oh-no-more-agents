@@ -3685,3 +3685,20 @@ sheet scattered them like red confetti. At res 2 a drop is now 2×2 (the same
 on-screen size as a res-1 pixel and a half) with a three-dot streak trailing
 back along its velocity at half alpha, so a spray reads as a spray; res 1
 keeps its squares. Looked at level 8 just after a hit on the boss. Tests 695.
+
+## 135 — 2026-10-13 · Crap: fillEarth and specialShapeCut
+
+Game functions over CRAP 30: **4 → 2**, fingerprint identical (`95742321…`;
+it covers generation and every special).
+
+- `fillEarth` (40) → `earthBands`, `layEarth` (with `bandAt` lifted out of
+  its closure), `earthLenses`, `earthVeins`, `earthGrit` — random draws in the
+  same order. All ≤ 13.
+- `specialShapeCut` (55) → `SPECIAL_SHAPES`, one shape per act (`shapeStomp`,
+  `shapeBallast`, `shapeQuarry`, `shapeSlab`, `shapeRocket`), sharing
+  `carveCells` (clear every cell named, or on a dry run stop at the first that
+  would change). The rocket's two possible targets are `rocketStrikesEnemy`
+  and `rocketStrikesHazard`. All ≤ 13.
+
+Left: `generate` (77) and `stepAgents` (58), the two top-level sequences.
+Tests 695.

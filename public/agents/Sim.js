@@ -2286,6 +2286,18 @@ function missionSite(w, corridor, base, count) {
 }
 
 function fillEarth(w, rng) {
+  layEarth(w, earthBands(rng))
+  earthLenses(w, rng)
+  earthVeins(w, rng)
+  earthGrit(w, rng)
+  biomeSkin(w, rng)
+
+  // Last, because an event needs the corridors, the pits, the exit and the
+  // hatch all settled before it can be told where it is not allowed to go.
+  rollEvents(w, rng, w.eventRng)
+}
+
+function earthBands(rng) {
   // Each stratum gets its own thickness, its own material and its own pair of
   // sine waves, so boundaries roll independently instead of the whole stack
   // undulating together like a stretched accordion.
@@ -2308,31 +2320,36 @@ function fillEarth(w, rng) {
     })
     y0 += thick
   }
+  return bands
+}
 
-  // A cell belongs to the last band whose (wavy) top edge is above it.
-  function bandAt(x, y) {
-    var found = bands[0]
-    for (var i = 0; i < bands.length; i++) {
-      var b = bands[i]
-      var edge = b.top + b.amp1 * Math.sin(x * b.freq1 + b.phase1)
-                       + b.amp2 * Math.sin(x * b.freq2 + b.phase2)
-      if (y >= edge) found = b
-      else break
-    }
-    return found
+// A cell belongs to the last band whose (wavy) top edge is above it.
+function bandAt(bands, x, y) {
+  var found = bands[0]
+  for (var i = 0; i < bands.length; i++) {
+    var b = bands[i]
+    var edge = b.top + b.amp1 * Math.sin(x * b.freq1 + b.phase1)
+                     + b.amp2 * Math.sin(x * b.freq2 + b.phase2)
+    if (y >= edge) found = b
+    else break
   }
+  return found
+}
 
+function layEarth(w, bands) {
   for (var y = 0; y < ROWS; y++) {
     for (var x = 0; x < COLS; x++) {
       var t
       if (y < SKY) t = EMPTY
       else if (y >= ROWS - 2) t = STEEL          // bedrock
       else if (x < 3 || x >= COLS - 3) t = STEEL // side walls: nothing leaves the board
-      else t = bandAt(x, y).mat
+      else t = bandAt(bands, x, y).mat
       w.terrain[y * COLS + x] = t
     }
   }
+}
 
+function earthLenses(w, rng) {
   // Lenses: a pocket of one material sitting inside another, which is what
   // stops the strata reading as a layer cake. Fewer and bigger than a scatter
   // of small ones, which at this scale is just noise.
@@ -2351,7 +2368,9 @@ function fillEarth(w, rng) {
       }
     }
   }
+}
 
+function earthVeins(w, rng) {
   // Ore veins: a wandering one-cell line, occasionally two, drawn as a walk
   // rather than a curve so it kinks the way a real seam does.
   var veins = irand(rng, 3, 6)
@@ -2372,7 +2391,11 @@ function fillEarth(w, rng) {
         if (at(w, vx, vy + vt) !== STEEL) setCell(w, vx, vy + vt, ORE)
     }
   }
+}
 
+// Grit: short runs of the material above dragged down across a boundary, so
+// the strata meet raggedly instead of along a ruled line.
+function earthGrit(w, rng) {
   for (var gy = SKY + 1; gy < ROWS - 2; gy++) {
     for (var gx = 3; gx < COLS - 3; gx++) {
       var above = at(w, gx, gy - 1)
@@ -2386,11 +2409,6 @@ function fillEarth(w, rng) {
       }
     }
   }
-  biomeSkin(w, rng)
-
-  // Last, because an event needs the corridors, the pits, the exit and the
-  // hatch all settled before it can be told where it is not allowed to go.
-  rollEvents(w, rng, w.eventRng)
 }
 
 function biomeSkin(w, rng) {
@@ -3460,104 +3478,130 @@ function specialTraverse(w, ag, act, dry) {
 
 function specialShapeCut(w, ag, act, dry) {
   var fx = Math.floor(ag.x), fy = Math.floor(ag.y), d = ag.dir
-  var moved = false
-  var i, j, x, y
-  if (act === "rocket") {
-    // Fired, not swung. It travels until it meets something and takes out a
-    // room-sized bite where it lands, which is the whole point of it: every
-    // other move on this roster answers the wall the agent is touching, and
-    // this one answers a wall on the other side of the level.
-    var hitX = fx, hitY = fy - 2, flew = 0
-    for (i = 2; i <= ROCKET_RANGE; i++) {
-      var rx2 = fx + d * i
-      if (at(w, rx2, fy - 2) === STEEL || at(w, rx2, fy - 1) === STEEL) break
-      flew = i
-      if (solid(w, rx2, fy - 2) || solid(w, rx2, fy - 1)) break
-    }
-    hitX = fx + d * Math.max(2, flew)
-
-    // Red-team actors are real rocket targets too. Pick the nearest visible
-    // one before the terrain impact; lineClear keeps the bazooka from shooting
-    // through the obstacle it was equally entitled to hit.
-    var rocketEnemy = null, rocketEnemyDist = Infinity
-    for (var re = 0; re < w.enemies.length; re++) {
-      var ren = w.enemies[re]
-      if (ren.gone || Math.abs(ren.y - ag.y) > (ren.kind === "drone" ? 5 : 3)) continue
-      var redAlong = (ren.x - ag.x) * d
-      if (redAlong < 2 || redAlong > Math.abs(hitX - fx) || redAlong >= rocketEnemyDist) continue
-      if (!lineClear(w, fx, fy - 2, Math.floor(ren.x), Math.floor(ren.y) - 2)) continue
-      rocketEnemy = ren; rocketEnemyDist = redAlong
-    }
-    if (rocketEnemy) {
-      if (dry) return true
-      hitX = Math.round(rocketEnemy.x)
-      hitY = Math.round(rocketEnemy.y) - 2
-      killEnemy(w, rocketEnemy)
-    }
-
-    // A hazard in the flight path is what it hits, and a hazard it hits is
-    // wrecked. Nothing else in the game can reach out and do that.
-    for (var rh = 0; rh < w.hazards.length; rh++) {
-      var rhz = w.hazards[rh]
-      if (rhz.wrecked) continue
-      var rmid = hazardMid(rhz)
-      if (Math.abs(rmid.y - fy) > CORR_H + 2) continue
-      var along = (rmid.x - fx) * d
-      if (along < 1 || along > Math.abs(hitX - fx) + 3) continue
-      if (dry) return true
-      hitX = Math.round(rmid.x)
-      wreckHazard(w, rhz)
-      break
-    }
-
-    for (i = -ROCKET_BLAST; i <= ROCKET_BLAST; i++)
-      for (j = -ROCKET_BLAST; j <= ROCKET_BLAST; j++) {
-        if (i * i + j * j > ROCKET_BLAST * ROCKET_BLAST + 1) continue
-        x = hitX + i; y = hitY + j
-        if (dry ? workable(w, x, y) : clearCell(w, x, y)) { if (dry) return true; moved = true }
-      }
-
-    if (!dry) {
-      // Where it went, for the flight Draw.js has to put on the board.
-      ag.specialX = hitX
-      ag.specialY = hitY
-      ag.shotFor = ROCKET_FLIGHT
-      addDust(w, hitX, hitY, 22)
-      w.lastEvent = "force pushed"
-      moved = true
-    }
-
-  } else if (act === "stomp") {
-    for (i = -1; i <= 1; i++) for (j = 1; j <= 6; j++)
-      if (dry ? workable(w, fx + i, fy + j) : clearCell(w, fx + i, fy + j)) {
-        if (dry) return true; moved = true
-      }
-  } else if (act === "ballast") {
-    // Straight up, three across, through whatever is over its head. Wider than
-    // an agent so the queue behind can use the shaft too — a hole exactly one
-    // body across is a hole only the one that made it gets through.
-    for (i = -1; i <= 1; i++) for (j = 1; j <= 9; j++)
-      if (dry ? workable(w, fx + i, fy - AGENT_H - j) : clearCell(w, fx + i, fy - AGENT_H - j)) {
-        if (dry) return true; moved = true
-      }
-  } else if (act === "quarry") {
-    for (i = 1; i <= 7; i++) for (j = -7; j <= 0; j++)
-      if (dry ? workable(w, fx + d * i, fy + j) : clearCell(w, fx + d * i, fy + j)) {
-        if (dry) return true; moved = true
-      }
-  } else if (act === "slab") {
-    for (i = 1; i <= 6; i++) for (j = 1; j <= 3; j++) {
-      x = fx + d * i; y = fy + j
-      if (at(w, x, y) !== EMPTY || agentOccupiesCell(w, x, y, ag)) continue
-      if (dry) return true
-      setCell(w, x, y, ROCK); moved = true
-    }
-  }
-  if (moved) {
+  var shape = SPECIAL_SHAPES[act]
+  var moved = shape ? shape(w, ag, fx, fy, d, dry) : false
+  if (moved && !dry) {
     w.terrainVersion++
     addDust(w, fx + d * 2, fy - 2, 8)
   }
   return moved
+}
+
+var SPECIAL_SHAPES = {
+  rocket: shapeRocket, stomp: shapeStomp, ballast: shapeBallast, quarry: shapeQuarry, slab: shapeSlab
+}
+
+// Clears (or, dry, asks whether it could clear) every cell the callback
+// names. A dry run stops at the first cell that would change.
+function carveCells(w, dry, each) {
+  var moved = false
+  each(function (x, y) {
+    if (moved && dry) return
+    if (dry ? workable(w, x, y) : clearCell(w, x, y)) moved = true
+  })
+  return moved
+}
+
+function shapeStomp(w, ag, fx, fy, d, dry) {
+  return carveCells(w, dry, function (cut) {
+    for (var i = -1; i <= 1; i++) for (var j = 1; j <= 6; j++) cut(fx + i, fy + j)
+  })
+}
+
+// Straight up, three across, through whatever is over its head. Wider than
+// an agent so the queue behind can use the shaft too — a hole exactly one
+// body across is a hole only the one that made it gets through.
+function shapeBallast(w, ag, fx, fy, d, dry) {
+  return carveCells(w, dry, function (cut) {
+    for (var i = -1; i <= 1; i++) for (var j = 1; j <= 9; j++) cut(fx + i, fy - AGENT_H - j)
+  })
+}
+
+function shapeQuarry(w, ag, fx, fy, d, dry) {
+  return carveCells(w, dry, function (cut) {
+    for (var i = 1; i <= 7; i++) for (var j = -7; j <= 0; j++) cut(fx + d * i, fy + j)
+  })
+}
+
+function shapeSlab(w, ag, fx, fy, d, dry) {
+  var moved = false
+  for (var i = 1; i <= 6; i++) for (var j = 1; j <= 3; j++) {
+    var x = fx + d * i, y = fy + j
+    if (at(w, x, y) !== EMPTY || agentOccupiesCell(w, x, y, ag)) continue
+    if (dry) return true
+    setCell(w, x, y, ROCK); moved = true
+  }
+  return moved
+}
+
+// Fired, not swung. It travels until it meets something and takes out a
+// room-sized bite where it lands, which is the whole point of it: every
+// other move on this roster answers the wall the agent is touching, and
+// this one answers a wall on the other side of the level.
+function shapeRocket(w, ag, fx, fy, d, dry) {
+  var flew = 0
+  for (var i = 2; i <= ROCKET_RANGE; i++) {
+    var rx2 = fx + d * i
+    if (at(w, rx2, fy - 2) === STEEL || at(w, rx2, fy - 1) === STEEL) break
+    flew = i
+    if (solid(w, rx2, fy - 2) || solid(w, rx2, fy - 1)) break
+  }
+  var hit = { x: fx + d * Math.max(2, flew), y: fy - 2 }
+  if (rocketStrikesEnemy(w, ag, fx, fy, d, hit, dry)) return true
+  if (rocketStrikesHazard(w, fx, fy, d, hit, dry)) return true
+  var moved = carveCells(w, dry, function (cut) {
+    for (var bi = -ROCKET_BLAST; bi <= ROCKET_BLAST; bi++)
+      for (var bj = -ROCKET_BLAST; bj <= ROCKET_BLAST; bj++)
+        if (bi * bi + bj * bj <= ROCKET_BLAST * ROCKET_BLAST + 1) cut(hit.x + bi, hit.y + bj)
+  })
+  if (dry) return moved
+  // Where it went, for the flight Draw.js has to put on the board.
+  ag.specialX = hit.x
+  ag.specialY = hit.y
+  ag.shotFor = ROCKET_FLIGHT
+  addDust(w, hit.x, hit.y, 22)
+  w.lastEvent = "force pushed"
+  return true
+}
+
+// Red-team actors are real rocket targets too. Pick the nearest visible one
+// before the terrain impact; lineClear keeps the bazooka from shooting through
+// the obstacle it was equally entitled to hit. True only for a dry run that
+// found one (the shot is worth taking); a real one moves `hit` and goes on.
+function rocketStrikesEnemy(w, ag, fx, fy, d, hit, dry) {
+  var target = null, best = Infinity
+  for (var re = 0; re < w.enemies.length; re++) {
+    var ren = w.enemies[re]
+    if (ren.gone || Math.abs(ren.y - ag.y) > (ren.kind === "drone" ? 5 : 3)) continue
+    var along = (ren.x - ag.x) * d
+    if (along < 2 || along > Math.abs(hit.x - fx) || along >= best) continue
+    if (!lineClear(w, fx, fy - 2, Math.floor(ren.x), Math.floor(ren.y) - 2)) continue
+    target = ren; best = along
+  }
+  if (!target) return false
+  if (dry) return true
+  hit.x = Math.round(target.x)
+  hit.y = Math.round(target.y) - 2
+  killEnemy(w, target)
+  return false
+}
+
+// A hazard in the flight path is what it hits, and a hazard it hits is
+// wrecked. Nothing else in the game can reach out and do that.
+function rocketStrikesHazard(w, fx, fy, d, hit, dry) {
+  for (var rh = 0; rh < w.hazards.length; rh++) {
+    var rhz = w.hazards[rh]
+    if (rhz.wrecked) continue
+    var rmid = hazardMid(rhz)
+    if (Math.abs(rmid.y - fy) > CORR_H + 2) continue
+    var along = (rmid.x - fx) * d
+    if (along < 1 || along > Math.abs(hit.x - fx) + 3) continue
+    if (dry) return true
+    hit.x = Math.round(rmid.x)
+    wreckHazard(w, rhz)
+    return false
+  }
+  return false
 }
 
 // What a special does to the wall in front of it, one function per act in
