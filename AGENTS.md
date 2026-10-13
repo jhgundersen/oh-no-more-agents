@@ -713,9 +713,10 @@ gameplay, intended or not. `hangs` must stay at zero. The game has no pass mark,
 so `cleared` is measured against `CLEAR_SHARE`, a fixed fraction of the colony
 defined in `simcheck.js`.
 
-Baselines, 200 levels (as of iteration 70, October 2026 — biome mechanisms,
-Rubber Duck, sidearm at 15%): **97% of levels cleared, 90% of agents home,
-47s per attempt, no hangs.** Before the sidearm change it was 96 / 88 / 46s.
+Baselines, 200 levels (as of iteration 93, October 2026 — fourteen biomes,
+patience 900 / 8 passes): **99% of levels cleared, 94% of agents home,
+no hangs.** As of iteration 70 it was 97 / 90 / 47s; before the sidearm
+change 96 / 88 / 46s.
 Earlier, as of the twelve-biome catalogue: 95% cleared, 89% home, 44s. The
 pinned 200 are a small sample: adding the twelfth biome moved them from 99% to
 95% with the failures spread over seven biomes, while the wide sweep moved 1.4.

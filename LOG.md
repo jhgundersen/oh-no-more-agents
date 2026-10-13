@@ -2503,3 +2503,24 @@ ladder, a route home) — and sent them off at a sprint.
 facing it). Check passes; `sim play` below. AGENTS.md's boulder section notes it.
 
 **Deployed** after 92 (name="build" content="59310364"): boulder flee. Browser check clean.
+
+## 93 — 2026-10-13 · More patience before the stall rules bomb
+
+**Why.** Iteration 92 found the boulder's flee rule cost more than the
+boulder. The same question for the biggest killer left: the stall rules'
+bombs ("boom", the top cause in most biomes). Are the colleagues they bomb
+in hopeless spots, or just not given long enough?
+
+**Measured.** PATIENCE × LOOP_PASSES over 420 levels:
+600×5 93.18% (147 bombs, 9 timeouts); 600×8 93.42; 900×5 93.89;
+900×8 94.25% (94 bombs, 4 timeouts); 1200×8 93.96; 1200×12 94.21;
+1800×12 93.88. Average level length unchanged (45–46s) throughout.
+On 420 fresh levels: 600×5 94.01% → 900×8 94.77%, bombs 140 → 104.
+
+**Changed.** PATIENCE 600 → 900, LOOP_PASSES 5 → 8 (STUCK_LIMIT follows).
+Since they were set the colony has gained many more ways out of a corner
+(heroes with the toolbar, Rubber Duck, the director, biome routes), and the
+rules were bombing colleagues who would have found one.
+
+**Checked.** 534 tests pass; `inert` passes; `sim play` 99% / 94% (the
+pinned 200 move within noise). AGENTS.md baselines updated.

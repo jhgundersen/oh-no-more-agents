@@ -8555,10 +8555,16 @@ function grant(w, skill) {
   return true
 }
 
-var PATIENCE = 600
+// 900, was 600; and LOOP_PASSES 8, was 5. The colony now has far more ways
+// out of a corner than when these were set — heroes with the toolbar, the
+// Rubber Duck, the director, the biome routes — and the stall rules were
+// bombing colleagues who would have found one. Measured over 420 levels:
+// 93.18 → 94.25% home, bombs 147 → 94, timeouts 9 → 4, no longer levels;
+// on 420 fresh ones 94.01 → 94.77%. 1200 and 1800 were no better.
+var PATIENCE = 900
 
 var LOOP_BUCKET = 5
-var LOOP_PASSES = 5
+var LOOP_PASSES = 8
 
 var STUCK_LIMIT = PATIENCE + 240
 
