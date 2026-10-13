@@ -2423,3 +2423,39 @@ own 16).
 deadliest fixture. `sim play` 93 → 94% home. Scarab: 5 vs 3 projectiles
 0.92 vs 0.83 kills a placement, Ruins 90.8 vs 91.1% — not worth it; kept.
 528 tests pass.
+
+## 90 — 2026-10-13 · Light on the walls
+
+**Changed.** Res-2-only light spill: three hard, stepped rings and half-pixel
+Bayer stipple in the source's colour. The exit, luminous pools, reading lamps
+and franking lamps put their steady spill on the terrain layer. Pool shimmer,
+rack LED blinking, braziers, firing flame/molten hazards, explosions, muzzle
+flashes and transporter beams add small moving pools before the colony is
+drawn. Explosions briefly reach beyond their fireball. No world writes, random
+draws, filters or new gradients; each pool has a fixed rectangle budget.
+Sim.js and Palette.js are unchanged.
+
+**Measured.** Native Chromium Canvas2D, res 2, levels 1/4/7/12/13/14, colony
+seed 99 at tick 350; 200 warm-up draws, then twelve alternating batches of
+250 calls per renderer. Median `drawActors` milliseconds before → after:
+Cavern 0.0812 → 0.0808; Foundry 0.1568 → 0.1648; Spaceship 0.1736 → 0.1884;
+Data Center 0.2080 → 0.2240; Library 0.2124 → 0.2132; Mail Room
+0.1560 → 0.1564. Mean of those medians: **0.1647 → 0.1713 ms**, +0.0066 ms.
+These measure the actor drawing calls, not a complete presented frame.
+
+**Checked.** `npm test`, `npm run check` and `npm run crap` pass; stamps updated.
+Six light tests cover resolution gating, read-only rendering, fixed drawing
+cost, half-pixel detail, fixture support, shimmer, source lifetimes, beams and
+shooters. Seeded old/new res-1 comparison: 560 frames, levels 1–70, ticks
+0/200/500/900 and two themes, identical `Math.random` — zero differences; no
+whole-frame goldens. Split the actor pass without changing draw order: every
+added or changed function is below CRAP 30 (highest 27.7), and the total over
+30 falls from 27 to 26.
+
+**Looked at.** Scaled before/after boards and nearest-neighbour close-ups of
+lava Foundry, Library reading lamps, the dark Cavern exit, an explosion, Data
+Center LEDs, a Mail Room franking machine and coolant. Reviewed the contact
+sheet at `/tmp/codex-light/sheet.png`: the colony stays readable and the steady
+light remains local and dim. Work on `codex/light`; no push or deploy.
+
+**Next.** Keep future light sources within the same local drawing budget.
