@@ -5663,12 +5663,9 @@ function notePrint(w, ag) {
   if (w.prints.length > PRINT_CAP) w.prints.shift()
 }
 
-function stepWalk(w, ag) {
-  notePrint(w, ag)
-  var nx = ag.x + ag.dir * walkStep(ag, w)
-  var cx = Math.floor(nx)
-  var footY = Math.floor(ag.y)
-
+// Which way to walk this tick: toward the mission's unsearched stretch, or
+// toward a door in sight. Returns the next x.
+function walkHeading(w, ag, nx) {
   // Mission levels give the cast one extra piece of knowledge: which stretch
   // of the final corridor still needs searching. This stops a shortcut or a turn
   // at an obstacle from sending everybody straight past the assignment.
@@ -5676,7 +5673,6 @@ function stepWalk(w, ag) {
   if (search && Math.abs(search.x - ag.x) > 2) {
     ag.dir = search.x > ag.x ? 1 : -1
     nx = ag.x + ag.dir * walkStep(ag, w)
-    cx = Math.floor(nx)
   }
 
   // Turn toward a door it can see. Only when it is walking away from one, so
@@ -5687,8 +5683,94 @@ function stepWalk(w, ag) {
     ag.dir = seen
     ag.turns = 0
     nx = ag.x + ag.dir * walkStep(ag, w)
-    cx = Math.floor(nx)
   }
+  return nx
+}
+
+// A danger's zone one step ahead: go round it, or wait at its lip. True when
+// the agent has done something other than step.
+function walkHazardZone(w, ag, nx, cx, footY) {
+  var crossPerceptive = hazardPerceptive(ag)
+  var stepInto = hazardZoneAt(w, cx, footY, crossPerceptive)
+  if (stepInto && stepInto.known && !ag.special
+      && !hazardZoneAt(w, Math.floor(ag.x), footY, crossPerceptive)
+      && !shieldCovering(w, ag, nx)
+      && !canCrossHazard(w, stepInto, ag)) {
+    if (startDescent(w, ag, take, false, false, false, true)) {
+      ag.idle = 0
+      ag.still = 0
+      return true
+    }
+    ag.waitFor = 12
+    turnAround(w, ag)
+    return true
+  }
+  if (stepInto && !ag.special && ag.idle < HAZARD_WAIT
+      && !hazardZoneAt(w, Math.floor(ag.x), footY, crossPerceptive)
+      && !shieldCovering(w, ag, nx)
+      && !canCrossHazard(w, stepInto, ag)) {
+    // Waiting is not pacing. Both look like an agent walking back and forth in
+    // one place, and the loop detector cannot tell them apart — so on level 15
+    // the colony stopped dying to the sentry and started being written off as
+    // stuck instead, bombed one at a time at the lip of the zone it was
+    // correctly refusing to enter. This says: it knows why it is here.
+    ag.waitFor = 12
+    turnAround(w, ag)
+    return true
+  }
+  return false
+}
+
+// A danger in reach ahead: shelter behind a shield, get out of its zone by
+// the open side, plant a blocker for the colony, or turn round.
+function walkHazardAhead(w, ag, nx, cx, footY) {
+  var mine = ag.special && specOf(ag).act === "shield"
+  if (mine && ag.shieldHeld < SHIELD_MAX - SHIELD_MARGIN
+      && (ag.shieldFor > 0 || raiseShield(w, ag))) return advanceWalk(w, ag, nx, cx, footY)
+  var cover = mine ? null : shieldCovering(w, ag, nx)
+  if (cover && cover.shieldHeld < SHIELD_MAX - SHIELD_MARGIN) return advanceWalk(w, ag, nx, cx, footY)
+
+  var htrait = traitOf(ag)
+  var perceptive = hazardPerceptive(ag)
+
+  // Already inside its reach. Turning round is the answer at a wall, and
+  // here it is a coin toss between walking out of the zone and walking
+  // further into it — and since the reach is wider than the wind-up is long,
+  // walking further in is fatal. Head away from the fixture, whichever way
+  // that is, and keep going until the ground is clear.
+  var inside = hazardZoneAt(w, Math.floor(ag.x), footY, perceptive)
+  if (inside) {
+    // Out by the nearer lip, which is not always the way it came in: an
+    // agent four fifths of the way across a sixteen-cell reach should finish
+    // the crossing, not turn round and re-run the whole thing.
+    var hspec = hazardSpec(inside.kind)
+    var hmid = hazardMid(inside).x
+    var lipBack = inside.dir > 0 ? hmid - 1 : hmid + 1
+    var lipOn = inside.dir > 0 ? hmid + hspec.reach + 1 : hmid - hspec.reach - 1
+    var out = Math.abs(lipOn - ag.x) < Math.abs(lipBack - ag.x) ? lipOn : lipBack
+    // Unless that side is a wall or a drop. The lips above are measured from
+    // the fixture's reach, which means nothing for a plate; on level 96 it
+    // sent a queue on a grinder at a chasm toward the edge, the edge rule
+    // turned them back, and they paced mid-plate through the wind-up until
+    // eight died at once (log 25). fleeHazard picks a side that is open.
+    var away = fleeHazard(w, ag) || (out > ag.x ? 1 : -1)
+    if (ag.dir !== away) { ag.dir = away; ag.turns++ }
+    var outX = ag.x + ag.dir * walkStep(ag, w)
+    return advanceWalk(w, ag, outX, Math.floor(outX), footY)
+  }
+
+  if ((w.skills.blocker || 0) > 1
+      && countComing(w, ag) >= 2 - htrait.blockBias
+      && !hazardZoneAt(w, Math.floor(ag.x), footY, perceptive)
+      && take(w, "blocker")) { ag.state = "block"; return }
+  turnAround(w, ag)
+}
+
+function stepWalk(w, ag) {
+  notePrint(w, ag)
+  var footY = Math.floor(ag.y)
+  var nx = walkHeading(w, ag, ag.x + ag.dir * walkStep(ag, w))
+  var cx = Math.floor(nx)
 
   if (anyBlockerNear(w, ag, nx)) { turnAround(w, ag); return }
 
@@ -5713,78 +5795,9 @@ function stepWalk(w, ag) {
     if (door && !liftDoorAt(w, Math.floor(ag.x), footY)) { useLift(w, ag, door, footY); return }
   }
 
-  var crossPerceptive = hazardPerceptive(ag)
-  var stepInto = hazardZoneAt(w, cx, footY, crossPerceptive)
-  if (stepInto && stepInto.known && !ag.special
-      && !hazardZoneAt(w, Math.floor(ag.x), footY, crossPerceptive)
-      && !shieldCovering(w, ag, nx)
-      && !canCrossHazard(w, stepInto, ag)) {
-    if (startDescent(w, ag, take, false, false, false, true)) {
-      ag.idle = 0
-      ag.still = 0
-      return
-    }
-    ag.waitFor = 12
-    turnAround(w, ag)
-    return
-  }
-  if (stepInto && !ag.special && ag.idle < HAZARD_WAIT
-      && !hazardZoneAt(w, Math.floor(ag.x), footY, crossPerceptive)
-      && !shieldCovering(w, ag, nx)
-      && !canCrossHazard(w, stepInto, ag)) {
-    // Waiting is not pacing. Both look like an agent walking back and forth in
-    // one place, and the loop detector cannot tell them apart — so on level 15
-    // the colony stopped dying to the sentry and started being written off as
-    // stuck instead, bombed one at a time at the lip of the zone it was
-    // correctly refusing to enter. This says: it knows why it is here.
-    ag.waitFor = 12
-    turnAround(w, ag)
-    return
-  }
+  if (walkHazardZone(w, ag, nx, cx, footY)) return
 
-  if (hazardAhead(w, ag, nx)) {
-    var mine = ag.special && specOf(ag).act === "shield"
-    if (mine && ag.shieldHeld < SHIELD_MAX - SHIELD_MARGIN
-        && (ag.shieldFor > 0 || raiseShield(w, ag))) return advanceWalk(w, ag, nx, cx, footY)
-    var cover = mine ? null : shieldCovering(w, ag, nx)
-    if (cover && cover.shieldHeld < SHIELD_MAX - SHIELD_MARGIN) return advanceWalk(w, ag, nx, cx, footY)
-
-    var htrait = traitOf(ag)
-    var perceptive = hazardPerceptive(ag)
-
-    // Already inside its reach. Turning round is the answer at a wall, and
-    // here it is a coin toss between walking out of the zone and walking
-    // further into it — and since the reach is wider than the wind-up is long,
-    // walking further in is fatal. Head away from the fixture, whichever way
-    // that is, and keep going until the ground is clear.
-    var inside = hazardZoneAt(w, Math.floor(ag.x), footY, perceptive)
-    if (inside) {
-      // Out by the nearer lip, which is not always the way it came in: an
-      // agent four fifths of the way across a sixteen-cell reach should finish
-      // the crossing, not turn round and re-run the whole thing.
-      var hspec = hazardSpec(inside.kind)
-      var hmid = hazardMid(inside).x
-      var lipBack = inside.dir > 0 ? hmid - 1 : hmid + 1
-      var lipOn = inside.dir > 0 ? hmid + hspec.reach + 1 : hmid - hspec.reach - 1
-      var out = Math.abs(lipOn - ag.x) < Math.abs(lipBack - ag.x) ? lipOn : lipBack
-      // Unless that side is a wall or a drop. The lips above are measured from
-      // the fixture's reach, which means nothing for a plate; on level 96 it
-      // sent a queue on a grinder at a chasm toward the edge, the edge rule
-      // turned them back, and they paced mid-plate through the wind-up until
-      // eight died at once (log 25). fleeHazard picks a side that is open.
-      var away = fleeHazard(w, ag) || (out > ag.x ? 1 : -1)
-      if (ag.dir !== away) { ag.dir = away; ag.turns++ }
-      var outX = ag.x + ag.dir * walkStep(ag, w)
-      return advanceWalk(w, ag, outX, Math.floor(outX), footY)
-    }
-
-    if ((w.skills.blocker || 0) > 1
-        && countComing(w, ag) >= 2 - htrait.blockBias
-        && !hazardZoneAt(w, Math.floor(ag.x), footY, perceptive)
-        && take(w, "blocker")) { ag.state = "block"; return }
-    turnAround(w, ag)
-    return
-  }
+  if (hazardAhead(w, ag, nx)) return walkHazardAhead(w, ag, nx, cx, footY)
 
   advanceWalk(w, ag, nx, cx, footY)
 }

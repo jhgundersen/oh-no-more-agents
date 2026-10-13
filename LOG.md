@@ -3044,3 +3044,16 @@ after. Over 300 levels: 90 missions, 173 freed, 158 followed someone, and
 followers are not counted as agents, and they leave the frame when home.
 
 **Deployed** after 108 (name="build" content="5626223e"): the rescued follow the colony home. Browser check clean.
+
+## 109 — 2026-10-13 · Crap: stepWalk; Codex on the followers' look
+
+Deployed 108 first (above). `stepWalk` (CRAP 50) is now its decisions in
+order: `walkHeading` (toward the mission or a door in sight) →
+blocker/swim/lift → `walkHazardZone` (go round a known zone or wait at its
+lip) → `walkHazardAhead` (shield, flee by the open side, blocker, turn) →
+`advanceWalk`. The fingerprint of 240 plays is identical before and after.
+CRAP: stepWalk 50 → 12, the largest piece is walkHazardAhead at 22; the
+over-30 count is 21 → 20.
+
+Codex is on `codex/escort`: a following pose for the rescued, an arrival at
+the door, and the "+N RESCUED" line on the report card.
