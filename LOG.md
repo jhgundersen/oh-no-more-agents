@@ -2385,3 +2385,19 @@ Reviewed `/tmp/codex-mailroom/sheet.png`, including the moving passenger and
 both air puffs. Split the existing terrain and exit recipes without changing
 their pixels: every added or changed function is below CRAP 30, and the total
 over 30 falls from 29 to 28. Committed on `mailroom`; no push or deploy.
+
+## 88 — 2026-10-13 · The Mail Room (merged)
+
+**What.** A fourteenth biome, built on a branch like the Library: Sim and
+Palette by the loop (87's WIP commit: pigeonhole skin, manila palette,
+"SIGN FOR THE PARCELS", Dead Letter Queue / Backlog / Back Pressure, and
+pneumatic tubes on the transporter rule), art by Codex (its entry above).
+Tests pinned to level numbers (the operator drones) now find their levels by
+roster; the pads test knows the Mail Room has tubes.
+
+**Checked.** Codex's sheet: a brass pipe from intake up the wall and across
+to the outlet, the capsule travelling it with the agent inside, pigeonholes
+with envelope ends, parcels and sacks. 528 tests pass; `sim play` 99%
+cleared, 93% home (not like-for-like — every level moved biome); `inert`,
+`gravity` pass; over 30: 28. Tubes measured: 94.03 vs 93.85% home without
+them, 6.4 rides a level.

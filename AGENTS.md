@@ -75,7 +75,7 @@ Production is `https://oh-no-more-agents.com`.
   side gets bricks, and the blocker is kept for the drop with no far side.
 - **Biomes are picked by level number, so a new one goes on the end of `BIOMES`**
   — inserting re-skins every level above it. `Palette.js` derives the same index
-  with its own copy of the rule (`(level - 1) % 13` in `poolTint` and `biomeTint`)
+  with its own copy of the rule (`(level - 1) % 14` in `poolTint` and `biomeTint`)
   and must change in the same commit. `rock` is mixed from the theme foreground and is **not** tinted, so a
   skin built mostly of `ROCK` comes out the same grey everywhere.
 - **Events change a level's premise while it is played** (see the block above
@@ -437,6 +437,15 @@ version, reading ORE, failed it. Measured over 400 Library plays: 94.19% home
 with the free climb vs 93.77%, climbers spent 5.59 → 5.24 a level.
 Adding it reshuffled every level number's biome; tests now find levels by
 biome (`test/levels.js`, `levelWith`) instead of pinning numbers.
+
+## The Mail Room
+
+The fourteenth biome: a sorting office, pigeonholes in a 3×2 grid
+(`skinMailRoom`). Its mechanism is pneumatic tubes — `placeTubes` reuses the
+Spaceship's transporter rule (`placePads` with its own stream, pads marked
+`tube`), and Draw gives a tube a brass pipe from intake to outlet and a
+capsule with the agent in it. Measured over 400 plays: 94.03% home with
+tubes vs 93.85%, 6.4 capsules a level.
 
 ## Staying current
 
