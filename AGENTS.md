@@ -649,6 +649,10 @@ Failures that have actually happened here. None produced an error at the time.
   special. Anything one file needs from another travels on the world object (see
   `w.k`, `w.specialSpec`). `tools/check-core-refs.js` enforces this, and also
   catches the mirror-image failure of one name declared in two files.
+- **A second declaration in the same file silently wins.** `check-core-refs`
+  catches a name declared in two core files, not twice in one. Splitting
+  `stepFall` once named a helper `fallSpeed`, which `stepBomb` already used.
+  Grep for `^function name(` before adding one.
 - **`node --check` passes a file with a missing function.** A refactor once
   deleted `biomeSkin()` and killed the simulation on the first `generate()`. Run
   `npm run sim` for anything touching the sim.
