@@ -85,6 +85,7 @@
       if (typeof d.showLabels === "boolean") showLabels = d.showLabels
       if (typeof d.theme === "string" && THEMES[d.theme]) themeName = d.theme
       if (typeof d.track === "number" && d.track >= 0 && d.track < TRACKS.length) trackIndex = Math.floor(d.track)
+      if (d.sfx === true && window.AgentSfx) AgentSfx.setOn(true)
     } catch (e) { /* first visit, or someone cleared it */ }
   }
 
@@ -93,7 +94,8 @@
       localStorage.setItem(STORE_KEY, JSON.stringify({
         version: 1, level: level, lifetimeSaved: lifetimeSaved,
         levelsCleared: levelsCleared, speedIndex: speedIndex,
-        showLabels: showLabels, theme: themeName, track: trackIndex
+        showLabels: showLabels, theme: themeName, track: trackIndex,
+        sfx: !!(window.AgentSfx && AgentSfx.isOn())
       }))
     } catch (e) { /* private browsing; the sim doesn't care */ }
   }
@@ -459,6 +461,7 @@
   function tick() {
     if (!world) return
     step(world)
+    if (window.AgentSfx) AgentSfx.observe(world)
 
     if (world.terrainVersion !== lastTerrainVersion) {
       lastTerrainVersion = world.terrainVersion
@@ -679,6 +682,18 @@
     else { el.player.pause(); renderAudio() }
   }
 
+  function toggleSfx() {
+    if (!window.AgentSfx) return
+    AgentSfx.setOn(!AgentSfx.isOn())
+    renderSfx()
+    saveState()
+  }
+
+  function renderSfx() {
+    if (!el.sfx) return
+    el.sfx.querySelector("span").textContent = window.AgentSfx && AgentSfx.isOn() ? "on" : "off"
+  }
+
   function renderAudio() {
     var playing = !el.player.paused && !el.player.ended
     el.playpause.innerHTML = playing ? "&#10073;&#10073;" : "&#9654;"
@@ -741,6 +756,12 @@
     })
     setTrack(trackIndex, false)
     el.playpause.addEventListener("click", toggleAudio)
+    el.sfx = document.getElementById("sfx")
+    if (el.sfx) el.sfx.addEventListener("click", function () { toggleSfx(); el.sfx.blur() })
+    renderSfx()
+    ;["pointerdown", "keydown"].forEach(function (ev) {
+      document.addEventListener(ev, function () { if (window.AgentSfx) AgentSfx.wake() })
+    })
     // Follow media events so browser-initiated pauses update the button.
     ;["play", "pause", "ended"].forEach(function (ev) {
       el.player.addEventListener(ev, renderAudio)
@@ -808,6 +829,7 @@
       else if (k === "s") cycleSpeed()
       else if (k === "w") toggleLabels()
       else if (k === "f") toggleFullscreen()
+      else if (k === "m") toggleSfx()
       // Only faux fullscreen receives Escape here.
       else if (k === "escape" && el.stage.classList.contains("faux")) setFaux(false)
       else return

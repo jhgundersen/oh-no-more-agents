@@ -3300,3 +3300,28 @@ the canopy (`en.lineTo`, draw-only), not in the agent behind it.
 snaps open, the tracer stops at it, and the agent walks on behind its umbrella.
 Tests 649 → 653 (parry, late roll, empty toolbar, facing, overhead kinds,
 shield drawing at both resolutions). New functions CRAP ≤ 8.
+
+## 117 — 2026-10-13 · Sound effects
+
+The page had a soundtrack and no sounds: an umbrella opening, a round fired,
+a colleague home, all silent. New `public/agents/sfx.js`, synthesised with
+WebAudio — square waves and filtered noise, the sound of the machines the game
+is drawn like — so there is nothing to load.
+
+It **observes** rather than being called: after each `step` the page passes the
+world, and it compares with the last tick. Umbrella opening (a floater crossing
+`fall > 2`, exactly when the canopy is drawn): rising chirp. Parry (`w.umbrellaSaves`):
+metallic tink. Agent round: falling "pew". Red-team round: noise crack. Blast:
+low boom. Somebody home: two-note chime. Somebody lost: falling tone. Level
+over: four-note arpeggio, up if at least half got home, down if not. Each sound
+has a minimum gap in real time, so the fast speed and a crowded level do not
+buzz; master gain 0.11, under the music.
+
+**Off by default** — a page that starts making noise in a background tab gets
+closed, and browsers need a gesture anyway. New control `m sfx: off/on` in the
+controls row, remembered in localStorage; a remembered "on" resumes audio on
+the first click or key. Core files untouched: the Omarchy panel stays silent.
+
+**Checked in headless Chromium:** toggle turns it on and is saved; 14 sounds in
+15 s of level 1 at Steady speed, no console errors. Controls row: one line of
+eight at 1400 px, four and four at 800, wraps cleanly at 390. Tests 653 pass.

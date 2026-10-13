@@ -19,6 +19,9 @@ Production is `https://oh-no-more-agents.com`.
 - `public/agents/Draw.js` — Canvas rendering and animation.
 - `public/agents/Palette.js` — biome and visual palettes.
 - `public/agents/web.js` — browser integration, controls, audio, rescue reporting.
+- `public/agents/sfx.js` — synthesised sound effects (WebAudio, no files), web
+  only. It observes the world after each step and plays the differences; nothing
+  in the core files calls it, so the panel stays silent. Off by default (`m`).
 - `public/agents/Outcome.js` — end-of-level copy, shared with the Omarchy panel.
 - `tools/render.js` — draws the game to a PNG from Node, no browser; `tools/shoot.js`
   is the command that uses it (`npm run shot`).
