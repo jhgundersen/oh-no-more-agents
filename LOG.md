@@ -2797,3 +2797,32 @@ died. Over 300 levels only 33 of 219 deaths were a hazard or fall near an
 earlier one, so there is nothing for it to save.
 
 **Deployed** after 102 (name="build" content="fd7fba5e"): Auto Complete. Browser check clean.
+
+## 103 — 2026-10-13 · The leapers stop skipping the way down
+
+Next in the survey: Chain of Thought −0.75, Web Crawler −0.71, Speculative
+Decoder −0.66. Split into hero vs colony (160 levels): the colony does as
+well or better with Chain of Thought or Speculative Decoder. What fails is
+the hero itself, still walking when the level ends: 24 and 19 of 160. Their
+"trick" leapt every gap wider than a cell, including the colony's way down,
+so they skipped the descent and wandered the floor above. This is the same
+pattern as Auto Complete in 102.
+
+Variant B: leap only a lethal gap, before the hero's own way down (`leapsGaps`,
+in the lethal branch of `specialAtEdge`). Home %, samples A / B (no hero
+93.69 / 92.77):
+
+| hero | old | leap off | B (lethal first) |
+|---|---|---|---|
+| Speculative Decoder | 93.03 / 90.74 | 93.61 / 91.11 | 93.57 / 91.07 |
+| Model Collapse | 91.62 / 90.13 | 93.71 / 91.02 | 93.52 / 91.50 |
+| Chain of Thought | 92.94 / 90.82 | 92.82 / 90.20 | 92.49 / 90.11 |
+
+B is kept for Speculative Decoder and Model Collapse. Chain of Thought keeps
+leaping any gap: it lost on both samples, and its cost lies elsewhere. Model
+Collapse, the costliest hero in 102, is now within 0.2 / 1.3 of no hero.
+Test: both leap a lethal gap and never a survivable one. Whole game: 200
+levels, 97% cleared, no hangs.
+
+**Pattern, three heroes running:** a move that a hero makes at *any* gap
+tends to cost, because most gaps are the way down. Make it at lethal ones.

@@ -7521,6 +7521,17 @@ function stepSpecialHeight(w, ag) {
 // colony's way down: it closed them behind itself, −2.1 against no hero.
 // Across lethal drops only, the floor is a way over that was not there, and it
 // is neutral against no hero on two samples (iteration 102).
+// Speculative Decoder and Model Collapse leap a gap that kills, before their
+// own way down. They used to leap every gap wider than a cell, and most gaps are
+// the colony's way down: they skipped the descent and wandered the floor above
+// until the level ended (a fifth of Speculative Decoders never got home).
+// Measured on two 160-level samples: Speculative Decoder +0.4/+0.3, Model
+// Collapse +1.9/+1.4. Chain of Thought was tried the same way and lost
+// 0.1–0.7, so it keeps leaping any gap (below) (iteration 103).
+function leapsGaps(spec) {
+  return spec.act === "speculate" || spec.act === "collapse"
+}
+
 function autoCompleteEdge(w, ag, nx, spec, far) {
   if (ag.cool > 0 || far <= 2) return false
   var foot = Math.floor(ag.y) + 1
@@ -7550,12 +7561,16 @@ function specialAtEdge(w, ag, nx, depth, far) {
   if (depth > killingFall(w)) {
     if (spec.act === "ceiling" && rappelAtEdge(w, ag, nx, depth)) return
     if (spec.act === "complete" && autoCompleteEdge(w, ag, nx, spec, far)) return
+    if (leapsGaps(spec) && ag.cool <= 0 && far > 1 && specialLanding(w, ag, 14)) {
+      ag.state = "trick"
+      ag.timer = 0
+      return
+    }
     if (startSpecialHeight(w, ag, nx, depth, far)) return
   }
 
-  if ((spec.act === "chain" || spec.act === "speculate"
-       || spec.act === "collapse")
-      && ag.cool <= 0 && far > 1 && specialLanding(w, ag, 14)) {
+
+  if (spec.act === "chain" && ag.cool <= 0 && far > 1 && specialLanding(w, ag, 14)) {
     ag.state = "trick"
     ag.timer = 0
     return

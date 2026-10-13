@@ -215,3 +215,14 @@ test("Auto Complete paves over a lethal drop, never over a survivable one", () =
     assert.equal(S.solid(w, x + 2, top + 1), paves, `depth ${depth}`)
   }
 })
+
+test("Speculative Decoder and Model Collapse leap a lethal gap, not the way down", () => {
+  for (const id of ["specdecoder", "collapse"]) for (const [depth, leaps] of [[6, false], [S.killingFall(fresh()) + 4, true]]) {
+    const w = fresh(), x = 20, top = 20, bottom = top + depth
+    clear(w, x - 4, x + 12, top - 6, bottom); floor(w, x - 4, x, top + 1); floor(w, x + 4, x + 12, top + 1)
+    floor(w, x - 4, x + 12, bottom + 1)
+    const ag = { special: id, x: x + 0.5, y: top, dir: 1, state: "walk", anim: 0, turns: 0, floater: false, fall: 0, timer: 0, cool: 0 }
+    S.specialAtEdge(w, ag, ag.x + S.WALK_SPEED, depth, 3)
+    assert.equal(ag.state === "trick", leaps, `${id} at depth ${depth}`)
+  }
+})
