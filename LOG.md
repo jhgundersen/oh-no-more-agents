@@ -3577,3 +3577,5 @@ Game functions over CRAP 30: **7 → 5**, behaviour unchanged (fingerprint
 
 Left: `generate`, `stepAgents`, `specialShapeCut`, `edgeAhead`, `fillEarth`.
 Tests 684.
+
+**Deployed** after 129 (name="build" content="66e6c2ce"): MVP on the report card, crap splits. Browser check clean.
