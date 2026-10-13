@@ -3826,3 +3826,12 @@ three pips over its head. Looked at level 13 (Library) walking and mid-scuffle.
 Tests 710.
 
 **Deployed** after 142 (name="build" content="95a982af"): victory pose, the Bouncer. Browser check clean.
+
+## 143 — 2026-10-14 · Thrown out, visibly
+
+The Bouncer's throw (142) moved the agent three cells in one tick: it simply
+reappeared further back. Sim now notes `thrownFrom` (bookkeeping) and Draw's
+`throwArc` flies the agent from there to where it already is over eight
+ticks, up a 7-px arc and heels over head (`spriteFlip`) through the middle
+third, landing into its stunned pose. Looked at level 13's throw at ticks
+417–426: the flip reads over the next scuffle's cloud. Tests 711.

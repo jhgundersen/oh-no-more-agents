@@ -112,3 +112,14 @@ test("the Bouncer throws a lone agent back alive, and takes BOUNCER_HP scuffles 
   assert.ok(thrown > 0)
   assert.equal(w.lost, 0)
 })
+
+test("a thrown agent is drawn flying back along an arc, flipped mid-flight, landing where it is", () => {
+  const ag = { state: "stunned", x: 30.5, thrownFrom: 33.5, thrownAt: 100 }
+  const w = { ticks: 100 }
+  let a = D.throwArc(w, ag, 4)
+  assert.equal(a.dx, 12); assert.equal(a.lift, 0); assert.equal(a.over, false)
+  w.ticks = 104; a = D.throwArc(w, ag, 4)
+  assert.ok(a.lift > 5 && a.over)
+  w.ticks = 108; assert.deepEqual(D.throwArc(w, ag, 4), { dx: 0, lift: 0, over: false })
+  w.ticks = 102; ag.state = "walk"; assert.equal(D.throwArc(w, ag, 4).dx, 0)
+})

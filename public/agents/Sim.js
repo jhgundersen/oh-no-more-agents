@@ -8971,6 +8971,7 @@ var BOUNCER_EDGE = 20      // percent off the agent's brawl odds against it
 
 function bouncerThrows(w, en, ag) {
   var back = ag.x >= en.x ? 1 : -1
+  ag.thrownFrom = ag.x       // for Draw: where the throw started
   for (var i = 0; i < BOUNCER_THROW * 4; i++) {
     var nx = ag.x + back * 0.25
     if (solid(w, Math.floor(nx), Math.floor(ag.y))) break

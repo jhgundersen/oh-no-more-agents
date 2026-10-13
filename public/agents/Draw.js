@@ -6555,6 +6555,22 @@ function landSquash(w, ag) {
   return since < 3 ? 2 : (since < 6 ? 1 : 0)
 }
 
+// Thrown out by the Bouncer (Sim moves the agent at once; see bouncerThrows):
+// drawn flying from where it was, in an arc, heels over head in the middle of
+// it, and landing where the simulation already put it.
+var THROW_FLIGHT = 8
+function throwArc(w, ag, C) {
+  var none = { dx: 0, lift: 0, over: false }
+  if (ag.thrownAt === undefined || ag.thrownFrom === undefined || ag.state !== "stunned") return none
+  var t = (w.ticks - ag.thrownAt) / THROW_FLIGHT
+  if (t < 0 || t >= 1) return none
+  return {
+    dx: Math.round((ag.thrownFrom - ag.x) * C * (1 - t)),
+    lift: Math.round(Math.sin(t * Math.PI) * 7),
+    over: t > 0.3 && t < 0.7
+  }
+}
+
 // Up out of a won scuffle (Sim's brawlTick sets wonAt): the forward fist
 // punched at the sky, pumping twice, with two stars over it — the colony's
 // own colour for a moment it does not get many of.
@@ -10232,6 +10248,9 @@ function drawAgent(ctx, w, pal, ag, opts) {
     ? Math.round(w.lifts[ag.liftIx].car * C) - SPRITE_PX
     : Math.round((ag.y + 1) * C) - SPRITE_PX
   oy += eventFloatBob(w, ag)
+  var thrown = throwArc(w, ag, C)
+  ox += thrown.dx
+  oy -= thrown.lift
 
   if (st === "saved") {
     // A short rise and fade into the portal, so getting home reads as an
@@ -10278,7 +10297,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
 
   // Upside down: the whole sprite is mirrored vertically, so the one that
   // walks on ceilings reads as hanging rather than as floating.
-  spriteFlip = (st === "ceil")
+  spriteFlip = (st === "ceil") || thrown.over
 
   // The walk cycle, worked out up here because the head rides it. On the
   // passing frames, legs together, the body is at the top of its stride and
