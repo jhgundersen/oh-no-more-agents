@@ -2423,3 +2423,5 @@ own 16).
 deadliest fixture. `sim play` 93 → 94% home. Scarab: 5 vs 3 projectiles
 0.92 vs 0.83 kills a placement, Ruins 90.8 vs 91.1% — not worth it; kept.
 528 tests pass.
+
+**Deployed** after 89 (name="build" content="3523c8e7"): sentry reach. Browser check clean.
