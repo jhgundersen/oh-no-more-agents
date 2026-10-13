@@ -2401,3 +2401,5 @@ with envelope ends, parcels and sacks. 528 tests pass; `sim play` 99%
 cleared, 93% home (not like-for-like — every level moved biome); `inert`,
 `gravity` pass; over 30: 28. Tubes measured: 94.03 vs 93.85% home without
 them, 6.4 rides a level.
+
+**Deployed** after 88 (name="build" content="febea1b4"): the Mail Room. Browser check clean.
