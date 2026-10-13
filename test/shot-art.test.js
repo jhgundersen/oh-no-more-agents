@@ -62,3 +62,10 @@ test("the report card's battle line counts guards down and umbrella saves", () =
   assert.equal(D.battleLine({ enemiesKilled: 2, umbrellaSaves: 1 }), "2 GUARDS DOWN · 1 UMBRELLA SAVE")
   assert.equal(D.battleLine({ enemiesKilled: 0, umbrellaSaves: 3 }), "3 UMBRELLA SAVES")
 })
+
+test("the MVP is the agent who did most in the fight, and only if somebody did", () => {
+  assert.equal(D.mvpLine({ agents: [{ id: 3 }, { id: 4 }] }), "")
+  assert.equal(D.mvpLine({ agents: [{ id: 3, saves: 1 }, { id: 7, downed: 1 }] }), "MVP AGENT 007 · 1 DOWN")
+  assert.equal(D.mvpLine({ agents: [{ id: 12, saves: 2, downed: 1 }] }), "MVP AGENT 012 · 1 DOWN · 2 SAVES")
+  assert.equal(D.mvpLine({ agents: [{ id: 1, special: true, downed: 5 }, { id: 2, saves: 1 }] }), "MVP AGENT 002 · 1 SAVE")
+})

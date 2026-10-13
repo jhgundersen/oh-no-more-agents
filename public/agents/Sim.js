@@ -4303,6 +4303,7 @@ function umbrellaParries(w, ag, fromX) {
   if (!take(w, "floater")) return false
   ag.brollyFor = BROLLY_HOLD
   ag.brollyDir = fromX >= ag.x ? 1 : -1
+  ag.saves = (ag.saves || 0) + 1
   w.umbrellaSaves = (w.umbrellaSaves || 0) + 1
   w.lastEvent = "umbrella up"
   return true
@@ -4313,10 +4314,15 @@ function umbrellaParries(w, ag, fromX) {
 // from stable state, a separate draw from the parry's.
 var BROLLY_RICOCHET = 35
 
+// Who did what, for the report card's MVP. Bookkeeping only: nothing in the
+// simulation reads these back.
+function creditDowned(ag) { ag.downed = (ag.downed || 0) + 1 }
+
 function umbrellaRicochet(w, ag, by) {
   if (!by || by.gone || by.kind === "drone") return
   if ((w.ticks * 53 + ag.id * 29 + by.id * 7) % 100 >= BROLLY_RICOCHET) return
   killEnemy(w, by)
+  creditDowned(ag)
   w.ricochets = (w.ricochets || 0) + 1
   w.lastEvent = "ricochet"
 }
@@ -7189,7 +7195,7 @@ function regularSidearm(w, ag) {
   ag.shotFor = 8
   ag.gunCool = SIDEARM_RELOAD + (ag.id % 5) * 7
   if (hit) {
-    if (targetKind === "enemy") killEnemy(w, target)
+    if (targetKind === "enemy") { killEnemy(w, target); creditDowned(ag) }
     else wreckHazard(w, target)
   }
 }
@@ -7213,7 +7219,7 @@ function shootDrone(w, ag) {
   ag.shotY = hit ? target.y : target.y - 2 + roll % 4
   ag.shotFor = 8
   ag.gunCool = SIDEARM_RELOAD + (ag.id % 5) * 7
-  if (hit) { target.gone = true; target.state = "dead"; addDust(w, target.x, target.y, 10); noteBlast(w, target.x, target.y, 2); w.lastEvent = "drone down" }
+  if (hit) { target.gone = true; target.state = "dead"; addDust(w, target.x, target.y, 10); noteBlast(w, target.x, target.y, 2); w.lastEvent = "drone down"; creditDowned(ag) }
   return true
 }
 
@@ -8819,6 +8825,7 @@ function brawlTick(w, en) {
   var roll = (w.ticks * 37 + ag.id * 61 + en.id * 17) % 100
   if (roll < brawlOdds(w, ag)) {
     killEnemy(w, en)
+    creditDowned(ag)
     w.brawlsWon = (w.brawlsWon || 0) + 1
     w.lastEvent = "brawl won"
   } else {

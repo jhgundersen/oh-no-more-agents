@@ -2757,10 +2757,27 @@ function battleLine(w) {
   return parts.join(" · ")
 }
 
+// The agent who did most in the fight: three for each guard or drone it put
+// down (shot, brawled or ricocheted), two for each round its umbrella stopped.
+// Agents are numbered, as agents in suits are.
+function mvpLine(w) {
+  var best = null, top = 0
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i], score = (ag.downed || 0) * 3 + (ag.saves || 0) * 2
+    if (!ag.special && score > top) { best = ag; top = score }
+  }
+  if (!best) return ""
+  var parts = ["MVP AGENT " + ("00" + best.id).slice(-3)]
+  if (best.downed) parts.push(best.downed + " DOWN")
+  if (best.saves) parts.push(best.saves + (best.saves === 1 ? " SAVE" : " SAVES"))
+  return parts.join(" · ")
+}
+
 function drawLevelResults(ctx, w, pal) {
   var cx = Math.round(w.k.COLS * w.k.CELL / 2)
   var y = Math.round(w.k.ROWS * w.k.CELL / 2) - 31 + Math.max(0, 10 - w.doneTicks) * 2
-  var battle = battleLine(w), extra = (w.escortsHome > 0 ? 16 : 0) + (battle ? 16 : 0)
+  var battle = battleLine(w), mvp = battle ? mvpLine(w) : ""
+  var extra = (w.escortsHome > 0 ? 16 : 0) + (battle ? 16 : 0) + (mvp ? 12 : 0)
   drawTransitionPlate(ctx, w, pal, cx - 136, y, 62 + extra)
   ctx.fillStyle = pal.decorLit
   drawTransitionText(ctx, "LEVEL " + w.level + " · REPORT", cx, y + 8, 1)
@@ -2772,6 +2789,10 @@ function drawLevelResults(ctx, w, pal) {
   if (battle) {
     ctx.fillStyle = pal.warn
     drawTransitionText(ctx, battle, cx, y + 61 + (w.escortsHome > 0 ? 16 : 0), 1)
+  }
+  if (mvp) {
+    ctx.fillStyle = pal.decorLit
+    drawTransitionText(ctx, mvp, cx, y + 73 + (w.escortsHome > 0 ? 16 : 0), 1)
   }
 }
 

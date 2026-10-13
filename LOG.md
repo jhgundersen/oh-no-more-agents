@@ -3541,3 +3541,21 @@ animal, alien) with `drawMissionPerson` for civilians and explorers; the bob
 and the variant are worked out once. All ≤ 13. Seeded old/new Draw.js
 comparison, levels 1–170 at ticks 300 and 1100, res 1 and 2: **680 identical
 frames**, 204 of them with a mission on the board. Tests 683.
+
+## 128 — 2026-10-13 · An MVP, and a hero not built
+
+**Not built:** "Rain Check", an umbrella hero who would walk at guards behind
+a bulletproof canopy. It is Ada Blocker's shield again with a different
+prop, and every hero so far has cost the colony something; dropped.
+
+**Checked, no change:** terrain repaint cost in Chromium at res 2, since every
+dig repaints the whole layer and 113 added the depth pass: 0.9–2.3 ms per full
+repaint on seven biomes (Rooftops the most), depth calculation 0.17 ms.
+
+**MVP:** agents now keep score of their own fight — `downed` for each guard
+or drone they shot, brawled or ricocheted, `saves` for each round their
+umbrella stopped (bookkeeping only; fingerprint unchanged, `7d414d92…`). The
+report card names the best of them under the battle line, numbered as agents
+in suits are: "MVP AGENT 001 · 2 SAVES". Three points a guard, two a save;
+specials are not eligible. Looked at level 13's card: fits inside the plate.
+(The transition font has no colon; it printed "MVP?" until dropped.) Tests 684.
