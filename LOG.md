@@ -2826,3 +2826,17 @@ levels, 97% cleared, no hangs.
 
 **Pattern, three heroes running:** a move that a hero makes at *any* gap
 tends to cost, because most gaps are the way down. Make it at lethal ones.
+
+## 104 — 2026-10-13 · Crap: hitWall; Codex on an art audit
+
+`hitWall` (CRAP 41) is now four functions, in the order it decides:
+`wallBypassed` (stair door, ladder, hero move, steel, swim) → `wallTools`
+(the toolbar in the trait's order; `wallClimbable` holds the h > 0 guard
+and its story) → `wallLastResort` (stand down, blast, turn). The whole
+simulation is unchanged: a fingerprint of 240 plays (120 levels with and
+without a hero: final agents, ticks, terrain) has the same sha256 before
+and after. CRAP: hitWall 41 → 3, the largest piece is wallTools at 27; the
+over-30 count is 22 → 21.
+
+Codex is on `codex/audit`: find the three weakest-looking things in the game
+as a whole and improve them, with before/after crops.

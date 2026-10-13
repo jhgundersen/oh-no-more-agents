@@ -4653,6 +4653,18 @@ function exitAbove(w, ag) { return exitFloor(w) < ag.y - 2 }
 function liftRouted(w) { return w.lifts.length > 0 }
 
 function hitWall(w, ag) {
+  if (wallBypassed(w, ag)) return
+  var footY = Math.floor(ag.y)
+  var ax = Math.floor(ag.x) + ag.dir
+  var h = wallHeight(w, ax, footY)
+  var t = wallThickness(w, ax, footY, ag.dir)
+  if (wallTools(w, ag, h, t)) return
+  wallLastResort(w, ag, t)
+}
+
+// The ways past a wall that are not the toolbar's: a stair door or a ladder,
+// a hero's own move, steel (no way at all), or open water to swim.
+function wallBypassed(w, ag) {
   var footY = Math.floor(ag.y)
   var ax = Math.floor(ag.x) + ag.dir
 
@@ -4660,63 +4672,74 @@ function hitWall(w, ag) {
   if (stairs) {
     openStairDoor(w, stairs, footY)
     useLift(w, ag, stairs, footY)
-    return
+    return true
   }
 
   // A ladder is the one thing on the board that every agent treats identically
   // — special or not, cautious or brave, climbers left or none. It is also the
   // only way up a wall taller than MAX_CLIMB, and it costs the toolbar
   // nothing, which is the whole of what Stack Overflow contributes.
-  if (ladderAt(w, ax, ag.dir, footY)) { startClimb(w, ag); return }
+  if (ladderAt(w, ax, ag.dir, footY)) { startClimb(w, ag); return true }
 
-  if (ag.special) { specialAtWall(w, ag); return }
-  var mat = at(w, ax, footY)
+  if (ag.special) { specialAtWall(w, ag); return true }
 
   // Steel is the one honest "no". Nothing to try, so don't waste a skill on it.
-  if (mat === STEEL) { turnAround(w, ag); return }
+  if (at(w, ax, footY) === STEEL) { turnAround(w, ag); return true }
 
   // Before any of the tools: if home is up or down and the water is open, the
   // wall is somebody else's problem. This is what makes the biome read as
   // swimming rather than as walking with a longer fall — a diver meeting an
   // obstacle under the exit goes over it, not through it.
-  if (swimRoute(w, ag)) return
+  return swimRoute(w, ag)
+}
 
-  var h = wallHeight(w, ax, footY)
-  var t = wallThickness(w, ax, footY, ag.dir)
-  var trait = traitOf(ag)
-  var bashFirst = ag.contrary ? !trait.bashFirst : trait.bashFirst
-  var wantUp = exitAbove(w, ag) && !liftRouted(w)
-  var reach = wantUp ? RESCUE_CLIMB : MAX_CLIMB
-  // h > 0 matters. advanceWalk sends a low roof here as well as a wall, and it
-  // does not always agree with this function about which cell is "ahead" — the
-  // stride is fractional, so floor(x)+dir can be one past the cell that
-  // stopped the walk. Where that cell is open, wallHeight answers zero, which
-  // used to read as "a wall of no height, easily climbed": the agent bought a
-  // climber, started up a wall that was not there and dropped off it on the
-  // same tick. Seven of those in a row is a colony's entire climb allowance,
-  // and a tower's queue at the lift doors found the case reliably.
-  var climbable = h > 0 && h <= reach && footY - h >= SKY
+// A wall this agent could climb with a climber (or a shelf), up to `reach`.
+//
+// h > 0 matters. advanceWalk sends a low roof to hitWall as well as a wall,
+// and it does not always agree with hitWall about which cell is "ahead" — the
+// stride is fractional, so floor(x)+dir can be one past the cell that
+// stopped the walk. Where that cell is open, wallHeight answers zero, which
+// used to read as "a wall of no height, easily climbed": the agent bought a
+// climber, started up a wall that was not there and dropped off it on the
+// same tick. Seven of those in a row is a colony's entire climb allowance,
+// and a tower's queue at the lift doors found the case reliably.
+function wallClimbable(w, ag, h, reach) {
+  var footY = Math.floor(ag.y)
+  return h > 0 && h <= reach && footY - h >= SKY
     && climbShaftClear(w, Math.floor(ag.x), footY, h)
+}
 
-  if (wantUp) bashFirst = false
+// The toolbar, in the order this agent's trait reaches for it. True when a
+// skill was spent and started.
+function wallTools(w, ag, h, t) {
+  var trait = traitOf(ag)
+  var wantUp = exitAbove(w, ag) && !liftRouted(w)
+  var bashFirst = !wantUp && (ag.contrary ? !trait.bashFirst : trait.bashFirst)
+  var climbable = wallClimbable(w, ag, h, wantUp ? RESCUE_CLIMB : MAX_CLIMB)
 
-  if (trait.bridgeAt <= 3 && h <= 6 && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return }
+  if (trait.bridgeAt <= 3 && h <= 6 && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return true }
 
   if (bashFirst) {
-    if (t <= BASH_REACH && spend(w, ag, "basher")) { ag.state = "bash"; ag.timer = 0; return }
-    if (climbable && (shelfClimb(w, ag) || spend(w, ag, "climber"))) { startClimb(w, ag); return }
+    if (t <= BASH_REACH && spend(w, ag, "basher")) { ag.state = "bash"; ag.timer = 0; return true }
+    if (climbable && (shelfClimb(w, ag) || spend(w, ag, "climber"))) { startClimb(w, ag); return true }
   } else {
-    if (climbable && (shelfClimb(w, ag) || spend(w, ag, "climber"))) { startClimb(w, ag); return }
+    if (climbable && (shelfClimb(w, ag) || spend(w, ag, "climber"))) { startClimb(w, ag); return true }
     // Climbers are the scarcest thing on the board and a pit will empty them.
     // A staircase is the other way up, and the one the level has plenty of —
     // so under the exit it comes before the bash rather than after it, and
     // brings its own allowance with it (see willBuild).
-    if (wantUp && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return }
-    if (t <= BASH_REACH && spend(w, ag, "basher")) { ag.state = "bash"; ag.timer = 0; return }
+    if (wantUp && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return true }
+    if (t <= BASH_REACH && spend(w, ag, "basher")) { ag.state = "bash"; ag.timer = 0; return true }
   }
 
-  if (h <= MAX_CLIMB && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return }
+  if (h <= MAX_CLIMB && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return true }
+  return false
+}
 
+// Nothing bought a way past: stand down for the colony behind, blast the wall,
+// or turn round.
+function wallLastResort(w, ag, t) {
+  var trait = traitOf(ag)
   if (trait.standDown > 0 && ag.turns >= trait.standDown &&
       countComing(w, ag) >= 1 && spend(w, ag, "blocker")) {
     ag.state = "block"
