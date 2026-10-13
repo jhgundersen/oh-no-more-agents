@@ -203,6 +203,7 @@ function drawTerrain(ctx, w, pal) {
   if (w.biome === "Mail Room") drawMailSlots(ctx, w, pal)
   if (w.biome === "Building Site") drawSiteMaterials(ctx, w, pal)
   if (w.biome === "Clock Tower") drawClockMaterials(ctx, w, pal)
+  if (w.biome === "Rooftops") drawRoofMaterials(ctx, w, pal)
   if ((w.res || 1) >= 2) drawTerrainFine(ctx, w, pal)
 
   drawFactoryPlates(ctx, w, pal)
@@ -346,7 +347,7 @@ function drawFactoryPlates(ctx, w, pal) {
 // while the colony digs around it.
 // Built places get no grain: on hull plate, office wall and machine housing it
 // read as dirt, and those biomes carry their own pattern (panels, bays, rivets).
-var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true, "Library": true, "Mail Room": true, "Building Site": true, "Clock Tower": true }
+var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true, "Library": true, "Mail Room": true, "Building Site": true, "Clock Tower": true, "Rooftops": true }
 
 // One cell's grain: a dark fleck in a quarter of cells, a pale one in an
 // eighth, placed inside the cell by the hash.
@@ -470,7 +471,7 @@ var BACKDROPS = {
   "Foundry": backFoundry, "Jungle": backJungle, "Ice Cave": backIceCave,
   "Spaceship": backSpaceship, "Factory": backFactory, "Trench": backTrench,
   "Desert": backDesert, "Data Center": backDataCenter, "Library": backLibrary, "Mail Room": backMailRoom,
-  "Building Site": backBuildingSite, "Clock Tower": backClockTower
+  "Building Site": backBuildingSite, "Clock Tower": backClockTower, "Rooftops": backRooftops
 }
 
 function drawBackdrop(ctx, w, pal) {
@@ -732,7 +733,7 @@ var BACKDROP_FINE = {
   "Spaceship": backSpaceshipFine, "Factory": backFactoryFine,
   "Skyscraper": backSkyscraperFine, "Trench": backTrenchFine,
   "Desert": backDesertFine, "Data Center": backDataCenterFine, "Library": backLibraryFine, "Mail Room": backMailRoomFine,
-  "Building Site": backBuildingSiteFine, "Clock Tower": backClockTowerFine
+  "Building Site": backBuildingSiteFine, "Clock Tower": backClockTowerFine, "Rooftops": backRooftopsFine
 }
 
 function drawBackdropFine(ctx, w, pal) {
@@ -994,11 +995,12 @@ function drawDecor(ctx, w, pal) {
     var desert = w.biome === "Desert"
     drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert)
     if ((w.res || 1) >= 2) drawDecorFine(ctx, pal, d, px, py, py + C,
-      w.biome === "Clock Tower" ? "clock" : w.biome === "Building Site" ? "site" : w.biome === "Mail Room" ? "mail" : w.biome === "Library" ? "library" : foundry ? "pipe" : ruins ? "ruins" : desert ? "desert" : jungle ? "jungle" : frost ? "frost" : "cave")
+      w.biome === "Rooftops" ? "roof" : w.biome === "Clock Tower" ? "clock" : w.biome === "Building Site" ? "site" : w.biome === "Mail Room" ? "mail" : w.biome === "Library" ? "library" : foundry ? "pipe" : ruins ? "ruins" : desert ? "desert" : jungle ? "jungle" : frost ? "frost" : "cave")
   }
 }
 
 function drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert) {
+  if (w.biome === "Rooftops") return drawRoofDecor(ctx, pal, d, px, py, w.k.CELL)
   if (w.biome === "Clock Tower") return drawClockDecor(ctx, pal, d, px, py, w.k.CELL)
   if (w.biome === "Building Site") return drawSiteDecor(ctx, pal, d, px, py, w.k.CELL)
   if (w.biome === "Mail Room") return drawMailDecor(ctx, pal, d, px, py, w.k.CELL)
@@ -1115,6 +1117,8 @@ function drawDecorFine(ctx, pal, d, px, top, base, look) {
 function fineSpireHeight(d) { return 3 + d.size * 3 }
 
 var DECOR_FINE = {
+  "spire:roof": fineRoofChimney, "clump:roof": fineRoofDish,
+  "hang:roof": fineRoofWashing, "tuft:roof": fineRoofPigeon,
   "spire:clock": fineClockWeight, "clump:clock": fineClockParts,
   "hang:clock": fineClockChain, "tuft:clock": fineClockOiler,
   "spire:site": fineSiteCone, "clump:site": fineSitePallet,
@@ -1244,7 +1248,7 @@ function drawExitBack(ctx, w, pal) {
   drawExitFrameFine(ctx, w, pal, x, y, ww, hh)
 }
 
-var EXIT_FRAMES = { "Library": drawExitLibrary, "Data Center": drawExitDataBack, "Mail Room": drawExitMail, "Building Site": drawExitSite, "Clock Tower": drawExitClock }
+var EXIT_FRAMES = { "Library": drawExitLibrary, "Data Center": drawExitDataBack, "Mail Room": drawExitMail, "Building Site": drawExitSite, "Clock Tower": drawExitClock, "Rooftops": drawExitRoof }
 function drawExitFrameBase(ctx, w, pal, x, y, ww, hh, cx3) {
   switch (w.biome) {
   case "Ruins":
@@ -1398,7 +1402,7 @@ var EXIT_FINE = {
   "Data Center": drawExitDataFine,
   "Library": drawExitLibraryFine,
   "Mail Room": drawExitMailFine,
-  "Building Site": drawExitSiteFine, "Clock Tower": drawExitClockFine
+  "Building Site": drawExitSiteFine, "Clock Tower": drawExitClockFine, "Rooftops": drawExitRoofFine
 }
 
 function drawExitFrameFine(ctx, w, pal, x, y, ww, hh) {
@@ -1705,6 +1709,7 @@ function drawWaterLife(ctx, w, pal) {
 //   blink  >0: lit only for that share of a cycle (fireflies, glints)
 
 var AMBIENCE = {
+  "Rooftops": [{ n: 200, vx: -0.35, vy: 1.4, sway: 0, size: 1, col: "dust", alpha: 0.48 }],
   "Clock Tower": [{ n: 52, vx: 0.018, vy: 0.04, sway: 2, size: 1, col: "dust", alpha: 0.38 },
                   { n: 4, vx: 0.015, vy: 0.35, sway: 1, size: 2, col: "oreEdge", alpha: 0.55 }],
   "Building Site": [{ n: 48, vx: 0.07, vy: 0.09, sway: 2, size: 1, col: "dust", alpha: 0.34 }],
@@ -1795,6 +1800,7 @@ function drawMotes(ctx, w, pal, spec, salt) {
     if (w.terrain[Math.floor(py / C) * k.COLS + Math.floor(px / C)] !== k.EMPTY) continue
     ctx.globalAlpha = spec.alpha
     if ((w.res || 1) >= 2) AMBIENCE_FINE[w.biome](ctx, w, pal, Math.floor(x * 2) / 2, Math.floor(y * 2) / 2, spec, i)
+    else if (w.biome === "Rooftops") drawRoofRain(ctx, w, pal, px, py, 1)
     else if (w.biome === "Mail Room") drawMailMote(ctx, w, pal, px, py, spec)
     else ctx.fillRect(px, py, spec.size, spec.size)
   }
@@ -1811,7 +1817,7 @@ var AMBIENCE_FINE = {
   "Spaceship": drawMoteSpaceshipFine, "Factory": drawMoteFactoryFine,
   "Skyscraper": drawMoteSkyscraperFine, "Trench": drawMoteTrenchFine,
   "Desert": drawMoteDesertFine, "Data Center": drawMoteDataFine, "Library": drawMoteLibraryFine, "Mail Room": drawMoteMailFine,
-  "Building Site": drawMoteSiteFine, "Clock Tower": drawMoteClockFine
+  "Building Site": drawMoteSiteFine, "Clock Tower": drawMoteClockFine, "Rooftops": drawMoteRoofFine
 }
 
 // Check the complete half-pixel footprint: the motion can put a corner into
@@ -2021,6 +2027,7 @@ function drawMachines(ctx, w, pal) {
   drawWaterLife(ctx, w, pal)
   if (w.biome === "Building Site") drawSiteMachines(ctx, w, pal)
   if (w.biome === "Clock Tower") drawClockMachines(ctx, w, pal)
+  if (w.biome === "Rooftops") drawRoofMachines(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
   if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
   if (w.updraft) drawUpdrafts(ctx, w, pal)
@@ -4492,7 +4499,12 @@ function drawEnemyHatch(ctx, w, pal, opts) {
   else if (biome === "Library") { wall = pal.dirt; roof = pal.dirtShade; edge = pal.oreEdge; sign = "STACK OVERFLOW" }
   else if (biome === "Clock Tower") { wall = pal.dirt; roof = pal.oreShade; edge = pal.oreEdge; sign = "WATCHDOG TIMER" }
   else if (biome === "Building Site") { wall = pal.rock; roof = pal.ore; edge = pal.oreEdge; sign = "BUILD FAILED" }
+  else if (biome === "Rooftops") { wall = pal.dirt; roof = pal.oreShade; edge = pal.oreEdge; sign = "LOCAL HOST" }
 
+  drawBoothFrame(ctx, pal, opts, biome, x, y, wall, roof, edge, sign)
+}
+
+function drawBoothFrame(ctx, pal, opts, biome, x, y, wall, roof, edge, sign) {
   // Barely larger than an agent: a sentry booth, not a second landmark. Its
   // materials come from the current theme; biome identity is in the roofline.
   ctx.fillStyle = wall
@@ -4502,6 +4514,8 @@ function drawEnemyHatch(ctx, w, pal, opts) {
     ctx.fillRect(x - 6, y - 19, 12, 2); ctx.fillRect(x - 9, y - 17, 18, 2)
   } else if (biome === "Jungle") {
     ctx.fillRect(x - 11, y - 19, 22, 3); ctx.fillRect(x - 7, y - 22, 14, 3)
+  } else if (biome === "Rooftops") {
+    drawRoofBoothTop(ctx, pal, x, y)
   } else if (biome === "Clock Tower") {
     drawClockBoothTop(ctx, pal, x, y)
   } else if (biome === "Building Site") {
@@ -4534,6 +4548,7 @@ function drawEnemyHatch(ctx, w, pal, opts) {
 }
 
 function drawExitGlow(ctx, w, pal) {
+  if (w.biome === "Rooftops") return drawRoofDoorLight(ctx, w, pal)
   var k = w.k
   var C = k.CELL
   var e = w.exit
@@ -6645,7 +6660,7 @@ function drawReloadSign(ctx, ag, ox, oy, hair) {
 // These are visual durations only (guarded against EVENTS by the tests), so a
 // direct fireEvent and a scheduled one fade alike without a renderer clock.
 var EVENT_VISUAL_SPANS = {
-  boost: { Ruins: 420, Foundry: 360, Factory: 380, Skyscraper: 400, "Data Center": 300, "Mail Room": 360, "Building Site": 380, "Clock Tower": { 0: 280, 2: 360 } },
+  boost: { Ruins: 420, Foundry: 360, Factory: 380, Skyscraper: 400, "Data Center": 300, "Mail Room": 360, "Building Site": 380, "Clock Tower": { 0: 280, 2: 360 }, Rooftops: 300 },
   sight: { Cavern: 420, Frost: 480, "Ice Cave": 450, Desert: 460, Library: 420 },
   fall: { Spaceship: 400 }
 }
@@ -6783,6 +6798,7 @@ function eventDimColour(colour, shade, fade) {
 function drawEventHazardStatus(ctx, w, pal, h, fade) {
   if (!(w.eventBoost > 0) || h.wrecked || h.throttled > 0) return
   if (w.biome === "Clock Tower") return drawClockHazardStatus(ctx, w, pal, h, fade)
+  if (w.biome === "Rooftops") return drawRoofPowerStatus(ctx, w, pal, h, fade)
   var C = w.k.CELL, x = Math.round((h.zx0 + h.zx1 + 1) * C / 2)
   var y = h.mount === "ceiling" ? h.zy0 * C + 2 : (h.zy1 + 1) * C - 5
   var stopped = w.eventMult === 0
@@ -6823,6 +6839,7 @@ function drawEventHeat(ctx, w, pal, x, y, fade, dir) {
 function drawEventSite(ctx, w, pal, fx) {
   if (w.biome === "Building Site") drawSiteEventMarker(ctx, w, pal, fx)
   if (w.biome === "Clock Tower") drawClockEventMarker(ctx, w, pal, fx)
+  if (w.biome === "Rooftops") drawRoofEventMarker(ctx, w, pal, fx)
   if (w.ticks < fx.fireAt) {
     var p = (w.ticks - fx.warnAt) / Math.max(1, fx.fireAt - fx.warnAt)
     if (fx.mech === "growth") drawGrowthWarning(ctx, w, pal, fx, p)
@@ -9754,6 +9771,7 @@ function drawDiverBubbles(ctx, w, pal, ag, ox, oy, drop) {
 }
 
 function drawAgent(ctx, w, pal, ag, opts) {
+  if (ag.state === "zip") return drawZipAgent(ctx, w, pal, ag, opts)
   if (ag.state === "hooked") return drawHookedAgent(ctx, w, pal, ag, opts)
   var k = w.k
   var C = k.CELL
@@ -11440,5 +11458,455 @@ function drawClockHazardStatus(ctx, w, pal, h, fade) {
     ctx.fillStyle = CLOCK_GLINT
     ctx.fillRect(x - 2, y - 2.5, 1.5, 0.5)
   }
+  ctx.restore()
+}
+
+// Rooftops: wet brick and slate, warm windows across the street. Scenery is
+// derived from level/ticks; even the cable's load is a read of living riders.
+var ROOF_LIGHT = "#deb977", ROOF_POT = "#986b56"
+function backRooftops(ctx, r, b, pal) {
+  drawRoofMoon(ctx, pal, 250 + b.world.level % 47, 12)
+  for (var row = 0; row < 5; row++) {
+    var base = b.y + 24 + row * 43
+    for (var x = -12; x < b.w; x += 31) {
+      var h = 16 + Math.floor(r() * 12)
+      backRoofHouse(ctx, pal, x, base, h, Math.floor(r() * 100))
+    }
+  }
+  // A far church spire breaks the terrace's rhythm.
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(78, b.y - 5, 9, 27)
+  for (var i = 0; i < 6; i++) ctx.fillRect(82 - Math.floor(i / 2), b.y - 17 + i * 2, 1 + Math.floor(i / 2) * 2, 2)
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(82, b.y + 1, 1, 5)
+}
+function drawRoofMoon(ctx, pal, x, y) {
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(x - 5, y - 3, 10, 6)
+  ctx.fillRect(x - 3, y - 5, 6, 10)
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(x - 10, y + 1, 22, 3) // a cloud across the moon
+  ctx.fillRect(x - 5, y - 1, 14, 2)
+  ctx.fillStyle = pal.back
+  ctx.fillRect(x + 8, y + 3, 15, 2)
+}
+function backRoofHouse(ctx, pal, x, base, h, seed) {
+  ctx.fillStyle = seed % 2 ? pal.back : pal.backDim
+  ctx.fillRect(x, base - h, 29, h)
+  for (var i = 0; i < 7; i++) ctx.fillRect(x + i * 2, base - h - i, 29 - i * 4, 1)
+  ctx.fillRect(x + 5, base - h - 7, 3, 5) // stack
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(x + 5, base - h - 8, 1, 2); ctx.fillRect(x + 7, base - h - 8, 1, 2)
+  ctx.fillRect(x + 22, base - h - 9, 1, 8) // TV aerial
+  ctx.fillRect(x + 19, base - h - 7, 7, 1)
+  ctx.fillRect(x + 20, base - h - 4, 5, 1)
+  for (var wy = base - h + 4; wy < base - 3; wy += 7) for (var wx = 4; wx < 26; wx += 9) {
+    ctx.fillStyle = (wx + wy + seed) % 5 < 2 ? "rgba(222,185,119,0.22)" : pal.backDim
+    ctx.fillRect(x + wx, wy, 3, 4)
+  }
+}
+function backRooftopsFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + b.w - 0.5, b.y, 0.5, b.h) // window mullion / party wall
+  if (b.w > 3 && b.h > 3) {
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(b.x + 0.5, b.y + 0.5, b.w - 1, 0.5)
+    ctx.fillRect(b.x + Math.floor(b.w / 2), b.y + 1, 0.5, b.h - 1)
+  }
+}
+function drawRoofMaterials(ctx, w, pal) {
+  var k = w.k, C = k.CELL, fine = (w.res || 1) >= 2
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 0; x < k.COLS; x++) {
+    var m = w.terrain[y * k.COLS + x]
+    if (m === k.EMPTY || m === k.STEEL) continue
+    drawRoofCell(ctx, k, pal, m, x * C, y * C, x, y, fine)
+  }
+}
+function drawRoofCell(ctx, k, pal, m, px, py, x, y, fine) {
+  if (m === k.DIRT) {
+    ctx.fillStyle = pal.dirtShade
+    ctx.fillRect(px, py + 3, 4, 1) // brick courses, staggered per row
+    ctx.fillRect(px + (y % 2) * 2, py, 1, 3)
+  } else if (m === k.ORE) {
+    ctx.fillStyle = pal.oreShade
+    ctx.fillRect(px, py + 3, 4, 1)
+    ctx.fillRect(px + (y % 2) * 2, py, 1, 3) // slate overlaps
+  }
+  if (fine) drawRoofCellFine(ctx, k, pal, m, px, py, x, y)
+}
+function drawRoofCellFine(ctx, k, pal, m, px, py, x, y) {
+  ctx.fillStyle = materialEdge(k, pal, m)
+  ctx.globalAlpha = m === k.ROCK ? 0.3 : 0.55
+  ctx.fillRect(px + 0.5, py + 0.5, 3, 0.5)
+  ctx.globalAlpha = 1
+  if (m === k.ORE) {
+    ctx.fillStyle = pal.oreShade
+    ctx.fillRect(px + 2.5, py + 1, 0.5, 2) // split slate
+  } else if ((x + y) % 4 === 0) {
+    ctx.fillStyle = materialShade(k, pal, m)
+    ctx.fillRect(px + 1, py + 2, 1.5, 0.5) // chipped brick / mortar
+  }
+}
+function drawRoofDecor(ctx, pal, d, x, y, C) {
+  var base = y + C
+  if (d.kind === "spire") {
+    if (d.seed % 2) drawRoofChimney(ctx, pal, d, x, base)
+    else drawRoofAerial(ctx, pal, x, base, 7 + d.size * 2)
+  } else if (d.kind === "clump") drawRoofDish(ctx, pal, d, x, base)
+  else if (d.kind === "hang") drawRoofWashing(ctx, pal, d, x, y)
+  else if (d.seed % 3 === 0) drawRoofGutter(ctx, pal, x, base)
+  else drawRoofPigeon(ctx, pal, d, x, base)
+}
+function drawRoofChimney(ctx, pal, d, x, base) {
+  var h = 5 + d.size * 2
+  ctx.fillStyle = pal.dirtShade
+  ctx.fillRect(x - 1, base - h, 7, h)
+  ctx.fillStyle = pal.dirtEdge
+  ctx.fillRect(x - 2, base - h, 9, 1)
+  ctx.fillStyle = ROOF_POT
+  ctx.fillRect(x, base - h - 4, 2, 4); ctx.fillRect(x + 3, base - h - 3, 2, 3)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x, base - h - 4, 2, 1); ctx.fillRect(x + 3, base - h - 3, 2, 1)
+}
+function drawRoofAerial(ctx, pal, x, base, h) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x + 2, base - h, 1, h)
+  ctx.fillRect(x - 2, base - h + 2, 9, 1)
+  ctx.fillRect(x, base - h + 5, 5, 1)
+  ctx.fillRect(x - 1, base - h + 1, 1, 3); ctx.fillRect(x + 5, base - h + 1, 1, 3)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x, base - 1, 5, 1)
+}
+function drawRoofDish(ctx, pal, d, x, base) {
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x + 1, base - 5, 2, 5)
+  ctx.fillRect(x - 3, base - 6, 7, 2)
+  ctx.fillRect(x - 2, base - 4, 5, 1)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 4, base - 8, 1, 3); ctx.fillRect(x - 3, base - 7, 2, 1)
+  ctx.fillRect(x + 4, base - 8, 1, 4); ctx.fillRect(x + 2, base - 9, 3, 1) // feed horn
+}
+function drawRoofWashing(ctx, pal, d, x, top) {
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x - 4, top, 15, 2) // gutter and hanging clothes rail
+  ctx.fillRect(x + 9, top + 2, 2, 5)
+  ctx.fillStyle = pal.shirt
+  ctx.fillRect(x - 2, top + 3, 6, 2); ctx.fillRect(x - 1, top + 5, 4, 3) // shirt
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x + 6, top + 3, 2, 4); ctx.fillRect(x + 5, top + 6, 2, 2) // sock
+}
+function drawRoofPigeon(ctx, pal, d, x, base) {
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x - 3, base - 3, 6, 2) // tail trailing to the left
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x, base - 4, 4, 3); ctx.fillRect(x + 3, base - 6, 2, 3)
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(x + 5, base - 5, 1, 1); ctx.fillRect(x + 1, base - 1, 1, 1)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 4, base - 6, 1, 1)
+}
+function fineRoofChimney(ctx, pal, d, x, base) {
+  if (d.seed % 2 === 0) {
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(x - 1.5, base - 4.5 - d.size * 2, 8, 0.5)
+    ctx.fillStyle = pal.steelEdge
+    ctx.fillRect(x + 2, base - 6.5 - d.size * 2, 0.5, 6 + d.size * 2)
+    return
+  }
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x + 0.5, base - 8 - d.size * 2, 0.5, 2)
+  ctx.fillStyle = pal.dirtShade
+  ctx.fillRect(x, base - 3.5, 5, 0.5)
+}
+function fineRoofDish(ctx, pal, d, x, base) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 2.5, base - 5.5, 4.5, 0.5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 3.5, base - 7.5, 0.5, 1.5)
+}
+function fineRoofWashing(ctx, pal, d, x, base, top) {
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 3.5, top + 1.5, 13, 0.5)
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(x - 0.5, top + 2.5, 0.5, 1); ctx.fillRect(x + 6.5, top + 2.5, 0.5, 1) // pegs
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x + 1.5, top + 5, 0.5, 2.5)
+}
+function fineRoofPigeon(ctx, pal, d, x, base) {
+  if (d.seed % 3 === 0) {
+    ctx.fillStyle = pal.steelEdge
+    ctx.fillRect(x - 3.5, base - 1.5, 10, 0.5)
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(x + 5.5, base - 4.5, 0.5, 2)
+    return
+  }
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x + 3, base - 3.5, 1, 0.5) // neck sheen
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 4.5, base - 5.5, 0.5, 0.5)
+  ctx.fillRect(x, base - 2.5, 2.5, 0.5) // wing
+}
+function drawExitRoof(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.dirtShade
+  ctx.fillRect(x, y, ww - 3, hh) // a front door ajar, with light down the opening
+  ctx.fillStyle = ROOF_LIGHT
+  ctx.fillRect(x + ww - 3, y, 3, hh)
+  ctx.fillRect(x + 2, y + 2, ww - 8, 4) // lit fanlight
+  ctx.fillStyle = pal.dirtEdge
+  ctx.fillRect(x + 2, y + 8, ww - 8, 1)
+  ctx.fillRect(x + 2, y + hh - 3, ww - 8, 1)
+  ctx.fillStyle = pal.dirtShade
+  ctx.fillRect(x - 5, y - 5, ww + 10, 5)
+  ctx.fillRect(x - 4, y, 3, hh); ctx.fillRect(x + ww + 1, y, 3, hh)
+  ctx.fillStyle = pal.oreShade
+  ctx.fillRect(x - 6, y - 7, ww + 12, 2) // porch canopy
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x - 4, y - 8, ww + 8, 1)
+  ctx.fillStyle = pal.exitFrame
+  ctx.fillRect(x - 1, y, 1, hh); ctx.fillRect(x + ww, y, 1, hh)
+  ctx.fillRect(x - 4, y + hh, ww + 8, 2) // doorstep
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + ww + 2, y + 2, 3, 5) // porch lamp housing
+  ctx.fillStyle = ROOF_LIGHT
+  ctx.fillRect(x + ww + 3, y + 3, 1, 3)
+  ctx.fillRect(x + ww - 2, y + hh / 2, 1, 1) // door handle
+  drawRoofNumber(ctx, pal, x + ww / 2 - 3, y - 4)
+}
+function drawRoofNumber(ctx, pal, x, y) {
+  ctx.fillStyle = pal.shirt
+  ctx.fillRect(x, y, 1, 3) // No. 17, readable even when text is disabled
+  ctx.fillRect(x + 3, y, 3, 1); ctx.fillRect(x + 5, y + 1, 1, 2)
+}
+function drawExitRoofFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x - 5.5, y - 6.5, ww + 11, 0.5)
+  ctx.fillStyle = pal.exitFrame
+  ctx.fillRect(x + 1, y + 2, ww - 2, 0.5) // front door's glazed transom
+  ctx.fillRect(x + 1, y + hh - 4, ww - 2, 0.5)
+  ctx.fillStyle = pal.dirtShade
+  ctx.fillRect(x - 3.5, y + 1, 0.5, hh - 1)
+  ctx.fillStyle = pal.warn
+  ctx.fillRect(x + ww + 2.5, y + 3, 0.5, 3)
+}
+function drawRoofBoothTop(ctx, pal, x, y) {
+  for (var i = 0; i < 4; i++) ctx.fillRect(x - 10 + i * 2, y - 18 - i, 20 - i * 4, 1)
+  ctx.fillRect(x + 5, y - 24, 3, 5)
+  drawRoofAerial(ctx, pal, x - 5, y - 20, 6)
+}
+function drawRoofRain(ctx, w, pal, x, y, size) {
+  for (var j = 0; j < 4; j++) moteFineRect(ctx, w, x + Math.floor(j / 2) * size, y - j * size, size, size)
+}
+function drawMoteRoofFine(ctx, w, pal, x, y) {
+  drawRoofRain(ctx, w, pal, x, y, 0.5)
+}
+function drawRoofMachines(ctx, w, pal) {
+  for (var i = 0; i < w.ziplines.length; i++) drawRoofLine(ctx, w, pal, w.ziplines[i], i)
+  drawRoofWeather(ctx, w, pal)
+}
+function drawRoofWeather(ctx, w, pal) {
+  ctx.save()
+  var C = w.k.CELL
+  for (var i = 0; i < w.decor.length; i++) {
+    var d = w.decor[i]
+    if (d.kind !== "spire" || d.seed % 2 === 0 || !lightDecorAlive(w, d)) continue
+    drawRoofSteam(ctx, w, pal, d.x * C + 1, (d.y + 1) * C - 9 - d.size * 2, d.seed)
+  }
+  // Sparse splashes above surviving ledges, never fixed to a carved floor.
+  for (var y = w.k.SKY; y < w.k.ROWS; y++) for (var x = 5; x < w.k.COLS - 3; x += 11) {
+    if (!w.terrain[y * w.k.COLS + x] || !mechanismAir(w, x * C, y * C - 1)) continue
+    var age = (w.ticks + x * 7 + y * 13) % 47
+    if (age < 5) drawRoofSplash(ctx, w, pal, x * C + 1, y * C - 1, age)
+  }
+  ctx.restore()
+}
+function drawRoofSteam(ctx, w, pal, x, y, seed) {
+  ctx.fillStyle = pal.dust
+  var size = (w.res || 1) >= 2 ? 0.5 : 1
+  for (var i = 0; i < 7; i++) {
+    var rise = (w.ticks * 0.18 + i * 2 + seed % 9) % 14
+    var sx = Math.round((x + Math.sin(rise / 3 + seed) * 2 - rise / 4) / size) * size
+    var sy = Math.round((y - rise) / size) * size
+    ctx.globalAlpha = 0.45 * (1 - rise / 14)
+    moteFineRect(ctx, w, sx, sy, size * 2, size)
+  }
+}
+function drawRoofSplash(ctx, w, pal, x, y, age) {
+  var size = (w.res || 1) >= 2 ? 0.5 : 1
+  ctx.fillStyle = pal.dust
+  ctx.globalAlpha = 0.6 * (1 - age / 6)
+  moteFineRect(ctx, w, x - age, y - (age % 3), size, size)
+  moteFineRect(ctx, w, x + age + 1, y - (age % 3), size, size)
+}
+
+// The cable is 14 art pixels above the smooth feet path. A compact, bent-leg
+// pose leaves room for the closed umbrella inside the corridor's headroom.
+// Visual mirrors of the lift and sag; the tests check them against Sim.
+// Local load tents peak at each rider and meet both ends; their upper envelope
+// gives several riders one cable, with each hook touching it exactly.
+var ROOF_ZIP_LIFT = 2
+var ROOF_ZIP_SAG = 1
+var ROOF_ZIP_HANG = 14
+function roofLineDrawing(w, z, index) {
+  var C = w.k.CELL, loads = [], length = Math.abs(z.lx - z.ax) * C
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state !== "zip" || ag.zip !== index) continue
+    var s = Math.min(length, Math.max(0, ag.zipS * C))
+    loads.push({ s: s, sag: ROOF_ZIP_SAG * C * Math.sin(Math.PI * s / length) })
+  }
+  return { x: (z.ax + 0.5) * C, y: (z.ay + 1 - ROOF_ZIP_LIFT) * C - ROOF_ZIP_HANG, dir: z.dir, length: length, loads: loads }
+}
+function roofCableSag(g, s) {
+  var sag = 0.75 * Math.sin(Math.PI * s / g.length)
+  for (var i = 0; i < g.loads.length; i++) {
+    var load = g.loads[i]
+    var weight = s <= load.s ? s / Math.max(0.01, load.s) : (g.length - s) / Math.max(0.01, g.length - load.s)
+    sag = Math.max(sag, load.sag * weight)
+  }
+  return sag
+}
+function drawRoofLine(ctx, w, pal, z, index) {
+  var g = roofLineDrawing(w, z, index), size = (w.res || 1) >= 2 ? 0.5 : 1
+  ctx.save()
+  drawRoofPost(ctx, w, pal, g.x, g.y, z.dir)
+  drawRoofPost(ctx, w, pal, g.x + z.dir * g.length, g.y, -z.dir)
+  ctx.fillStyle = pal.steelEdge
+  for (var s = 0; s <= g.length; s += size) {
+    var x = g.x + g.dir * s, y = Math.round((g.y + roofCableSag(g, s)) / size) * size
+    moteFineRect(ctx, w, x, y, size, size)
+  }
+  if (!g.loads.length) drawRoofLinePeg(ctx, w, pal, g, size)
+  ctx.restore()
+}
+function drawRoofPost(ctx, w, pal, x, y, dir) {
+  var height = ROOF_ZIP_LIFT * w.k.CELL + ROOF_ZIP_HANG
+  ctx.fillStyle = pal.steelShade
+  moteFineRect(ctx, w, x - dir * 3, y, 2, height) // posts planted on the lips
+  ctx.fillStyle = pal.steelEdge
+  moteFineRect(ctx, w, x - 3, y, 7, 1)
+  if ((w.res || 1) >= 2) moteFineRect(ctx, w, x - dir * 3, y + 1, 0.5, height - 2)
+}
+function drawRoofLinePeg(ctx, w, pal, g, size) {
+  var s = Math.round(g.length * 0.28), x = g.x + g.dir * s
+  var y = Math.round((g.y + roofCableSag(g, s)) / size) * size
+  ctx.fillStyle = pal.warn
+  moteFineRect(ctx, w, x, y - size, size, 2)
+  ctx.fillStyle = pal.shirt
+  moteFineRect(ctx, w, x, y + 2, 2, 3) // a lone forgotten sock
+  moteFineRect(ctx, w, x - 1, y + 4, 2, 1)
+}
+function zipDrawing(w, ag) {
+  var z = w.ziplines[ag.zip], C = w.k.CELL, size = (w.res || 1) >= 2 ? 0.5 : 1
+  var t = Math.min(1, ag.zipS / Math.abs(z.lx - z.ax))
+  var x = (z.ax + z.dir * ag.zipS + 0.5) * C
+  var y = (z.ay + 1 - ROOF_ZIP_LIFT) * C - ROOF_ZIP_HANG + ROOF_ZIP_SAG * C * Math.sin(Math.PI * t)
+  return { x: Math.round(x / size) * size, y: Math.round(y / size) * size,
+    swing: Math.round(Math.sin(w.ticks / 7 + ag.id) * (ag.zipV || 0.16) * 2), dir: ag.dir }
+}
+function drawZipAgent(ctx, w, pal, ag, opts) {
+  var g = zipDrawing(w, ag), c = agentDrawColors(w, pal, ag, "zip")
+  ctx.save()
+  drawZipUmbrella(ctx, w, pal, ag, g)
+  drawZipBody(ctx, pal, g, c)
+  if ((w.res || 1) >= 2) drawZipFine(ctx, w, pal, g)
+  drawAgentLabel(ctx, w, pal, ag, g.x - 4, g.y + 5, "zip", opts)
+  ctx.restore()
+}
+function drawZipUmbrella(ctx, w, pal, ag, g) {
+  ctx.fillStyle = pal.umbrellaStem
+  zipRect(ctx, g, -1.0, -1.0, 4, 1) // crook curled over the cable
+  zipRect(ctx, g, -1.0, 0, 1, 2); zipRect(ctx, g, 2.0, 0, 1, 8)
+  ctx.fillStyle = brollyColour(w, pal, ag)
+  zipRect(ctx, g, 0, 2.0, 2, 1)
+  zipRect(ctx, g, -1.0, 3.0, 3, 3) // folded canopy, narrow and pointed
+  zipRect(ctx, g, 0, 6.0, 2, 1)
+  ctx.fillStyle = pal.umbrellaRim
+  zipRect(ctx, g, -1.0, 3.0, 1, 3)
+  ctx.fillStyle = pal.umbrellaStem
+  zipRect(ctx, g, 1.0, 7.0, 1, 2) // ferrule between the hands
+}
+function zipRect(ctx, g, x, y, width, height) {
+  ctx.fillRect(g.dir > 0 ? g.x + x : g.x - x - width, g.y + y, width, height)
+}
+function drawZipBody(ctx, pal, g, c) {
+  var x = -3 - g.swing
+  ctx.fillStyle = c.robe
+  zipRect(ctx, g, x - 3, 7, 1, 5); zipRect(ctx, g, x - 3, 7, 4 - x, 1) // far arm reaching up
+  ctx.fillStyle = c.hair
+  zipRect(ctx, g, x - 2, 6, 4, 2)
+  ctx.fillStyle = c.skin
+  zipRect(ctx, g, x - 2, 8, 4, 2); zipRect(ctx, g, x + 2, 8, 1, 1)
+  ctx.fillStyle = c.robe
+  zipRect(ctx, g, x - 2, 10, 4, 3)
+  zipRect(ctx, g, x + 1, 10, 3 - x, 1); zipRect(ctx, g, 3, 8, 1, 3) // near arm, elbow out
+  ctx.fillStyle = c.skin
+  zipRect(ctx, g, 0, 7, 2, 1); zipRect(ctx, g, 1, 8, 3, 1) // two hands on the ferrule
+  ctx.fillStyle = pal.shirt
+  zipRect(ctx, g, x + 1, 10, 1, 2)
+  ctx.fillStyle = pal.lapel
+  zipRect(ctx, g, x - 2, 10, 1, 1)
+  ctx.fillStyle = c.robe
+  zipRect(ctx, g, x - 4, 12, 3, 1); zipRect(ctx, g, x - 2, 13, 2, 1) // trailing legs
+  ctx.fillStyle = pal.rigDark
+  zipRect(ctx, g, x - 5, 12, 2, 1); zipRect(ctx, g, x - 3, 14, 2, 1)
+}
+function drawZipFine(ctx, w, pal, g) {
+  ctx.fillStyle = pal.umbrellaRim
+  zipRect(ctx, g, 0.5, 3, 0.5, 3) // tied folds
+  ctx.fillStyle = pal.rigDark
+  zipRect(ctx, g, -0.5, 4.5, 3, 0.5) // fastening band
+  ctx.fillStyle = pal.dust
+  var age = w.ticks % 3
+  moteFineRect(ctx, w, g.x - g.dir * (4 + age), g.y + 1 + age, 0.5, 0.5) // water shaken off the line
+}
+function drawRoofEventMarker(ctx, w, pal, fx) {
+  if (w.ticks >= fx.fireAt) return
+  var x = (fx.x + fx.span / 2) * w.k.CELL, y = fx.floorY * w.k.CELL - 7
+  ctx.save()
+  ctx.fillStyle = pal.warn
+  if (fx.mech === "growth") {
+    ctx.fillRect(x - 5, y, 10, 1)
+    for (var i = 0; i < 3; i++) ctx.fillRect(x - 5 + i * 2, y - i - 1, 10 - i * 4, 1) // proposed loft roof
+  } else {
+    for (var j = 0; j < 4; j++) drawRoofRain(ctx, w, pal, x - 5 + j * 3, y + j % 2, 1)
+  }
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = pal.dust
+    ctx.fillRect(x - 4.5, y + 0.5, 9, 0.5)
+  }
+  ctx.restore()
+}
+function drawRoofPowerStatus(ctx, w, pal, h, fade) {
+  var C = w.k.CELL, x = Math.round((h.zx0 + h.zx1 + 1) * C / 2)
+  var y = h.mount === "ceiling" ? h.zy0 * C + 2 : (h.zy1 + 1) * C - 6
+  ctx.save()
+  ctx.globalAlpha = fade
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 3, y, 7, 6) // neighbourhood fuse box, switch down
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 2, y + 1, 5, 1)
+  ctx.fillStyle = pal.urgent
+  ctx.fillRect(x, y + 3, 1, 2)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = pal.labelFaint
+    ctx.fillRect(x - 1.5, y + 3, 0.5, 1)
+  }
+  ctx.restore()
+}
+function drawRoofGutter(ctx, pal, x, base) {
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x - 4, base - 2, 12, 2)
+  ctx.fillRect(x + 5, base - 5, 2, 3)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 4, base - 3, 9, 1)
+}
+function drawRoofDoorLight(ctx, w, pal) {
+  var e = w.exit, C = w.k.CELL, fade = 0.22 + 0.05 * Math.sin(w.ticks / 13)
+  if (w.mission && !w.mission.done) fade *= 0.3
+  ctx.save()
+  ctx.fillStyle = ROOF_LIGHT
+  ctx.globalAlpha = fade
+  ctx.fillRect((e.x - 1) * C, (e.y + e.h) * C - 1, (e.w + 2) * C, 1)
+  drawLightPool(ctx, w, ROOF_LIGHT, (e.x + e.w + 0.75) * C, e.y * C + 4, 9, 7, fade)
   ctx.restore()
 }

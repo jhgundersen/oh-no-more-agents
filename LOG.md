@@ -3366,3 +3366,53 @@ Biome wiring: `BIOMES`, mission "WALK THE NEIGHBOURS HOME" (civilians),
 events Downpour / Loft Conversion / Power Cut, Palette `% 17` with SLATE.
 Tests: `test/ziplines.test.js` (placement, a full ride, boarding rules). The
 six art tests fail until the Rooftops have art.
+
+## 120 — 2026-10-13 · The Rooftops, in the rain
+
+The seventeenth biome now has its own art: terraces across the street with a
+few warm windows, chimney pots and aerials, a church spire and a moon behind
+cloud. Wet brick courses and overlapping slate replace the cave's grain;
+fine joints, chips and glints stay at res 2. Slanting rain, ledge splashes
+and chimney steam move on the actor pass without scenery state. Satellite
+dishes, washing, pigeons and gutters dress the corridors. Home is an ajar
+front door with a porch lamp and number 17; the guard booth says "LOCAL HOST".
+
+**Lines:** posts on the two lips support a sagging cable. Living riders load
+it at their actual positions, including several at once; empty lines carry a
+forgotten sock. Each rider hangs by both hands from its own closed umbrella,
+the crook hooked over the cable and the folded canopy in `brollyColour`.
+Bent legs trail with the ride, the body swings and fine drops shake off the
+line. Lift and sag are visual mirrors checked against Sim; smooth drawing
+positions follow its feet path rather than the rounded `ag.y`.
+
+**Events:** Downpour marks the failing floor with rain above the existing
+cracks and rubble; Loft Conversion gets a proposed pitched-roof marker.
+Power Cut darkens the fixtures and shows a switched-off fuse box, with its
+300-tick visual duration mirrored explicitly. Markers expire with the events.
+
+**Looked at:** levels 17, 34 and 51 at res 1 and 2, plus actual play on level
+102 tick 288 and level 187 tick 975, with enlarged rider crops and props.
+All five themes were rendered; the contact sheet was inspected before commit.
+
+![Rooftops levels and live line rides at both resolutions](/tmp/codex-roof/sheet.png)
+
+**Compatibility:** old/new Draw.js, with `Math.random` identically seeded:
+**2,160 identical frames** across three levels of each of the other sixteen
+biomes, all five themes, ticks 0/240/900 and res undefined/1/2. No whole-frame
+snapshots added to tests. Sim.js and Palette.js are unchanged.
+
+**Cost:** 100 alternating software-canvas samples per workload after 20
+warm-ups, res 2, Rooftops level 102 versus Clock Tower level 16 at tick 288.
+Median actor pass **2.05 vs 2.63 ms** (883 vs 1,496 rectangles); full
+terrain-plus-actor repaint **23.63 vs 20.23 ms**. Terrain is normally cached.
+These are software-raster measurements, not browser timings.
+
+**Checks:** `npm run check` / `npm test` pass, including the six missing-art
+failures; stamps updated. New tests cover both resolutions and unspecified
+res, all themes, full rides, several loads, both directions, umbrella colour
+and closed silhouette, rejected world writes and RNG, restored canvas state,
+terrain clipping, weather expiry, props, booth copy and the three events.
+CRAP over-30 count **21 → 21**; every new or changed function is below 30
+(highest: `drawMachines`, **29.6**). Committed on `codex/rooftops`.
+
+Next: review the Rooftops art and rides before merging the branch.
