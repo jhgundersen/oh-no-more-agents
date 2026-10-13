@@ -3042,3 +3042,5 @@ exit or the home count: the fingerprint of 240 plays is identical before and
 after. Over 300 levels: 90 missions, 173 freed, 158 followed someone, and
 142 reached the exit. Tests: a follower goes in after the agent it followed,
 followers are not counted as agents, and they leave the frame when home.
+
+**Deployed** after 108 (name="build" content="5626223e"): the rescued follow the colony home. Browser check clean.
