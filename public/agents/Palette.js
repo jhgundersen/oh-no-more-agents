@@ -85,6 +85,7 @@ var WATER = { r: 0.13, g: 0.42, b: 0.52 }
 var SEA = { r: 0.06, g: 0.34, b: 0.40 }
 var SAND = { r: 0.95, g: 0.76, b: 0.48 }
 var TERMINAL = { r: 0.20, g: 0.82, b: 0.66 }
+var SLATE = { r: 0.42, g: 0.40, b: 0.50 }
 var PARCHMENT = { r: 0.72, g: 0.52, b: 0.32 }
 var MANILA = { r: 0.86, g: 0.56, b: 0.42 }
 var HIVIS = { r: 0.94, g: 0.80, b: 0.10 }
@@ -102,7 +103,7 @@ var VOID = { r: 0, g: 0, b: 0 }
 // number by the same rule, which is how every other per-biome difference in
 // this game stays in step across two files that cannot call each other.
 function poolTint(level) {
-  switch ((level - 1) % 16) {
+  switch ((level - 1) % 17) {
     case 1: return WATER      // Ruins: a flooded cistern
     case 3: return LAVA       // Foundry: what the place is for
     case 4: return WATER      // Jungle: the swamp, and what lives in it
@@ -117,12 +118,13 @@ function poolTint(level) {
     // 13, the Mail Room, is dry: a chute to the basement, and nothing in it.
     // 14, the Building Site, is dry: a foundation dug and not yet poured.
     // 15, the Clock Tower, is dry: the weights' shaft, all the way down.
+    // 16, the Rooftops, are dry: a light well, and the street at the bottom.
     default: return WATER     // dry biomes; unused, but never undefined
   }
 }
 
 function biomeTint(theme, level) {
-  switch ((level - 1) % 16) {
+  switch ((level - 1) % 17) {
     case 0: return theme.accent                              // Cavern
     case 1: return theme.urgent                              // Ruins
     case 2: return lighter(theme.accent, 1.7)                // Frost
@@ -157,7 +159,10 @@ function biomeTint(theme, level) {
     case 14: return toward(theme.muted, HIVIS, 0.78)              // Building Site
     // Old copper gone green on a tower in the weather: the Jungle's leaf and
     // the Data Center's terminal both pulled well away from it by the grey.
-    default: return toward(theme.muted, VERDIGRIS, 0.74)          // Clock Tower
+    case 15: return toward(theme.muted, VERDIGRIS, 0.74)          // Clock Tower
+    // Wet slate under sodium streetlight: the night city's own orange, pulled
+    // down and blue by the rain so it is nobody's brass or sand.
+    default: return toward(theme.muted, SLATE, 0.70)              // Rooftops
   }
 }
 

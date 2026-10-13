@@ -3336,3 +3336,33 @@ row only when there was a fight. Looked at level 13 (Library): "+3 RESCUED"
 then "4 UMBRELLA SAVES", inside the plate, nothing overlapping. Tests 654.
 
 **Deployed** after 118 (name="build" content="8f975fcc"): umbrella shields, sound effects (off by default), battle line. Browser check clean.
+
+## 119 — 2026-10-13 · The Rooftops and their lines (on a branch)
+
+A seventeenth biome on the way home: a terrace of houses at night, in section,
+and the umbrella used a third way. Sim and palette only; art goes to Codex on
+`codex/rooftops`, as with the last two biomes.
+
+**First idea, dropped:** a zipline slanting down through a hole in a corridor
+floor to the corridor below. 69 of 85 candidate holes blocked it: the holes
+are one or two cells wide and a slant through one hits the slab.
+
+**What went in:** lines strung lip to lip at head height over every crossing
+pit (`pit.crossing`, where the route goes over). A walker under the near end
+reaches up, hooks its own closed umbrella over the line, is lifted two rows,
+rides across sagging a row through the middle (speeding up to the middle,
+slowing after), and lets go walking the same way on the far side, dropping the
+two rows back to the floor. No toolbar cost; specials carry no umbrella and do
+not ride; riders are spaced two cells at the near end; a rider whose way is
+blocked (somebody's bridge) lets go and falls.
+
+**Measured** (240 Rooftops plays, against no lines): 94.69% vs 94.85% home;
+on levels with a crossing 94.1% vs 94.5%; deaths by cause the same within a
+few; 188 rides on 60 levels. Neutral: there for the ride, like the crane. All
+16 crossings in 40 levels got a line. `npm run sim` (whole game, reshuffled by
+the new biome): cleared 100%, home 92%, hangs 0; materials inert.
+
+Biome wiring: `BIOMES`, mission "WALK THE NEIGHBOURS HOME" (civilians),
+events Downpour / Loft Conversion / Power Cut, Palette `% 17` with SLATE.
+Tests: `test/ziplines.test.js` (placement, a full ride, boarding rules). The
+six art tests fail until the Rooftops have art.

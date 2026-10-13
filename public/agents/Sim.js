@@ -130,7 +130,7 @@ var SKILL_LABELS = {
 // putting a new one anywhere but the end would re-skin every level above it.
 // Palette.js derives the same index with the same rule and must be kept in
 // step — see the note over poolTint there.
-var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room", "Building Site", "Clock Tower"]
+var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room", "Building Site", "Clock Tower", "Rooftops"]
 
 // A small job on the route gives each biome a premise beyond merely reaching
 // the door. These are deliberately one mechanism with different casts: an
@@ -167,6 +167,7 @@ var MISSION_SPECS = {
   "Mail Room": { id: "parcels",   verb: "SIGN FOR THE PARCELS",  kind: "chest", count: 2 },
   // Nobody told the night shift the site was closing. Hard hats on, out.
   "Building Site": { id: "crew",  verb: "SEND THE CREW HOME",    kind: "civilian", count: 3 },
+  "Rooftops":      { id: "neighbours", verb: "WALK THE NEIGHBOURS HOME", kind: "civilian", count: 3 },
   // Up in the works since the last time it was wound. Nobody noticed.
   "Clock Tower": { id: "keepers", verb: "FREE THE CLOCKMAKERS",  kind: "civilian", count: 2 }
 }
@@ -810,6 +811,7 @@ function generate(level, attempt, colonySeed) {
     frozen: [],       // the Ice Cave's colleagues in the ice; see placeFrozen
     pads: [],
     cranes: [],       // the Building Site's gantry cranes; see placeCranes
+    ziplines: [],     // the Rooftops' washing-line cables; see placeZiplines
     gates: [],        // the Clock Tower's clockwork gates; see placeGates         // the Spaceship's transporter pairs; see placePads
     sinkholes: [],    // the Cavern's thin floors; see placeSinkholes
     k: K,
@@ -1380,6 +1382,7 @@ var BIOME_MECHANISMS = {
   "Cavern": placeSinkholes,
   "Mail Room": placeTubes,
   "Building Site": placeCranes,
+  "Rooftops": placeZiplines,
   "Clock Tower": placeGates
 }
 
@@ -2068,6 +2071,119 @@ function craneBack(w, k) {
   if (k.drop === CRANE_LIFT) k.phase = "wait"
 }
 
+// The Rooftops' own mechanism: a line strung across a light well — the pit a
+// corridor has to cross — from one lip to the other at head height. Every
+// agent carries an umbrella, and a crook handle hooks over a line as well as
+// it opens over a drop: a walker under the near end reaches up, hooks on and
+// rides across, sagging through the middle, and drops off walking on the far
+// side the way it was going. It spends nothing from the toolbar — the
+// umbrella is its own and stays closed — where the crossing would otherwise
+// cost a bridge's worth of bricks or somebody's life.
+//
+// Only over crossings (`pit.crossing`): the colony's route goes over those.
+// Not over the gaps in a floor, which are its way down (iterations 98, 102).
+// Own stream; any number may ride a line at once, spaced at the top.
+var ZIP_LIFT = 2           // rows a rider's feet leave the floor, hanging on
+var ZIP_SAG = 1            // rows the line dips at its middle under a rider
+var ZIP_START = 0.16       // cells a tick, hooking on
+var ZIP_PULL = 0.02        // and gained each tick, while the line still falls
+var ZIP_TOP = 0.5          // the fastest a rider goes
+var ZIP_GAP = 2            // cells between two riders at the near end
+
+function placeZiplines(w, corridors) {
+  var zrng = makeRng(w.level * 7027 + 3301)
+  for (var i = 0; i < w.pits.length; i++) {
+    var p = w.pits[i], c = corridorWithFeet(corridors, p.floorY - 1)
+    if (!p.crossing || !c) continue
+    var line = zipAcross(w, c, p, irand(zrng, 2, 3))
+    if (line) w.ziplines.push(line)
+  }
+}
+
+function zipAcross(w, c, p, margin) {
+  var near = c.dir > 0 ? p.x0 - margin : p.x1 + margin
+  var far = c.dir > 0 ? p.x1 + margin : p.x0 - margin
+  var ax = padSpot(w, c, near), lx = padSpot(w, c, far)
+  if (ax < 0 || lx < 0) return null
+  if ((p.x0 - ax) * c.dir <= 0 && (p.x1 - ax) * c.dir <= 0) return null
+  if ((lx - p.x0) * c.dir <= 0 || (lx - p.x1) * c.dir <= 0) return null
+  var line = { ax: ax, ay: p.floorY - 1, lx: lx, ly: p.floorY - 1, dir: c.dir, usedAt: -1, riders: 0 }
+  return zipClear(w, line) ? line : null
+}
+
+// Where a rider's feet are, `s` cells along the line from its near end.
+function zipFeet(z, s) {
+  var len = Math.abs(z.lx - z.ax), t = Math.min(1, s / len)
+  return { x: z.ax + z.dir * s, y: z.ay - ZIP_LIFT + ZIP_SAG * Math.sin(Math.PI * t) }
+}
+
+// Air for a whole rider every half cell of the way across.
+function zipClear(w, z) {
+  var len = Math.abs(z.lx - z.ax)
+  for (var s = 0.5; s < len; s += 0.5) {
+    var f = zipFeet(z, s)
+    if (craneBlocked(w, Math.floor(f.x + 0.5), Math.floor(f.y))) return false
+  }
+  return true
+}
+
+function stepZiplines(w) {
+  for (var i = 0; i < w.ziplines.length; i++) zipBoard(w, w.ziplines[i], i)
+  for (var j = 0; j < w.agents.length; j++) if (w.agents[j].state === "zip") zipRide(w, w.agents[j])
+}
+
+// A walker going the line's way, under its high end, with the line clear and
+// nobody just ahead at the top: hook on. Only ordinary agents — a special
+// carries no umbrella, and has its own ways down.
+function zipBoard(w, z, index) {
+  for (var j = 0; j < w.agents.length; j++) {
+    var ag = w.agents[j]
+    if (ag.gone || ag.special || ag.state !== "walk" || ag.dir !== z.dir) continue
+    if (Math.floor(ag.x) !== z.ax || Math.floor(ag.y) !== z.ay) continue
+    if (zipCrowded(w, index) || !zipClear(w, z) || !solid(w, z.lx, z.ly + 1)) return
+    ag.y = z.ay - ZIP_LIFT
+    ag.state = "zip"
+    ag.zip = index
+    ag.zipS = 0
+    ag.zipV = ZIP_START
+    ag.fall = 0
+    ag.idle = 0
+    z.usedAt = w.ticks
+    z.riders++
+    w.lastEvent = "zipline"
+    return
+  }
+}
+
+function zipCrowded(w, index) {
+  for (var j = 0; j < w.agents.length; j++) {
+    var ag = w.agents[j]
+    if (ag.state === "zip" && ag.zip === index && ag.zipS < ZIP_GAP) return true
+  }
+  return false
+}
+
+function zipRide(w, ag) {
+  var z = w.ziplines[ag.zip], len = Math.abs(z.lx - z.ax)
+  var s = Math.min(len, ag.zipS + ag.zipV)
+  var f = zipFeet(z, s)
+  // Somebody's bridge across the line: let go where it is, and fall.
+  if (craneBlocked(w, Math.floor(f.x + 0.5), Math.floor(f.y))) return zipLetGo(ag)
+  ag.zipS = s
+  ag.zipV = s * 2 < len ? Math.min(ZIP_TOP, ag.zipV + ZIP_PULL) : Math.max(ZIP_START, ag.zipV - ZIP_PULL)
+  ag.x = f.x + 0.5
+  ag.y = Math.floor(f.y)
+  if (s >= len) zipLetGo(ag)
+}
+
+function zipLetGo(ag) {
+  ag.state = "walk"
+  ag.idle = 0
+  ag.still = 0
+  ag.fall = 0
+  ag.zip = -1
+}
+
 function placeMission(w, corridors) {
   // Optional, and rolled from its own stream so adding missions does not
   // reshuffle terrain, hazards, specials or events on established levels.
@@ -2282,7 +2398,8 @@ var BIOME_SKINS = {
   "Library": skinLibrary,
   "Mail Room": skinMailRoom,
   "Building Site": skinBuildingSite,
-  "Clock Tower": skinClockTower
+  "Clock Tower": skinClockTower,
+  "Rooftops": skinRooftops
 }
 
 function skinSpaceship(w, rng) {
@@ -2570,6 +2687,26 @@ function skinClockTower(w, rng) {
         else if (d < 1) setCell(w, x, y, ORE)
       }
   }
+}
+
+// A terrace of houses at night, seen in section: brick (DIRT) in courses with
+// mortar lines (ROCK) every third row, and slate (ORE) roofs pitched over each
+// house, a chimney stack on most of them.
+function skinRooftops(w, rng) {
+  var x, y
+  var house = irand(rng, 13, 17), storey = irand(rng, 9, 11)
+  var ox = irand(rng, 0, house - 1), oy = irand(rng, 0, storey - 1)
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++) {
+      if (at(w, x, y) === STEEL) continue
+      var hx = (x + ox) % house, hy = (y + oy) % storey
+      var ridge = Math.abs(hx - house / 2)
+      var mat = DIRT
+      if (hy < 3 && hy >= Math.floor(ridge / 2) - 1) mat = ORE
+      else if (hy % 3 === 0 || (hx + (Math.floor(hy / 3) % 2) * 2) % 4 === 0) mat = ROCK
+      if (hx === 2 && hy < 4 && hy > 0) mat = ROCK
+      setCell(w, x, y, mat)
+    }
 }
 
 function skinMailRoom(w, rng) {
@@ -5584,6 +5721,11 @@ var EVENTS = [
   { id: "scopecreep",name: "Scope Creep",     biome: "Building Site", mech: "growth",   span: 13, high: 2 },
   { id: "unpoured", name: "Missed Deadline",  biome: "Building Site", mech: "collapse", at: "floor", span: 6, deep: 2 },
   { id: "crunch",   name: "Crunch Time",      biome: "Building Site", mech: "blackout", mult: 2, ticks: 380 },
+
+  // --- Rooftops ---
+  { id: "downpour", name: "Downpour",         biome: "Rooftops", mech: "collapse", at: "floor", span: 6, deep: 2 },
+  { id: "extension",name: "Loft Conversion",  biome: "Rooftops", mech: "growth",   span: 12, high: 2 },
+  { id: "powercut", name: "Power Cut",        biome: "Rooftops", mech: "blackout", mult: 0, ticks: 300 },
 
   // --- Clock Tower ---
   { id: "deadlock", name: "Deadlock",         biome: "Clock Tower", mech: "blackout", mult: 0, ticks: 280 },
@@ -9283,6 +9425,7 @@ function stepAgents(w) {
       case "wait":  stepLiftWait(w, ag); break
       case "ride":  stepLiftRide(w, ag); break
       case "hooked": break   // the crane moves them; see stepCrane
+      case "zip": break      // the cable carries them; see stepZiplines
     }
 
     // A one-cell trap can evade both stuck detectors: the agent technically
@@ -9739,6 +9882,7 @@ function step(w) {
   stepFrozen(w)
   stepPads(w)
   stepCranes(w)
+  stepZiplines(w)
   stepGates(w)
   stepSinkholes(w)
   var counts = stepAgents(w)

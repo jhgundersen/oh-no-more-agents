@@ -487,6 +487,24 @@ doorways through thin walls (≤3 cells) the colony meets, open 150 of every
 - Measured +0.1/+0.2 against no gates (400 plays × 2), 0.45 fewer bashers a
   level.
 
+## The Rooftops
+
+The seventeenth biome: a terrace of houses at night in section
+(`skinRooftops`: DIRT brick in courses, ROCK mortar every third row, ORE slate
+roofs pitched over each house). Palette `% 17`, wet slate. Its mechanism is
+lines (`placeZiplines` … `stepZiplines`, `w.ziplines`): strung lip to lip at
+head height across every **crossing** pit. A walker under the near end hooks
+its own closed umbrella over the line (state `"zip"`), rides across sagging
+through the middle, and lets go walking the same way on the far side. No
+toolbar cost; specials do not ride.
+
+- **Only crossings.** A diagonal line down through a hole in a floor was the
+  first idea; the holes between floors are one or two cells wide and a slant
+  through one hits the slab (69 of 85 candidate holes blocked). Floor gaps are
+  the colony's way down anyway.
+- Measured neutral (94.7% vs 94.9% home over 240 Rooftops plays; 188 rides on
+  60 levels). Like the crane, it is there for the ride.
+
 ## Staying current
 
 A tab is left open for days, so a deploy has to reach it without anyone pressing
