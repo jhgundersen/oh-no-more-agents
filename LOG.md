@@ -2795,3 +2795,5 @@ never a survivable one.
 Also looked at and dropped: a "post-mortem" hero that marks where someone
 died. Over 300 levels only 33 of 219 deaths were a hazard or fall near an
 earlier one, so there is nothing for it to save.
+
+**Deployed** after 102 (name="build" content="fd7fba5e"): Auto Complete. Browser check clean.
