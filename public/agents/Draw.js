@@ -8022,6 +8022,7 @@ function enemyRecoil(en) {
 
 function drawEnemy(ctx, w, pal, en, opts) {
   if (en.gone) return
+  if (en.state === "brawl") { drawBrawl(ctx, w, pal, en); return }
   spriteFlip = false
   var m = enemyMotion(w, en)
   var ox = Math.round(en.x * w.k.CELL) - SPRITE_W / 2 - en.dir * enemyRecoil(en)
@@ -8031,6 +8032,81 @@ function drawEnemy(ctx, w, pal, en, opts) {
   if (opts && opts.labels) drawEnemyLabel(ctx, w, en, ox, oy)
   ctx.globalAlpha = 1
 }
+
+// A scuffle (Sim's stepBrawl): the cartoon fight cloud. Both fighters vanish
+// into a churning ball of dust, and what pokes out of it says who is in
+// there — a suit sleeve and a fist, a red boot, a hat knocked into the air —
+// with stars going round over the top. It churns faster as it nears the end.
+function drawBrawl(ctx, w, pal, en) {
+  var C = w.k.CELL, step = (w.res || 1) >= 2 ? 0.5 : 1
+  var cx = Math.round(en.x * C), cy = Math.round((en.y + 1) * C) - 7
+  var t = w.ticks, spin = t * 0.45
+  ctx.save()
+  // Every puff twice: a dark one a size up for the outline, then the dust.
+  for (var pass = 0; pass < 2; pass++) {
+    ctx.fillStyle = pass ? pal.dust : pal.rigDark
+    for (var b = 0; b < 5; b++) {
+      var a = spin + b * 1.26, r = 3.5 + ((b + (t >> 2)) % 3) * 0.75
+      brawlBlob(ctx, cx + Math.cos(a) * 3, cy + Math.sin(a) * 2, r + (pass ? 0 : 1), step)
+    }
+  }
+  // Swirl marks going round inside it.
+  ctx.fillStyle = pal.rigDark
+  for (var k = 0; k < 2; k++) for (var d = 0; d < 4; d++) {
+    var sa = -spin * 1.3 + k * Math.PI + d * 0.35, sr = 2.5 - d * 0.25
+    ctx.fillRect(Math.round((cx + Math.cos(sa) * sr * 1.4) / step) * step,
+      Math.round((cy + Math.sin(sa) * sr) / step) * step, step, step)
+  }
+  drawBrawlLimbs(ctx, w, pal, cx, cy, t)
+  drawBrawlStars(ctx, pal, cx, cy, t, step)
+  ctx.restore()
+}
+
+function brawlBlob(ctx, x, y, r, step) {
+  for (var dy = -r; dy <= r; dy += step) {
+    var half = Math.sqrt(Math.max(0, r * r - dy * dy))
+    ctx.fillRect(Math.round((x - half) / step) * step, Math.round((y + dy) / step) * step,
+      Math.max(step, Math.round(half * 2 / step) * step), step)
+  }
+}
+
+// One limb out of the cloud at a time, in turn, each for four ticks.
+function drawBrawlLimbs(ctx, w, pal, cx, cy, t) {
+  var which = (t >> 2) % 4
+  if (which === 0) {                              // a suit sleeve and a fist
+    ctx.fillStyle = pal.suit || pal.rigDark
+    ctx.fillRect(cx + 5, cy - 2, 3, 2)
+    ctx.fillStyle = pal.skin
+    ctx.fillRect(cx + 8, cy - 3, 2, 3)
+  } else if (which === 1) {                       // a red boot
+    ctx.fillStyle = pal.urgent
+    ctx.fillRect(cx - 8, cy + 2, 3, 2)
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(cx - 9, cy + 3, 2, 2)
+  } else if (which === 2) {                       // the hat, knocked up
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(cx - 2, cy - 11 - (t % 4), 5, 1)
+    ctx.fillRect(cx - 1, cy - 13 - (t % 4), 3, 2)
+  } else {                                        // the guard's fist back
+    ctx.fillStyle = pal.urgent
+    ctx.fillRect(cx - 7, cy - 3, 3, 2)
+    ctx.fillStyle = pal.skin
+    ctx.fillRect(cx - 9, cy - 4, 2, 3)
+  }
+}
+
+function drawBrawlStars(ctx, pal, cx, cy, t, step) {
+  for (var i = 0; i < 3; i++) {
+    var a = t * 0.2 + i * 2.09
+    var x = Math.round((cx + Math.cos(a) * 7)), y = Math.round(cy - 10 + Math.sin(a) * 1.5)
+    ctx.fillStyle = BRAWL_STAR
+    ctx.fillRect(x - 1, y, 3, 1)
+    ctx.fillRect(x, y - 1, 1, 3)
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(x, y, step, step)
+  }
+}
+var BRAWL_STAR = "#ffe68a"
 
 var ENEMY_DRAW = { gun: drawGunner, drone: drawDrone, operator: drawOperator,
   sniper: drawSniper, xeno: drawXeno, harpoon: drawHarpoon }
@@ -9772,6 +9848,7 @@ function drawDiverBubbles(ctx, w, pal, ag, ox, oy, drop) {
 
 function drawAgent(ctx, w, pal, ag, opts) {
   if (ag.state === "zip") return drawZipAgent(ctx, w, pal, ag, opts)
+  if (ag.state === "brawl") return   // inside the guard's fight cloud
   if (ag.state === "hooked") return drawHookedAgent(ctx, w, pal, ag, opts)
   var k = w.k
   var C = k.CELL

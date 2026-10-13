@@ -17,7 +17,7 @@
   var last = {}            // sound name -> time it last played (ms)
   var seen = null          // what the previous tick looked like
 
-  var GAPS = { pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0 }
+  var GAPS = { scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0 }
 
   function ensure() {
     if (ctx) return ctx
@@ -73,6 +73,7 @@
     boom: function () { noise(0.4, 1, "lowpass", 600); tone("sine", 120, 40, 0.35, 0.8) },
     home: function () { tone("square", 880, 880, 0.06, 0.3); tone("square", 1320, 1320, 0.08, 0.3, 0.06) },
     down: function () { tone("square", 330, 70, 0.18, 0.4) },
+    scuffle: function () { noise(0.05, 0.7, "bandpass", 500 + Math.random() * 700) },  // fists in the cloud
     fanfare: function (good) {
       var notes = good ? [523, 659, 784, 1047] : [392, 330, 262, 196]
       for (var i = 0; i < notes.length; i++) tone("square", notes[i], notes[i], 0.11, 0.35, i * 0.1)
@@ -89,9 +90,14 @@
       if (ag.floater && ag.state === "fall" && ag.fall > 2) open[ag.id] = true
       if (ag.shotFor === 8) shots++
     }
-    for (var e = 0; e < w.enemies.length; e++) if (!w.enemies[e].gone && w.enemies[e].shotFor === 8) enemyShots++
+    var brawls = 0
+    for (var e = 0; e < w.enemies.length; e++) {
+      if (w.enemies[e].gone) continue
+      if (w.enemies[e].shotFor === 8) enemyShots++
+      if (w.enemies[e].state === "brawl") brawls++
+    }
     return {
-      world: w, open: open, shots: shots, enemyShots: enemyShots, blasts: w.blasts.length,
+      world: w, open: open, shots: shots, enemyShots: enemyShots, brawls: brawls, blasts: w.blasts.length,
       saved: w.saved, lost: w.lost, parries: w.umbrellaSaves || 0, done: w.done
     }
   }
@@ -107,6 +113,7 @@
     if (now.shots) play("pew")
     if (now.enemyShots) play("bang")
     if (now.blasts > was.blasts) play("boom")
+    if (now.brawls) play("scuffle")
     if (now.saved > was.saved) play("home")
     if (now.lost > was.lost) play("down")
     if (now.done && !was.done) play("fanfare", w.saved * 2 >= w.toRelease)

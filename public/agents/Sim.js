@@ -8755,6 +8755,74 @@ function fireEnemyGun(w, en) {
   en.shotFor = 8
 }
 
+// Hand to hand. A walker who runs into a guard on its own floor does not walk
+// through it: the two go down in a scuffle for BRAWL_TICKS, and one of them
+// gets up. The agent's chance grows with every colleague close enough to pile
+// in — a lone agent mostly loses, a crowd mostly wins — so the colony fights
+// its way past a guard by arriving together. The roll is from stable state,
+// like the sidearm's, so it draws on nobody's random stream.
+var BRAWL_TICKS = 28
+var BRAWL_BASE = 50       // percent, alone: a coin toss
+var BRAWL_HELP = 15       // percent per colleague within reach, up to three
+var BRAWL_REACH = 4       // cells
+
+var BRAWL_GROUND = { walk: true, aim: true, recover: true, reload: true, camp: true, operate: true }
+
+function stepBrawl(w, en) {
+  if (en.state === "brawl") { brawlTick(w, en); return true }
+  if (en.kind === "drone" || !BRAWL_GROUND[en.state]) return false
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.special || ag.state !== "walk") continue
+    if (Math.abs(ag.x - en.x) >= 1 || Math.abs(ag.y - en.y) >= 1.5) continue
+    en.state = "brawl"; en.brawlFor = BRAWL_TICKS; en.brawlWith = ag.id
+    ag.state = "brawl"; ag.idle = 0
+    w.lastEvent = "brawl"
+    return true
+  }
+  return false
+}
+
+function brawlTick(w, en) {
+  var ag = agentById(w, en.brawlWith)
+  if (!ag || ag.gone || ag.state !== "brawl") { en.state = "walk"; en.timer = 0; return }
+  if (--en.brawlFor > 0) return
+  var roll = (w.ticks * 37 + ag.id * 61 + en.id * 17) % 100
+  if (roll < brawlOdds(w, ag)) {
+    killEnemy(w, en)
+    w.brawlsWon = (w.brawlsWon || 0) + 1
+    w.lastEvent = "brawl won"
+  } else {
+    addBlood(w, ag.x, ag.y - 1.5, 14)
+    ag.gone = true
+    ag.state = "dead"
+    w.lost++
+    w.lastEvent = "red team"
+    en.state = "walk"; en.timer = 0
+  }
+  if (!ag.gone) { ag.state = "walk"; ag.idle = 0 }
+}
+
+function brawlOdds(w, ag) {
+  var help = 0
+  for (var i = 0; i < w.agents.length && help < 3; i++) {
+    var o = w.agents[i]
+    if (o === ag || o.gone || o.state === "saved" || o.state === "dead") continue
+    if (Math.abs(o.x - ag.x) <= BRAWL_REACH && Math.abs(o.y - ag.y) < 2) help++
+  }
+  return BRAWL_BASE + BRAWL_HELP * help
+}
+
+// The agent's side holds still; the guard's side counts and settles it. If the
+// guard is gone some other way mid-scuffle, the agent gets up and walks on.
+function stepBrawlAgent(w, ag) {
+  for (var i = 0; i < w.enemies.length; i++) {
+    var en = w.enemies[i]
+    if (!en.gone && en.state === "brawl" && en.brawlWith === ag.id) return
+  }
+  ag.state = "walk"
+}
+
 function stepEnemy(w, en) {
   if (en.gone) return
 
@@ -8770,6 +8838,7 @@ function stepEnemy(w, en) {
   if (en.shotFor > 0) en.shotFor--
   // Rate-limited: it stands (or hovers) where it is and does nothing at all.
   if (en.throttled > 0) { en.throttled--; return }
+  if (stepBrawl(w, en)) return
   if (stepEnemyMover(w, en)) return
 
   en.timer++
@@ -9443,6 +9512,7 @@ function stepAgents(w) {
       case "ride":  stepLiftRide(w, ag); break
       case "hooked": break   // the crane moves them; see stepCrane
       case "zip": break      // the cable carries them; see stepZiplines
+      case "brawl": stepBrawlAgent(w, ag); break
     }
 
     // A one-cell trap can evade both stuck detectors: the agent technically

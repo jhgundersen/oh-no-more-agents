@@ -3450,3 +3450,33 @@ Game functions over CRAP 30: **13 → 10**, behaviour unchanged.
 
 Simulation fingerprint (240 plays) identical before and after each split:
 `96144ab0…`. Tests 677 pass.
+
+## 122 — 2026-10-13 · Brawls
+
+Agents and guards met face to face in 44 of 119 guard levels (3,137 ticks of
+contact), and nothing happened: they walked through each other.
+
+**Change:** `stepBrawl`. A walker who runs into a guard on its floor goes down
+with it in a scuffle for 28 ticks; one of them gets up. The agent's chance is
+50% alone and +15% per colleague within four cells (up to three), so a lone
+agent tosses a coin and a crowd nearly always wins: the colony gets past a
+guard by arriving together. Stable-state roll, no random stream. Specials and
+drones do not brawl; a guard removed mid-scuffle lets the agent up.
+
+**Measured** (238 guard-post plays, levels 1–300 × 2):
+
+| base odds | home on post levels | brawls | won |
+|---|---|---|---|
+| none (before) | 91.98% | 0 | 0 |
+| 35% | 91.73% | 135 | 50 |
+| **50%** | **92.64%** | 112 | 58 |
+| 65% | 93.05% | 105 | 65 |
+
+50: about one brawl every two guard levels, a little over half won.
+`npm run sim`: cleared 100%, home 92%, hangs 0.
+
+**Drawing:** both fighters vanish into the cartoon fight cloud — five churning
+puffs with a dark outline, swirl marks going round inside, one thing at a time
+poking out (suit sleeve and fist, a red boot, the hat knocked up, the guard's
+fist), and three yellow stars circling over it. Looked at level 5 at res 1 and
+2. Sound: a scuffle thump while one is on. Tests 682 (`test/brawl.test.js`).
