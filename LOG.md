@@ -2675,3 +2675,24 @@ them past the colony's way down and into the guards; lowering them *down*
 it still cost 0.8. To be looked at before it goes anywhere.
 
 **Deployed** after 98 (name="build" content="49330cff"): report card without the overlay.
+
+## 99 — 2026-10-13 · The Building Site's crane, made to cost nothing
+
+**Picked up the parked crane.** On fresh seeds (800 plays) the lowering
+crane still cost 0.7 points of home, and the extra was bombs: 106 → 173.
+Riders were condemned later, at the far end of the corridor below. The crane
+turned each rider to face the lower corridor's way; a faller keeps the way it
+was walking, and the colony's routes are built around that. Riders now keep
+their own direction: 94.02% home with cranes vs 94.08% without (800 plays),
+level length unchanged, 2.7 rides a level. Neutral on the numbers. What it adds
+is a ride down the hole in place of a drop. That is worth having for the look,
+but it is not a way through.
+
+**Whole game, with the fifteenth biome reshuffling every level:** 600 levels,
+99% cleared both, 93.3% home vs main's 93.5% (noise; per-biome swings at 20
+levels each were ±10 in both directions). No hangs. `sim inert` passes.
+Tests: `test/cranes.test.js` (placement, a ride end to end, refusals, lost
+rider, a blocked hook letting go).
+
+On branch `codex/site`, not main: Draw has no Building Site art yet, and six
+art tests fail without it. Codex is drawing the biome and the crane.
