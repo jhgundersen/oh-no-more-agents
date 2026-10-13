@@ -10093,7 +10093,7 @@ function drawSiteDecor(ctx, pal, d, x, y, C) {
   var base = y + C
   if (d.kind === "spire") drawSiteCone(ctx, pal, x, base, d.size)
   else if (d.kind === "clump") drawSitePallet(ctx, pal, x, base, d.size)
-  else if (d.kind === "hang") drawSiteSign(ctx, pal, x, y)
+  else if (d.kind === "hang") siteSignAt(d) ? drawSiteSign(ctx, pal, x, y) : drawSiteLamp(ctx, pal, x, y)
   else drawSiteEquipment(ctx, pal, d, x, base)
 }
 function drawSiteCone(ctx, pal, x, base, size) {
@@ -10121,6 +10121,19 @@ function drawSitePallet(ctx, pal, x, base, size) {
   }
   ctx.fillStyle = pal.ore
   ctx.fillRect(x + 1, base - 5 - size * 3, 1, size * 3 + 3) // packing strap
+}
+// One hanging fitting in three is the safety board; a board on every one read
+// as wallpaper, four to a level. The rest are caged work lamps.
+function siteSignAt(d) { return d.seed % 3 === 0 }
+function drawSiteLamp(ctx, pal, x, y) {
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x + 2, y, 1, 4)
+  ctx.fillRect(x, y + 4, 5, 1); ctx.fillRect(x, y + 8, 5, 1)
+  ctx.fillRect(x, y + 5, 1, 3); ctx.fillRect(x + 4, y + 5, 1, 3)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x + 1, y + 5, 3, 3)
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x + 2, y + 6, 1, 1)
 }
 function drawSiteSign(ctx, pal, x, y) {
   ctx.fillStyle = pal.steelShade
@@ -10180,12 +10193,20 @@ function fineSitePallet(ctx, pal, d, x, base) {
   ctx.fillStyle = pal.decorLit
   ctx.fillRect(x - 1.5, base - 2, 11, 0.5)
 }
+// The lamp's cage wires and a glint on the bulb, at half pixels.
+function fineSiteLamp(ctx, pal, x, top) {
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 2, top + 5, 0.5, 3)
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x + 1.5, top + 5.5, 0.5, 0.5)
+}
 function fineSiteSign(ctx, pal, d, x, base, top) {
+  if (!siteSignAt(d)) return fineSiteLamp(ctx, pal, x, top)
   ctx.fillStyle = pal.rockEdge
   ctx.fillRect(x - 4, top + 7, 42, 9)
   ctx.fillStyle = pal.rigDark
   drawTransitionText(ctx, "SAFETY FIRST", x + 17, top + 8, 0.5)
-  drawTransitionText(ctx, "0 DAYS SINCE INCIDENT", x + 17, top + 12, 0.5)
+  drawTransitionText(ctx, "0 DAYS SAFE", x + 17, top + 12, 0.5)
   ctx.fillStyle = pal.steelEdge
   ctx.fillRect(x - 4.5, top + 6.5, 0.5, 9)
   ctx.fillStyle = pal.rigDark
