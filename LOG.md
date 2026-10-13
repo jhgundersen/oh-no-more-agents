@@ -3774,3 +3774,28 @@ fingerprint unchanged) and the winner punches its forward fist at the sky for
 is walking, so a winner that is immediately falling or working is drawn as
 that. Looked at level 5's won brawl at ticks 327–336: the fist and stars read
 even next to the guard's defeat pose. Tests 702.
+
+## 141 — 2026-10-14 · Nothing left over 30
+
+The last functions over CRAP 30 were in the dev tooling: `tools/simcheck.js`
+(`cmdGravity` 2070, `cmdHeights` 812, `cmdInert` 272 — big, and never run by
+the tests) and `crc32` in the PNG writer.
+
+- `simcheck.js` is now a module: each command is exported, takes its sizes
+  and an `out` to print through, and returns `{ ok, … }`; the CLI is a small
+  `COMMANDS` table under an is-main guard. The commands are split into the
+  checks they always contained (`gravityOf`, `ladderFalls`, `ladderOverhang`,
+  `specialDescends`, `specialAscends`, `inertRun`, `spreadOf`,
+  `hazardTally` …). Run by hand, `heights` and `gravity` print exactly what
+  they did (23/23, 23/23, 8/8; 11/12, 11/11, 12/12, 12/12, 10/10, both
+  ladder checks), and an unknown command still exits 2.
+- `test/simcheck.test.js` runs those checks on every `npm test` (every
+  special's height device and powered ascent in full; gravity, ladders and
+  material inertness on a sample; the playthrough harnesses on a level or
+  two) — 1.7 s. These were the checks that caught most of this game's bugs,
+  and until now only when somebody remembered to run them.
+- `test/png.test.js`: the hand-written PNG's signature, IHDR size and the
+  IEND chunk's fixed CRC.
+
+**CRAP over 30 in the whole repository: 0.** Highest now `walkHazardAhead`
+and `drawMachines` at 29.6. Tests 702 → 709.

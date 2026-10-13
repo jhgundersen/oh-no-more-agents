@@ -804,6 +804,11 @@ gameplay, intended or not. `hangs` must stay at zero. The game has no pass mark,
 so `cleared` is measured against `CLEAR_SHARE`, a fixed fraction of the colony
 defined in `simcheck.js`.
 
+Every simcheck command is also an export that takes its sizes and an `out`
+and returns what it found; `test/simcheck.test.js` runs `heights` and the
+ladder checks in full and the rest on a level or two, so `npm test` would
+catch a special that lost its height device or a ladder left in mid air.
+
 Baselines, 200 levels (as of iteration 93, October 2026 — fourteen biomes,
 patience 900 / 8 passes): **99% of levels cleared, 94% of agents home,
 no hangs.** As of iteration 70 it was 97 / 90 / 47s; before the sidearm
