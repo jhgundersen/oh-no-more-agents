@@ -2565,7 +2565,7 @@ var TRANSITION_GLYPHS = {
   "3": [6,1,2,1,6], "4": [5,5,7,1,1], "5": [7,4,6,1,6],
   "6": [3,4,7,5,7], "7": [7,1,2,2,2], "8": [7,5,7,5,7], "9": [7,5,7,1,6],
   " ": [0,0,0,0,0], "·": [0,0,2,0,0], "/": [1,1,2,4,4],
-  "!": [2,2,2,0,2], "?": [6,1,2,0,2]
+  "!": [2,2,2,0,2], "?": [6,1,2,0,2], "+": [0,2,7,2,0]
 }
 
 function drawTransitionGlyph(ctx, rows, x, y, size) {
@@ -2646,16 +2646,49 @@ function escortLine(w) {
   return w.escortsHome > 0 ? " · +" + w.escortsHome + " RESCUED" : ""
 }
 
+// Eight-pixel silhouettes, one per arrival (up to six, to bound the row).
+// The count is authoritative; these just recall who came through the door.
+var ESCORT_BADGES = {
+  civilian: [56,56,16,124,84,56,40,40],
+  explorer: [60,56,16,126,86,58,40,40],
+  camel: [2,98,246,255,254,68,68,68],
+  boar: [0,0,4,254,255,126,68,68],
+  bird: [16,56,60,254,124,56,40,40],
+  monkey: [56,56,16,125,85,60,40,40]
+}
+
+function drawEscortBadge(ctx, kind, t, x, y) {
+  var key = kind === "animal" ? ["boar", "bird", "monkey"][t.variant || 0] : kind
+  var rows = ESCORT_BADGES[key]
+  if (!rows) return
+  for (var r = 0; r < rows.length; r++) for (var c = 0; c < 8; c++)
+    if (rows[r] & (128 >> c)) ctx.fillRect(x + c, y + r, 1, 1)
+}
+
+function drawEscortReport(ctx, w, pal, cx, y) {
+  if (!(w.escortsHome > 0)) return
+  var targets = w.mission ? w.mission.targets.filter(function (t) { return t.home }).slice(0, 6) : []
+  var text = "+" + w.escortsHome + " RESCUED", width = text.length * 4 - 1
+  var icons = targets.length * 12, left = Math.round(cx - (width + icons) / 2)
+  ctx.save()
+  ctx.fillStyle = pal.exitLight
+  drawTransitionText(ctx, text, left + width / 2, y + 2, 1)
+  for (var i = 0; i < targets.length; i++)
+    drawEscortBadge(ctx, w.mission.kind, targets[i], left + width + 5 + i * 12, y)
+  ctx.restore()
+}
+
 function drawLevelResults(ctx, w, pal) {
   var cx = Math.round(w.k.COLS * w.k.CELL / 2)
   var y = Math.round(w.k.ROWS * w.k.CELL / 2) - 31 + Math.max(0, 10 - w.doneTicks) * 2
-  drawTransitionPlate(ctx, w, pal, cx - 136, y, 62)
+  drawTransitionPlate(ctx, w, pal, cx - 136, y, w.escortsHome > 0 ? 78 : 62)
   ctx.fillStyle = pal.decorLit
   drawTransitionText(ctx, "LEVEL " + w.level + " · REPORT", cx, y + 8, 1)
   ctx.fillStyle = pal.label
   drawTransitionText(ctx, w.saved + " / " + w.toRelease + " HOME", cx, y + 22, 2)
   ctx.fillStyle = w.saved === 0 ? pal.urgent : pal.exitLight
-  drawTransitionText(ctx, levelVerdict(w) + escortLine(w), cx, y + 43, 1)
+  drawTransitionText(ctx, levelVerdict(w), cx, y + 43, 1)
+  drawEscortReport(ctx, w, pal, cx, y + 59)
 }
 
 function drawLevelClosing(ctx, w, pal) {
@@ -2981,7 +3014,7 @@ function drawMission(ctx, w, pal) {
 
   for (var i = 0; i < m.targets.length; i++) {
     var t = m.targets[i]
-    if (t.home) continue  // followed an agent in through the exit
+    if (drawMissionEscort(ctx, w, pal, m.kind, t)) continue
     var x = Math.round(t.x * C), y = Math.round(t.y * C)
 
     if (!t.freed && !t.dead) drawMissionContainer(ctx, m.kind, x, y, pal)
@@ -2995,6 +3028,190 @@ function drawMission(ctx, w, pal) {
     }
   }
   ctx.restore()
+}
+
+var ESCORT_DRAW = {
+  civilian: drawEscortPerson,
+  explorer: drawEscortPerson,
+  animal: drawEscortAnimal,
+  camel: drawEscortCamel
+}
+var ESCORT_HOME_TICKS = 14
+
+function drawMissionEscort(ctx, w, pal, kind, t) {
+  if (t.home) { drawEscortHome(ctx, w, pal, kind, t); return true }
+  if (!t.freed || t.dead || !(t.escort >= 0) || !ESCORT_DRAW[kind]) return false
+  ctx.save()
+  var pose = escortPose(w, t)
+  var x = Math.round(t.x * w.k.CELL), y = Math.round(t.y * w.k.CELL)
+  if (pose.moving && !pose.air && pose.phase % 2) y--
+  ESCORT_DRAW[kind](ctx, pal, kind, t, x, y, pose, (w.res || 1) >= 2)
+  ctx.restore()
+  return true
+}
+
+// The trail stores positions and direction, not movement states. Look at its
+// next sample and support under the current feet, never the leader's *current*
+// state: a leader climbing now may still have a follower on the floor below.
+// A large first gap is the pickup delay, not a stride. No render-side history.
+function escortPose(w, t) {
+  var next = t.trail && t.trail[0]
+  var dx = next ? next[0] - t.x : 0, dy = next ? next[1] - t.y : 0
+  var moving = Math.abs(dx) + Math.abs(dy) > 0.005 && Math.abs(dx) + Math.abs(dy) < 1.5
+  var foot = Math.floor(t.y) * w.k.COLS + Math.floor(t.x)
+  var air = !w.terrain[foot] || Math.abs(dy) > 0.12
+  return { dir: t.dir || 1, moving: moving, air: air, up: dy < -0.02,
+    phase: moving ? Math.floor(t.anim / 3) % 4 : 0 }
+}
+
+function drawEscortHome(ctx, w, pal, kind, t) {
+  var age = w.ticks - t.homeAt
+  if (!(age >= 0 && age < ESCORT_HOME_TICKS) || !ESCORT_DRAW[kind]) return
+  ctx.save()
+  ctx.globalAlpha *= 1 - age / ESCORT_HOME_TICKS
+  var x = Math.round(t.x * w.k.CELL), y = Math.round(t.y * w.k.CELL) - age
+  var pose = { dir: t.dir || 1, moving: false, air: true, up: true, phase: 0 }
+  ESCORT_DRAW[kind](ctx, pal, kind, t, x, y, pose, (w.res || 1) >= 2)
+  ctx.fillStyle = pal.exitLight
+  for (var s = 0; s < 4; s++) {
+    var angle = s * Math.PI / 2 + age * 0.3 + (t.variant || 0)
+    ctx.fillRect(x + Math.round(Math.cos(angle) * (4 + age / 2)),
+      y - 7 + Math.round(Math.sin(angle) * (3 + age / 3)), 1, 1)
+  }
+  ctx.restore()
+}
+
+// A forward profile and pumping elbows replace the freed cheering pose.
+// In a shaft the hands reach and the knees tuck; the same silhouette can hop
+// off a ledge, scramble up a ladder or ride a lift without walking on air.
+function drawEscortPerson(ctx, pal, kind, t, x, y, pose, fine) {
+  var v = t.variant || 0, dir = pose.dir, short = v === 1 ? 2 : 0
+  var coat = kind === "explorer" ? (v === 2 ? pal.ore : pal.decorLit) : (v === 2 ? pal.warn : pal.exitLight)
+  var stride = pose.moving ? [-2, 0, 2, 0][pose.phase] : 0
+  ctx.fillStyle = coat
+  ctx.fillRect(x - 2, y - 7 + short, 5, 4 - short)
+  var arm = pose.air ? (pose.up ? -10 : -7) : -6 - Math.sign(stride)
+  ctx.fillRect(x + dir * 3 - (dir < 0 ? 2 : 0), y + arm, 2, 3)
+  ctx.fillRect(x - dir * 4 - (dir < 0 ? 1 : 0), y - 6, 2, 2)
+  drawEscortFeet(ctx, pal.rigDark, x, y, stride, pose.air)
+  ctx.fillStyle = pal.skin
+  var head = x + (pose.moving ? dir : 0)
+  ctx.fillRect(head - 2, y - 11 + short, 4, 4)
+  ctx.fillRect(head + dir * 2 - (dir < 0 ? 1 : 0), y - 9 + short, 1, 2)
+  ctx.fillRect(x + dir * 4 - (dir < 0 ? 1 : 0), y + arm, 1, 1)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(head - 2, y - 12 + short, 4, 2)
+  ctx.fillRect(head + dir - (dir < 0 ? 1 : 0), y - 9 + short, 1, 1)
+  if (v === 2) ctx.fillRect(head - dir * 3, y - 10, 1, 5)
+  if (kind === "explorer") {
+    ctx.fillStyle = pal.urgent
+    ctx.fillRect(x - dir * 5, y - 8 + short, 3, 4)
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(head - 2, y - 9 + short, 4, 1)
+  }
+  if (!fine) return
+  ctx.fillStyle = pal.lens
+  ctx.fillRect(head + dir - (dir < 0 ? 0.5 : 0), y - 9 + short, 0.5, 0.5)
+  ctx.fillStyle = pal.skin
+  ctx.fillRect(head + dir - (dir < 0 ? 0.5 : 0), y - 7.5 + short, 1, 0.5)
+  ctx.fillStyle = pal.decorDim
+  ctx.fillRect(x + dir, y - 5, 0.5, 1)
+}
+
+function drawEscortFeet(ctx, colour, x, y, stride, air) {
+  ctx.fillStyle = colour
+  if (air) {
+    ctx.fillRect(x - 3, y - 4, 2, 2); ctx.fillRect(x + 2, y - 3, 2, 2)
+    ctx.fillRect(x - 2, y - 2, 2, 1); ctx.fillRect(x + 1, y - 1, 2, 1)
+    return
+  }
+  ctx.fillRect(x - 2 - stride, y - 3, 2, 3)
+  ctx.fillRect(x + 1 + stride, y - 3, 2, 3)
+}
+
+var ESCORT_ANIMALS = [drawEscortBoar, drawEscortBird, drawEscortMonkey]
+function drawEscortAnimal(ctx, pal, kind, t, x, y, pose, fine) {
+  ESCORT_ANIMALS[t.variant || 0](ctx, pal, x, y, pose, fine)
+}
+
+function drawEscortBoar(ctx, pal, x, y, pose, fine) {
+  var dir = pose.dir, stride = pose.moving ? [-1, 0, 1, 0][pose.phase] : 0
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x - 4, y - 7, 8, 4)
+  ctx.fillRect(x + dir * 4 - (dir < 0 ? 3 : 0), y - 8, 3, 4)
+  drawEscortFeet(ctx, pal.decorDim, x, y, stride, pose.air)
+  ctx.fillStyle = pal.exitLight
+  ctx.fillRect(x + dir * 6 - (dir < 0 ? 1 : 0), y - 5, 1, 2)
+  ctx.fillStyle = pal.eye
+  ctx.fillRect(x + dir * 4, y - 7, 1, 1)
+  ctx.fillStyle = pal.decorDim
+  ctx.fillRect(x - dir * 5, y - 6, 1, 2)
+  if (fine) {
+    for (var b = -3; b < 3; b += 1.5) ctx.fillRect(x + b, y - 7.5, 0.5, 1)
+  }
+}
+
+function drawEscortBird(ctx, pal, x, y, pose, fine) {
+  var dir = pose.dir, flap = pose.phase % 2
+  ctx.fillStyle = pal.exitLight
+  ctx.fillRect(x - 2, y - 9, 5, 5)
+  ctx.fillRect(x + dir - 1, y - 11, 3, 2)
+  var wing = pose.air ? -11 + flap * 3 : -7
+  ctx.fillRect(x - 5, y + wing, 3, 2); ctx.fillRect(x + 3, y + wing, 3, 2)
+  drawEscortFeet(ctx, pal.decorDim, x, y, pose.moving ? [-2, 0, 2, 0][pose.phase] : 0, pose.air)
+  ctx.fillStyle = pal.urgent
+  ctx.fillRect(x + dir * 3 - (dir < 0 ? 2 : 0), y - 9, 2, 1)
+  ctx.fillStyle = pal.eye
+  ctx.fillRect(x + dir, y - 10, 1, 1)
+  if (fine) {
+    ctx.fillStyle = pal.decorDim
+    ctx.fillRect(x - 4, y + wing + 1, 2, 0.5); ctx.fillRect(x + 3, y + wing + 1, 2, 0.5)
+  }
+}
+
+function drawEscortMonkey(ctx, pal, x, y, pose, fine) {
+  var dir = pose.dir, stride = pose.moving ? [-2, 0, 2, 0][pose.phase] : 0
+  ctx.fillStyle = pal.ore
+  ctx.fillRect(x - 2, y - 10, 5, 5); ctx.fillRect(x - 3, y - 5, 6, 2)
+  var reach = pose.air ? -11 : -7
+  ctx.fillRect(x + dir * 4, y + reach, 2, 4)
+  ctx.fillRect(x - dir * 5, y - 6, 2, 3)
+  ctx.fillRect(x - dir * 5, y - 7, 2, 1); ctx.fillRect(x - dir * 6, y - 9, 1, 3)
+  drawEscortFeet(ctx, pal.ore, x, y, stride, pose.air)
+  ctx.fillStyle = pal.skin
+  ctx.fillRect(x + dir - 1, y - 9, 3, 3)
+  ctx.fillStyle = pal.eye
+  ctx.fillRect(x + dir * 2, y - 8, 1, 1)
+  if (fine) {
+    ctx.fillStyle = pal.skin
+    ctx.fillRect(x + dir * 4, y + reach, 1, 0.5)
+  }
+}
+
+function drawEscortCamel(ctx, pal, kind, t, x, y, pose, fine) {
+  var dir = pose.dir, stride = pose.moving ? [-1, 0, 1, 0][pose.phase] : 0
+  ctx.fillStyle = "#c99a5b"
+  ctx.fillRect(x - 5, y - 8, 10, 4)
+  if ((t.variant || 0) % 2) {
+    ctx.fillRect(x - 4, y - 10, 3, 2); ctx.fillRect(x + 1, y - 10, 3, 2)
+  } else ctx.fillRect(x - 3, y - 11, 5, 3)
+  ctx.fillRect(x + dir * 5 - (dir < 0 ? 2 : 0), y - 12, 2, 6)
+  ctx.fillRect(x + dir * 6 - (dir < 0 ? 3 : 0), y - 13, 3, 2)
+  ctx.fillStyle = "#8a6436"
+  var legY = pose.air ? y - 3 : y - 4, legH = pose.air ? 2 : 4
+  for (var l = 0; l < 4; l++) {
+    var offset = l % 2 ? stride : -stride
+    ctx.fillRect(x + [-4, -2, 2, 4][l] + offset, legY, 1, legH)
+  }
+  ctx.fillRect(x - dir * 6 - (dir > 0 ? 0 : 1), y - 8, 1, 3)
+  ctx.fillStyle = pal.eye
+  ctx.fillRect(x + dir * 7 - (dir < 0 ? 1 : 0), y - 13, 1, 1)
+  if (fine) {
+    ctx.fillStyle = "#b8362e"
+    ctx.fillRect(x + dir * 6 - (dir < 0 ? 3 : 0), y - 12, 3, 0.5)
+    ctx.fillStyle = "#e3b77a"
+    ctx.fillRect(x - 2, y - ((t.variant || 0) % 2 ? 10 : 11), 2, 0.5)
+  }
 }
 
 function drawMissionContainer(ctx, kind, x, y, pal) {
