@@ -2290,3 +2290,31 @@ across 79–83 the worst went from −3.4 to about −1, Beam Search and Guard
 Rails from heavy costs to near even, and heroes get home far more often.
 
 **Deployed** after 83 (name="build" content="51f5a1f2"): hero balance 82–83. Browser check clean.
+
+## 84 — 2026-10-13 · A HUD around the colony
+
+**Looked at.** The page around the finished board: low-contrast captions,
+plain readouts and counters, controls without much affordance, and a 400px
+minimum board overflowing phone viewports.
+
+**Changed.** Square pixel frames and inset bevels, a stepped, segmented rescue
+bar, a shadowed title, brighter theme-derived captions, underlined key hints,
+and a dedicated rescue-total row. Skills blink briefly on each spend and Home
+pops on each arrival; `web.js` adds only presentation hooks. Four counters per
+row and 44px controls on phones, visible keyboard focus, and no CSS animation
+under reduced motion. The canvas, simulation, reporting and clock are unchanged.
+
+**Checked.** `npm test` and `npm run check` pass; assets re-stamped. Local Worker
+on 8788, fresh headless Chromium profiles, desktop 1280×800 and phone 390×844
+at 1.5s and 22s virtual time, including command-line `--virtual-time-budget`
+captures. No console errors; keyboard shortcuts, fullscreen and reduced motion
+pass. Text contrast across all nine themes is at least 4.64:1, including active
+and spent skills and the urgent clock. Reviewed the before/after contact sheet
+at `/tmp/codex-page/sheet.png`.
+
+**Phone constraint.** The board is 400 art pixels wide: at 360px it retains 1×
+pixels with 20px cropped from each outer edge. All readouts remain in view and
+measured page scroll width is 360px. Larger boards retain integer scaling.
+
+**Next.** Check the HUD during a long session on a real touchscreen, especially
+large rescue totals and the urgency readout.

@@ -1,6 +1,6 @@
 <!doctype html>
 
-<html>
+<html lang="en">
 
 <head>
 	<meta charset="utf-8">
@@ -10,371 +10,231 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-	<meta name="build" content="51f5a1f2">
+	<meta name="build" content="790334df">
+	<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%237aa2f7' d='M2 11h4V7h4V3h4v4h-4v4H6v4H2z'/%3E%3C/svg%3E">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 	<style>
 		:root {
-			/* Overwritten by web.js from the selected theme, so the page and the
-			   board always agree. These are the tokyo-night defaults, present so
-			   nothing flashes white before the first paint. */
+			/* web.js supplies the selected board theme before the first paint. */
 			--bg: #1a1b26;
 			--fg: #a9b1d6;
 			--accent: #7aa2f7;
 			--muted: #414868;
 			--urgent: #f7768e;
-
-			/* The board only ever scales by a whole number, so its width is one
-			   of four or five values rather than the viewport width. web.js sets
-			   this to whichever it picked and everything else lines up with the
-			   board instead of drifting a few pixels off it. */
 			--board-w: 800px;
+			--panel: color-mix(in srgb, var(--fg) 6%, var(--bg));
+			--edge: color-mix(in srgb, var(--fg) 30%, var(--bg));
+			--dim: color-mix(in srgb, var(--fg) 82%, var(--bg));
+			--ink: color-mix(in srgb, var(--bg) 75%, #000);
+			--signal: color-mix(in srgb, var(--accent) 60%, var(--fg));
 		}
 
-		body,
-		html,
-		p {
-			margin: 0;
-			padding: 0;
-			font-family: 'Orbitron', monospace;
-		}
-
+		html, body, p { margin: 0; padding: 0; font-family: 'Orbitron', monospace; }
 		body {
-			background-color: var(--bg);
+			background: var(--bg);
 			color: var(--fg);
 			min-height: 100vh;
 			display: flex;
 			flex-direction: column;
 			align-items: center;
-			justify-content: center;
-			gap: 18px;
-			padding: 24px 16px;
+			gap: 12px;
+			padding: 16px 16px;
 			box-sizing: border-box;
-			transition: background-color 200ms, color 200ms;
-		}
-
-		/* The board only ever scales by whole numbers, so sixteen pixels of
-		   padding on each side is not a margin — it is the difference between a
-		   400px board and an 800px one on any screen a shade under 832px wide,
-		   which is an iPad held upright. Give the room back where it is worth a
-		   whole step, and keep it everywhere there is space to spare. */
-		@media (max-width: 900px) {
-			body {
-				padding-left: 4px;
-				padding-right: 4px;
-			}
 		}
 
 		h1 {
 			margin: 0;
-			font-size: 22px;
+			font-size: 28px;
 			font-weight: 900;
-			letter-spacing: 0.06em;
+			line-height: 1.25;
+			letter-spacing: 0.045em;
 			text-align: center;
+			text-shadow: 2px 2px var(--ink), 4px 4px var(--muted);
 		}
-
+		.title-alarm { color: var(--accent); }
 		.sub {
-			font-size: 12px;
-			color: var(--muted);
+			font-size: 11px;
+			color: var(--dim);
 			text-align: center;
-			max-width: 52ch;
-			line-height: 1.6;
+			max-width: min(90ch, 100%);
+			line-height: 1.7;
 			text-wrap: balance;
 		}
+		.sub a { color: var(--fg); text-underline-offset: 3px; }
+		body > .sub:last-of-type { max-width: min(80ch, 100%); font-size: 10px; }
 
-		.sub a {
-			color: var(--accent);
-		}
-
-		/* Stacked exactly as these elements were stacked directly on the body,
-		   so the page looks identical until somebody asks for fullscreen. */
 		#stage {
 			display: flex;
 			flex-direction: column;
 			align-items: center;
 			justify-content: center;
-			gap: 18px;
+			gap: 8px;
 			width: 100%;
 		}
-
-		/* The fullscreen element gets a transparent backdrop by default, which
-		   in practice means black — a shade nothing else on the page is using.
-		   Painting it in the theme background keeps the board in the frame it
-		   was mixed for. */
-		#stage:fullscreen,
-		#stage.faux {
-			background-color: var(--bg);
+		#stage:fullscreen, #stage.faux {
+			background: var(--bg);
 			padding: 16px;
 			box-sizing: border-box;
 		}
-
-		/* iOS Safari has no Element.requestFullscreen at all, so on a phone the
-		   button covers the viewport by hand instead of leaving the one control
-		   that does nothing when pressed. Same result, minus the OS. */
-		#stage.faux {
-			position: fixed;
-			inset: 0;
-			z-index: 50;
-			width: auto;
-			overflow: auto;
-		}
+		/* The existing iOS/URL fullscreen fallback. */
+		#stage.faux { position: fixed; inset: 0; z-index: 50; width: auto; overflow: auto; }
 
 		#board {
 			position: relative;
-			border: 1px solid var(--muted);
-			border-radius: 4px;
+			/* An outside frame leaves every canvas pixel at its integer scale. */
+			box-shadow: 0 0 0 2px var(--muted), 0 4px 0 2px var(--ink);
 			overflow: hidden;
 			cursor: pointer;
 			line-height: 0;
+			flex-shrink: 0;
 		}
-
 		#board canvas {
 			position: absolute;
 			inset: 0;
 			width: 100%;
 			height: 100%;
-			/* The board is pixel art scaled by a whole number. Without this the
-			   browser smooths it and every 1px eye turns to porridge. */
 			image-rendering: pixelated;
 		}
-
 		#overlay {
-			position: absolute;
-			inset: 0;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			flex-direction: column;
-			gap: 10px;
-			padding: 24px;
-			background: rgba(0, 0, 0, 0.55);
-			text-align: center;
-			z-index: 2;
+			position: absolute; inset: 0; z-index: 2;
+			display: flex; align-items: center; justify-content: center;
+			flex-direction: column; gap: 10px; padding: 24px;
+			background: rgba(0, 0, 0, 0.55); text-align: center;
 			transition: opacity 160ms;
 		}
+		#overlay-title { font-size: 16px; font-weight: 700; letter-spacing: 0.08em; }
+		#overlay-line { max-width: 560px; font-size: 12px; line-height: 1.45; color: #fff; opacity: 0.78; }
 
-		#overlay-title {
-			font-size: 16px;
-			font-weight: 700;
-			letter-spacing: 0.08em;
-		}
-
-		#overlay-line {
-			max-width: 560px;
-			font-size: 12px;
-			line-height: 1.45;
-			color: #fff;
-			opacity: 0.78;
-		}
-
+		.hud, #toolbar, .controls, #themes { width: var(--board-w); max-width: 100%; box-sizing: border-box; }
 		.hud {
-			display: flex;
-			align-items: center;
-			gap: 14px;
-			font-size: 12px;
-			font-weight: 700;
-			width: var(--board-w);
-			flex-wrap: wrap;
-			justify-content: center;
+			display: flex; align-items: center; gap: 14px;
+			padding: 10px 12px;
+			font-size: 11px; font-weight: 700;
+			background: var(--panel);
+			border: 1px solid var(--edge);
+			box-shadow: inset 0 2px var(--muted), inset 0 -2px var(--ink);
+			font-variant-numeric: tabular-nums;
 		}
-
-		#biome {
-			color: var(--muted);
-			text-transform: lowercase;
-		}
-
-		.clock {
-			min-width: 3.5em;
-		}
-
-		.clock.urgent {
-			color: var(--urgent);
-		}
-
+		#level { color: var(--fg); white-space: nowrap; }
+		#biome { color: var(--dim); text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; }
+		.home-readout { white-space: nowrap; }
+		#home { display: inline-block; color: var(--signal); min-width: 4ch; }
+		#home.arrived-a { animation: home-a 320ms steps(3, end); }
+		#home.arrived-b { animation: home-b 320ms steps(3, end); }
+		@keyframes home-a { 0% { transform: translateY(-2px); color: var(--fg); } 100% { transform: none; color: var(--signal); } }
+		@keyframes home-b { 0% { transform: translateY(-2px); color: var(--fg); } 100% { transform: none; color: var(--signal); } }
+		.clock { min-width: 3.5em; text-align: right; }
+		.clock:empty { display: none; }
+		.clock.urgent { color: color-mix(in srgb, var(--urgent) 50%, var(--fg)); }
 		.track {
-			flex: 1;
-			min-width: 120px;
-			height: 4px;
-			border-radius: 2px;
-			background: var(--muted);
-			overflow: hidden;
+			position: relative; flex: 1; min-width: 60px; height: 10px;
+			background: var(--ink); border: 1px solid var(--muted);
+			box-shadow: inset 0 2px var(--bg); overflow: hidden;
 		}
-
+		/* A fixed pixel grid cuts both filled and empty portions into bricks. */
+		.track::after {
+			content: ''; position: absolute; inset: 0;
+			background: repeating-linear-gradient(90deg, transparent 0 6px, var(--ink) 6px 8px);
+			pointer-events: none;
+		}
 		#bar {
-			height: 100%;
-			width: 0;
-			background: var(--accent);
-			transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+			height: 100%; width: 0; background: var(--accent);
+			box-shadow: inset 0 2px color-mix(in srgb, var(--fg) 40%, var(--accent));
+			transition: width 240ms steps(4, end);
 		}
 
-		#toolbar {
-			display: grid;
-			grid-template-columns: repeat(8, 1fr);
-			gap: 6px;
-			width: var(--board-w);
-		}
-
+		#toolbar { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }
 		.skill {
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			gap: 1px;
-			padding: 6px 2px;
-			border-radius: 3px;
-			background: color-mix(in srgb, var(--fg) 8%, transparent);
-			transition: background-color 140ms, opacity 140ms;
+			display: flex; flex-direction: column; align-items: center; gap: 3px;
+			padding: 6px 2px 7px;
+			background: var(--panel); border: 1px solid var(--edge);
+			box-shadow: inset 0 2px var(--muted), inset 0 -2px var(--ink);
+			font-variant-numeric: tabular-nums;
 		}
+		.skill-name { font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+		.skill-count { font-size: 17px; line-height: 1; font-weight: 700; }
+		.skill.spent { border-color: var(--muted); box-shadow: inset 0 2px var(--ink); }
+		.skill.spent .skill-count { color: var(--dim); }
+		.skill.recent { border-color: var(--accent); background: var(--panel); }
+		.skill.recent .skill-count { color: var(--signal); }
+		.skill.recent .skill-count[data-pulse="0"] { animation: skill-a 180ms steps(1, end) 2; }
+		.skill.recent .skill-count[data-pulse="1"] { animation: skill-b 180ms steps(1, end) 2; }
+		@keyframes skill-a { 50% { color: var(--fg); transform: translateY(-1px); } }
+		@keyframes skill-b { 50% { color: var(--fg); transform: translateY(-1px); } }
 
-		.skill.spent {
-			opacity: 0.35;
-		}
-
-		.skill.recent {
-			background: color-mix(in srgb, var(--accent) 28%, transparent);
-		}
-
-		.skill-name {
-			font-size: 9px;
-			letter-spacing: 0.05em;
-			color: color-mix(in srgb, var(--fg) 65%, transparent);
-		}
-
-		.skill.recent .skill-name {
-			color: var(--accent);
-		}
-
-		.skill-count {
-			font-size: 13px;
-			font-weight: 700;
-		}
-
-		/* Board-width and left-aligned, so this row starts where the readouts
-		   and the toolbar start instead of being centred on the viewport and
-		   agreeing with neither. The running totals go to the far end, which is
-		   where the clock sits in the readouts above. */
 		.controls {
-			display: flex;
-			align-items: center;
-			gap: 10px;
-			font-size: 11px;
-			color: var(--muted);
-			flex-wrap: wrap;
-			width: var(--board-w);
+			display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+			font-size: 10px; color: var(--dim); margin-top: 4px;
 		}
-
-		.counts {
-			display: flex;
-			align-items: center;
-			gap: 14px;
-			margin-left: auto;
-		}
-
-		.controls b {
-			color: color-mix(in srgb, var(--fg) 80%, transparent);
-			font-weight: 700;
-		}
-
-		/* The hints are buttons. They were a row of text describing keys, which
-		   is no use at all on a touchscreen — and the keys still work, so this
-		   costs nothing and makes the page usable with a thumb. Sized to the
-		   44px touch target everybody settled on. */
 		.ctl {
-			font-family: inherit;
-			font-size: 11px;
-			color: var(--muted);
-			background: transparent;
-			border: 1px solid transparent;
-			border-radius: 4px;
-			padding: 6px 10px;
-			min-height: 32px;
-			cursor: pointer;
-			transition: color 140ms, border-color 140ms, background-color 140ms;
+			flex: 1 0 auto;
+			font-family: inherit; font-size: 10px; color: var(--dim);
+			background: var(--panel); border: 1px solid var(--muted);
+			padding: 7px 8px; min-height: 34px; cursor: pointer;
+			box-shadow: inset 0 1px var(--edge), 0 2px var(--ink);
 		}
-
-		.ctl:hover {
-			color: var(--fg);
-			border-color: var(--muted);
+		.controls b { color: var(--fg); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+		.ctl:hover, .theme:hover { border-color: var(--accent); color: var(--fg); }
+		.ctl:active, .theme:active { box-shadow: inset 0 2px var(--ink); background: var(--muted); }
+		button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+		.counts {
+			display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+			gap: 6px 16px; width: 100%; margin-top: 6px; padding: 10px 0 2px;
+			border-top: 2px solid var(--muted); font-size: 10px; line-height: 1.6;
+			font-variant-numeric: tabular-nums;
 		}
+		#global { color: var(--fg); }
+		#global::before { content: ''; display: inline-block; width: 5px; height: 5px; margin: 0 8px 1px 0; background: var(--accent); box-shadow: 2px 2px var(--muted); }
 
-		.ctl:active {
-			background: color-mix(in srgb, var(--accent) 20%, transparent);
-		}
-
-		@media (pointer: coarse) {
-			/* No hover on a touchscreen, so the affordance has to be permanent. */
-			.ctl {
-				border-color: var(--muted);
-				min-height: 44px;
-				padding: 10px 14px;
-				font-size: 12px;
-			}
-		}
-
-		#themes {
-			display: flex;
-			gap: 6px;
-			flex-wrap: wrap;
-			justify-content: center;
-			width: var(--board-w);
-		}
-
+		#themes { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
 		.theme {
-			font-family: inherit;
-			font-size: 10px;
-			letter-spacing: 0.04em;
-			padding: 4px 8px;
-			border-radius: 3px;
-			border: 1px solid var(--muted);
-			background: transparent;
-			color: var(--muted);
-			cursor: pointer;
-			transition: color 140ms, border-color 140ms;
+			font-family: inherit; font-size: 9px; letter-spacing: 0.025em;
+			padding: 5px 7px; border: 1px solid var(--muted);
+			background: var(--panel); color: var(--dim); cursor: pointer;
+			box-shadow: inset 0 1px var(--edge), 0 2px var(--ink);
 		}
+		.theme.on { color: var(--fg); border-color: var(--accent); box-shadow: inset 0 -2px var(--accent); }
+		.audio { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 100%; }
+		#tracks { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+		#player { display: none; }
+		#playpause { min-width: 2.6em; }
 
-		.theme:hover {
-			color: var(--fg);
+		/* Keep the room needed for the existing 800px integer step on tablets. */
+		@media (max-width: 900px) { body { padding-left: 4px; padding-right: 4px; } }
+		@media (max-width: 599px) {
+			body { padding: 20px 12px; gap: 16px; }
+			h1 { font-size: 22px; }
+			.sub { font-size: 11px; line-height: 1.8; }
+			.hud { flex-wrap: wrap; gap: 10px 14px; padding: 10px; }
+			#biome { flex: 1; }
+			.track { flex-basis: 100%; order: 1; }
+			#toolbar { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+			.skill { padding: 8px 2px; }
+			.skill-name { font-size: 10px; }
+			.skill-count { font-size: 18px; }
+			.ctl { min-height: 44px; font-size: 11px; padding: 8px; }
+			.counts { justify-content: center; padding-top: 12px; }
+			.theme { min-height: 32px; padding: 7px; }
 		}
-
-		.theme.on {
-			color: var(--accent);
-			border-color: var(--accent);
+		/* A 400-art-pixel board cannot shrink into a 360px viewport at 1×.
+		   Crop just its outer edges below native width; keep HUD text in view
+		   and preserve the canvas scale chosen by web.js. */
+		@media (max-width: 423px) {
+			#stage { width: calc(100% + 24px); overflow-x: clip; }
+			.hud, #toolbar, .controls { max-width: calc(100% - 24px); }
 		}
-
-		.audio {
-			display: flex;
-			align-items: center;
-			gap: 10px;
-			flex-wrap: wrap;
-			justify-content: center;
-		}
-
-		#tracks {
-			display: flex;
-			gap: 6px;
-		}
-
-		/* The native <audio> player is the one thing on the page that won't take
-		   the theme — it renders as a slab of browser grey next to a board mixed
-		   from five colors. So it's hidden and driven by a button in the same
-		   style as everything else here. */
-		#player {
-			display: none;
-		}
-
-		#playpause {
-			min-width: 2.6em;
-		}
-
-		#global {
-			color: var(--accent);
+		@media (pointer: coarse) { .ctl { min-height: 44px; } .theme { min-height: 36px; } }
+		@media (prefers-reduced-motion: reduce) {
+			*, *::before, *::after { animation: none !important; transition: none !important; }
 		}
 	</style>
 </head>
 
 <body>
 
-	<h1>Oh No! More Agents</h1>
+	<h1><span class="title-alarm">Oh No!</span> More Agents</h1>
 
 	<p class="sub">
 		Autonomous agents with no supervisor, no plan beyond the next two
@@ -392,8 +252,8 @@
 		<div class="hud">
 			<span id="level">Level 1</span>
 			<span id="biome"></span>
-			<span>Home <span id="home">0/0</span></span>
-			<div class="track"><div id="bar"></div></div>
+			<span class="home-readout">Home <span id="home">0/0</span></span>
+			<div class="track" aria-hidden="true"><div id="bar"></div></div>
 			<span id="clock" class="clock"></span>
 		</div>
 
@@ -406,7 +266,7 @@
 			</div>
 		</div>
 
-		<div id="toolbar"></div>
+		<div id="toolbar" role="group" aria-label="Skills remaining"></div>
 
 		<!-- The key is the letter it is, inside the word it belongs to: "restart"
 		     with a lit r, not "r restart". Pause is the exception, because the
@@ -414,7 +274,7 @@
 		     these is also a button, so the arrow keys still work but no longer
 		     need a control of their own — the two that had one read as "level"
 		     and an arrow pointing nowhere in particular. -->
-		<div class="controls">
+		<div class="controls" role="group" aria-label="Game controls and rescue totals">
 			<button class="ctl" id="c-pause"><b>space</b> <span id="pauseWord">pause</span></button>
 			<button class="ctl" id="c-prev"><b>p</b>rev level</button>
 			<button class="ctl" id="c-next"><b>n</b>ext level</button>
@@ -430,10 +290,10 @@
 
 	</div>
 
-	<div id="themes"></div>
+	<div id="themes" role="group" aria-label="Colour theme"></div>
 
 	<div class="audio">
-		<button id="playpause" class="theme" title="Play or pause the soundtrack">&#9654;</button>
+		<button id="playpause" aria-label="Play or pause the soundtrack" class="theme" title="Play or pause the soundtrack">&#9654;</button>
 		<div id="tracks"></div>
 		<audio id="player"></audio>
 	</div>
@@ -449,7 +309,7 @@
 	<script src="agents/Draw.js?v=47911828"></script>
 	<script src="agents/Palette.js?v=57053fff"></script>
 	<script src="agents/Outcome.js?v=3e24e081"></script>
-	<script src="agents/web.js?v=ab700433"></script>
+	<script src="agents/web.js?v=0f9855f6"></script>
 
 </body>
 

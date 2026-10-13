@@ -563,6 +563,11 @@
 
     el.level.textContent = "Level " + world.level
     el.biome.textContent = world.biome
+    // Only a presentation hook: alternating names replay the CSS pop for each
+    // arrival, without a timer or any change to the simulation's clock.
+    if (world.saved > (parseInt(el.home.textContent, 10) || 0))
+      el.home.className = world.saved % 2 ? "arrived-a" : "arrived-b"
+    else if (world.saved === 0) el.home.className = ""
     el.home.textContent = world.saved + "/" + total
     el.bar.style.width = (total > 0 ? Math.min(1, world.saved / total) * 100 : 0) + "%"
 
@@ -592,6 +597,7 @@
       var used = world.lastUsed[name]
       var recent = used !== undefined && (world.ticks - used) < 20
       node.count.textContent = count
+      node.count.dataset.pulse = count % 2 // replay the CSS blink on consecutive spends
       node.cell.classList.toggle("recent", recent)
       node.cell.classList.toggle("spent", count === 0 && !recent)
     })
