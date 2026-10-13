@@ -2503,3 +2503,39 @@ ladder, a route home) — and sent them off at a sprint.
 facing it). Check passes; `sim play` below. AGENTS.md's boulder section notes it.
 
 **Deployed** after 92 (name="build" content="59310364"): boulder flee. Browser check clean.
+
+## 93 — 2026-10-13 · Personality in the walk
+
+**Changed.** Twelve res-2-only trait tells in Draw.js: steady's pressed cuffs;
+brave's raised chin, wider stride and swing; cautious's hunched shoulders and
+short steps; curious's chin finger and brief peeks; stubborn's forward head
+and fist; tinkerer’s ear pencil and pocket screwdriver; engineer's pocket
+protector; sentinel's upright stance and hands behind its back; burrower's
+dirty knees and trowel; hoarder's bag and bulging pocket; follower's backward
+check; skittish's raised elbows and quick glance. All keep the colony's suit
+palette. Walk, wait, block and lift riding share the tells; idle gestures keep
+their hands and props. Divers keep their helmets and gain suit details. Heroes
+and folded/action poses keep their existing drawing. No simulation changes,
+world writes, random draws or renderer state.
+
+**Checked.** `npm test` and `npm run check` pass; stamps updated. Sixteen new
+trait tests cover every trait's final pixels at res 2, both directions, four
+walk frames, quiet standing and scheduled fidgets, res 1 and unspecified
+resolution parity, distinct stances/cycles, hero and action-pose exclusion,
+divers, read-only deterministic rendering, staggered peeks and landing knees.
+Seeded old/new res-1 comparison: 560 frames, levels 1–70, ticks 0/200/500/900,
+two themes, identical Math.random; zero byte differences, including 220 frames
+with heroes. CRAP baseline checked before editing: 26 functions over 30;
+final report stays at 26. Every added or changed function is under 30, highest
+13. Used the locally cached crapper installation after its bootstrap could not
+resolve GitHub.
+
+**Looked at.** `/tmp/codex-traits/sheet.png`: every trait in four walking
+frames, waiting, blocking and walking left, rendered at res 2 and enlarged
+without smoothing. The real crowd is level 9, seed 99, tick 380, fifteen agents
+on the board. Reviewed the complete sheet: personalities reward a closer look
+and the crowd still reads as one uniformed colony. Work on `codex/traits`;
+no push or deploy.
+
+**Next.** Give any future trait a small tell in the same drawing table, keeping
+its rule in Sim.js and its costume out of the res-1 panel.

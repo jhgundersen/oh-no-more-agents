@@ -5697,8 +5697,9 @@ function drawIdleBody(ctx, w, pal, ag, ox, oy, dir, robe, drop, idle) {
     blit(ctx, ox, oy, dir, r[0], r[1] + drop, r[2], r[3])
   }
 }
-function drawIdleFine(ctx, pal, ag, ox, oy, dir, drop, idle) {
-  drawFineHead(ctx, pal, ag, ox, oy, dir, drop - (idle.pose === "glance" ? 1 : 0))
+function drawIdleFine(ctx, pal, ag, ox, oy, dir, drop, idle, w) {
+  var look = traitHeadOffset(w, ag)
+  drawFineHead(ctx, pal, ag, ox + dir * look.x, oy, dir, drop + look.y - (idle.pose === "glance" ? 1 : 0))
   drawFineSuit(ctx, pal, ox, oy, dir, 7 + Math.max(drop, -1))
   var toe = idle.pose === "tap" && idle.phase % 12 < 6 ? 1 : 0
   drawFineShoes(ctx, pal, ox, oy, dir, 2, 15.5, 4, 15.5 - toe, 2)
@@ -5792,7 +5793,7 @@ function drawAgentBody(ctx, w, pal, ag, ox, oy, dir, robe, skin, st, bodyDrop, w
   if (st === "saved") return drawAgentHome(ctx, w, pal, ag, ox, oy, dir, robe, skin)
   var pose = AGENT_POSES[st]
   if (pose) return pose(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop)
-  drawAgentWalk(ctx, ag, ox, oy, dir, robe, skin, walkLead, squash, bodyDrop, st === "walk")
+  drawAgentWalk(ctx, ag, ox, oy, dir, robe, skin, walkLead, squash, bodyDrop, st === "walk", w)
 }
 
 function drawPoseClimb(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
@@ -6013,21 +6014,24 @@ function drawCampShot(ctx, w, pal, ag, ox, oy, dir, st, C) {
 
 // Walking. The torso stretches down to the hips whatever the bob, so the
 // legs stay planted while the chest rises and falls above them.
-function drawAgentWalk(ctx, ag, ox, oy, dir, robe, skin, walkLead, squash, bodyDrop, walking) {
+function drawAgentWalk(ctx, ag, ox, oy, dir, robe, skin, walkLead, squash, bodyDrop, walking, w) {
+  var look = agentTraitLook(w, ag)
+  var pixel = look ? blitFine : blit
+  walkLead = traitStride(w, ag, walkLead)
   var walkTop = 7 + Math.max(bodyDrop, -1)
-  blit(ctx, ox, oy, dir, 1, walkTop, 6, 13 - walkTop)
+  pixel(ctx, ox, oy, dir, 1, walkTop, 6, 13 - walkTop)
   if (squash) {
-    blit(ctx, ox, oy, dir, 1, 13, 2, 3)            // knees out, taking it
-    blit(ctx, ox, oy, dir, 5, 13, 2, 3)
+    pixel(ctx, ox, oy, dir, 1, 13, 2, 3)            // knees out, taking it
+    pixel(ctx, ox, oy, dir, 5, 13, 2, 3)
   } else {
-    blit(ctx, ox, oy, dir, 2 + walkLead, 13, 2, 3)
-    blit(ctx, ox, oy, dir, 4 - walkLead, 13, 2, 3)
+    pixel(ctx, ox, oy, dir, 2 + walkLead, 13, 2, 3)
+    pixel(ctx, ox, oy, dir, 4 - walkLead, 13, 2, 3)
   }
   // Hands, swinging against the legs: the one in front when the far leg is
   // forward. A pixel each, but a walk with no arms in it is a slide.
-  if (walking && walkLead !== 0 && !squash) {
+  if (walking && walkLead !== 0 && !squash && !(look && look.arms)) {
     ctx.fillStyle = skin
-    blit(ctx, ox, oy, dir, walkLead < 0 ? 6 : 0, 11 + Math.max(bodyDrop, -1), 1, 1)
+    pixel(ctx, ox, oy, dir, walkLead < 0 ? 6 : 0, 11 + Math.max(bodyDrop, -1), 1, 1)
     ctx.fillStyle = robe
   }
 }
@@ -6806,12 +6810,145 @@ function drawAgentFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w) {
   var pose = FINE_POSES[ag.state]
   if (!pose) return
   if (pose !== drawAgentUprightFine) drawFineHead(ctx, pal, ag, ox, oy, dir, drop)
-  pose(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe)
+  pose(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w)
 }
 
-// Keep the original upright pass intact: its head rides the walking bob.
-function drawAgentUprightFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe) {
-  var hy = drop
+// A colony still wears one suit. Personality is a half-pixel tilt, a cuff or
+// something crammed into that suit; heroes keep their own costume. These are
+// drawing choices, never a second copy of the simulation's trait rules.
+var TRAIT_LOOKS = {
+  steady:   { x: 0,   y: 0,    stride: 1,    draw: drawTraitSteady },
+  brave:    { x: 0.5, y: -0.5, stride: 1.5,  arms: true, draw: drawTraitBrave },
+  cautious: { x: 0.5, y: 0.5,  stride: 0.5,  arms: true, draw: drawTraitCautious },
+  curious:  { x: 0,   y: 0,    stride: 1,    arms: true, draw: drawTraitCurious },
+  stubborn: { x: 0.5, y: 0,    stride: 1,    arms: true, draw: drawTraitStubborn },
+  tinkerer: { x: 0,   y: 0,    stride: 1,    draw: drawTraitTinkerer },
+  engineer: { x: 0,   y: 0,    stride: 1,    draw: drawTraitEngineer },
+  sentinel: { x: 0,   y: -0.5, stride: 0.5,  arms: true, draw: drawTraitSentinel },
+  burrower: { x: 0,   y: 0,    stride: 1,    draw: drawTraitBurrower },
+  hoarder:  { x: 0,   y: 0,    stride: 1,    draw: drawTraitHoarder },
+  follower: { x: 0,   y: 0,    stride: 1,    arms: true, draw: drawTraitFollower },
+  skittish: { x: 0,   y: 0,    stride: 1.5,  arms: true, draw: drawTraitSkittish }
+}
+var TRAIT_POSES = { walk: true, wait: true, block: true, ride: true }
+function agentTraitLook(w, ag) {
+  if (!w || (w.res || 1) < 2 || ag.special || !TRAIT_POSES[ag.state]) return null
+  return TRAIT_LOOKS[ag.trait] || null
+}
+function traitHeadOffset(w, ag) {
+  var look = agentTraitLook(w, ag)
+  if (!look || w.submerged) return { x: 0, y: 0 }
+  // Peeks are brief and staggered by id, with no random draw or pose memory.
+  var peek = (ag.anim + (ag.id || 0) * 17) % 96
+  if (ag.trait === "curious" && peek < 20) return { x: peek < 10 ? 0.5 : -0.5, y: -0.5 }
+  if ((ag.trait === "follower" || ag.trait === "skittish") && peek < 16) return { x: -0.5, y: 0 }
+  return { x: look.x, y: look.y }
+}
+function traitStride(w, ag, lead) {
+  var look = agentTraitLook(w, ag)
+  return look ? lead * look.stride : lead
+}
+function drawTraitDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, idle) {
+  var look = agentTraitLook(w, ag)
+  if (!look) return
+  var head = traitHeadOffset(w, ag)
+  var lift = w.submerged && !idle && ag.state === "walk" ? Math.round(Math.sin(ag.anim * 0.22) * 1.2) : 0
+  var p = { ctx: ctx, pal: pal, ag: ag, x: ox, y: oy + drop + lift, dir: dir,
+    drop: drop, lead: idle ? 0 : lead, hands: !idle || !idle.pose,
+    hx: head.x, hy: head.y - (idle && idle.pose === "glance" ? 1 : 0), wet: w.submerged }
+  look.draw(p)
+}
+function traitPixel(p, color, x, y, width, height) {
+  p.ctx.fillStyle = color
+  blitFine(p.ctx, p.x, p.y, p.dir, x, y, width, height)
+}
+function drawTraitSteady(p) {
+  // Pressed sleeves. Somebody has to be the adult in this meeting.
+  traitPixel(p, p.pal.lapel, 1.5, 9, 0.5, 2)
+  traitPixel(p, p.pal.shirt, 1.5, 11, 1, 0.5)
+}
+function drawTraitBrave(p) {
+  traitPixel(p, p.pal.lapel, 1, 6.5, 1.5, 0.5)
+  if (!p.hands || p.ag.state === "block") return
+  var front = p.lead < 0 ? 7 : 6.5, back = p.lead > 0 ? -0.5 : 0
+  traitPixel(p, p.pal.robe, front, 9.5, 1, 1.5)
+  traitPixel(p, p.pal.skin, front, 11, 1, 0.5)
+  traitPixel(p, p.pal.skin, back, 11.5, 1, 0.5)
+}
+function drawTraitCautious(p) {
+  // Shoulders up, hands held close, eyes tipped toward the next floor cell.
+  traitPixel(p, p.pal.lapel, 5.5, 6.5, 1.5, 0.5)
+  traitPixel(p, p.pal.robe, 2.5, 7, 2.5, 0.5)
+  if (!p.hands) return
+  traitPixel(p, p.pal.skin, 5.5, 9.5, 1, 0.5)
+  traitPixel(p, p.pal.shirt, 5, 10, 0.5, 1)
+}
+function drawTraitCurious(p) {
+  // A finger at the chin between those little upward/sideways peeks.
+  traitPixel(p, p.pal.lapel, 6, 7, 0.5, 1)
+  if (!p.hands) return
+  traitPixel(p, p.pal.skin, 6 + p.hx, 6.5 + p.hy, 0.5, 1)
+  traitPixel(p, p.pal.shirt, 6, 8, 0.5, 0.5)
+}
+function drawTraitStubborn(p) {
+  traitPixel(p, p.pal.lapel, 6, 7, 1.5, 0.5)
+  if (!p.hands) return
+  traitPixel(p, p.pal.robe, 6.5, 9, 1, 2)
+  traitPixel(p, p.pal.skin, 6.5, 10.5, 1, 1)
+  traitPixel(p, p.pal.eye, 7, 11, 0.5, 0.5) // clenched knuckles
+}
+function drawTraitTinkerer(p) {
+  // A pencil behind the ear on land; a screwdriver in the suit everywhere.
+  if (!p.wet) {
+    traitPixel(p, p.pal.dirtEdge, 1.5 + p.hx, 2 + p.hy, 0.5, 2)
+    traitPixel(p, p.pal.shirt, 1.5 + p.hx, 2 + p.hy, 0.5, 0.5)
+  }
+  traitPixel(p, p.pal.lapel, 5.5, 9, 0.5, 2)
+  traitPixel(p, p.pal.dirtEdge, 5.5, 8.5, 0.5, 1)
+}
+function drawTraitEngineer(p) {
+  // Pocket protector: still the same uniform, just an aggressively tidy one.
+  traitPixel(p, p.pal.shirt, 5, 8.5, 1.5, 1.5)
+  traitPixel(p, p.pal.eye, 5.5, 8, 0.5, 1)
+  traitPixel(p, p.pal.lapel, 5, 10, 1.5, 0.5)
+}
+function drawTraitSentinel(p) {
+  traitPixel(p, p.pal.lapel, 1, 6.5, 1, 0.5)
+  if (!p.hands || p.ag.state === "block") return
+  traitPixel(p, p.pal.robe, 6, 10, 1, 2) // front hand tucked away
+  traitPixel(p, p.pal.shirt, 0, 10, 0.5, 1)
+  traitPixel(p, p.pal.skin, -0.5, 10.5, 1, 0.5) // hands behind back
+}
+function drawTraitBurrower(p) {
+  traitPixel(p, p.pal.dirtShade, 2 + p.lead, 13.5 - p.drop, 1, 0.5)
+  traitPixel(p, p.pal.dirtEdge, 4 - p.lead, 14 - p.drop, 0.5, 0.5)
+  traitPixel(p, p.pal.dirtEdge, 1, 10, 0.5, 2)
+  traitPixel(p, p.pal.lapel, 0.5, 12, 1.5, 0.5) // pocket trowel
+}
+function drawTraitHoarder(p) {
+  traitPixel(p, p.pal.robe, -0.5, 8, 1.5, 4.5)
+  traitPixel(p, p.pal.lapel, -0.5, 8.5, 0.5, 3)
+  traitPixel(p, p.pal.eye, 0, 10, 1, 0.5) // bag flap
+  traitPixel(p, p.pal.lapel, 6, 11, 1.5, 1)
+  traitPixel(p, p.pal.robe, 6.5, 11.5, 1, 1) // overstuffed pocket
+}
+function drawTraitFollower(p) {
+  traitPixel(p, p.pal.shirt, 0.5, 9.5, 0.5, 1)
+  if (!p.hands) return
+  traitPixel(p, p.pal.skin, -0.5, 9.5, 1, 0.5) // checking the colleague behind
+  traitPixel(p, p.pal.lapel, 0, 8.5, 0.5, 1)
+}
+function drawTraitSkittish(p) {
+  traitPixel(p, p.pal.lapel, 1, 6.5, 0.5, 1)
+  if (!p.hands) return
+  var elbow = p.lead > 0 ? 0.5 : 0
+  traitPixel(p, p.pal.robe, 6.5, 8 + elbow, 1, 2)
+  traitPixel(p, p.pal.skin, 6.5, 8 + elbow, 0.5, 0.5)
+  traitPixel(p, p.pal.shirt, 6.5, 8.5 + elbow, 0.5, 0.5)
+}
+
+// The head rides the walking bob and the res-2 personality tilt.
+function drawUprightHeadFine(ctx, pal, ag, ox, oy, dir, hy) {
   ctx.fillStyle = pal.lapel
   blitFine(ctx, ox, oy, dir, 2.5, 0.5 + hy, 2.5, 0.5)       // light on the hair
   ctx.fillStyle = pal.skin
@@ -6823,6 +6960,10 @@ function drawAgentUprightFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, rob
   ctx.globalAlpha = 1
   ctx.fillStyle = "#ffffff"
   blitFine(ctx, ox, oy, dir, 5.5, 4 + hy, 0.5, 0.5)         // glint
+}
+function drawAgentUprightFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w) {
+  var look = traitHeadOffset(w, ag)
+  drawUprightHeadFine(ctx, pal, ag, ox + dir * look.x, oy, dir, drop + look.y)
   if (ag.state === "saved") return
   var ty = 7 + Math.max(drop, -1)
   ctx.fillStyle = pal.shirt
@@ -6838,7 +6979,8 @@ function drawAgentUprightFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, rob
   if (ag.state !== "walk") return
   // Shoes: the last row of each leg, with a toe forward of the heel.
   ctx.fillStyle = pal.eye
-  var l1 = squash ? 1 : 2 + lead, l2 = squash ? 5 : 4 - lead
+  var stride = traitStride(w, ag, lead)
+  var l1 = squash ? 1 : 2 + stride, l2 = squash ? 5 : 4 - stride
   blitFine(ctx, ox, oy, dir, l1, 15, 2.5, 1)
   blitFine(ctx, ox, oy, dir, l2, 15, 2.5, 1)
   ctx.fillStyle = robe
@@ -8925,12 +9067,13 @@ function agentDrawMotion(w, ag, st, idle) {
 function drawAgentDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, squash, robe, idle) {
   if ((w.res || 1) < 2) return
   if (!w.submerged) {
-    if (idle) drawIdleFine(ctx, pal, ag, ox, oy, dir, drop, idle)
+    if (idle) drawIdleFine(ctx, pal, ag, ox, oy, dir, drop, idle, w)
     else drawAgentFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w)
   } else if (ag.state !== "saved") {
     var swimming = !idle && (ag.state === "walk" || ag.state === "swim")
     drawDiverFine(ctx, pal, ag, ox, oy, dir, drop + (swimming ? Math.round(Math.sin(ag.anim * 0.22) * 1.2) : 0) - (idle && idle.pose === "glance" ? 1 : 0))
   }
+  drawTraitDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, idle)
 }
 
 function drawAgentEffects(ctx, w, pal, ag, ox, oy, dir, hair, st, C) {
@@ -9034,21 +9177,7 @@ function drawAgentHead(ctx, w, pal, ag, ox, oy, dir, hair, skin, st, bodyDrop) {
     drawDiverBubbles(ctx, w, pal, ag, ox, oy, bodyDrop + headLift)
     drawDiverHead(ctx, w, pal, ag, ox, oy, dir, bodyDrop + headLift)
   } else {
-  ctx.fillStyle = hair
-  blit(ctx, ox, oy, dir, 2, 0 + bodyDrop, 4, 3)
-  blit(ctx, ox, oy, dir, 0, 1 + bodyDrop, 2, 3)        // the back of the head
-
-  ctx.fillStyle = skin
-  blit(ctx, ox, oy, dir, 2, 3 + bodyDrop, 4, 4)
-  blit(ctx, ox, oy, dir, 6, 5 + bodyDrop, 1, 1)        // the nose
-
-  // Shades, not an eye. A band reads as somebody wearing something, which is
-  // the difference between a little person and an agent. It runs one pixel out
-  // over the nose, so the glasses lead the face the way glasses do.
-  ctx.fillStyle = pal.eye
-  blit(ctx, ox, oy, dir, 2, 4 + bodyDrop, 5, 1)
-  ctx.fillStyle = pal.lens
-  blit(ctx, ox, oy, dir, 5, 4 + bodyDrop, 1, 1)        // the lit lens, in front
+    drawAgentDryHead(ctx, w, pal, ag, ox, oy, dir, hair, skin, bodyDrop)
   }
 
   // --- collar ------------------------------------------------------------
@@ -9062,6 +9191,28 @@ function drawAgentHead(ctx, w, pal, ag, ox, oy, dir, hair, skin, st, bodyDrop) {
     blit(ctx, ox, oy, dir, 3, 6 + bodyDrop + collarLift, 2, 4)
   }
 
+}
+
+function drawAgentDryHead(ctx, w, pal, ag, ox, oy, dir, hair, skin, bodyDrop) {
+  var look = traitHeadOffset(w, ag)
+  var pixel = agentTraitLook(w, ag) ? blitFine : blit
+  ox += dir * look.x
+  bodyDrop += look.y
+  ctx.fillStyle = hair
+  pixel(ctx, ox, oy, dir, 2, 0 + bodyDrop, 4, 3)
+  pixel(ctx, ox, oy, dir, 0, 1 + bodyDrop, 2, 3)        // the back of the head
+
+  ctx.fillStyle = skin
+  pixel(ctx, ox, oy, dir, 2, 3 + bodyDrop, 4, 4)
+  pixel(ctx, ox, oy, dir, 6, 5 + bodyDrop, 1, 1)        // the nose
+
+  // Shades, not an eye. A band reads as somebody wearing something, which is
+  // the difference between a little person and an agent. It runs one pixel out
+  // over the nose, so the glasses lead the face the way glasses do.
+  ctx.fillStyle = pal.eye
+  pixel(ctx, ox, oy, dir, 2, 4 + bodyDrop, 5, 1)
+  ctx.fillStyle = pal.lens
+  pixel(ctx, ox, oy, dir, 5, 4 + bodyDrop, 1, 1)        // the lit lens, in front
 }
 
 function drawAgentMarks(ctx, w, pal, ag, ox, oy, dir, st, bodyDrop) {
