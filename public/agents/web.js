@@ -583,11 +583,12 @@
       el.clock.className = "clock"
     }
 
-    var showingResult = completionLine !== ""
-    el.overlay.style.display = (!running || showingResult) ? "" : "none"
-    el.overlayTitle.textContent = showingResult
-      ? (world.saved + " of " + world.toRelease + " home") : "PAUSED"
-    el.overlayLine.textContent = showingResult ? completionLine : "Space or click to resume"
+    // The result is the canvas's own report card now (drawLevelResults). This
+    // overlay used to print the same count and a line of prose on top of it,
+    // and the two were unreadable through each other — so it is pause only.
+    el.overlay.style.display = running ? "none" : ""
+    el.overlayTitle.textContent = "PAUSED"
+    el.overlayLine.textContent = "Space or click to resume"
 
     // Same rule as the bar's toolbar: flash for two thirds of a second after
     // an agent takes one, so you can catch which skill just went out.

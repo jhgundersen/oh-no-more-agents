@@ -2659,3 +2659,17 @@ haze and Overclock heat read as event state without hiding agents, and the
 inactive frames stay byte-identical.
 
 **Deployed** after 97 (name="build" content="471055c1"): event effects on the board. Browser check clean.
+
+## 98 — 2026-10-13 · The report card on its own
+
+**Owner report.** The end-of-level card (Codex, iteration 97's transitions)
+was hard to read: the page's old HTML result overlay — "N of M home" and a
+line of prose — still printed on top of it. The overlay is now pause-only
+(`web.js` render); the canvas card is the result. Checked headlessly at the
+end of a level: card alone, legible.
+
+Parked mid-way (stashed, not on main): a fifteenth biome, the Building Site,
+with a gantry crane. Two designs measured worse than no crane on 400 plays
+(93.0% and 93.3% vs 94.1% home): carrying riders *over* a floor hole took
+them past the colony's way down and into the guards; lowering them *down*
+it still cost 0.8. To be looked at before it goes anywhere.
