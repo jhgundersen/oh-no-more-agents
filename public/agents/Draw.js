@@ -11590,9 +11590,13 @@ function drawRoofWashing(ctx, pal, d, x, top) {
   ctx.fillStyle = pal.steelShade
   ctx.fillRect(x - 4, top, 15, 2) // gutter and hanging clothes rail
   ctx.fillRect(x + 9, top + 2, 2, 5)
-  ctx.fillStyle = pal.shirt
+  // Washing on one rail in three; the rest is just the gutter and its
+  // downpipe. White shirts on every ceiling were the brightest thing on the
+  // board and pulled the eye off the colony.
+  if (d.seed % 3) return
+  ctx.fillStyle = pal.steelEdge
   ctx.fillRect(x - 2, top + 3, 6, 2); ctx.fillRect(x - 1, top + 5, 4, 3) // shirt
-  ctx.fillStyle = pal.decorLit
+  ctx.fillStyle = pal.warn
   ctx.fillRect(x + 6, top + 3, 2, 4); ctx.fillRect(x + 5, top + 6, 2, 2) // sock
 }
 function drawRoofPigeon(ctx, pal, d, x, base) {
@@ -11627,6 +11631,7 @@ function fineRoofDish(ctx, pal, d, x, base) {
 function fineRoofWashing(ctx, pal, d, x, base, top) {
   ctx.fillStyle = pal.rigDark
   ctx.fillRect(x - 3.5, top + 1.5, 13, 0.5)
+  if (d.seed % 3) return
   ctx.fillStyle = pal.warn
   ctx.fillRect(x - 0.5, top + 2.5, 0.5, 1); ctx.fillRect(x + 6.5, top + 2.5, 0.5, 1) // pegs
   ctx.fillStyle = pal.steelShade
@@ -11807,54 +11812,52 @@ function drawZipAgent(ctx, w, pal, ag, opts) {
   var g = zipDrawing(w, ag), c = agentDrawColors(w, pal, ag, "zip")
   ctx.save()
   drawZipUmbrella(ctx, w, pal, ag, g)
-  drawZipBody(ctx, pal, g, c)
+  drawZipBody(ctx, w, pal, ag, g, c)
   if ((w.res || 1) >= 2) drawZipFine(ctx, w, pal, g)
-  drawAgentLabel(ctx, w, pal, ag, g.x - 4, g.y + 5, "zip", opts)
+  drawAgentLabel(ctx, w, pal, ag, g.x - 4, g.y + 6, "zip", opts)
   ctx.restore()
 }
+// The closed umbrella, crook over the cable: six pixels from the hook to the
+// ferrule, because the whole agent has to hang under it inside the corridor.
 function drawZipUmbrella(ctx, w, pal, ag, g) {
   ctx.fillStyle = pal.umbrellaStem
-  zipRect(ctx, g, -1.0, -1.0, 4, 1) // crook curled over the cable
-  zipRect(ctx, g, -1.0, 0, 1, 2); zipRect(ctx, g, 2.0, 0, 1, 8)
+  zipRect(ctx, g, -1.0, -1.0, 3, 1) // crook curled over the cable
+  zipRect(ctx, g, -1.0, 0, 1, 1)
+  zipRect(ctx, g, 1.0, 0, 1, 2)
   ctx.fillStyle = brollyColour(w, pal, ag)
-  zipRect(ctx, g, 0, 2.0, 2, 1)
-  zipRect(ctx, g, -1.0, 3.0, 3, 3) // folded canopy, narrow and pointed
-  zipRect(ctx, g, 0, 6.0, 2, 1)
+  zipRect(ctx, g, 0, 2.0, 3, 3) // folded canopy
   ctx.fillStyle = pal.umbrellaRim
-  zipRect(ctx, g, -1.0, 3.0, 1, 3)
+  zipRect(ctx, g, 0, 2.0, 1, 3)
   ctx.fillStyle = pal.umbrellaStem
-  zipRect(ctx, g, 1.0, 7.0, 1, 2) // ferrule between the hands
+  zipRect(ctx, g, 1.0, 5.0, 1, 1) // ferrule between the hands
 }
 function zipRect(ctx, g, x, y, width, height) {
   ctx.fillRect(g.dir > 0 ? g.x + x : g.x - x - width, g.y + y, width, height)
 }
-function drawZipBody(ctx, pal, g, c) {
-  var x = -3 - g.swing
+// The whole agent, hat and shades, hanging from both hands under the ferrule
+// with its legs trailing back from the speed and swinging.
+function drawZipBody(ctx, w, pal, ag, g, c) {
+  var dir = g.dir, ox = Math.round(g.x + dir * 1.5 - SPRITE_W / 2), oy = g.y + 7
+  spriteFlip = false
+  drawAgentHead(ctx, w, pal, ag, ox, oy, dir, c.hair, c.skin, "hooked", 0)
   ctx.fillStyle = c.robe
-  zipRect(ctx, g, x - 3, 7, 1, 5); zipRect(ctx, g, x - 3, 7, 4 - x, 1) // far arm reaching up
-  ctx.fillStyle = c.hair
-  zipRect(ctx, g, x - 2, 6, 4, 2)
+  blit(ctx, ox, oy, dir, 2, 7, 4, 5)                                  // jacket
+  blit(ctx, ox, oy, dir, 1, -1, 1, 7); blit(ctx, ox, oy, dir, 6, -1, 1, 7) // arms up
   ctx.fillStyle = c.skin
-  zipRect(ctx, g, x - 2, 8, 4, 2); zipRect(ctx, g, x + 2, 8, 1, 1)
-  ctx.fillStyle = c.robe
-  zipRect(ctx, g, x - 2, 10, 4, 3)
-  zipRect(ctx, g, x + 1, 10, 3 - x, 1); zipRect(ctx, g, 3, 8, 1, 3) // near arm, elbow out
-  ctx.fillStyle = c.skin
-  zipRect(ctx, g, 0, 7, 2, 1); zipRect(ctx, g, 1, 8, 3, 1) // two hands on the ferrule
-  ctx.fillStyle = pal.shirt
-  zipRect(ctx, g, x + 1, 10, 1, 2)
+  blit(ctx, ox, oy, dir, 2, -2, 1, 1); blit(ctx, ox, oy, dir, 5, -2, 1, 1) // hands
   ctx.fillStyle = pal.lapel
-  zipRect(ctx, g, x - 2, 10, 1, 1)
+  blit(ctx, ox, oy, dir, 2, 7, 1, 1); blit(ctx, ox, oy, dir, 5, 7, 1, 1)
   ctx.fillStyle = c.robe
-  zipRect(ctx, g, x - 4, 12, 3, 1); zipRect(ctx, g, x - 2, 13, 2, 1) // trailing legs
+  var trail = 1 + g.swing
+  blit(ctx, ox, oy, dir, 2 - trail, 12, 1, 3); blit(ctx, ox, oy, dir, 5 - trail, 12, 1, 3) // legs
   ctx.fillStyle = pal.rigDark
-  zipRect(ctx, g, x - 5, 12, 2, 1); zipRect(ctx, g, x - 3, 14, 2, 1)
+  blit(ctx, ox, oy, dir, 1 - trail, 15, 2, 1); blit(ctx, ox, oy, dir, 4 - trail, 15, 2, 1) // shoes
 }
 function drawZipFine(ctx, w, pal, g) {
   ctx.fillStyle = pal.umbrellaRim
-  zipRect(ctx, g, 0.5, 3, 0.5, 3) // tied folds
+  zipRect(ctx, g, 1.5, 2, 0.5, 3) // tied folds
   ctx.fillStyle = pal.rigDark
-  zipRect(ctx, g, -0.5, 4.5, 3, 0.5) // fastening band
+  zipRect(ctx, g, 0, 3.5, 3, 0.5) // fastening band
   ctx.fillStyle = pal.dust
   var age = w.ticks % 3
   moteFineRect(ctx, w, g.x - g.dir * (4 + age), g.y + 1 + age, 0.5, 0.5) // water shaken off the line
