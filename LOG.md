@@ -3431,3 +3431,5 @@ rain, chimneys, aerials, pigeons, the front-door exit. Two fixes in review:
   steel edge colour with the sock in the warning colour; the rest are gutters.
 
 Tests 675 pass.
+
+**Deployed** after 120 (name="build" content="9ecec7f1"): the Rooftops and their umbrella lines. Browser check clean.
