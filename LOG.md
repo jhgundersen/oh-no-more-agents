@@ -3334,3 +3334,5 @@ read exactly like a quiet one. New `battleLine`: "2 GUARDS DOWN · 3 UMBRELLA
 SAVES", in the warning colour under the rescue line, the plate growing by a
 row only when there was a fight. Looked at level 13 (Library): "+3 RESCUED"
 then "4 UMBRELLA SAVES", inside the plate, nothing overlapping. Tests 654.
+
+**Deployed** after 118 (name="build" content="8f975fcc"): umbrella shields, sound effects (off by default), battle line. Browser check clean.
