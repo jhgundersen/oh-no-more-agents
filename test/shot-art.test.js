@@ -38,3 +38,20 @@ test("res 1 keeps the dotted line and no half pixels", () => {
   D.drawAgentSidearm(ctx, w, pal, ag)
   for (const c of ctx.calls) for (const n of [c.x, c.y, c.w, c.h]) assert.equal(n, Math.round(n))
 })
+
+test("the umbrella shield draws at both resolutions, side-on and overhead", () => {
+  for (const res of [1, 2]) for (const dir of [1, -1, 0]) for (const left of [24, 20, 1]) {
+    const { w, ag, pal } = shooter(res, 0)
+    Object.assign(ag, { brollyFor: left, brollyDir: dir })
+    const ctx = recorder()
+    D.drawUmbrella(ctx, w, pal, ag, 80, 140, "walk")
+    assert.ok(ctx.calls.length >= 3, `res ${res} dir ${dir}`)
+    assert.equal(ctx.globalAlpha, 1)
+    for (const c of ctx.calls) for (const n of [c.x, c.y, c.w, c.h])
+      assert.equal(n * res, Math.round(n * res), "pixel grid")
+    if (dir) {
+      const front = ctx.calls.filter(c => (c.x - 84) * dir > 4 && c.c !== pal.umbrellaStem)
+      assert.ok(front.length > 0, "canopy sits toward the shooter")
+    }
+  }
+})

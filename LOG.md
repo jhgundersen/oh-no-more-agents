@@ -3259,3 +3259,44 @@ Sim untouched. Tests 647 → 649 (`test/shot-art.test.js`: grid, alpha, spark
 timing, res-1 integer pixels). New functions CRAP ≤ 4.6.
 
 **Deployed** after 115 (name="build" content="282b4092"): depth shading, guard posts from level 3, readable shots. Browser check clean.
+
+## 116 — 2026-10-13 · The umbrella as a shield
+
+The colony is a crowd of agents in black suits, each with an umbrella. Until
+now the umbrella did one thing: it opened on a lethal drop.
+
+**First try, dropped as a feature on its own:** an umbrella held overhead
+against falling rock, snow and ice (`umbrellaGuards`). It works, but over 600
+plays the falling hazards killed one agent: the colony already flees them.
+It stays in as a small consistent rule, and it fires rarely.
+
+**The real change:** `umbrellaParries`. When a red-team round would kill an
+ordinary walker, half the time (a stable-state roll like the sidearm's, no
+random stream touched) it gets its umbrella open toward the muzzle and the round
+stops in the canopy. It costs one floater from the same toolbar count the
+lethal drops use, and stays up for `BROLLY_HOLD` (24) ticks, covering the rest
+of the burst — but only from the side it faces. Specials carry no umbrella.
+
+**Measured** (600 plays, levels 1–300, two colonies; against HEAD):
+
+|  | before | after |
+|---|---|---|
+| home, all plays | 92.91% | 93.87% |
+| home where a guard post is | 89.6% | 92.0% |
+| deaths to the red team | 293 | 207 |
+| umbrella parries | 0 | 103 (0.43 per post level) |
+
+The red team still kills 207, so it is still the thing to fear; this hands
+back the 1.3 points iteration 114 spent on doubling the fights. `npm run sim`
+cleared 98 → 100%, home 90 → 92%, hangs 0.
+
+**Drawing:** `drawUmbrellaShield`. Side-on, the canopy is the floater's dome
+turned toward the gun on a short shaft from the forward hand, opening over four
+ticks and shuddering while hit; at res 2 a half-pixel dome with ribs and a lit
+rim. Overhead it is the ordinary canopy. A parried round's tracer now ends at
+the canopy (`en.lineTo`, draw-only), not in the agent behind it.
+
+**Reviewed:** level 13 (Library), ticks 182–200: the guard fires, the canopy
+snaps open, the tracer stops at it, and the agent walks on behind its umbrella.
+Tests 649 → 653 (parry, late roll, empty toolbar, facing, overhead kinds,
+shield drawing at both resolutions). New functions CRAP ≤ 8.

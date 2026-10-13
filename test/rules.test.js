@@ -102,6 +102,7 @@ test("Frost's powder snow lets a longer fall land, and the colony knows it", () 
 
 test("a graze stuns and knocks back; a second one, or a lethal shot, kills", () => {
   const w = S.generate(13, 0, 3)
+  w.skills.floater = 0          // no umbrella to put up: the wound rule alone
   const ag = floorAgent(w, 40)
   const lost = w.lost
   S.woundFriendly(w, ag, 45, false)
@@ -134,4 +135,60 @@ test("Cavern sinkholes: a crust over a hollow that opens under the first walker"
   assert.equal(s.openedAt, w.ticks)
   for (let x = s.x; x < s.x + 3; x++) assert.ok(!S.solid(w, x, s.top), "the crust is gone")
   assert.ok(S.solid(w, s.x, s.bottom + 1), "and there is floor to land on")
+})
+
+// The umbrella as a shield: paid for from the floater count, held toward the
+// shooter for BROLLY_HOLD ticks, and no use against a shot from behind.
+function parryTick(w, ag, want) {
+  for (let t = 0; t < 100; t++) {
+    w.ticks = t
+    if (((t * 37 + ag.id * 61 + 11) % 100 < S.BROLLY_PARRY) === want) return
+  }
+  throw new Error("no such tick")
+}
+test("an umbrella put up in time stops a lethal shot and costs a floater", () => {
+  const w = S.generate(13, 0, 3)
+  const ag = floorAgent(w, 40)
+  w.skills.floater = 3
+  parryTick(w, ag, true)
+  S.woundFriendly(w, ag, 45, true)
+  assert.ok(!ag.gone)
+  assert.equal(w.skills.floater, 2)
+  assert.equal(ag.brollyFor, S.BROLLY_HOLD)
+  assert.equal(ag.brollyDir, 1, "held toward the shooter")
+  S.woundFriendly(w, ag, 46, true)
+  assert.ok(!ag.gone, "still up for the rest of the burst")
+  assert.equal(w.skills.floater, 2, "the same umbrella")
+  S.woundFriendly(w, ag, 30, true)
+  assert.ok(ag.gone, "a shot from behind gets round it")
+})
+test("no umbrella goes up late, empty-handed or for a special", () => {
+  const w = S.generate(13, 0, 3)
+  const late = floorAgent(w, 40)
+  w.skills.floater = 3
+  parryTick(w, late, false)
+  S.woundFriendly(w, late, 45, true)
+  assert.ok(late.gone)
+  const broke = floorAgent(w, 30)
+  w.skills.floater = 0
+  parryTick(w, broke, true)
+  S.woundFriendly(w, broke, 35, true)
+  assert.ok(broke.gone)
+})
+
+test("an umbrella overhead keeps off falling rock, snow and ice, not fire", () => {
+  const w = S.generate(13, 0, 3)
+  w.skills.floater = 2
+  const ag = floorAgent(w, 40)
+  assert.equal(S.umbrellaGuards(w, { kind: "flame" }, ag), false)
+  assert.equal(S.umbrellaGuards(w, { kind: "rockfall" }, ag), true)
+  assert.equal(ag.brollyDir, 0, "overhead")
+  assert.equal(w.skills.floater, 1)
+  assert.equal(S.umbrellaGuards(w, { kind: "icicle" }, ag), true, "still up")
+  assert.equal(w.skills.floater, 1)
+  const other = floorAgent(w, 30)
+  other.state = "dig"
+  assert.equal(S.umbrellaGuards(w, { kind: "snowball" }, other), false, "busy hands")
+  other.state = "walk"; other.special = true
+  assert.equal(S.umbrellaGuards(w, { kind: "snowball" }, other), false, "specials carry none")
 })

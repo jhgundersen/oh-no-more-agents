@@ -85,6 +85,8 @@ var SIDEARM_HAZARD_HIT = 1
 // time. A drone in range is fired at whichever way it is, and hit far more.
 var SIDEARM_DRONE_RANGE = 14
 var SIDEARM_DRONE_HIT = 35
+// How long an umbrella held up as cover stays up (umbrellaParries).
+var BROLLY_HOLD = 24
 var ENEMY_JET_SPEED = 0.30
 var ENEMY_JET_SINK = 0.10
 
@@ -766,6 +768,7 @@ var K = {
   AGENT_H: AGENT_H,
   // Draw.js needs this one to know how much of an incubation is left to show.
   INCUBATION_TELL: INCUBATION_TELL,
+  BROLLY_HOLD: BROLLY_HOLD,
   // Force Push's reach, so Draw.js can fly the rocket exactly as far as the
   // simulation throws it. Drawn short of the hole it makes, it read as a dud.
   ROCKET_RANGE: ROCKET_RANGE,
@@ -4113,6 +4116,51 @@ function stepSniper(w, h, spec) {
   }
 }
 
+// The umbrella is a roof as well as a parachute. Caught under something
+// falling — rocks, snow, icicles — an ordinary walker puts its umbrella up and
+// the fall bounces off. It is the same umbrella the toolbar hands out for a
+// lethal drop, so it is paid for out of the same count: a colony that shelters
+// under a rockfall has one umbrella fewer for the shaft further down. Held for
+// a moment, which covers the rest of that volley; specials carry no umbrella.
+var BROLLY_STOPS = { rockfall: true, snowball: true, icicle: true }
+
+// And against the red team it is a shield. A walker that sees the muzzle in
+// time snaps its umbrella open toward it and the round goes into the canopy —
+// the suit and the umbrella were always going to end up here. In time is a
+// roll, from stable state like the sidearm's, so it costs nobody's random
+// stream; once it is up it stays up for the rest of the burst.
+var BROLLY_PARRY = 50
+
+function umbrellaParries(w, ag, fromX) {
+  if (ag.special) return false
+  if (ag.brollyFor > 0) return brollyFacing(ag, fromX)
+  if (ag.state !== "walk") return false
+  if ((w.ticks * 37 + ag.id * 61 + 11) % 100 >= BROLLY_PARRY) return false
+  if (!take(w, "floater")) return false
+  ag.brollyFor = BROLLY_HOLD
+  ag.brollyDir = fromX >= ag.x ? 1 : -1
+  w.umbrellaSaves = (w.umbrellaSaves || 0) + 1
+  w.lastEvent = "umbrella up"
+  return true
+}
+
+function brollyFacing(ag, fromX) {
+  return !ag.brollyDir || (fromX >= ag.x ? 1 : -1) === ag.brollyDir
+}
+
+function umbrellaGuards(w, h, ag) {
+  if (!BROLLY_STOPS[h.kind] || ag.special) return false
+  if (ag.brollyFor > 0) return true
+  if (ag.state !== "walk" || !take(w, "floater")) return false
+  ag.brollyFor = BROLLY_HOLD
+  ag.brollyDir = 0
+  h.known = true
+  w.hazardKnown = true
+  w.umbrellaSaves = (w.umbrellaSaves || 0) + 1
+  w.lastEvent = "umbrella up"
+  return true
+}
+
 function hazardStrike(w, h) {
   var hmid = hazardMid(h)
   for (var i = 0; i < w.agents.length; i++) {
@@ -4158,6 +4206,7 @@ function hazardStrike(w, h) {
       w.lastEvent = "swept away"
       continue
     }
+    if (umbrellaGuards(w, h, ag)) continue
     addBlood(w, ag.x, ag.y - 1.5, 14)
     ag.gone = true
     ag.state = "dead"
@@ -8335,6 +8384,7 @@ function threatAhead(w, ag, reach) {
 function woundFriendly(w, ag, fromX, lethal) {
   if (!ag || ag.gone || ag.state === "saved") return
   if (shieldStops(w, ag, fromX)) return
+  if (umbrellaParries(w, ag, fromX)) return
   ag.wounds = lethal ? 2 : (ag.wounds || 0) + 1
   addBlood(w, ag.x, ag.y - 1.5, ag.wounds >= 2 ? 16 : 7)
   if (ag.wounds >= 2) {
@@ -8524,6 +8574,8 @@ function fireEnemyGun(w, en) {
         // roster the colony did not need to fear: 97.7% home against 94.9%
         // with no enemies at all, 0.08 deaths a level. Lethal: 94.5%, 0.58.
         woundFriendly(w, ag, en.x, true)
+        // Parried: the round stops in the canopy, not in the agent behind it.
+        if (!ag.gone && ag.brollyFor > 0 && ag.brollyDir) en.lineTo = ag.x + ag.brollyDir * 2
         return
       }
     }
@@ -9308,7 +9360,7 @@ function stepAgents(w) {
 // Every per-agent countdown that only ever runs down. (`cool` and `infected`
 // run in stepAgents itself: one of them can end the agent's turn.)
 var AGENT_COUNTDOWNS = ["blockFor", "coveredFor", "mineCool", "waitFor", "shotFor", "throttleFor", "debugFor", "restockFor",
-  "netFor", "reloadFor", "gunCool", "shoveCool", "hazardGrace"]
+  "netFor", "reloadFor", "gunCool", "shoveCool", "hazardGrace", "brollyFor"]
 function tickAgentTimers(w, ag) {
   for (var i = 0; i < AGENT_COUNTDOWNS.length; i++) if (ag[AGENT_COUNTDOWNS[i]] > 0) ag[AGENT_COUNTDOWNS[i]]--
   if (ag.shieldFor > 0) {

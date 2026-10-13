@@ -6270,6 +6270,7 @@ function drawPoseSwim(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
 
 // The umbrella, drawn behind nothing and above everything.
 function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
+  if (ag.brollyFor > 0 && st !== "fall") { drawUmbrellaShield(ctx, w, pal, ag, ox, oy); return }
   if (!(ag.floater && st === "fall" && ag.fall > 2)) return
   // It breathes. A canopy that holds one shape all the way down reads as a
   // prop being carried; one that flexes against the air reads as the thing
@@ -6283,9 +6284,7 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   // to hand mid-descent, and offset by the colony seed so the same id is not
   // handed the same umbrella every playthrough — the same trick the colony
   // itself uses, and it costs no draw from the trait stream to do it here.
-  var brolly = pal.umbrellas
-    ? pal.umbrellas[(ag.id + (w.colonySeed || 0)) % pal.umbrellas.length]
-    : pal.umbrella
+  var brolly = brollyColour(w, pal, ag)
 
   if ((w.res || 1) >= 2) drawFloatingUmbrella(ctx, w, pal, ag, ox, oy, flex, brolly)
   else {
@@ -6306,6 +6305,77 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   blit(ctx, ox, oy, 1, -2, -8, 2, 1)
   blit(ctx, ox, oy, 1, 9, -8, 2, 1)
   }
+}
+
+function brollyColour(w, pal, ag) {
+  return pal.umbrellas
+    ? pal.umbrellas[(ag.id + (w.colonySeed || 0)) % pal.umbrellas.length]
+    : pal.umbrella
+}
+
+// The umbrella held up as cover (Sim: umbrellaParries, umbrellaGuards). Into
+// the line of fire it is a canopy on its side, bulging toward the shooter on
+// a short shaft from the forward hand; against falling rock it is held
+// overhead. It snaps open over the first four ticks and shudders while held.
+var BROLLY_OPEN = 4
+function drawUmbrellaShield(ctx, w, pal, ag, ox, oy) {
+  var held = w.k.BROLLY_HOLD - ag.brollyFor
+  var open = Math.min(1, (held + 1) / BROLLY_OPEN)
+  var brolly = brollyColour(w, pal, ag)
+  if (!ag.brollyDir) { drawUmbrellaOverhead(ctx, w, pal, ox, oy, open, brolly); return }
+  var d = ag.brollyDir, half = Math.max(1, Math.round(6 * open))
+  var shake = held < 8 && held % 2 ? 1 : 0
+  if ((w.res || 1) >= 2) { drawShieldCanopyFine(ctx, pal, ox, oy, d, open, shake * 0.5, brolly); return }
+  ctx.fillStyle = pal.umbrellaStem
+  blit(ctx, ox, oy, d, 7, 8, 3, 1)                         // shaft from the hand
+  ctx.fillStyle = brolly
+  blit(ctx, ox, oy, d, 10 + shake, 8 - half, 2, half * 2 + 1)            // canopy
+  if (open >= 1) {
+    blit(ctx, ox, oy, d, 9 + shake, 8 - half - 1, 2, 1)                  // tips
+    blit(ctx, ox, oy, d, 9 + shake, 8 + half + 1, 2, 1)
+  }
+  ctx.fillStyle = pal.umbrellaRim
+  blit(ctx, ox, oy, d, 12 + shake, 8 - half + 1, 1, Math.max(1, half * 2 - 1))  // lit edge
+}
+
+// The side-on canopy at res 2: a dome in half-pixel rows, deepest at the
+// middle where the shaft meets it, with the lit rim on the outside and two
+// ribs showing through. It is the floater's canopy turned toward the gun.
+function drawShieldCanopyFine(ctx, pal, ox, oy, d, open, shake, brolly) {
+  var half = Math.max(1, Math.round(6.5 * open * 2) / 2), base = 10 + shake
+  ctx.fillStyle = pal.umbrellaStem
+  blitFine(ctx, ox, oy, d, 6.5, 8, base - 6.5, 0.5)
+  for (var r = -half; r <= half; r += 0.5) {
+    var q = 1 - (r / (half + 0.5)) * (r / (half + 0.5))
+    var deep = Math.round(3 * Math.sqrt(q) * 2) / 2
+    if (deep <= 0) continue
+    ctx.fillStyle = brolly
+    blitFine(ctx, ox, oy, d, base, 8 + r, deep, 0.5)
+    ctx.fillStyle = pal.umbrellaRim
+    blitFine(ctx, ox, oy, d, base + deep - 0.5, 8 + r, 0.5, 0.5)
+  }
+  ctx.fillStyle = pal.umbrellaStem
+  ctx.globalAlpha = 0.45
+  blitFine(ctx, ox, oy, d, base, 8 - half / 2, 1.5, 0.5)
+  blitFine(ctx, ox, oy, d, base, 8 + half / 2, 1.5, 0.5)
+  ctx.globalAlpha = 1
+  blitFine(ctx, ox, oy, d, base + 0.5, 8 - half - 0.5, 0.5, 0.5)       // tips
+  blitFine(ctx, ox, oy, d, base + 0.5, 8 + half + 0.5, 0.5, 0.5)
+}
+
+function drawUmbrellaOverhead(ctx, w, pal, ox, oy, open, brolly) {
+  if ((w.res || 1) >= 2) {
+    drawUmbrellaFine(ctx, pal, ox, oy, 0, brolly, Math.max(0.25, open))
+    ctx.fillStyle = pal.umbrellaStem
+    blitFine(ctx, ox, oy, 1, 4, -7, 0.5, 9)
+    return
+  }
+  ctx.fillStyle = pal.umbrellaStem
+  blit(ctx, ox, oy, 1, 4, -6, 1, 8)
+  ctx.fillStyle = brolly
+  blit(ctx, ox, oy, 1, -1, -9, 11, 2)
+  ctx.fillStyle = pal.umbrellaRim
+  blit(ctx, ox, oy, 1, -1, -10, 11, 1)
 }
 
 function drawShieldPlate(ctx, pal, ag, ox, oy, dir, robe, hair, skin, C) {
