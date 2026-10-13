@@ -3486,89 +3486,90 @@ var CREATURE_FINE = {
 }
 
 function drawMissionSubjectBase(ctx, kind, t, x, y, pal, fine) {
-  var v = t.variant || 0
-  var dir = t.dir || 1
   var bob = t.freed && Math.floor(t.anim / 5) % 2 ? 1 : 0
-  y -= bob
+  var fn = MISSION_SUBJECT_DRAW[kind] || drawMissionPerson
+  fn(ctx, kind, t, x, y - bob, t.dir || 1, t.variant || 0, pal, fine)
+}
 
-  if (kind === "camel") { drawCamel(ctx, t, x, y, dir, pal); return }
+var MISSION_SUBJECT_DRAW = {
+  camel: function (ctx, kind, t, x, y, dir, v, pal) { drawCamel(ctx, t, x, y, dir, pal) },
+  treasure: drawMissionTreasure, animal: drawMissionAnimal, alien: drawMissionAlien
+}
 
-  if (kind === "treasure") {
-    // A strongbox with banded iron and a hasp. Shut it is a dark box with a
-    // brass line across it; open it is the only genuinely bright thing in the
-    // biome, which is what makes finding one worth watching — everything else
-    // down here is blue.
-    var open = t.freed
+function drawMissionTreasure(ctx, kind, t, x, y, dir, v, pal) {
+  // A strongbox with banded iron and a hasp. Shut it is a dark box with a
+  // brass line across it; open it is the only genuinely bright thing in the
+  // biome, which is what makes finding one worth watching — everything else
+  // down here is blue.
+  var open = t.freed
+  ctx.fillStyle = pal.helmetDark
+  ctx.fillRect(x - 6, y - 9, 12, 9)                 // the body of the chest
+  ctx.fillStyle = pal.decorDim
+  ctx.fillRect(x - 6, y - 9, 12, 1)
+  ctx.fillStyle = pal.helmet
+  ctx.fillRect(x - 6, y - 5, 12, 1)                 // the band
+  ctx.fillRect(x - 1, y - 5, 2, 3)                  // the hasp
+  if (!open) {
+    // The lid, shut: a shallow curve of staves across the top.
     ctx.fillStyle = pal.helmetDark
-    ctx.fillRect(x - 6, y - 9, 12, 9)                 // the body of the chest
-    ctx.fillStyle = pal.decorDim
-    ctx.fillRect(x - 6, y - 9, 12, 1)
+    ctx.fillRect(x - 6, y - 13, 12, 4)
     ctx.fillStyle = pal.helmet
-    ctx.fillRect(x - 6, y - 5, 12, 1)                 // the band
-    ctx.fillRect(x - 1, y - 5, 2, 3)                  // the hasp
-    if (!open) {
-      // The lid, shut: a shallow curve of staves across the top.
-      ctx.fillStyle = pal.helmetDark
-      ctx.fillRect(x - 6, y - 13, 12, 4)
-      ctx.fillStyle = pal.helmet
-      ctx.fillRect(x - 5, y - 14, 10, 1)
-      return
-    }
-    // Thrown back, and what is inside it. The glow is drawn as loose coins
-    // rather than as a light because a light source in a biome with one sun
-    // shaft would read as a second sun.
-    ctx.fillStyle = pal.helmetDark
-    ctx.fillRect(x - 7, y - 15, 12, 3)
-    ctx.fillStyle = pal.helmetLit
-    ctx.fillRect(x - 5, y - 12, 10, 3)                // the hoard
-    for (var co = 0; co < 6; co++) {
-      var glint = (Math.floor(t.anim / 4) + co) % 3 === 0
-      ctx.fillStyle = glint ? "#fff2b0" : pal.helmetLit
-      ctx.fillRect(x - 5 + co * 2, y - 13 - (co % 2), 2, 2)
-    }
+    ctx.fillRect(x - 5, y - 14, 10, 1)
     return
   }
+  // Thrown back, and what is inside it. The glow is drawn as loose coins
+  // rather than as a light because a light source in a biome with one sun
+  // shaft would read as a second sun.
+  ctx.fillStyle = pal.helmetDark
+  ctx.fillRect(x - 7, y - 15, 12, 3)
+  ctx.fillStyle = pal.helmetLit
+  ctx.fillRect(x - 5, y - 12, 10, 3)                // the hoard
+  for (var co = 0; co < 6; co++) {
+    var glint = (Math.floor(t.anim / 4) + co) % 3 === 0
+    ctx.fillStyle = glint ? "#fff2b0" : pal.helmetLit
+    ctx.fillRect(x - 5 + co * 2, y - 13 - (co % 2), 2, 2)
+  }
+}
 
-  if (kind === "animal") {
-    ctx.fillStyle = v === 0 ? pal.decorLit : (v === 1 ? pal.exitLight : pal.ore)
-    if (v === 0) { // boar: low, square and tusked
-      ctx.fillRect(x - 4, y - 7, 8, 4); ctx.fillRect(x + dir * 4 - (dir < 0 ? 2 : 0), y - 8, 3, 3)
-      ctx.fillRect(x - 3, y - 3, 2, 3); ctx.fillRect(x + 2, y - 3, 2, 3)
-      ctx.fillStyle = pal.exitLight; ctx.fillRect(x + dir * 6 - (dir < 0 ? 1 : 0), y - 6, 1, 1)
-    } else if (v === 1) { // bird: crest, wings and stick legs
-      ctx.fillRect(x - 3, y - 10, 6, 6); ctx.fillRect(x - 5, y - 8, 3, 3); ctx.fillRect(x + 3, y - 8, 3, 3)
-      ctx.fillRect(x - 2, y - 4, 1, 4); ctx.fillRect(x + 2, y - 4, 1, 4)
-      ctx.fillStyle = pal.urgent; ctx.fillRect(x + dir * 3, y - 9, 2, 1)
-    } else { // monkey: long arms and a curled pixel tail
-      ctx.fillRect(x - 2, y - 10, 5, 5); ctx.fillRect(x - 3, y - 5, 6, 4)
-      ctx.fillRect(x - 5, y - 7, 2, 6); ctx.fillRect(x + 3, y - 7, 2, 6)
-      ctx.fillRect(x - dir * 5, y - 6, 2, 1); ctx.fillRect(x - dir * 6, y - 8, 1, 3)
-      ctx.fillRect(x - 3, y - 2, 2, 2); ctx.fillRect(x + 2, y - 2, 2, 2)
-    }
+function drawMissionAnimal(ctx, kind, t, x, y, dir, v, pal) {
+  ctx.fillStyle = v === 0 ? pal.decorLit : (v === 1 ? pal.exitLight : pal.ore)
+  if (v === 0) { // boar: low, square and tusked
+    ctx.fillRect(x - 4, y - 7, 8, 4); ctx.fillRect(x + dir * 4 - (dir < 0 ? 2 : 0), y - 8, 3, 3)
+    ctx.fillRect(x - 3, y - 3, 2, 3); ctx.fillRect(x + 2, y - 3, 2, 3)
+    ctx.fillStyle = pal.exitLight; ctx.fillRect(x + dir * 6 - (dir < 0 ? 1 : 0), y - 6, 1, 1)
+  } else if (v === 1) { // bird: crest, wings and stick legs
+    ctx.fillRect(x - 3, y - 10, 6, 6); ctx.fillRect(x - 5, y - 8, 3, 3); ctx.fillRect(x + 3, y - 8, 3, 3)
+    ctx.fillRect(x - 2, y - 4, 1, 4); ctx.fillRect(x + 2, y - 4, 1, 4)
+    ctx.fillStyle = pal.urgent; ctx.fillRect(x + dir * 3, y - 9, 2, 1)
+  } else { // monkey: long arms and a curled pixel tail
+    ctx.fillRect(x - 2, y - 10, 5, 5); ctx.fillRect(x - 3, y - 5, 6, 4)
+    ctx.fillRect(x - 5, y - 7, 2, 6); ctx.fillRect(x + 3, y - 7, 2, 6)
+    ctx.fillRect(x - dir * 5, y - 6, 2, 1); ctx.fillRect(x - dir * 6, y - 8, 1, 3)
+    ctx.fillRect(x - 3, y - 2, 2, 2); ctx.fillRect(x + 2, y - 2, 2, 2)
+  }
+}
+
+function drawMissionAlien(ctx, kind, t, x, y, dir, v, pal) {
+  if (t.dead) {
+    ctx.fillStyle = pal.blood
+    ctx.fillRect(x - 6, y - 3, 12, 2)
+    ctx.fillStyle = pal.urgent
+    ctx.fillRect(x - 4, y - 5, 7, 3); ctx.fillRect(x + 3, y - 4, 4, 1)
     return
   }
-
-  if (kind === "alien") {
-    if (t.dead) {
-      ctx.fillStyle = pal.blood
-      ctx.fillRect(x - 6, y - 3, 12, 2)
-      ctx.fillStyle = pal.urgent
-      ctx.fillRect(x - 4, y - 5, 7, 3); ctx.fillRect(x + 3, y - 4, 4, 1)
-      return
-    }
-    ctx.fillStyle = v === 1 ? pal.decorLit : pal.urgent
-    if (v === 0) { // broad xeno
-      ctx.fillRect(x - 3, y - 11, 7, 7); ctx.fillRect(x - 5, y - 8, 2, 5); ctx.fillRect(x + 4, y - 8, 2, 5)
-    } else if (v === 1) { // tall visitor
-      ctx.fillRect(x - 2, y - 13, 5, 7); ctx.fillRect(x - 3, y - 6, 7, 5); ctx.fillRect(x - 4, y - 3, 2, 3); ctx.fillRect(x + 3, y - 3, 2, 3)
-    } else { // crab thing
-      ctx.fillRect(x - 4, y - 8, 9, 5); ctx.fillRect(x - 6, y - 6, 2, 2); ctx.fillRect(x + 5, y - 6, 2, 2)
-      ctx.fillRect(x - 4, y - 3, 2, 3); ctx.fillRect(x + 3, y - 3, 2, 3)
-    }
-    ctx.fillStyle = pal.exitLight; ctx.fillRect(x - 2, y - (v === 1 ? 11 : 7), 1, 1); ctx.fillRect(x + 2, y - (v === 1 ? 11 : 7), 1, 1)
-    return
+  ctx.fillStyle = v === 1 ? pal.decorLit : pal.urgent
+  if (v === 0) { // broad xeno
+    ctx.fillRect(x - 3, y - 11, 7, 7); ctx.fillRect(x - 5, y - 8, 2, 5); ctx.fillRect(x + 4, y - 8, 2, 5)
+  } else if (v === 1) { // tall visitor
+    ctx.fillRect(x - 2, y - 13, 5, 7); ctx.fillRect(x - 3, y - 6, 7, 5); ctx.fillRect(x - 4, y - 3, 2, 3); ctx.fillRect(x + 3, y - 3, 2, 3)
+  } else { // crab thing
+    ctx.fillRect(x - 4, y - 8, 9, 5); ctx.fillRect(x - 6, y - 6, 2, 2); ctx.fillRect(x + 5, y - 6, 2, 2)
+    ctx.fillRect(x - 4, y - 3, 2, 3); ctx.fillRect(x + 3, y - 3, 2, 3)
   }
+  ctx.fillStyle = pal.exitLight; ctx.fillRect(x - 2, y - (v === 1 ? 11 : 7), 1, 1); ctx.fillRect(x + 2, y - (v === 1 ? 11 : 7), 1, 1)
+}
 
+function drawMissionPerson(ctx, kind, t, x, y, dir, v, pal, fine) {
   // Civilians and explorers share anatomy, but variants change height, hair,
   // coat and carried gear enough to read as a group instead of copied sprites.
   var short = v === 1 ? 2 : 0

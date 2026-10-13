@@ -3532,3 +3532,12 @@ levels change): the gap between two houses.
 home 94.88 → 95.24%; hangs 0. Tests 683.
 
 **Deployed** after 126 (name="build" content="6ada238d"): ricochets, Rooftops gaps, crap splits. Browser check clean.
+
+## 127 — 2026-10-13 · Crap: drawMissionSubjectBase
+
+Game functions over CRAP 30: **8 → 7**. `drawMissionSubjectBase` (36) is a
+table now, `MISSION_SUBJECT_DRAW`, one drawer per kind (camel, treasure,
+animal, alien) with `drawMissionPerson` for civilians and explorers; the bob
+and the variant are worked out once. All ≤ 13. Seeded old/new Draw.js
+comparison, levels 1–170 at ticks 300 and 1100, res 1 and 2: **680 identical
+frames**, 204 of them with a mission on the board. Tests 683.
