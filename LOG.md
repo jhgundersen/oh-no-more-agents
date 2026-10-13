@@ -3185,3 +3185,5 @@ wheels with spokes read on the board as an orange lattice. Now there are ten
 wheels without spokes (rim, teeth, axle), and they read as gears. That is
 paint only; `sim inert` passes. Frame cost at res 2: actors 2.87 ms against
 the Building Site's 1.88 (software canvas), well inside a frame.
+
+**Deployed** after 112 (name="build" content="ff46ec77"): the Clock Tower. Browser check clean.
