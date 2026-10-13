@@ -2341,3 +2341,5 @@ right edge (the level line, the skill row, the footer); now it fits, the
 skills wrap to two rows of four, and every panel is bevelled in the theme's
 colours. The board keeps its whole-pixel scaling, losing ~20px a side at
 360px. Board pixels unchanged (Draw.js untouched).
+
+**Deployed** after 85 (name="build" content="790334df"): the page HUD. Browser check clean (phone width).
