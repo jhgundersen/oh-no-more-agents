@@ -3674,3 +3674,5 @@ resolutions) it reads as a boss at a glance: armoured, crowned, the ban-hammer
 on its back, a white flash and a stagger on each hit, and on defeat it goes to
 its knees and topples while the crown pops off and bounces away. The brawl
 cloud was left as it was. 695 tests pass after the merge.
+
+**Deployed** after 133 (name="build" content="ffd75b91"): the Moderator's art, crap splits. Browser check clean.
