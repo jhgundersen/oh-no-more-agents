@@ -3238,3 +3238,22 @@ the post's plan reads the same draws as before).
 unchanged; the total cost is the price of fighting twice as often. Looked at
 levels 5 (Jungle) and 6 (Ice Cave): booths sit cleanly on the floor and the
 guards walk out to meet the colony. Tests 647 pass.
+
+## 115 — 2026-10-13 · Shots you can follow
+
+With fights twice as common (114), looked at one closely: level 6 (Ice Cave),
+the colony against a drone operator, ticks 516–523, cropped and enlarged.
+The sidearm's shot was a dot every ten pixels at 0.8 alpha; on the board it
+did not read as anything, so the fight looked like agents waving at a booth.
+
+**Change (res 2 only; res 1 keeps its dotted line):** `drawSidearmShotFine`.
+The round is a bright 3-px streak with a white tip that crosses the gap in the
+first three ticks, leaving a half-pixel trail that fades over the shot; then
+`drawShotSpark` throws five sparks from the point of impact, with a white flash
+on the first tick. Misses spark where they actually land (the booth wall, the
+floor), so a miss reads as a miss.
+
+**Reviewed:** six frames across two shots — the round is visible in flight,
+the trail joins agent to target, and the eye lands on the impact. Draw only;
+Sim untouched. Tests 647 → 649 (`test/shot-art.test.js`: grid, alpha, spark
+timing, res-1 integer pixels). New functions CRAP ≤ 4.6.

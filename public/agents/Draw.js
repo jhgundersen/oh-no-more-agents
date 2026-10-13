@@ -3358,7 +3358,8 @@ function drawAgentSidearm(ctx, w, pal, ag) {
   if (firing) {
     ctx.fillStyle = pal.fireHot
     ctx.fillRect(dir > 0 ? handX + 7 : handX - 7, handY - 2, 2, 3)
-    if (!hunting && ag.shotTo) {
+    if (!hunting && ag.shotTo && (w.res || 1) >= 2) drawSidearmShotFine(ctx, w, pal, ag, handX + dir * 7, handY)
+    else if (!hunting && ag.shotTo) {
       ctx.globalAlpha = Math.min(0.8, ag.shotFor / 5)
       var ex = ag.shotTo * C, ey = ag.shotY * C
       var sx = handX + dir * 7, sy = handY
@@ -3369,6 +3370,50 @@ function drawAgentSidearm(ctx, w, pal, ag) {
       ctx.globalAlpha = 1
     }
   }
+}
+
+// A sidearm shot at res 2. The res-1 dotted line spaced its dots ten pixels
+// apart, and at that spacing nobody watching could tell what was being shot
+// at. Here the round is a short bright streak that crosses the gap in the
+// first three ticks of the shot, leaving a fading half-pixel trail; then the
+// far end sparks for the rest of it, so the eye lands on what was hit.
+var SHOT_FLIGHT = 3
+function drawSidearmShotFine(ctx, w, pal, ag, sx, sy) {
+  var C = w.k.CELL, age = 8 - ag.shotFor
+  var ex = ag.shotTo * C, ey = ag.shotY * C
+  var flight = Math.min(1, (age + 1) / SHOT_FLIGHT)
+  var tipX = sx + (ex - sx) * flight, tipY = sy + (ey - sy) * flight
+  var len = Math.max(1, Math.round(Math.hypot(tipX - sx, tipY - sy) * 2))
+  ctx.fillStyle = pal.fireHot
+  ctx.globalAlpha = 0.5 * (1 - age / 8)
+  for (var q = 0; q < len; q += 2) shotDot(ctx, sx + (tipX - sx) * q / len, sy + (tipY - sy) * q / len, 0.5)
+  ctx.globalAlpha = 1
+  if (flight < 1) {
+    var back = 3 / Math.max(1, Math.hypot(ex - sx, ey - sy))
+    ctx.fillStyle = pal.fireHot
+    for (var b = 0; b <= 4; b++) shotDot(ctx, tipX - (ex - sx) * back * b / 4, tipY - (ey - sy) * back * b / 4, 1)
+    ctx.fillStyle = "#ffffff"
+    shotDot(ctx, tipX, tipY, 1)
+    return
+  }
+  drawShotSpark(ctx, pal, ex, ey, age - SHOT_FLIGHT + 1)
+}
+
+function shotDot(ctx, x, y, size) {
+  ctx.fillRect(Math.round(x * 2) / 2, Math.round(y * 2) / 2, size, size)
+}
+
+// Four sparks thrown out from the point of impact, and a white flash on the
+// first tick.
+function drawShotSpark(ctx, pal, x, y, t) {
+  if (t === 1) { ctx.fillStyle = "#ffffff"; shotDot(ctx, x - 1, y - 1, 2) }
+  ctx.fillStyle = pal.fireHot
+  ctx.globalAlpha = Math.max(0, 1 - t / 6)
+  var r = 1 + t * 0.75
+  shotDot(ctx, x - r, y - r, 0.5); shotDot(ctx, x + r, y - r, 0.5)
+  shotDot(ctx, x - r * 0.5, y + r * 0.5, 0.5); shotDot(ctx, x + r * 0.5, y + r * 0.5, 0.5)
+  shotDot(ctx, x, y - r * 1.25, 0.5)
+  ctx.globalAlpha = 1
 }
 
 function drawMissionSubject(ctx, kind, t, x, y, pal, fine) {
