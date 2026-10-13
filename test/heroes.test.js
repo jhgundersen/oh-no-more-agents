@@ -204,3 +204,14 @@ test("a hero whose own way out fails falls back on the colony's tools", () => {
   assert.equal(typeof hero.state, "string")
   assert.equal(w.acting, null, "the toolbar is barred to it again afterwards")
 })
+
+test("Auto Complete paves over a lethal drop, never over a survivable one", () => {
+  // A survivable gap is usually the colony's way down; paving it closed it.
+  for (const [depth, paves] of [[6, false], [S.killingFall(fresh()) + 4, true]]) {
+    const w = fresh(), x = 20, top = 20, bottom = top + depth
+    clear(w, x - 4, x + 12, top - 6, bottom); floor(w, x - 4, x, top + 1); floor(w, x - 4, x + 12, bottom + 1)
+    const ag = { special: "autocomplete", x: x + 0.5, y: top, dir: 1, state: "walk", anim: 0, turns: 0, floater: false, fall: 0, timer: 0, cool: 0 }
+    S.specialAtEdge(w, ag, ag.x + S.WALK_SPEED, depth, 6)
+    assert.equal(S.solid(w, x + 2, top + 1), paves, `depth ${depth}`)
+  }
+})

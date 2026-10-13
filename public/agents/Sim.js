@@ -7516,6 +7516,31 @@ function stepSpecialHeight(w, ag) {
 // And at a drop. Every special owns a signature height move for a lethal one;
 // survivable steps still use the ordinary fall so the machines only come out
 // when they mean something.
+// Auto Complete's floor: laid across a drop that kills, before its own way
+// down. It used to pave every gap wider than two cells, and most gaps are the
+// colony's way down: it closed them behind itself, −2.1 against no hero.
+// Across lethal drops only, the floor is a way over that was not there, and it
+// is neutral against no hero on two samples (iteration 102).
+function autoCompleteEdge(w, ag, nx, spec, far) {
+  if (ag.cool > 0 || far <= 2) return false
+  var foot = Math.floor(ag.y) + 1
+  var span = Math.min(BUILD_REACH, far + 4)
+  var added = false
+  for (var ac = 1; ac <= span; ac++) {
+    var acx = Math.floor(ag.x) + ag.dir * ac
+    if (at(w, acx, foot) !== EMPTY || agentOccupiesCell(w, acx, foot, ag)) continue
+    setCell(w, acx, foot, ROCK)
+    added = true
+  }
+  if (!added) return false
+  ag.specialX = ag.x + ag.dir * span
+  ag.specialY = ag.y
+  ag.shotFor = 12
+  ag.cool = spec.cool
+  ag.x = nx
+  return true
+}
+
 function specialAtEdge(w, ag, nx, depth, far) {
   var spec = specOf(ag)
 
@@ -7524,27 +7549,8 @@ function specialAtEdge(w, ag, nx, depth, far) {
   // anybody else's umbrella or machine.
   if (depth > killingFall(w)) {
     if (spec.act === "ceiling" && rappelAtEdge(w, ag, nx, depth)) return
+    if (spec.act === "complete" && autoCompleteEdge(w, ag, nx, spec, far)) return
     if (startSpecialHeight(w, ag, nx, depth, far)) return
-  }
-
-  if (spec.act === "complete" && ag.cool <= 0 && far > 2) {
-    var foot = Math.floor(ag.y) + 1
-    var span = Math.min(BUILD_REACH, far + 4)
-    var added = false
-    for (var ac = 1; ac <= span; ac++) {
-      var acx = Math.floor(ag.x) + ag.dir * ac
-      if (at(w, acx, foot) !== EMPTY || agentOccupiesCell(w, acx, foot, ag)) continue
-      setCell(w, acx, foot, ROCK)
-      added = true
-    }
-    if (added) {
-      ag.specialX = ag.x + ag.dir * span
-      ag.specialY = ag.y
-      ag.shotFor = 12
-      ag.cool = spec.cool
-      ag.x = nx
-      return
-    }
   }
 
   if ((spec.act === "chain" || spec.act === "speculate"

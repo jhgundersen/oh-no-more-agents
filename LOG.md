@@ -2767,3 +2767,31 @@ is untouched. Verified on the generated decor and terrain of 300 levels
 first name, `DECOR_FITTINGS`, was already taken in Draw.js; check-core-refs
 caught it, because the core files share one browser scope. Not deployed:
 nothing a player can see changed.
+
+## 102 — 2026-10-13 · Auto Complete stops paving over the way down
+
+**Hero survey** (160 levels, each hero against none at 93.69%): Model
+Collapse −2.07, Auto Complete −1.19, then a tail of −0.75 or less; five
+heroes are above +0.8. Model Collapse is partly a counting artefact: its 216
+copies are released when they appear and 79% of them get home, so they add
+148 rescues and still lower the percentage. Its originals: 92.74% vs 93.69%.
+Left as it is.
+
+**Auto Complete** paved every gap wider than two cells it walked up to. Most
+gaps are the colony's way down, and it closed them behind itself. At a
+lethal drop its own way down ran first, so the paving never happened where
+it would have helped. Now `autoCompleteEdge` runs before the height move at a
+lethal drop, and it is the only place that paves.
+
+| sample | no hero | old | no paving | lethal-only (kept) |
+|---|---|---|---|---|
+| A | 93.69 | 92.50 | 94.32 | 93.66 |
+| B (fresh) | 92.77 | 90.10 | 91.54 | 92.66 |
+
+Neutral against no hero on both samples, and it keeps the joke. No paving
+at all was better on A and worse on B. Test: paves across a lethal drop,
+never a survivable one.
+
+Also looked at and dropped: a "post-mortem" hero that marks where someone
+died. Over 300 levels only 33 of 219 deaths were a hazard or fall near an
+earlier one, so there is nothing for it to save.
