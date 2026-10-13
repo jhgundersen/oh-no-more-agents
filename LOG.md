@@ -3480,3 +3480,11 @@ puffs with a dark outline, swirl marks going round inside, one thing at a time
 poking out (suit sleeve and fist, a red boot, the hat knocked up, the guard's
 fist), and three yellow stars circling over it. Looked at level 5 at res 1 and
 2. Sound: a scuffle thump while one is on. Tests 682 (`test/brawl.test.js`).
+
+## 123 — 2026-10-13 · Fighting back, written down; arrivals checked
+
+AGENTS.md gets a "Fighting back" section: the red team schedule and the three
+answers to it (sidearm, umbrella parry, brawl) with their numbers, so the
+next change to any of them starts from the measurements. Looked at arrivals at
+the exit on level 21 (ticks 438–452): arms up, rising into the light and
+fading. It already reads as a homecoming; left alone.

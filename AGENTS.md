@@ -487,6 +487,24 @@ doorways through thin walls (≤3 cells) the colony meets, open 150 of every
 - Measured +0.1/+0.2 against no gates (400 plays × 2), 0.45 fewer bashers a
   level.
 
+## Fighting back
+
+The red team (guard posts, `planGuard`: from level 3, 40% of levels) is the
+fight the game is named for. Three ways the colony answers it, each rolled
+from stable state (ticks, ids) so none draws on a random stream:
+
+- **Sidearm** (`regularSidearm`): one hurried shot, 15% to hit a walking
+  guard. Drawn at res 2 as a visible round, a trail and sparks where it lands.
+- **Umbrella parry** (`umbrellaParries`): a lethal round at an ordinary walker
+  is stopped in its umbrella half the time, opened toward the gun. It costs a
+  floater from the toolbar and holds for `BROLLY_HOLD` ticks, from that side
+  only. Red-team deaths 293 → 207 over 600 plays.
+- **Brawl** (`stepBrawl`): a walker meeting a guard on its floor scuffles
+  with it for `BRAWL_TICKS`; 50% alone, +15% per colleague within four cells
+  (up to three). Both are drawn as one cartoon fight cloud.
+
+The report card's battle line counts guards down and umbrella saves.
+
 ## The Rooftops
 
 The seventeenth biome: a terrace of houses at night in section
