@@ -3018,3 +3018,5 @@ both arms out where they used to be a walker standing still, the umbrella
 opens in stages instead of popping, and climbers reach with their hands on
 the face. The bomber's last moments are a small change. Mining was rightly
 left alone: a miner plants a charge, and there is no digging pose to draw.
+
+**Deployed** after 107 (name="build" content="b2af17f9"): Chain of Thought (106) and the skills art. Browser check clean.
