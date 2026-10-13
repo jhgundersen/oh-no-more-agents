@@ -2343,3 +2343,16 @@ colours. The board keeps its whole-pixel scaling, losing ~20px a side at
 360px. Board pixels unchanged (Draw.js untouched).
 
 **Deployed** after 85 (name="build" content="790334df"): the page HUD. Browser check clean (phone width).
+
+## 86 — 2026-10-13 · Review: has the art cost frame rate? (no)
+
+**Why.** Since iteration 42 nearly every sprite, fixture and effect gained
+half-pixel detail, idle and death animations, and the actor pass redraws all
+of it at res 2 every frame. Worth checking before adding more.
+
+**Measured.** In the test rasteriser (software, not a browser): actor pass
+0.93 → 1.75 ms a frame, terrain repaint 15 → 19 ms, over six levels at res 2.
+In headless Chromium over CDP, 600 frames by requestAnimationFrame on the
+live page: now median / p95 / max 16.7 / 16.7 / 16.8 ms, no long tasks;
+at iteration 42 (6e0ba03) 16.7 / 16.8 / 16.8 ms with one 69 ms long task.
+Locked at 60 fps either way. No change needed.
