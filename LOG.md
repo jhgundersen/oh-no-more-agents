@@ -2356,3 +2356,32 @@ In headless Chromium over CDP, 600 frames by requestAnimationFrame on the
 live page: now median / p95 / max 16.7 / 16.7 / 16.8 ms, no long tasks;
 at iteration 42 (6e0ba03) 16.7 / 16.8 / 16.8 ms with one 69 ms long task.
 Locked at 60 fps either way. No change needed.
+
+## 87 — 2026-10-13 · The Mail Room gets its post
+
+**Changed.** Sorting-office back walls and fine detail, pigeonholes with envelope
+ends, stamps and parcel string, trolley rails, sacks, parcel stacks, a franking
+machine and sorting signs. Floating paper and stamps, a red dispatch exit and
+its fine frame, and the guard booth's `MAILER DAEMON` inbox. Mail Room terrain
+is built furniture, so it gets its own surface detail instead of earth grain.
+
+**Tubes.** Brass collars and glass pipe rise from a hopper, cross the wall and
+drop into the delivery tray. A send carries the passenger in a capsule, hides
+the already-moved body for eight ticks, then reveals it at its current position;
+air puffs at both ends. All timing reads the existing pad state. Sim.js and
+Palette.js are unchanged; the Spaceship keeps its pads and beams.
+
+**Checked.** `npm test` and `npm run check` pass, including the five missing
+Mail Room art checks and new excavation, prop, capsule and read-only-rendering
+tests; assets re-stamped. Seeded old/new comparison (identical `Math.random`):
+2,080 frames across the other thirteen biomes, four layouts each, ticks
+0/200/500/900, res 1/2 and all five themes — zero pixel differences. Another
+100 isolated Spaceship pad/arrival comparisons across send and recharge phases
+are identical. No whole-frame goldens added.
+
+**Looked at.** Levels 14, 28 and 42 at res 1 and 2, scaled with nearest-neighbour
+pixels; props and a real tube send on level 28 at tick 184 through delivery.
+Reviewed `/tmp/codex-mailroom/sheet.png`, including the moving passenger and
+both air puffs. Split the existing terrain and exit recipes without changing
+their pixels: every added or changed function is below CRAP 30, and the total
+over 30 falls from 29 to 28. Committed on `mailroom`; no push or deploy.

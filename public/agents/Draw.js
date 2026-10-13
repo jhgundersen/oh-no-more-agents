@@ -55,6 +55,31 @@ function drawTerrain(ctx, w, pal) {
   ctx.fillStyle = sky
   ctx.fillRect(0, 0, cols * C, rows * C)
 
+  drawTerrainSky(ctx, w, pal)
+
+  drawBackdrop(ctx, w, pal)
+
+  drawTerrainMaterials(ctx, w, pal)
+
+  if (w.biome === "Library") drawLibraryStacks(ctx, w, pal)
+  if (w.biome === "Mail Room") drawMailSlots(ctx, w, pal)
+  if ((w.res || 1) >= 2) drawTerrainFine(ctx, w, pal)
+
+  drawFactoryPlates(ctx, w, pal)
+
+  var wash = ctx.createLinearGradient(0, k.SKY * C, 0, rows * C)
+  wash.addColorStop(0, pal.washTop)
+  wash.addColorStop(1, pal.washLow)
+  ctx.fillStyle = wash
+  ctx.fillRect(0, k.SKY * C, cols * C, (rows - k.SKY) * C)
+
+  drawDecor(ctx, w, pal)
+  drawExitBack(ctx, w, pal)
+  drawSea(ctx, w, pal)
+}
+
+function drawTerrainSky(ctx, w, pal) {
+  var k = w.k, C = k.CELL, cols = k.COLS
   // Seed stars from the level to preserve deterministic rendering.
   if (w.biome === "Spaceship") {
     var seed3 = w.level * 2654435761 % 100000
@@ -94,9 +119,10 @@ function drawTerrain(ctx, w, pal) {
       }
     }
   }
+}
 
-  drawBackdrop(ctx, w, pal)
-
+function drawTerrainMaterials(ctx, w, pal) {
+  var k = w.k, C = k.CELL, cols = k.COLS, rows = k.ROWS
   // Batch horizontal material runs instead of drawing thousands of cells.
   for (var y = 0; y < rows; y++) {
     var x = 0
@@ -138,10 +164,10 @@ function drawTerrain(ctx, w, pal) {
       ctx.fillRect(estart * C, ey * C, (ex - estart) * C, Math.max(1, C - 2))
     }
   }
+}
 
-  if (w.biome === "Library") drawLibraryStacks(ctx, w, pal)
-  if ((w.res || 1) >= 2) drawTerrainFine(ctx, w, pal)
-
+function drawFactoryPlates(ctx, w, pal) {
+  var k = w.k, C = k.CELL, cols = k.COLS, rows = k.ROWS
   // Factory only. ORE is this biome's machinery and mezzanine plate, so it
   // gets riveted and seamed. The room's character has to come from detail on
   // the structures that are already there — the first version tried to get it
@@ -167,16 +193,6 @@ function drawTerrain(ctx, w, pal) {
       }
     }
   }
-
-  var wash = ctx.createLinearGradient(0, k.SKY * C, 0, rows * C)
-  wash.addColorStop(0, pal.washTop)
-  wash.addColorStop(1, pal.washLow)
-  ctx.fillStyle = wash
-  ctx.fillRect(0, k.SKY * C, cols * C, (rows - k.SKY) * C)
-
-  drawDecor(ctx, w, pal)
-  drawExitBack(ctx, w, pal)
-  drawSea(ctx, w, pal)
 }
 
 // The earth at half-pixel detail, for hosts that draw at res 2 (see
@@ -188,7 +204,7 @@ function drawTerrain(ctx, w, pal) {
 // while the colony digs around it.
 // Built places get no grain: on hull plate, office wall and machine housing it
 // read as dirt, and those biomes carry their own pattern (panels, bays, rivets).
-var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true, "Library": true }
+var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true, "Library": true, "Mail Room": true }
 
 // One cell's grain: a dark fleck in a quarter of cells, a pale one in an
 // eighth, placed inside the cell by the hash.
@@ -256,7 +272,7 @@ var BACKDROPS = {
   "Cavern": backCavern, "Ruins": backRuins, "Frost": backFrost,
   "Foundry": backFoundry, "Jungle": backJungle, "Ice Cave": backIceCave,
   "Spaceship": backSpaceship, "Factory": backFactory, "Trench": backTrench,
-  "Desert": backDesert, "Data Center": backDataCenter, "Library": backLibrary
+  "Desert": backDesert, "Data Center": backDataCenter, "Library": backLibrary, "Mail Room": backMailRoom
 }
 
 function drawBackdrop(ctx, w, pal) {
@@ -517,7 +533,7 @@ var BACKDROP_FINE = {
   "Foundry": backFoundryFine, "Jungle": backJungleFine, "Ice Cave": backIceCaveFine,
   "Spaceship": backSpaceshipFine, "Factory": backFactoryFine,
   "Skyscraper": backSkyscraperFine, "Trench": backTrenchFine,
-  "Desert": backDesertFine, "Data Center": backDataCenterFine, "Library": backLibraryFine
+  "Desert": backDesertFine, "Data Center": backDataCenterFine, "Library": backLibraryFine, "Mail Room": backMailRoomFine
 }
 
 function drawBackdropFine(ctx, w, pal) {
@@ -779,11 +795,12 @@ function drawDecor(ctx, w, pal) {
     var desert = w.biome === "Desert"
     drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert)
     if ((w.res || 1) >= 2) drawDecorFine(ctx, pal, d, px, py, py + C,
-      w.biome === "Library" ? "library" : foundry ? "pipe" : ruins ? "ruins" : desert ? "desert" : jungle ? "jungle" : frost ? "frost" : "cave")
+      w.biome === "Mail Room" ? "mail" : w.biome === "Library" ? "library" : foundry ? "pipe" : ruins ? "ruins" : desert ? "desert" : jungle ? "jungle" : frost ? "frost" : "cave")
   }
 }
 
 function drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert) {
+  if (w.biome === "Mail Room") return drawMailDecor(ctx, pal, d, px, py, w.k.CELL)
   if (w.biome === "Library") return drawLibraryDecor(ctx, pal, d, px, py, w.k.CELL)
   var C = w.k.CELL
 
@@ -897,6 +914,8 @@ function drawDecorFine(ctx, pal, d, px, top, base, look) {
 function fineSpireHeight(d) { return 3 + d.size * 3 }
 
 var DECOR_FINE = {
+  "spire:mail": fineMailSack, "clump:mail": fineMailParcels,
+  "hang:mail": fineMailSign, "tuft:mail": fineMailFrank,
   "spire:library": fineLibraryLadder, "hang:library": fineLibraryLamp,
   "clump:library": fineLibraryPile, "tuft:library": fineLibraryLamp,
   "spire:cave": function(ctx, pal, d, px, base) { fineCone(ctx, pal, d, px, base, 2.4) },
@@ -1014,6 +1033,14 @@ function drawExitBack(ctx, w, pal) {
   ctx.fillStyle = pal.exitFrame
   var cx3 = x + ww / 2
 
+  var frame = EXIT_FRAMES[w.biome]
+  if (frame) frame(ctx, pal, x, y, ww, hh)
+  else drawExitFrameBase(ctx, w, pal, x, y, ww, hh, cx3)
+  drawExitFrameFine(ctx, w, pal, x, y, ww, hh)
+}
+
+var EXIT_FRAMES = { "Library": drawExitLibrary, "Data Center": drawExitDataBack, "Mail Room": drawExitMail }
+function drawExitFrameBase(ctx, w, pal, x, y, ww, hh, cx3) {
   switch (w.biome) {
   case "Ruins":
     // A pediment on two broken columns, one shorter than the other.
@@ -1058,14 +1085,6 @@ function drawExitBack(ctx, w, pal) {
     ctx.fillRect(x + ww, y - 2, 4, hh + 2)
     ctx.fillStyle = pal.rigDark
     for (var rv = 0; rv < ww + 8; rv += 5) ctx.fillRect(x - 4 + rv, y - 5, 2, 2)
-    break
-
-  case "Library":
-    drawExitLibrary(ctx, pal, x, y, ww, hh)
-    break
-
-  case "Data Center":
-    drawExitDataBack(ctx, pal, x, y, ww, hh)
     break
 
   case "Desert":
@@ -1154,7 +1173,6 @@ function drawExitBack(ctx, w, pal) {
     ctx.fillRect(x - 2, y - 3, 2, hh + 3)
     ctx.fillRect(x + ww, y - 3, 2, hh + 3)
   }
-  drawExitFrameFine(ctx, w, pal, x, y, ww, hh)
 }
 
 // Static material detail, all on the half-pixel grid and inside the existing
@@ -1173,7 +1191,8 @@ var EXIT_FINE = {
   "Trench": drawExitTrenchFine,
   "Desert": drawExitDesertFine,
   "Data Center": drawExitDataFine,
-  "Library": drawExitLibraryFine
+  "Library": drawExitLibraryFine,
+  "Mail Room": drawExitMailFine
 }
 
 function drawExitFrameFine(ctx, w, pal, x, y, ww, hh) {
@@ -1480,6 +1499,8 @@ function drawWaterLife(ctx, w, pal) {
 //   blink  >0: lit only for that share of a cycle (fireflies, glints)
 
 var AMBIENCE = {
+  "Mail Room": [{ n: 26, vx: 0.12, vy: 0.08, sway: 5, size: 2, col: "oreEdge", alpha: 0.55 },
+                { n: 16, vx: -0.08, vy: 0.06, sway: 3, size: 1, col: "urgent", alpha: 0.65 }],
   "Library":  [{ n: 36, vx: 0.015, vy: 0.025, sway: 2, size: 1, col: "dust", alpha: 0.24 }],
   "Cavern":   [{ n: 26, vx: 0.02, vy: 0.05, sway: 2, size: 1, col: "dust", alpha: 0.30 }],
   "Ruins":    [{ n: 30, vx: 0.06, vy: 0.04, sway: 3, size: 1, col: "dust", alpha: 0.28 }],
@@ -1565,6 +1586,7 @@ function drawMotes(ctx, w, pal, spec, salt) {
     if (w.terrain[Math.floor(py / C) * k.COLS + Math.floor(px / C)] !== k.EMPTY) continue
     ctx.globalAlpha = spec.alpha
     if ((w.res || 1) >= 2) AMBIENCE_FINE[w.biome](ctx, w, pal, Math.floor(x * 2) / 2, Math.floor(y * 2) / 2, spec, i)
+    else if (w.biome === "Mail Room") drawMailMote(ctx, w, pal, px, py, spec)
     else ctx.fillRect(px, py, spec.size, spec.size)
   }
 }
@@ -1579,7 +1601,7 @@ var AMBIENCE_FINE = {
   "Foundry": drawMoteFoundryFine, "Jungle": drawMoteJungleFine, "Ice Cave": drawMoteIceFine,
   "Spaceship": drawMoteSpaceshipFine, "Factory": drawMoteFactoryFine,
   "Skyscraper": drawMoteSkyscraperFine, "Trench": drawMoteTrenchFine,
-  "Desert": drawMoteDesertFine, "Data Center": drawMoteDataFine, "Library": drawMoteLibraryFine
+  "Desert": drawMoteDesertFine, "Data Center": drawMoteDataFine, "Library": drawMoteLibraryFine, "Mail Room": drawMoteMailFine
 }
 
 // Check the complete half-pixel footprint: the motion can put a corner into
@@ -3961,6 +3983,7 @@ function drawEnemyHatch(ctx, w, pal, opts) {
   else if (biome === "Skyscraper") { wall = pal.dirt; roof = pal.rig; edge = pal.dirtEdge; sign = "MIDDLE MANAGEMENT" }
   else if (biome === "Desert") { wall = pal.ore; roof = pal.dirtShade; edge = pal.oreEdge; sign = "SANDBOX ESCAPE" }
   else if (biome === "Data Center") { wall = pal.steel; roof = pal.rigDark; edge = pal.oreEdge; sign = "SHADOW IT" }
+  else if (biome === "Mail Room") { wall = pal.dirt; roof = pal.urgent; edge = pal.oreEdge; sign = "MAILER DAEMON" }
   else if (biome === "Library") { wall = pal.dirt; roof = pal.dirtShade; edge = pal.oreEdge; sign = "STACK OVERFLOW" }
 
   // Barely larger than an agent: a sentry booth, not a second landmark. Its
@@ -3972,6 +3995,8 @@ function drawEnemyHatch(ctx, w, pal, opts) {
     ctx.fillRect(x - 6, y - 19, 12, 2); ctx.fillRect(x - 9, y - 17, 18, 2)
   } else if (biome === "Jungle") {
     ctx.fillRect(x - 11, y - 19, 22, 3); ctx.fillRect(x - 7, y - 22, 14, 3)
+  } else if (biome === "Mail Room") {
+    drawMailBoothTop(ctx, pal, x, y)
   } else if (biome === "Library") {
     drawLibraryBoothTop(ctx, pal, x, y)
   } else if (biome === "Ice Cave") {
@@ -6105,6 +6130,7 @@ function drawPrints(ctx, w, pal) {
 // machinery under every palette, like the umbrella and the ladder.
 var PAD_LIGHT = "#6ff3ff", PAD_FX_TICKS = 24, PAD_CHARGE = 10
 function drawPadPair(ctx, w, pal, p) {
+  if (p.tube) return drawTubePair(ctx, w, pal, p)
   var since = w.ticks - p.usedAt
   drawPad(ctx, w, pal, p.ax, p.ay, Math.min(1, since / PAD_CHARGE))
   drawPad(ctx, w, pal, p.bx, p.by, Math.min(1, since / PAD_CHARGE))
@@ -6198,6 +6224,7 @@ function drawBeamArrival(ctx, w, ag) {
   for (var i = 0; i < w.pads.length; i++) {
     var p = w.pads[i], age = w.ticks - p.usedAt
     if (p.usedAt < 0 || p.who !== ag.id || age < 0 || age >= PAD_CHARGE) continue
+    if (p.tube) return age < TUBE_TRAVEL
     ctx.save()
     drawBeamOutline(ctx, w, ag.x * w.k.CELL, (ag.y + 1) * w.k.CELL, age + 1, 1)
     ctx.restore()
@@ -9190,4 +9217,314 @@ function drawExitDataBack(ctx, pal, x, y, ww, hh) {
     for (var sl = 0; sl < ww + 4; sl += 3) ctx.fillRect(x - 2 + sl, y - 5, 1, 1)
     ctx.fillStyle = pal.rigDark
     ctx.fillRect(x + ww + 1, y + hh / 2 - 2, 3, 4)
+}
+
+// Mail Room: recessed pigeonholes on the far wall, address cards and a red
+// sorting stripe. Foreground letters belong to solid cells, never to scenery.
+function backMailRoom(ctx, r, b, pal) {
+  for (var x = -4; x < b.w; x += 24) for (var y = b.y; y < b.y + b.h; y += 12) {
+    ctx.fillStyle = pal.backDim
+    ctx.fillRect(x, y, 22, 10)
+    ctx.fillStyle = pal.back
+    ctx.fillRect(x + 1, y + 1, 20, 7)
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(x, y + 9, 22, 1)
+    ctx.fillRect(x + 2, y + 5, 5, 2)
+    ctx.fillRect(x + 12, y + 3, 6 + Math.floor(r() * 3), 4)
+  }
+}
+function backMailRoomFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + 0.5, b.y + b.h - 0.5, b.w - 0.5, 0.5)
+  if (b.w >= 5 && b.h >= 2) {
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(b.x + 1.5, b.y + 0.5, 2, 0.5) // address label
+  }
+}
+function drawMailSlots(ctx, w, pal) {
+  var k = w.k, C = k.CELL, fine = (w.res || 1) >= 2
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 0; x < k.COLS; x++) {
+    var m = w.terrain[y * k.COLS + x], px = x * C, py = y * C
+    if (m === k.ORE) drawMailLetter(ctx, pal, px, py, ((x * 73856093) ^ (y * 19349663)) >>> 0, fine)
+    else if (m === k.DIRT) {
+      ctx.fillStyle = pal.dirtShade
+      ctx.fillRect(px, py + C - 1, C, 1)
+      if (fine) { ctx.fillStyle = pal.dirtEdge; ctx.fillRect(px + 0.5, py, 0.5, C - 1) }
+    } else if (m === k.ROCK) {
+      ctx.fillStyle = pal.steelShade
+      ctx.fillRect(px, py + 1, C, 2)
+      ctx.fillStyle = pal.steelEdge
+      ctx.fillRect(px, py + 1, C, fine ? 0.5 : 1) // trolley rail
+    }
+  }
+}
+function drawMailLetter(ctx, pal, x, y, hash, fine) {
+  ctx.fillStyle = pal.dirtShade
+  ctx.fillRect(x, y, 4, 4)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x + 1, y + 1, 3, 2)
+  ctx.fillStyle = pal.oreShade
+  ctx.fillRect(x + 2, y + 2, 1, 1) // envelope's folded end
+  if (hash % 4 === 0) {
+    ctx.fillStyle = pal.dirtEdge
+    ctx.fillRect(x + 1, y, 3, 3)
+    ctx.fillStyle = pal.oreEdge
+    ctx.fillRect(x + 2, y, 1, 3); ctx.fillRect(x + 1, y + 1, 3, 1) // parcel string
+  }
+  if (fine) {
+    ctx.fillStyle = pal.oreShade
+    ctx.fillRect(x + 1.5, y + 1.5, 1.5, 0.5)
+    ctx.fillStyle = pal.urgent
+    ctx.fillRect(x + 3, y + 1, 0.5, 0.5) // red stamp
+  }
+}
+
+function drawMailDecor(ctx, pal, d, x, y, C) {
+  var base = y + C
+  if (d.kind === "spire") {
+    if (d.seed % 3 === 0) drawMailFrank(ctx, pal, x, base)
+    else drawMailSack(ctx, pal, x, base, d.size)
+  } else if (d.kind === "clump") drawMailParcels(ctx, pal, d, x, base)
+  else if (d.kind === "tuft") drawMailFrank(ctx, pal, x, base)
+  else {
+    ctx.fillStyle = pal.steelShade
+    ctx.fillRect(x + 2, y, 1, 4)
+    ctx.fillStyle = pal.urgent
+    ctx.fillRect(x - 3, y + 4, 12, 5)
+    ctx.fillStyle = pal.oreEdge
+    ctx.fillRect(x - 1, y + 6, 7, 1) // hanging sorting-lane sign
+  }
+}
+function drawMailSack(ctx, pal, x, base, size) {
+  var h = 6 + size * 2
+  ctx.fillStyle = pal.dirtShade
+  ctx.fillRect(x, base - h + 3, 8, h - 3)
+  ctx.fillStyle = pal.dirtEdge
+  ctx.fillRect(x + 1, base - h + 1, 6, h - 2)
+  ctx.fillRect(x + 2, base - h, 4, 1)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x + 2, base - h + 2, 4, 1) // tied neck
+  ctx.fillStyle = pal.urgent
+  ctx.fillRect(x + 3, base - 4, 2, 2) // postal mark on the cloth
+}
+function drawMailParcels(ctx, pal, d, x, base) {
+  for (var b = 0; b < 2 + d.size; b++) {
+    var bx = x + b % 2, by = base - 3 - b * 3
+    ctx.fillStyle = b % 2 ? pal.ore : pal.dirtEdge
+    ctx.fillRect(bx, by, 8 - b % 2, 3)
+    ctx.fillStyle = pal.oreEdge
+    ctx.fillRect(bx + 3, by, 1, 3); ctx.fillRect(bx, by + 1, 8 - b % 2, 1)
+  }
+}
+function drawMailFrank(ctx, pal, x, base) {
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x - 2, base - 2, 14, 2); ctx.fillRect(x, base - 7, 10, 5)
+  ctx.fillStyle = pal.urgent
+  ctx.fillRect(x + 1, base - 9, 7, 5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 3, base - 6, 5, 2) // stamp roller
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x - 3, base - 3, 6, 1); ctx.fillRect(x + 9, base - 3, 5, 1)
+  ctx.fillStyle = pal.urgent
+  ctx.fillRect(x + 11, base - 3, 1, 1) // franked envelope
+}
+function fineMailSack(ctx, pal, d, x, base) {
+  if (d.seed % 3 === 0) return fineMailFrank(ctx, pal, d, x, base)
+  var h = 6 + d.size * 2
+  ctx.fillStyle = pal.dirtShade
+  ctx.fillRect(x + 1.5, base - h + 3, 0.5, h - 4)
+  ctx.fillRect(x + 6, base - h + 3.5, 0.5, h - 4.5)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x + 1.5, base - h + 2, 1, 0.5); ctx.fillRect(x + 6, base - h + 2, 1, 0.5)
+}
+function fineMailParcels(ctx, pal, d, x, base) {
+  ctx.fillStyle = pal.dirtShade
+  for (var b = 0; b < 2 + d.size; b++) {
+    ctx.fillRect(x + b % 2 + 0.5, base - 0.5 - b * 3, 6 - b % 2, 0.5)
+    ctx.fillRect(x + b % 2 + 5, base - 2.5 - b * 3, 1.5, 0.5) // address label
+  }
+}
+function fineMailFrank(ctx, pal, d, x, base) {
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x + 1.5, base - 8.5, 5, 0.5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 1, base - 6, 0.5, 0.5); ctx.fillRect(x + 8.5, base - 6, 0.5, 0.5)
+  ctx.fillStyle = pal.urgent
+  ctx.fillRect(x + 10, base - 2.5, 3, 0.5) // cancellation bars
+}
+function fineMailSign(ctx, pal, d, x, base, top) {
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x - 2.5, top + 4.5, 10, 0.5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 0.5, top + 7.5, 6, 0.5)
+}
+
+// A red dispatch door with a letter slot above its lit mouth and a parcel
+// counter at the side. The beacon itself remains the common exit glow.
+function drawExitMail(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.urgent
+  ctx.fillRect(x - 4, y - 3, 3, hh + 3); ctx.fillRect(x + ww + 1, y - 3, 3, hh + 3)
+  ctx.fillRect(x - 5, y - 9, ww + 10, 6)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x, y - 7, ww, 2)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x + 2, y - 7, ww - 4, 1) // letter in the slot
+  ctx.fillRect(x + ww + 1, y + hh - 7, 6, 2) // collection counter
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x - 5, y + hh - 1, ww + 10, 1)
+}
+function drawExitMailFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x - 4.5, y - 8.5, ww + 9, 0.5)
+  ctx.fillRect(x - 3.5, y - 2.5, 0.5, hh + 2.5)
+  ctx.fillRect(x + ww + 1.5, y - 2.5, 0.5, hh + 2.5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + ww + 2, y + hh - 6.5, 4.5, 0.5)
+  ctx.fillRect(x + 3, y - 6.5, ww - 6, 0.5) // envelope flap
+}
+function drawMailBoothTop(ctx, pal, x, y) {
+  ctx.fillRect(x - 10, y - 19, 20, 4)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 5, y - 18, 10, 2)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x - 4, y - 18, 7, 1) // daemon's inbox
+}
+function drawMailMote(ctx, w, pal, x, y, spec) {
+  moteFineRect(ctx, w, x, y, spec.size + 1, 1)
+  moteFineRect(ctx, w, x + 1, y + 1, spec.size, 1)
+}
+function drawMoteMailFine(ctx, w, pal, x, y, spec) {
+  var curl = Math.floor(w.ticks / 12) % 2 * 0.5
+  moteFineRect(ctx, w, x, y + curl, spec.size + 1, 0.5)
+  moteFineRect(ctx, w, x + 0.5, y + 0.5, spec.size + 0.5, 1)
+  ctx.fillStyle = pal.oreShade
+  moteFineRect(ctx, w, x + 1, y + 1, 1, 0.5) // fold or stamp perforation
+  ctx.fillStyle = pal[spec.col]
+}
+
+// Pneumatic post shares only the transporter's state. The simulation has
+// already sent the passenger; hide that body during the recharge and draw it
+// in a glass capsule. No clocks or particles are added to the world.
+var TUBE_TRAVEL = 8
+var TUBE_BRASS = "#b58a52", TUBE_SHADE = "#5d4935", TUBE_GLASS = "#485e60", TUBE_GLINT = "#b1cebf"
+function tubeRoute(w, p) {
+  var C = w.k.CELL, ax = (p.ax + 0.5) * C, bx = (p.bx + 0.5) * C
+  var ay = (p.ay + 1) * C - 9, by = (p.by + 1) * C - 9
+  return [{ x: ax, y: ay }, { x: ax, y: ay - 18 }, { x: bx, y: ay - 18 }, { x: bx, y: by }]
+}
+function drawTubePair(ctx, w, pal, p) {
+  var route = tubeRoute(w, p), age = w.ticks - p.usedAt
+  ctx.save()
+  for (var i = 1; i < route.length; i++) drawTubeSegment(ctx, w, route[i - 1], route[i])
+  drawTubePort(ctx, w, pal, p.ax, p.ay, true, age)
+  drawTubePort(ctx, w, pal, p.bx, p.by, false, age)
+  if (p.usedAt >= 0 && age >= 0 && age < PAD_FX_TICKS) drawTubeSend(ctx, w, pal, p, route, age)
+  ctx.restore()
+}
+function drawTubeSegment(ctx, w, a, b) {
+  var vertical = a.x === b.x, x = Math.min(a.x, b.x), y = Math.min(a.y, b.y)
+  var length = vertical ? Math.abs(a.y - b.y) : Math.abs(a.x - b.x)
+  ctx.fillStyle = TUBE_SHADE
+  ctx.fillRect(x - 4, y - 4, vertical ? 8 : length + 8, vertical ? length + 8 : 8)
+  ctx.fillStyle = TUBE_BRASS
+  ctx.fillRect(x - 3, y - 3, vertical ? 6 : length + 6, vertical ? length + 6 : 6)
+  ctx.fillStyle = TUBE_GLASS
+  ctx.fillRect(x - 2, y - 2, vertical ? 4 : length + 4, vertical ? length + 4 : 4)
+  ctx.fillStyle = TUBE_GLINT
+  ctx.globalAlpha = 0.6
+  ctx.fillRect(x - 2, y - 2, vertical ? 1 : length + 4, vertical ? length + 4 : 1)
+  ctx.globalAlpha = 1
+  drawTubeCollar(ctx, w, a.x, a.y, vertical)
+  drawTubeCollar(ctx, w, b.x, b.y, vertical)
+}
+function drawTubeCollar(ctx, w, x, y, vertical) {
+  ctx.fillStyle = TUBE_SHADE
+  ctx.fillRect(x - 4, y - 4, 8, 8)
+  ctx.fillStyle = TUBE_BRASS
+  ctx.fillRect(x - 4, y - 3, 8, 6)
+  ctx.fillStyle = TUBE_GLASS
+  ctx.fillRect(x - 2, y - 2, 4, 4)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = TUBE_GLINT
+    ctx.fillRect(x - 3.5, y - 2.5, vertical ? 0.5 : 7, vertical ? 5 : 0.5)
+  }
+}
+function drawTubePort(ctx, w, pal, x, y, intake, age) {
+  var C = w.k.CELL, px = (x + 0.5) * C, base = (y + 1) * C
+  ctx.fillStyle = TUBE_SHADE
+  ctx.fillRect(px - 6, base - 8, 12, 8)
+  ctx.fillStyle = pal.urgent
+  ctx.fillRect(px - 5, base - 6, 10, 5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(px - 4, base - 6, 8, 3)
+  ctx.fillStyle = TUBE_BRASS
+  ctx.fillRect(px - 7, base - 9, 14, 2) // flared hopper
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(px - 3, base - 5, 6, 1) // flap / delivery tray
+  ctx.fillStyle = age < PAD_CHARGE ? pal.urgent : pal.oreEdge
+  ctx.fillRect(px + (intake ? -4 : 3), base - 2, 1, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = TUBE_GLINT
+    ctx.fillRect(px - 6.5, base - 8.5, 12, 0.5)
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(px - 2.5, base - 4.5, 5, 0.5)
+  }
+}
+// Constant speed along the three legs, including the bends. Distance, not a
+// separate timer per leg, makes short and long installations land together.
+function tubePosition(route, progress) {
+  var lengths = [], total = 0
+  for (var i = 1; i < route.length; i++) {
+    var n = Math.abs(route[i].x - route[i - 1].x) + Math.abs(route[i].y - route[i - 1].y)
+    lengths.push(n); total += n
+  }
+  var distance = Math.max(0, Math.min(1, progress)) * total
+  for (var j = 0; j < lengths.length; j++) {
+    if (distance > lengths[j] && j < lengths.length - 1) { distance -= lengths[j]; continue }
+    var a = route[j], b = route[j + 1], ratio = distance / Math.max(1, lengths[j])
+    return { x: Math.round(a.x + (b.x - a.x) * ratio), y: Math.round(a.y + (b.y - a.y) * ratio), horizontal: a.y === b.y }
+  }
+}
+function drawTubeSend(ctx, w, pal, p, route, age) {
+  if (age < TUBE_TRAVEL) drawTubeCapsule(ctx, w, pal, p, tubePosition(route, age / (TUBE_TRAVEL - 1)))
+  drawTubePuff(ctx, w, pal, route[0], age)
+  drawTubePuff(ctx, w, pal, route[3], age - TUBE_TRAVEL + 1)
+}
+function drawTubeCapsule(ctx, w, pal, p, pos) {
+  var passenger = null
+  for (var i = 0; i < w.agents.length; i++) if (w.agents[i].id === p.who) { passenger = w.agents[i]; break }
+  var colors = passenger ? agentDrawColors(w, pal, passenger, "walk") : pal
+  ctx.save()
+  ctx.translate(pos.x, pos.y)
+  if (pos.horizontal) ctx.rotate(Math.PI / 2)
+  ctx.fillStyle = TUBE_SHADE
+  ctx.fillRect(-3, -6, 6, 12)
+  ctx.fillStyle = TUBE_BRASS
+  ctx.fillRect(-3, -6, 6, 2); ctx.fillRect(-3, 4, 6, 2)
+  ctx.fillStyle = TUBE_GLINT
+  ctx.fillRect(-2, -4, 4, 8) // glass capsule window
+  ctx.fillStyle = colors.hair
+  ctx.fillRect(-1, -4, 2, 1)
+  ctx.fillStyle = colors.skin
+  ctx.fillRect(-1, -3, 2, 2)
+  ctx.fillStyle = pal.eye
+  ctx.fillRect(-1, -3, 2, 1)
+  ctx.fillStyle = colors.robe
+  ctx.fillRect(-1, 0, 2, 3)
+  ctx.fillStyle = pal.shirt
+  ctx.fillRect(-1, -1, 2, 1) // white collar survives the squeeze
+  ctx.fillStyle = pal.eye
+  ctx.fillRect(-1, 3, 1, 1); ctx.fillRect(1, 3, 1, 1)
+  if ((w.res || 1) >= 2) { ctx.fillStyle = pal.shirt; ctx.fillRect(0, 0, 0.5, 1.5) }
+  ctx.restore()
+}
+function drawTubePuff(ctx, w, pal, port, age) {
+  if (age < 0 || age >= 7) return
+  ctx.fillStyle = pal.dust
+  ctx.globalAlpha = 0.65 * (1 - age / 7)
+  for (var i = 0; i < 5; i++) {
+    var x = port.x + Math.round((i - 2) * (1 + age * 0.7)), y = port.y + 4 - Math.round(age * 0.7) - i % 2
+    ctx.fillRect(x, y, (w.res || 1) >= 2 ? 1.5 : 2, 1)
+  }
+  ctx.globalAlpha = 1
 }

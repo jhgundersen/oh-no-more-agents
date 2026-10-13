@@ -225,7 +225,18 @@ test("the guard house draws in every biome at both resolutions", async () => {
 })
 
 test("an operator's drones launch, hunt and are resolved one way or another", () => {
-  for (const [level, seed] of [[24, 313], [42, 547], [78, 1015]]) {
+  // Operator levels found by roster, not pinned by number (adding a biome
+  // reshuffles every level number).
+  const found = []
+  for (let level = 12; level < 600 && found.length < 3; level++) {
+    const w0 = S.generate(level, 0, level * 13 + 1)
+    if (w0.enemyRoster[0] !== "operator") continue
+    let drones = 0
+    while (!w0.done && w0.ticks < 3000) { S.step(w0); drones = Math.max(drones, w0.enemies.filter(e => e.kind === "drone").length) }
+    if (drones) found.push([level, level * 13 + 1])
+  }
+  assert.equal(found.length, 3)
+  for (const [level, seed] of found) {
     const w = S.generate(level, 0, seed)
     let launched = 0
     while (!w.done && w.ticks < 6000) {
