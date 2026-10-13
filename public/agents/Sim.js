@@ -2547,13 +2547,14 @@ function skinBuildingSite(w, rng) {
 }
 
 // The works of a tower clock. Blockwork (DIRT) with gear wheels set into it:
-// a rim of ROCK, teeth of ORE round the outside, spokes and an axle of ORE.
-// Wheels of several sizes overlap, as a train of gears does.
+// a rim of ROCK, teeth of ORE round the outside, an axle of ORE. Ten wheels
+// of several sizes, some overlapping, as a train of gears does; sixteen, with
+// spokes, read on the board as an orange lattice rather than as gears.
 function skinClockTower(w, rng) {
   var x, y
   for (y = SKY; y < ROWS - 2; y++)
     for (x = 3; x < COLS - 3; x++) if (at(w, x, y) !== STEEL) setCell(w, x, y, DIRT)
-  for (var n = 0; n < 16; n++) {
+  for (var n = 0; n < 10; n++) {
     var cx = irand(rng, 8, COLS - 9), cy = irand(rng, SKY + 4, ROWS - 6), r = irand(rng, 3, 7)
     for (y = cy - r - 1; y <= cy + r + 1; y++)
       for (x = cx - r - 1; x <= cx + r + 1; x++) {
@@ -2563,7 +2564,7 @@ function skinClockTower(w, rng) {
         var tooth = Math.cos(ang * (r + 3)) > 0.2
         if (d > r + 0.5 && d <= r + 1.3 && tooth) setCell(w, x, y, ORE)
         else if (d > r - 0.7 && d <= r + 0.5) setCell(w, x, y, ROCK)
-        else if (d < 1 || (d < r - 0.7 && (Math.abs(x - cx) < 0.6 || Math.abs(y - cy) < 0.6))) setCell(w, x, y, ORE)
+        else if (d < 1) setCell(w, x, y, ORE)
       }
   }
 }
