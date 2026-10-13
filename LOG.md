@@ -2481,3 +2481,5 @@ with a stepped, dithered glow for a moment; the Library lamps throw faint
 cones; the exit, lava, coolant and rack LEDs are barely changed (kept
 subtle on purpose — agents first). Actor pass +0.007 ms a frame; res-1
 identical over 560 seeded frames.
+
+**Deployed** after 91 (name="build" content="9f950c75"): obstacle split, light. Browser check clean.
