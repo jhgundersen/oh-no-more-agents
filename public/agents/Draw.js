@@ -2695,13 +2695,19 @@ function drawLevelIris(ctx, w, pal, cx, cy, open) {
 function drawLevelIntro(ctx, w, pal) {
   var width = w.k.COLS * w.k.CELL, height = w.k.ROWS * w.k.CELL
   drawLevelIris(ctx, w, pal, w.hatch.x * w.k.CELL, w.hatch.y * w.k.CELL, w.ticks / LEVEL_OPEN_TICKS)
-  var slide = Math.round(Math.max(0, (w.ticks - 24) / 16) * (width / 2 + 136))
+  // A boss level holds its card a little longer, for the warning on it.
+  var hold = w.bossPost ? 44 : 24
+  var slide = Math.round(Math.max(0, (w.ticks - hold) / 16) * (width / 2 + 136))
   var cx = Math.round(width / 2) + slide, y = Math.round(height / 2) - 20
-  drawTransitionPlate(ctx, w, pal, cx - 136, y, 40)
+  drawTransitionPlate(ctx, w, pal, cx - 136, y, w.bossPost ? 54 : 40)
   ctx.fillStyle = pal.decorLit
   drawTransitionText(ctx, "DEPLOYING AGENTS", cx, y + 8, 1)
   ctx.fillStyle = pal.label
   drawTransitionText(ctx, "LEVEL " + w.level + " · " + w.biome.toUpperCase(), cx, y + 21, 2)
+  if (w.bossPost && Math.floor(w.ticks / 6) % 2 === 0) {
+    ctx.fillStyle = pal.urgent
+    drawTransitionText(ctx, "WARNING · THE MODERATOR HOLDS THIS LEVEL", cx, y + 41, 1)
+  }
 }
 
 function levelVerdict(w) {
@@ -2812,7 +2818,7 @@ function drawLevelTransition(ctx, w, pal) {
     drawLevelResults(ctx, w, pal)
     drawLevelClosing(ctx, w, pal)
     ctx.restore()
-  } else if (w.ticks >= 0 && w.ticks < LEVEL_INTRO_TICKS) {
+  } else if (w.ticks >= 0 && w.ticks < LEVEL_INTRO_TICKS + (w.bossPost ? 20 : 0)) {
     ctx.save()
     drawLevelIntro(ctx, w, pal)
     ctx.restore()

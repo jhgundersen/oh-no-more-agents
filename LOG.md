@@ -3607,3 +3607,11 @@ pauldrons and breastplate, three red pips over its head that go dark with each
 hit, and a white flash when hit. Looked at level 8 (Factory) as it is shot
 and as it aims. The report card's battle line leads with "THE MODERATOR DOWN"
 when it falls. Tests 687 (`test/boss.test.js`).
+
+## 131 — 2026-10-13 · The warning
+
+The boss (130) arrived unannounced. On a boss level the intro card now has a
+third line, blinking in the urgent colour — "WARNING · THE MODERATOR HOLDS
+THIS LEVEL" — and stays up 20 ticks longer so it can be read before it slides
+away. Ordinary levels' cards are unchanged. Looked at level 8 at ticks 25 and
+30 (blink on and off). Tests 687.
