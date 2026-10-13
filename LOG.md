@@ -2585,3 +2585,59 @@ same number for every variant — rerun with a file each.)
 samples, with fewer bombs and timeouts.
 
 **Deployed** after 95 (name="build" content="d0fa156b"): blocker patience. Browser check clean.
+
+## 96 — 2026-10-13 · Rule events stay visible on the board
+
+**Why.** Overclock, Failover, reduced sight and Null Gravity changed the
+colony's rules after their sky banners had disappeared, with no persistent
+board tell.
+
+**Changed.** Draw.js reads the active countdowns: overclocked fixtures gain
+fast status lamps, accelerated idle motion and hot sparks; ceiling fixtures
+shed sparks into their corridor rather than into the roof. Failover fixtures
+stand still with dark lamps and a small unlit status bank; their colours cool
+and relight through the fade. Sight drift lays sparse horizontal haze and
+stipple below actors, with clear pockets around living colleagues: bats in
+the Cavern, snow in Frost, packets in the Ice Cave, dust in the Desert and
+quiet haze in the Library. Null Gravity lifts dust and small fragments and
+bobs falling bodies by at most one art pixel. Whole pixels carry every effect
+at res 1; res 2 adds half-pixel glints. Fade-in is 24 ticks, fade-out 30.
+No simulation changes, world writes, random draws or renderer timers.
+
+**Checked.** `npm test` and `npm run check` pass; stamps updated. Nineteen
+new tests cover all twelve event rows at res 1 and 2, expired flags, visual
+duration parity, fade endpoints, read-only deterministic actor rendering,
+rectangle budgets, every fixture kind frozen in Failover, cooling colours,
+ceiling/floor spark direction, clear pockets and falling-only bobbing.
+Seeded before/after comparison: 1,120 inactive frames, levels 1–70,
+ticks 0/200/500/900, two themes, res 1 and 2, identical Math.random;
+zero byte differences. No whole-frame snapshots pinned. CRAP baseline and
+final: 26 functions over 30; every added/changed function stays below 30
+(highest 21.5, added helpers at most 9). Used the locally cached crapper
+because its bootstrap could not resolve GitHub.
+
+**Measured.** Native Chromium Canvas2D `drawActors`, 800×496 (res 2), live
+colonies of 9–11, same world with the event active/inactive, warmup then
+20 alternating batches of 200 frames, median ms/frame, raster completion
+forced once per batch:
+
+| Event | Inactive | Active |
+| --- | ---: | ---: |
+| Overclock | 0.172 | 0.179 |
+| Failover | 0.221 | 0.228 |
+| Swarm Intelligence | 0.079 | 0.146 |
+| Signal Loss | 0.156 | 0.220 |
+| Packet Storm | 0.136 | 0.228 |
+| Null Gravity | 0.174 | 0.199 |
+
+Haze samples at most 96 patches (576 rectangles maximum), floating dust
+at most 240 rectangles, heat a few dozen per fixture; sampled event layers
+peaked at 498 rectangles. No per-pixel board loops.
+
+**Looked at.** `/tmp/codex-events/sheet.png`: all twelve events fired directly
+with `S.fireEvent`, on levels of their own biome, at res 1 and 2, enlarged
+without smoothing. Columns show +1, +90 and the final twelve ticks; ending
+fades are sampled on the live +90 colony to avoid the results plate hiding
+them. Reviewed the complete sheet and enlarged sections. Agents and hazards
+stay visible through the haze, and ceiling sparks now show in open air.
+Work on `codex/events`; no push or deploy.
