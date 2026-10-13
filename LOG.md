@@ -2583,3 +2583,5 @@ same number for every variant — rerun with a file each.)
 
 **Changed.** BLOCK_PATIENCE 300. Small, but the same direction in both
 samples, with fewer bombs and timeouts.
+
+**Deployed** after 95 (name="build" content="d0fa156b"): blocker patience. Browser check clean.
