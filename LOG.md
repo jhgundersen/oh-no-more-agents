@@ -2425,3 +2425,16 @@ deadliest fixture. `sim play` 93 → 94% home. Scarab: 5 vs 3 projectiles
 528 tests pass.
 
 **Deployed** after 89 (name="build" content="3523c8e7"): sentry reach. Browser check clean.
+
+## 90 — 2026-10-13 · Crap: placeObstacles
+
+**Changed.** The nine obstacle kinds out of `placeObstacles`' loop into an
+`OBSTACLES` table of one function each (`obstacleWall` … `obstacleCliff`),
+handed what they need about the level (`lo`, `hi`, `index`, `corridors`,
+`sealed`, `roofLimit`) in one object. 72 → 18; the largest kind 11.
+
+**Checked.** Generation golden (600 levels) and full-play golden (150 levels)
+identical before and after. 528 tests pass. Over 30: 28 → 27.
+
+Codex is on light (res-2 pools of dithered light round the exit, lava,
+lamps and explosions).

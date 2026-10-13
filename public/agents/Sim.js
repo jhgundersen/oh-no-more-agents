@@ -2565,122 +2565,148 @@ function placeObstacles(w, rng, c, index, corridors) {
     // the timing is funniest — see placeHazard().
     c.obstacles.push(x)
 
-    if (kind === "wall") {
-      // A plug spanning the full corridor height: climbing it just buries the
-      // agent's head in the ceiling, so the only way on is through it.
-      var t = irand(rng, 3, 6)
-      for (var wx = x; wx < x + t; wx++)
-        for (var wy = c.floorY - CORR_H; wy < c.floorY; wy++) setCell(w, wx, wy, DIRT)
+    var cut = OBSTACLES[kind]
+    if (cut) cut(w, rng, c, x, { lo: lo, hi: hi, index: index, corridors: corridors, sealed: sealed, roofLimit: roofLimit })
+  }
+}
 
-    } else if (kind === "step") {
-      // The floor rises by more than a stride, with the ceiling lifted to
-      // match so there IS a way over: a climber's obstacle.
-      var rise = irand(rng, 4, 7)
-      if (sealed) rise = Math.min(rise, 5)   // low enough that a bridge also tops it
-      var len = irand(rng, 12, 20)
-      var topCeil = c.floorY - rise - CORR_H
-      if (sealed) topCeil = Math.max(topCeil, roofLimit)
+// One function per obstacle kind, carved at x on corridor c. `o` carries what
+// the carving needs to know about the rest of the level.
+var OBSTACLES = {
+  wall: obstacleWall,
+  step: obstacleStep,
+  chasm: obstacleChasm,
+  collapse: obstacleCollapse,
+  towers: obstacleTowers,
+  pillars: obstaclePillars,
+  gap: obstacleGap,
+  pit: obstaclePit,
+  cliff: obstacleCliff
+}
 
-      for (var apx = x - 3; apx < x; apx++)
-        for (var apy = topCeil; apy < c.floorY; apy++) clearCell(w, apx, apy)
-      for (var bpx = x + len; bpx < x + len + 3; bpx++)
-        for (var bpy = topCeil; bpy < c.floorY; bpy++) clearCell(w, bpx, bpy)
+function obstacleWall(w, rng, c, x, o) {
+  // A plug spanning the full corridor height: climbing it just buries the
+  // agent's head in the ceiling, so the only way on is through it.
+  var t = irand(rng, 3, 6)
+  for (var wx = x; wx < x + t; wx++)
+    for (var wy = c.floorY - CORR_H; wy < c.floorY; wy++) setCell(w, wx, wy, DIRT)
+}
 
-      for (var sx = x; sx < x + len && sx <= hi; sx++) {
-        for (var fy = c.floorY - rise; fy < c.floorY; fy++) setCell(w, sx, fy, DIRT)
-        for (var cy = topCeil; cy < c.floorY - rise; cy++) clearCell(w, sx, cy)
+function obstacleStep(w, rng, c, x, o) {
+  // The floor rises by more than a stride, with the ceiling lifted to
+  // match so there IS a way over: a climber's obstacle.
+  var rise = irand(rng, 4, 7)
+  if (o.sealed) rise = Math.min(rise, 5)   // low enough that a bridge also tops it
+  var len = irand(rng, 12, 20)
+  var topCeil = c.floorY - rise - CORR_H
+  if (o.sealed) topCeil = Math.max(topCeil, o.roofLimit)
+
+  for (var apx = x - 3; apx < x; apx++)
+    for (var apy = topCeil; apy < c.floorY; apy++) clearCell(w, apx, apy)
+  for (var bpx = x + len; bpx < x + len + 3; bpx++)
+    for (var bpy = topCeil; bpy < c.floorY; bpy++) clearCell(w, bpx, bpy)
+
+  for (var sx = x; sx < x + len && sx <= o.hi; sx++) {
+    for (var fy = c.floorY - rise; fy < c.floorY; fy++) setCell(w, sx, fy, DIRT)
+    for (var cy = topCeil; cy < c.floorY - rise; cy++) clearCell(w, sx, cy)
+  }
+}
+
+function obstacleChasm(w, rng, c, x, o) {
+  var span2 = irand(rng, 10, 17)
+  var floorBelow = o.index + 1 < o.corridors.length ? o.corridors[o.index + 1].floorY : ROWS - 3
+  for (var gx2 = x; gx2 < x + span2 && gx2 <= o.hi; gx2++)
+    for (var gy2 = c.floorY; gy2 < floorBelow; gy2++) clearCell(w, gx2, gy2)
+}
+
+function obstacleCollapse(w, rng, c, x, o) {
+  var core = irand(rng, 3, 5)
+  var spill = irand(rng, 3, 6)
+  var debris = [ROCK, ORE, ROCK, DIRT]
+
+  for (var kx = x; kx < x + core && kx <= o.hi; kx++)
+    for (var ky = c.floorY - CORR_H; ky < c.floorY; ky++)
+      setCell(w, kx, ky, debris[(kx + ky) % debris.length])
+
+  for (var sp = 1; sp <= spill; sp++) {
+    var hgt = sp <= spill / 2 ? 2 : 1
+    for (var lx = 0; lx < 1; lx++) {
+      for (var sh = 0; sh < hgt; sh++) {
+        setCell(w, x - sp, c.floorY - 1 - sh, debris[(x + sp + sh) % debris.length])
+        setCell(w, x + core - 1 + sp, c.floorY - 1 - sh, debris[(x + sp + sh + 1) % debris.length])
       }
-
-    } else if (kind === "chasm") {
-      var span2 = irand(rng, 10, 17)
-      var floorBelow = index + 1 < corridors.length ? corridors[index + 1].floorY : ROWS - 3
-      for (var gx2 = x; gx2 < x + span2 && gx2 <= hi; gx2++)
-        for (var gy2 = c.floorY; gy2 < floorBelow; gy2++) clearCell(w, gx2, gy2)
-
-    } else if (kind === "collapse") {
-      var core = irand(rng, 3, 5)
-      var spill = irand(rng, 3, 6)
-      var debris = [ROCK, ORE, ROCK, DIRT]
-
-      for (var kx = x; kx < x + core && kx <= hi; kx++)
-        for (var ky = c.floorY - CORR_H; ky < c.floorY; ky++)
-          setCell(w, kx, ky, debris[(kx + ky) % debris.length])
-
-      for (var sp = 1; sp <= spill; sp++) {
-        var hgt = sp <= spill / 2 ? 2 : 1
-        for (var lx = 0; lx < 1; lx++) {
-          for (var sh = 0; sh < hgt; sh++) {
-            setCell(w, x - sp, c.floorY - 1 - sh, debris[(x + sp + sh) % debris.length])
-            setCell(w, x + core - 1 + sp, c.floorY - 1 - sh, debris[(x + sp + sh + 1) % debris.length])
-          }
-        }
-      }
-
-    } else if (kind === "towers") {
-      // Pillars of two minds: some reach the ceiling and have to be bashed,
-      // some are stubs low enough to walk over in stride. One obstacle, two
-      // answers, and which is which changes every level — where a run of
-      // identical pillars is the same decision made four times.
-      var tn = irand(rng, 4, 6)
-      var tpitch = irand(rng, 5, 8)
-      var tthick = irand(rng, 2, 3)
-      var solidCount = 0
-      for (var tc = 0; tc < tn; tc++) {
-        var tx = x + tc * tpitch
-        if (tx + tthick > hi) break
-        // At least two of them are real, so this never degenerates into a
-        // decorative row of bumps the colony strolls over.
-        var full = solidCount < 2 || rng() < 0.5
-        if (full) solidCount++
-        var top = full ? c.floorY - CORR_H : c.floorY - irand(rng, 1, 2)
-        for (var tw = tx; tw < tx + tthick; tw++)
-          for (var th = top; th < c.floorY; th++)
-            setCell(w, tw, th, full ? (tc % 2 === 0 ? DIRT : ROCK) : ORE)
-      }
-
-    } else if (kind === "pillars") {
-      var cols = irand(rng, 3, 5)
-      var pitch = irand(rng, 5, 8)
-      var thick = irand(rng, 2, 3)
-      for (var pc = 0; pc < cols; pc++) {
-        var colX = x + pc * pitch
-        if (colX + thick > hi) break
-        for (var pw = colX; pw < colX + thick; pw++)
-          for (var ph = c.floorY - CORR_H; ph < c.floorY; ph++) setCell(w, pw, ph, pc % 2 === 0 ? DIRT : ROCK)
-      }
-
-    } else if (kind === "gap") {
-      // Floor removed with the far side back at the same height — a bridge is
-      // the obvious answer, and the pocket below is a soft landing if a
-      // agent walks in before anyone thinks to build.
-      var g = irand(rng, 7, 13)
-      for (var gx = x; gx < x + g; gx++)
-        for (var gy = c.floorY; gy < c.floorY + 9; gy++) clearCell(w, gx, gy)
-
-    } else if (kind === "pit") {
-      // Steep-sided and too deep to climb out of: whoever falls in builds out.
-      var pw = irand(rng, 7, 11)
-      for (var px = x; px < x + pw; px++)
-        for (var py = c.floorY; py < c.floorY + 8; py++) clearCell(w, px, py)
-      for (var ry = c.floorY; ry < c.floorY + 8; ry++) {
-        setCell(w, x - 1, ry, ROCK)
-        setCell(w, x + pw, ry, ROCK)
-      }
-
-    } else if (kind === "cliff") {
-      var below = corridors[index + 2]
-      var drop = below.floorY - c.floorY
-      // Kept inside [lo, hi] — the stretch between the corridor's start and
-      // its handoff. Everything past the handoff belongs to placeHazard(), and
-      // an obstacle that carves into it deletes the one bottomless drop on the
-      // level along with the only chance of ever seeing a blocker.
-      var from = c.dir > 0 ? x : lo
-      var to = c.dir > 0 ? hi : x
-      for (var cxx = from; cxx <= to; cxx++)
-        for (var dy2 = c.floorY - CORR_H; dy2 < below.floorY; dy2++) clearCell(w, cxx, dy2)
     }
   }
 }
+
+function obstacleTowers(w, rng, c, x, o) {
+  // Pillars of two minds: some reach the ceiling and have to be bashed,
+  // some are stubs low enough to walk over in stride. One obstacle, two
+  // answers, and which is which changes every level — where a run of
+  // identical pillars is the same decision made four times.
+  var tn = irand(rng, 4, 6)
+  var tpitch = irand(rng, 5, 8)
+  var tthick = irand(rng, 2, 3)
+  var solidCount = 0
+  for (var tc = 0; tc < tn; tc++) {
+    var tx = x + tc * tpitch
+    if (tx + tthick > o.hi) break
+    // At least two of them are real, so this never degenerates into a
+    // decorative row of bumps the colony strolls over.
+    var full = solidCount < 2 || rng() < 0.5
+    if (full) solidCount++
+    var top = full ? c.floorY - CORR_H : c.floorY - irand(rng, 1, 2)
+    for (var tw = tx; tw < tx + tthick; tw++)
+      for (var th = top; th < c.floorY; th++)
+        setCell(w, tw, th, full ? (tc % 2 === 0 ? DIRT : ROCK) : ORE)
+  }
+}
+
+function obstaclePillars(w, rng, c, x, o) {
+  var cols = irand(rng, 3, 5)
+  var pitch = irand(rng, 5, 8)
+  var thick = irand(rng, 2, 3)
+  for (var pc = 0; pc < cols; pc++) {
+    var colX = x + pc * pitch
+    if (colX + thick > o.hi) break
+    for (var pw = colX; pw < colX + thick; pw++)
+      for (var ph = c.floorY - CORR_H; ph < c.floorY; ph++) setCell(w, pw, ph, pc % 2 === 0 ? DIRT : ROCK)
+  }
+}
+
+function obstacleGap(w, rng, c, x, o) {
+  // Floor removed with the far side back at the same height — a bridge is
+  // the obvious answer, and the pocket below is a soft landing if a
+  // agent walks in before anyone thinks to build.
+  var g = irand(rng, 7, 13)
+  for (var gx = x; gx < x + g; gx++)
+    for (var gy = c.floorY; gy < c.floorY + 9; gy++) clearCell(w, gx, gy)
+}
+
+function obstaclePit(w, rng, c, x, o) {
+  // Steep-sided and too deep to climb out of: whoever falls in builds out.
+  var pw = irand(rng, 7, 11)
+  for (var px = x; px < x + pw; px++)
+    for (var py = c.floorY; py < c.floorY + 8; py++) clearCell(w, px, py)
+  for (var ry = c.floorY; ry < c.floorY + 8; ry++) {
+    setCell(w, x - 1, ry, ROCK)
+    setCell(w, x + pw, ry, ROCK)
+  }
+}
+
+function obstacleCliff(w, rng, c, x, o) {
+  var below = o.corridors[o.index + 2]
+  var drop = below.floorY - c.floorY
+  // Kept inside [lo, hi] — the stretch between the corridor's start and
+  // its handoff. Everything past the handoff belongs to placeHazard(), and
+  // an obstacle that carves into it deletes the one bottomless drop on the
+  // level along with the only chance of ever seeing a blocker.
+  var from = c.dir > 0 ? x : o.lo
+  var to = c.dir > 0 ? o.hi : x
+  for (var cxx = from; cxx <= to; cxx++)
+    for (var dy2 = c.floorY - CORR_H; dy2 < below.floorY; dy2++) clearCell(w, cxx, dy2)
+}
+
 
 
 var SPECIALS = [
