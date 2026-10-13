@@ -124,7 +124,7 @@ var SKILL_LABELS = {
 // putting a new one anywhere but the end would re-skin every level above it.
 // Palette.js derives the same index with the same rule and must be kept in
 // step — see the note over poolTint there.
-var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library"]
+var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room"]
 
 // A small job on the route gives each biome a premise beyond merely reaching
 // the door. These are deliberately one mechanism with different casts: an
@@ -156,7 +156,9 @@ var MISSION_SPECS = {
   // the morning, and getting them out is the job.
   "Data Center": { id: "oncall",  verb: "RELIEVE THE ON-CALL",   kind: "civilian", count: 2 },
   // Asleep over the documentation. Nobody has read this far before.
-  "Library":   { id: "readers",   verb: "WAKE THE READERS",      kind: "civilian", count: 3 }
+  "Library":   { id: "readers",   verb: "WAKE THE READERS",      kind: "civilian", count: 3 },
+  // Undelivered for a decade. Somebody has to sign for them.
+  "Mail Room": { id: "parcels",   verb: "SIGN FOR THE PARCELS",  kind: "chest", count: 2 }
 }
 
 // ---------------------------------------------------------------------------
@@ -1362,7 +1364,8 @@ var BIOME_MECHANISMS = {
   "Ice Cave": placeFrozen,
   "Spaceship": placePads,
   "Foundry": placeChains,
-  "Cavern": placeSinkholes
+  "Cavern": placeSinkholes,
+  "Mail Room": placeTubes
 }
 
 // The Jungle's own mechanism: some walls have a vine down their face, and a
@@ -1646,9 +1649,9 @@ function stepFrozen(w) {
 var PAD_RECHARGE = 10      // ticks between beams
 var PAD_FX = 24            // ticks of beam and sparkle, for Draw
 
-function placePads(w, corridors) {
+function placePads(w, corridors, stream) {
   if (corridors.length < 2) return
-  var prng = makeRng(w.level * 5381 + 4127)
+  var prng = stream || makeRng(w.level * 5381 + 4127)
   var k = Math.floor(prng() * (corridors.length - 1))
   var from = corridors[k], to = corridors[k + 1]
   var ax = padSpot(w, from, from.startX + from.dir * irand(prng, 10, 16))
@@ -1670,6 +1673,15 @@ function padSpot(w, c, x) {
           && solid(w, cx - 1, feet + 1) && solid(w, cx, feet + 1) && solid(w, cx + 1, feet + 1)) return cx
     }
   return -1
+}
+
+// The Mail Room's own mechanism: pneumatic tubes. The transporter rule
+// exactly — an intake near the start of one corridor, its outlet near the
+// start of the one below, a recharge between capsules — on its own stream,
+// marked `tube` so Draw gives it a tube and a capsule rather than a beam.
+function placeTubes(w, corridors) {
+  placePads(w, corridors, makeRng(w.level * 7727 + 3301))
+  for (var i = 0; i < w.pads.length; i++) w.pads[i].tube = true
 }
 
 function stepPads(w) {
@@ -1981,7 +1993,8 @@ var BIOME_SKINS = {
   "Trench": skinTrench,
   "Desert": skinDesert,
   "Data Center": skinDataCenter,
-  "Library": skinLibrary
+  "Library": skinLibrary,
+  "Mail Room": skinMailRoom
 }
 
 function skinSpaceship(w, rng) {
@@ -2221,6 +2234,21 @@ function skinTrench(w, rng) {
 }
 
 
+// The sorting office. Pigeonholes: a grid of DIRT frames, three cells by two,
+// with the letters (ORE) in every hole and a heavier ROCK rail every few rows
+// where the trolleys run. Regular, like the Data Center, but in small square
+// boxes rather than tall racks.
+function skinMailRoom(w, rng) {
+  var x, y
+  var ox = irand(rng, 0, 2), oy = irand(rng, 0, 1), rail = irand(rng, 7, 10)
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++) {
+      if (at(w, x, y) === STEEL) continue
+      var frame = (x + ox) % 3 === 0 || (y + oy) % 2 === 0
+      setCell(w, x, y, y % rail === 0 ? ROCK : (frame ? DIRT : ORE))
+    }
+}
+
 // The stacks. Floor-to-ceiling shelving: uprights (DIRT, the tinted wood) on a
 // pitch, shelf boards (ROCK) every three rows, and books (ORE) filling every
 // shelf — so almost every wall the colony meets here is a wall of books, which
@@ -2322,6 +2350,10 @@ function placeDecor(w, rng, corridors) {
     // character on their own, and the general scatter was competing with them.
     floorRate = 0.07; ceilRate = 0.05; gap = 7
     floorKinds = ["spire", "spire", "clump"]
+  } else if (w.biome === "Mail Room") {
+    // Sacks and parcels on the floor; nothing grows in a sorting office.
+    floorRate = 0.10; ceilRate = 0.03; gap = 5
+    floorKinds = ["clump", "clump", "spire"]
   } else if (w.biome === "Library") {
     // Book piles on the floor, not much hanging: it is dusted, mostly.
     floorRate = 0.12; ceilRate = 0.03; gap = 5
@@ -5109,7 +5141,12 @@ var EVENTS = [
   // --- Library ---
   { id: "weeding",  name: "Deprecation Notice",biome: "Library", mech: "collapse", at: "floor",   span: 6, deep: 2 },
   { id: "reindex",  name: "Reindexing",       biome: "Library",  mech: "growth",   span: 12, high: 2 },
-  { id: "quiet",    name: "Quiet Hours",      biome: "Library",  mech: "drift",    what: "sight", ticks: 420 }
+  { id: "quiet",    name: "Quiet Hours",      biome: "Library",  mech: "drift",    what: "sight", ticks: 420 },
+
+  // --- Mail Room ---
+  { id: "deadletter",name: "Dead Letter Queue",biome: "Mail Room", mech: "collapse", at: "floor", span: 6, deep: 2 },
+  { id: "backlog",  name: "Backlog",          biome: "Mail Room", mech: "growth",   span: 12, high: 2 },
+  { id: "throttled",name: "Back Pressure",    biome: "Mail Room", mech: "blackout", mult: 2, ticks: 360 }
 ]
 
 function eventsFor(biome) {

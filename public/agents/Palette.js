@@ -86,6 +86,7 @@ var SEA = { r: 0.06, g: 0.34, b: 0.40 }
 var SAND = { r: 0.95, g: 0.76, b: 0.48 }
 var TERMINAL = { r: 0.20, g: 0.82, b: 0.66 }
 var PARCHMENT = { r: 0.72, g: 0.52, b: 0.32 }
+var MANILA = { r: 0.86, g: 0.56, b: 0.42 }
 var ABYSS = { r: 0.01, g: 0.05, b: 0.09 }
 var LAVA = { r: 0.88, g: 0.26, b: 0.06 }
 var COOLANT = { r: 0.20, g: 0.80, b: 0.76 }
@@ -99,7 +100,7 @@ var VOID = { r: 0, g: 0, b: 0 }
 // number by the same rule, which is how every other per-biome difference in
 // this game stays in step across two files that cannot call each other.
 function poolTint(level) {
-  switch ((level - 1) % 13) {
+  switch ((level - 1) % 14) {
     case 1: return WATER      // Ruins: a flooded cistern
     case 3: return LAVA       // Foundry: what the place is for
     case 4: return WATER      // Jungle: the swamp, and what lives in it
@@ -111,12 +112,13 @@ function poolTint(level) {
     // 10, the Desert, is dry: a sinkhole, and sand all the way down.
     // 11, the Data Center, is dry: a floor tile lifted, and the void under it.
     // 12, the Library, is dry: the stacks go down further than anyone reads.
+    // 13, the Mail Room, is dry: a chute to the basement, and nothing in it.
     default: return WATER     // dry biomes; unused, but never undefined
   }
 }
 
 function biomeTint(theme, level) {
-  switch ((level - 1) % 13) {
+  switch ((level - 1) % 14) {
     case 0: return theme.accent                              // Cavern
     case 1: return theme.urgent                              // Ruins
     case 2: return lighter(theme.accent, 1.7)                // Frost
@@ -142,7 +144,10 @@ function biomeTint(theme, level) {
     case 11: return toward(theme.accent, TERMINAL, 0.80)          // Data Center
     // Old wood and parchment: warm like the Factory's brass but browner and
     // softer, a room that has been read in rather than worked in.
-    default: return toward(theme.muted, PARCHMENT, 0.85)          // Library
+    case 12: return toward(theme.muted, PARCHMENT, 0.85)          // Library
+    // Manila envelopes, with the post office's red pulled through them so it
+    // is not the Library's brown or the Desert's sand.
+    default: return toward(theme.accent, MANILA, 0.82)            // Mail Room
   }
 }
 

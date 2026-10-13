@@ -10,11 +10,12 @@ import { canvas, themeOf } from "../tools/render.js"
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
 const SHIP = levelWith(S, "Spaceship", (w) => w.pads.length > 0)
 
-test("pads are a Spaceship thing, and always send downstream", () => {
+test("pads are the Spaceship's and tubes the Mail Room's, and always send downstream", () => {
   let found = 0
   for (let lv = 1; lv <= 120; lv++) {
     const w = S.generate(lv, 0, 5)
-    if (w.biome !== "Spaceship") { assert.equal(w.pads.length, 0, `level ${lv}`); continue }
+    if (w.biome !== "Spaceship" && w.biome !== "Mail Room") { assert.equal(w.pads.length, 0, `level ${lv}`); continue }
+    for (const p of w.pads) assert.equal(!!p.tube, w.biome === "Mail Room", "the Mail Room's are tubes")
     for (const p of w.pads) { found++; assert.ok(p.by > p.ay, `level ${lv}: the far pad is below`) }
   }
   assert.ok(found > 0)
