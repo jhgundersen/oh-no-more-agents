@@ -202,6 +202,7 @@ function drawTerrain(ctx, w, pal) {
   if (w.biome === "Library") drawLibraryStacks(ctx, w, pal)
   if (w.biome === "Mail Room") drawMailSlots(ctx, w, pal)
   if (w.biome === "Building Site") drawSiteMaterials(ctx, w, pal)
+  if (w.biome === "Clock Tower") drawClockMaterials(ctx, w, pal)
   if ((w.res || 1) >= 2) drawTerrainFine(ctx, w, pal)
 
   drawFactoryPlates(ctx, w, pal)
@@ -344,7 +345,7 @@ function drawFactoryPlates(ctx, w, pal) {
 // while the colony digs around it.
 // Built places get no grain: on hull plate, office wall and machine housing it
 // read as dirt, and those biomes carry their own pattern (panels, bays, rivets).
-var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true, "Library": true, "Mail Room": true, "Building Site": true }
+var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true, "Library": true, "Mail Room": true, "Building Site": true, "Clock Tower": true }
 
 // One cell's grain: a dark fleck in a quarter of cells, a pale one in an
 // eighth, placed inside the cell by the hash.
@@ -413,7 +414,7 @@ var BACKDROPS = {
   "Foundry": backFoundry, "Jungle": backJungle, "Ice Cave": backIceCave,
   "Spaceship": backSpaceship, "Factory": backFactory, "Trench": backTrench,
   "Desert": backDesert, "Data Center": backDataCenter, "Library": backLibrary, "Mail Room": backMailRoom,
-  "Building Site": backBuildingSite
+  "Building Site": backBuildingSite, "Clock Tower": backClockTower
 }
 
 function drawBackdrop(ctx, w, pal) {
@@ -675,7 +676,7 @@ var BACKDROP_FINE = {
   "Spaceship": backSpaceshipFine, "Factory": backFactoryFine,
   "Skyscraper": backSkyscraperFine, "Trench": backTrenchFine,
   "Desert": backDesertFine, "Data Center": backDataCenterFine, "Library": backLibraryFine, "Mail Room": backMailRoomFine,
-  "Building Site": backBuildingSiteFine
+  "Building Site": backBuildingSiteFine, "Clock Tower": backClockTowerFine
 }
 
 function drawBackdropFine(ctx, w, pal) {
@@ -937,11 +938,12 @@ function drawDecor(ctx, w, pal) {
     var desert = w.biome === "Desert"
     drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert)
     if ((w.res || 1) >= 2) drawDecorFine(ctx, pal, d, px, py, py + C,
-      w.biome === "Building Site" ? "site" : w.biome === "Mail Room" ? "mail" : w.biome === "Library" ? "library" : foundry ? "pipe" : ruins ? "ruins" : desert ? "desert" : jungle ? "jungle" : frost ? "frost" : "cave")
+      w.biome === "Clock Tower" ? "clock" : w.biome === "Building Site" ? "site" : w.biome === "Mail Room" ? "mail" : w.biome === "Library" ? "library" : foundry ? "pipe" : ruins ? "ruins" : desert ? "desert" : jungle ? "jungle" : frost ? "frost" : "cave")
   }
 }
 
 function drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert) {
+  if (w.biome === "Clock Tower") return drawClockDecor(ctx, pal, d, px, py, w.k.CELL)
   if (w.biome === "Building Site") return drawSiteDecor(ctx, pal, d, px, py, w.k.CELL)
   if (w.biome === "Mail Room") return drawMailDecor(ctx, pal, d, px, py, w.k.CELL)
   if (w.biome === "Library") return drawLibraryDecor(ctx, pal, d, px, py, w.k.CELL)
@@ -1057,6 +1059,8 @@ function drawDecorFine(ctx, pal, d, px, top, base, look) {
 function fineSpireHeight(d) { return 3 + d.size * 3 }
 
 var DECOR_FINE = {
+  "spire:clock": fineClockWeight, "clump:clock": fineClockParts,
+  "hang:clock": fineClockChain, "tuft:clock": fineClockOiler,
   "spire:site": fineSiteCone, "clump:site": fineSitePallet,
   "hang:site": fineSiteSign, "tuft:site": fineSiteEquipment,
   "spire:mail": fineMailSack, "clump:mail": fineMailParcels,
@@ -1184,7 +1188,7 @@ function drawExitBack(ctx, w, pal) {
   drawExitFrameFine(ctx, w, pal, x, y, ww, hh)
 }
 
-var EXIT_FRAMES = { "Library": drawExitLibrary, "Data Center": drawExitDataBack, "Mail Room": drawExitMail, "Building Site": drawExitSite }
+var EXIT_FRAMES = { "Library": drawExitLibrary, "Data Center": drawExitDataBack, "Mail Room": drawExitMail, "Building Site": drawExitSite, "Clock Tower": drawExitClock }
 function drawExitFrameBase(ctx, w, pal, x, y, ww, hh, cx3) {
   switch (w.biome) {
   case "Ruins":
@@ -1338,7 +1342,7 @@ var EXIT_FINE = {
   "Data Center": drawExitDataFine,
   "Library": drawExitLibraryFine,
   "Mail Room": drawExitMailFine,
-  "Building Site": drawExitSiteFine
+  "Building Site": drawExitSiteFine, "Clock Tower": drawExitClockFine
 }
 
 function drawExitFrameFine(ctx, w, pal, x, y, ww, hh) {
@@ -1645,6 +1649,8 @@ function drawWaterLife(ctx, w, pal) {
 //   blink  >0: lit only for that share of a cycle (fireflies, glints)
 
 var AMBIENCE = {
+  "Clock Tower": [{ n: 52, vx: 0.018, vy: 0.04, sway: 2, size: 1, col: "dust", alpha: 0.38 },
+                  { n: 4, vx: 0.015, vy: 0.35, sway: 1, size: 2, col: "oreEdge", alpha: 0.55 }],
   "Building Site": [{ n: 48, vx: 0.07, vy: 0.09, sway: 2, size: 1, col: "dust", alpha: 0.34 }],
   "Mail Room": [{ n: 26, vx: 0.12, vy: 0.08, sway: 5, size: 2, col: "oreEdge", alpha: 0.55 },
                 { n: 16, vx: -0.08, vy: 0.06, sway: 3, size: 1, col: "urgent", alpha: 0.65 }],
@@ -1749,7 +1755,7 @@ var AMBIENCE_FINE = {
   "Spaceship": drawMoteSpaceshipFine, "Factory": drawMoteFactoryFine,
   "Skyscraper": drawMoteSkyscraperFine, "Trench": drawMoteTrenchFine,
   "Desert": drawMoteDesertFine, "Data Center": drawMoteDataFine, "Library": drawMoteLibraryFine, "Mail Room": drawMoteMailFine,
-  "Building Site": drawMoteSiteFine
+  "Building Site": drawMoteSiteFine, "Clock Tower": drawMoteClockFine
 }
 
 // Check the complete half-pixel footprint: the motion can put a corner into
@@ -1958,6 +1964,7 @@ function drawBeltDrum(ctx, w, pal, x, top, side, dir) {
 function drawMachines(ctx, w, pal) {
   drawWaterLife(ctx, w, pal)
   if (w.biome === "Building Site") drawSiteMachines(ctx, w, pal)
+  if (w.biome === "Clock Tower") drawClockMachines(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
   if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
   if (w.updraft) drawUpdrafts(ctx, w, pal)
@@ -4368,6 +4375,7 @@ function drawEnemyHatch(ctx, w, pal, opts) {
   else if (biome === "Data Center") { wall = pal.steel; roof = pal.rigDark; edge = pal.oreEdge; sign = "SHADOW IT" }
   else if (biome === "Mail Room") { wall = pal.dirt; roof = pal.urgent; edge = pal.oreEdge; sign = "MAILER DAEMON" }
   else if (biome === "Library") { wall = pal.dirt; roof = pal.dirtShade; edge = pal.oreEdge; sign = "STACK OVERFLOW" }
+  else if (biome === "Clock Tower") { wall = pal.dirt; roof = pal.oreShade; edge = pal.oreEdge; sign = "WATCHDOG TIMER" }
   else if (biome === "Building Site") { wall = pal.rock; roof = pal.ore; edge = pal.oreEdge; sign = "BUILD FAILED" }
 
   // Barely larger than an agent: a sentry booth, not a second landmark. Its
@@ -4379,6 +4387,8 @@ function drawEnemyHatch(ctx, w, pal, opts) {
     ctx.fillRect(x - 6, y - 19, 12, 2); ctx.fillRect(x - 9, y - 17, 18, 2)
   } else if (biome === "Jungle") {
     ctx.fillRect(x - 11, y - 19, 22, 3); ctx.fillRect(x - 7, y - 22, 14, 3)
+  } else if (biome === "Clock Tower") {
+    drawClockBoothTop(ctx, pal, x, y)
   } else if (biome === "Building Site") {
     drawSiteBoothTop(ctx, pal, x, y)
   } else if (biome === "Mail Room") {
@@ -6450,15 +6460,20 @@ function drawReloadSign(ctx, ag, ox, oy, hair) {
 // These are visual durations only (guarded against EVENTS by the tests), so a
 // direct fireEvent and a scheduled one fade alike without a renderer clock.
 var EVENT_VISUAL_SPANS = {
-  boost: { Ruins: 420, Foundry: 360, Factory: 380, Skyscraper: 400, "Data Center": 300, "Mail Room": 360, "Building Site": 380 },
+  boost: { Ruins: 420, Foundry: 360, Factory: 380, Skyscraper: 400, "Data Center": 300, "Mail Room": 360, "Building Site": 380, "Clock Tower": { 0: 280, 2: 360 } },
   sight: { Cavern: 420, Frost: 480, "Ice Cave": 450, Desert: 460, Library: 420 },
   fall: { Spaceship: 400 }
+}
+
+function eventVisualSpan(w, kind) {
+  var span = EVENT_VISUAL_SPANS[kind][w.biome]
+  return typeof span === "object" ? span[w.eventMult] : span
 }
 
 function activeEventFade(w, kind) {
   var left = kind === "boost" ? w.eventBoost : w.eventDrift
   if (!(left > 0)) return 0
-  var full = EVENT_VISUAL_SPANS[kind][w.biome] || left + 24
+  var full = eventVisualSpan(w, kind) || left + 24
   return Math.max(0, Math.min(1, (full - left + 1) / 24, left / 30))
 }
 
@@ -6582,6 +6597,7 @@ function eventDimColour(colour, shade, fade) {
 
 function drawEventHazardStatus(ctx, w, pal, h, fade) {
   if (!(w.eventBoost > 0) || h.wrecked || h.throttled > 0) return
+  if (w.biome === "Clock Tower") return drawClockHazardStatus(ctx, w, pal, h, fade)
   var C = w.k.CELL, x = Math.round((h.zx0 + h.zx1 + 1) * C / 2)
   var y = h.mount === "ceiling" ? h.zy0 * C + 2 : (h.zy1 + 1) * C - 5
   var stopped = w.eventMult === 0
@@ -6621,6 +6637,7 @@ function drawEventHeat(ctx, w, pal, x, y, fade, dir) {
 // collapse, the rubble coming down. The banner says what; this says where.
 function drawEventSite(ctx, w, pal, fx) {
   if (w.biome === "Building Site") drawSiteEventMarker(ctx, w, pal, fx)
+  if (w.biome === "Clock Tower") drawClockEventMarker(ctx, w, pal, fx)
   if (w.ticks < fx.fireAt) {
     var p = (w.ticks - fx.warnAt) / Math.max(1, fx.fireAt - fx.warnAt)
     if (fx.mech === "growth") drawGrowthWarning(ctx, w, pal, fx, p)
@@ -10890,5 +10907,353 @@ function drawSiteEventMarker(ctx, w, pal, fx) {
   ctx.fillStyle = pal.oreEdge
   ctx.font = "bold 3px monospace"
   ctx.fillText(fx.mech === "growth" ? "SCOPE +1" : "POUR PENDING", x + 2, y - 9)
+  ctx.restore()
+}
+
+// Clock Tower: the back of the dial, stonework and the brass movement.
+// The clock's scenery is a pure tick recipe. Moving pieces are clipped to
+// air on the actor pass; the static face stays behind the terrain.
+var CLOCK_BRASS = "#ad8850", CLOCK_GLINT = "#d8b878", CLOCK_DARK = "#5d4b31"
+// Visual mirrors only: the simulation owns timing and occupancy deferrals.
+var CLOCK_GATE_PERIOD = 240
+var CLOCK_GATE_OPEN = 150
+var CLOCK_SHUTTER_TICKS = 10
+
+function clockFace(w) {
+  return { x: Math.round(w.k.COLS * w.k.CELL * 0.53), y: w.k.SKY * w.k.CELL + 68, r: 64 }
+}
+function clockRing(ctx, x, y, r, size) {
+  var count = Math.ceil(r * 5)
+  for (var i = 0; i < count; i++) {
+    var a = i * Math.PI * 2 / count
+    ctx.fillRect(x + Math.round(Math.cos(a) * r), y + Math.round(Math.sin(a) * r), size, size)
+  }
+}
+function backClockTower(ctx, r, b, pal) {
+  var f = clockFace(b.world)
+  ctx.fillStyle = pal.backDim
+  // Translucent glass behind the works; a clock face, never walkable ground.
+  for (var y = -f.r; y <= f.r; y += 2) {
+    var half = Math.floor(Math.sqrt(f.r * f.r - y * y))
+    ctx.fillRect(f.x - half, f.y + y, Math.max(1, half * 2), 2)
+  }
+  ctx.fillStyle = pal.backLit
+  clockRing(ctx, f.x, f.y, f.r, 2)
+  clockRing(ctx, f.x, f.y, f.r - 6, 1)
+  for (var n = 0; n < 12; n++) backClockHour(ctx, pal, f, n)
+  ctx.fillStyle = pal.back
+  ctx.fillRect(f.x - 2, f.y - 2, 5, 5)
+  ctx.fillRect(f.x - 3, f.y + 3, 2, b.y + b.h - f.y - 3) // pendulum suspension
+  for (var x = 24; x < b.w; x += 76) {
+    ctx.fillRect(x, b.y, 3, b.h) // distant timber frame
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(x + 3, b.y, 1, b.h)
+    ctx.fillStyle = pal.back
+  }
+}
+function backClockHour(ctx, pal, f, n) {
+  var a = n * Math.PI / 6 - Math.PI / 2
+  var x = f.x + Math.round(Math.cos(a) * 50), y = f.y + Math.round(Math.sin(a) * 50)
+  ctx.fillStyle = pal.backLit
+  // Roman strokes reversed as seen from inside. Four quarters have crossbars.
+  for (var i = 0; i < n % 3 + 1; i++) ctx.fillRect(x - i * 3, y - 3, 1, 7)
+  if (n % 3 === 0) {
+    ctx.fillRect(x - 3, y - 3, 7, 1); ctx.fillRect(x - 3, y + 3, 7, 1)
+  }
+}
+function backClockTowerFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(b.x, b.y, b.w, 0.5) // glass leading and engraved hour strokes
+  if (b.h > 2) {
+    ctx.fillStyle = pal.backDim
+    ctx.fillRect(b.x + b.w - 0.5, b.y + 0.5, 0.5, b.h - 0.5)
+  }
+}
+function drawClockMaterials(ctx, w, pal) {
+  var k = w.k, C = k.CELL, fine = (w.res || 1) >= 2
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 0; x < k.COLS; x++) {
+    var m = w.terrain[y * k.COLS + x]
+    if (m === k.EMPTY || m === k.STEEL) continue
+    drawClockCell(ctx, k, pal, m, x * C, y * C, x, y, fine)
+  }
+}
+function drawClockCell(ctx, k, pal, m, px, py, x, y, fine) {
+  if (m === k.DIRT) {
+    ctx.fillStyle = pal.dirtShade
+    if (y % 2 === 0) ctx.fillRect(px, py + 3, 4, 1)
+    if ((x + Math.floor(y / 2)) % 3 === 0) ctx.fillRect(px, py, 1, 3)
+  } else if (m === k.ORE) {
+    ctx.fillStyle = CLOCK_BRASS
+    ctx.fillRect(px, py, 4, 4)
+    ctx.fillStyle = CLOCK_DARK
+    ctx.fillRect(px, py + 3, 4, 1)
+  }
+  if (fine) drawClockCellFine(ctx, k, pal, m, px, py, x, y)
+}
+function drawClockCellFine(ctx, k, pal, m, px, py, x, y) {
+  ctx.fillStyle = m === k.DIRT ? pal.dirtEdge : CLOCK_GLINT
+  ctx.fillRect(px + 0.5, py + 0.5, 3, 0.5)
+  ctx.fillStyle = m === k.DIRT ? pal.dirtShade : CLOCK_DARK
+  if ((x + y) % 3 === 0) ctx.fillRect(px + 3, py + 1, 0.5, 2)
+  if (m === k.ORE) {
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(px + 1.5, py + 1.5, 1, 1) // axle fixing
+    ctx.fillStyle = CLOCK_GLINT
+    ctx.fillRect(px + 1.5, py + 1.5, 0.5, 0.5)
+  }
+}
+function drawClockDecor(ctx, pal, d, x, y, C) {
+  var base = y + C
+  if (d.kind === "spire") drawClockWeight(ctx, pal, d, x, base)
+  else if (d.kind === "clump") drawClockParts(ctx, pal, d, x, base)
+  else if (d.kind === "hang") drawClockChain(ctx, pal, d, x, y)
+  else drawClockOiler(ctx, pal, d, x, base)
+}
+function drawClockWeight(ctx, pal, d, x, base) {
+  var h = 5 + d.size * 2
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x, base - h - 3, 4, 3)
+  ctx.fillStyle = CLOCK_DARK
+  ctx.fillRect(x - 1, base - h, 6, h)
+  ctx.fillStyle = CLOCK_BRASS
+  ctx.fillRect(x, base - h, 4, h - 1)
+}
+function drawClockParts(ctx, pal, d, x, base) {
+  ctx.fillStyle = CLOCK_DARK
+  ctx.fillRect(x - 3, base - 2, 10, 2) // spare pinions, on a tray
+  ctx.fillStyle = CLOCK_BRASS
+  clockRing(ctx, x, base - 4, 2, 1)
+  clockRing(ctx, x + 5, base - 3, 1, 1)
+  ctx.fillRect(x + 1, base - 6, 1, 5)
+}
+function drawClockChain(ctx, pal, d, x, top) {
+  ctx.fillStyle = CLOCK_BRASS
+  for (var y = 0; y < 7 + d.size * 2; y += 2) ctx.fillRect(x + y / 2 % 2, top + y, 2, 2)
+  ctx.fillStyle = CLOCK_DARK
+  ctx.fillRect(x - 1, top + 7 + d.size * 2, 5, 3)
+}
+function drawClockOiler(ctx, pal, d, x, base) {
+  ctx.fillStyle = CLOCK_BRASS
+  ctx.fillRect(x, base - 4, 5, 4)
+  ctx.fillRect(x + 1, base - 6, 2, 2)
+  ctx.fillRect(x + 5, base - 5, 2, 1); ctx.fillRect(x + 7, base - 6, 1, 1)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 2, base - 4, 2, 3)
+}
+function fineClockWeight(ctx, pal, d, x, base) {
+  ctx.fillStyle = CLOCK_GLINT
+  ctx.fillRect(x + 0.5, base - 5 - d.size * 2, 0.5, 4 + d.size * 2)
+}
+function fineClockParts(ctx, pal, d, x, base) {
+  ctx.fillStyle = CLOCK_GLINT
+  ctx.fillRect(x - 1.5, base - 5.5, 1, 0.5)
+  ctx.fillRect(x + 4.5, base - 3.5, 0.5, 0.5)
+}
+function fineClockChain(ctx, pal, d, x, base, top) {
+  ctx.fillStyle = pal.rigDark
+  for (var y = 0; y < 7 + d.size * 2; y += 2) ctx.fillRect(x + y / 2 % 2 + 0.5, top + y + 0.5, 0.5, 1)
+}
+function fineClockOiler(ctx, pal, d, x, base) {
+  ctx.fillStyle = CLOCK_GLINT
+  ctx.fillRect(x + 0.5, base - 3.5, 3.5, 0.5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 3.5, base - 2, 0.5, 1.5)
+}
+function drawExitClock(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.dirtShade
+  ctx.fillRect(x - 4, y - 8, ww + 8, 8)
+  ctx.fillRect(x - 4, y, 3, hh); ctx.fillRect(x + ww + 1, y, 3, hh)
+  ctx.fillStyle = pal.dirtEdge
+  ctx.fillRect(x - 5, y - 7, ww + 10, 2)
+  ctx.fillStyle = pal.oreEdge
+  clockRing(ctx, x + ww / 2, y - 5, 4, 1)
+  ctx.fillRect(x + ww / 2, y - 7, 1, 3); ctx.fillRect(x + ww / 2 - 2, y - 5, 3, 1)
+  ctx.fillRect(x - 3, y, 1, hh); ctx.fillRect(x + ww + 2, y, 1, hh)
+}
+function drawExitClockFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.dirtEdge
+  ctx.fillRect(x - 4.5, y - 6.5, ww + 9, 0.5)
+  ctx.fillStyle = pal.oreShade
+  ctx.fillRect(x - 2.5, y + 1, 0.5, hh - 1)
+  ctx.fillRect(x + ww + 2.5, y + 1, 0.5, hh - 1)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x + ww / 2 + 0.5, y - 6.5, 0.5, 1.5)
+}
+function drawClockBoothTop(ctx, pal, x, y) {
+  ctx.fillStyle = CLOCK_DARK
+  ctx.fillRect(x - 10, y - 18, 20, 3)
+  ctx.fillStyle = CLOCK_BRASS
+  clockRing(ctx, x, y - 20, 3, 1)
+  ctx.fillRect(x, y - 22, 1, 3); ctx.fillRect(x, y - 20, 2, 1)
+}
+function drawMoteClockFine(ctx, w, pal, x, y, spec) {
+  if (spec.size === 2) {
+    moteFineRect(ctx, w, x, y + 0.5, 1.5, 1)
+    moteFineRect(ctx, w, x + 0.5, y, 0.5, 0.5) // a loose cog tooth
+  } else {
+    moteFineRect(ctx, w, x, y, 0.5, 0.5)
+    moteFineRect(ctx, w, x + 0.5, y + 0.5, 0.5, 0.5)
+  }
+}
+function clockAirMark(ctx, w, x, y, size) {
+  var res = (w.res || 1) >= 2 ? 2 : 1
+  x = Math.round(x * res) / res; y = Math.round(y * res) / res
+  moteFineRect(ctx, w, x, y, size, size)
+}
+function clockAirLine(ctx, w, x, y, angle, length, size) {
+  for (var d = 0; d < length; d += size)
+    clockAirMark(ctx, w, x + Math.cos(angle) * d, y + Math.sin(angle) * d, size)
+}
+function drawClockWheel(ctx, w, pal, x, y, radius, spin) {
+  var size = (w.res || 1) >= 2 ? 0.5 : 1
+  ctx.fillStyle = pal.backLit
+  for (var i = 0; i < radius * 5; i++) {
+    var a = i / (radius * 5) * Math.PI * 2
+    clockAirMark(ctx, w, x + Math.cos(a) * radius, y + Math.sin(a) * radius, 1)
+  }
+  for (var tooth = 0; tooth < 12; tooth++) {
+    var t = tooth * Math.PI / 6 + spin
+    clockAirMark(ctx, w, x + Math.cos(t) * (radius + 1), y + Math.sin(t) * (radius + 1), 1)
+  }
+  for (var s = 0; s < 4; s++) clockAirLine(ctx, w, x, y, spin + s * Math.PI / 2, radius, size)
+  ctx.fillStyle = pal.back
+  clockAirMark(ctx, w, x, y, 2)
+}
+function drawClockMovement(ctx, w, pal) {
+  var f = clockFace(w), beat = Math.sin(w.ticks * Math.PI / 30)
+  ctx.save()
+  ctx.globalAlpha = 0.7
+  ctx.fillStyle = pal.backLit
+  // Hands reverse because the audience is behind the glass.
+  clockAirLine(ctx, w, f.x, f.y, -w.ticks / 1500 - 1.2, 52, 1)
+  clockAirLine(ctx, w, f.x, f.y, -w.ticks / 18000 - 2.5, 34, 1)
+  clockAirLine(ctx, w, f.x - 2, f.y + 5, Math.PI / 2 + beat * 0.09, 108, 1)
+  var bx = f.x - 2 - Math.round(beat * 10), by = f.y + 112
+  for (var row = -5; row <= 5; row++) {
+    var width = 6 - Math.abs(row)
+    for (var col = -width; col <= width; col++) clockAirMark(ctx, w, bx + col, by + row, 1)
+  }
+  drawClockWheel(ctx, w, pal, f.x - 78, f.y + 28, 21, w.ticks / 600)
+  drawClockWheel(ctx, w, pal, f.x - 47, f.y + 51, 16, -w.ticks / 450)
+  drawClockWheel(ctx, w, pal, f.x + 77, f.y + 70, 25, w.ticks / 700)
+  // The escapement rocks on alternate beats, above the pinion.
+  ctx.fillStyle = pal.backLit
+  clockAirLine(ctx, w, f.x - 48, f.y + 26, Math.PI / 2 + beat * 0.25, 12, 1)
+  clockAirLine(ctx, w, f.x - 48, f.y + 38, beat * 0.25, 9, 1)
+  ctx.restore()
+}
+function drawClockShafts(ctx, w, pal) {
+  var f = clockFace(w), size = (w.res || 1) >= 2 ? 0.5 : 1
+  ctx.save()
+  ctx.fillStyle = pal.dust
+  ctx.globalAlpha = 0.07
+  for (var shaft = 0; shaft < 3; shaft++) {
+    var x = f.x - 44 + shaft * 37, y = f.y - 42 + shaft * 8
+    for (var d = 0; d < 110; d += 2) for (var width = 0; width < 3; width++)
+      clockAirMark(ctx, w, x - d * 0.32 + width * 2, y + d, size)
+  }
+  ctx.restore()
+}
+function drawClockMachines(ctx, w, pal) {
+  drawClockMovement(ctx, w, pal)
+  drawClockShafts(ctx, w, pal)
+  for (var i = 0; i < w.gates.length; i++) drawClockGate(ctx, w, pal, w.gates[i])
+}
+function clockGateDrawing(w, g) {
+  var C = w.k.CELL, res = (w.res || 1) >= 2 ? 2 : 1
+  var age = g.changedAt < 0 ? CLOCK_SHUTTER_TICKS : Math.max(0, w.ticks - g.changedAt)
+  var p = Math.min(1, age / CLOCK_SHUTTER_TICKS), h = (g.bottom - g.top + 1) * C
+  var cycle = (w.ticks + g.phase) % CLOCK_GATE_PERIOD
+  return { x: g.x0 * C, y: g.top * C, width: (g.x1 - g.x0 + 1) * C, height: h,
+    drop: Math.round(h * (g.open ? 1 - p : p) * res) / res,
+    left: cycle < CLOCK_GATE_OPEN ? CLOCK_GATE_OPEN - cycle : CLOCK_GATE_PERIOD - cycle,
+    span: cycle < CLOCK_GATE_OPEN ? CLOCK_GATE_OPEN : CLOCK_GATE_PERIOD - CLOCK_GATE_OPEN }
+}
+function drawClockGate(ctx, w, pal, g) {
+  var b = clockGateDrawing(w, g)
+  ctx.save()
+  // Mask the steel cells while the bars retract; the slot remains a dark
+  // recess. Agents are drawn afterwards, so a passing body is never erased.
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x, b.y, b.width, b.height)
+  ctx.fillStyle = CLOCK_DARK
+  ctx.fillRect(b.x - 1, b.y - 3, 1, b.height + 3)
+  ctx.fillRect(b.x + b.width, b.y - 3, 1, b.height + 3)
+  ctx.fillRect(b.x - 2, b.y - 4, b.width + 4, 4) // shutter cassette
+  drawClockShutter(ctx, w, b)
+  drawClockGateDial(ctx, w, pal, g, b)
+  ctx.restore()
+}
+function drawClockShutter(ctx, w, b) {
+  if (b.drop <= 0) return
+  ctx.fillStyle = CLOCK_BRASS
+  for (var x = b.x; x < b.x + b.width; x += 3) ctx.fillRect(x, b.y, 1, b.drop)
+  var rail = Math.min(1, b.drop)
+  ctx.fillRect(b.x, b.y + b.drop - rail, b.width, rail)
+  for (var y = b.y + b.drop - 5; y > b.y; y -= 4) ctx.fillRect(b.x, y, b.width, 1)
+  if ((w.res || 1) < 2) return
+  ctx.fillStyle = CLOCK_GLINT
+  for (var fx = b.x; fx < b.x + b.width; fx += 3) ctx.fillRect(fx, b.y, 0.5, b.drop)
+  ctx.fillRect(b.x, b.y + b.drop - 0.5, b.width, 0.5)
+}
+function drawClockGateDial(ctx, w, pal, g, b) {
+  var x = b.x + Math.floor(b.width / 2), y = b.y - 5
+  ctx.fillStyle = CLOCK_BRASS
+  ctx.fillRect(x - 3, y - 3, 7, 7)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 2, y - 2, 5, 5)
+  ctx.fillStyle = g.open ? pal.exitLight : CLOCK_GLINT
+  var angle = -Math.PI / 2 + (1 - b.left / b.span) * Math.PI * 2
+  ctx.fillRect(x, y, 1, 1)
+  ctx.fillRect(x + Math.round(Math.cos(angle) * 2), y + Math.round(Math.sin(angle) * 2), 1, 1)
+  // Two alternately lit pawls: a visible tick-tock even while waiting shut.
+  var beat = Math.floor((w.ticks + g.phase) / 15) % 2
+  ctx.fillRect(b.x - 1 + beat * (b.width + 1), b.y - 2, 1, 1)
+  if ((w.res || 1) < 2) return
+  ctx.fillStyle = CLOCK_GLINT
+  ctx.fillRect(x - 2.5, y - 2.5, 5, 0.5)
+  for (var n = 0; n < 4; n++) {
+    var a = n * Math.PI / 2
+    ctx.fillRect(x + Math.round(Math.cos(a) * 2), y + Math.round(Math.sin(a) * 2), 0.5, 0.5)
+  }
+}
+function drawClockEventMarker(ctx, w, pal, fx) {
+  if (w.ticks >= fx.fireAt) return
+  var x = (fx.x + fx.span / 2) * w.k.CELL, y = fx.floorY * w.k.CELL - 8
+  ctx.save()
+  ctx.fillStyle = CLOCK_GLINT
+  clockRing(ctx, x, y, 3, 1)
+  ctx.fillRect(x, y - 2, 1, 3)
+  ctx.fillRect(x + 2, y - 1, 1, 2) // broken second hand: the missing second
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = CLOCK_DARK
+    ctx.fillRect(x + 2.5, y - 1, 0.5, 1)
+  }
+  ctx.restore()
+}
+function drawClockHazardStatus(ctx, w, pal, h, fade) {
+  var C = w.k.CELL, x = Math.round((h.zx0 + h.zx1 + 1) * C / 2)
+  var y = h.mount === "ceiling" ? h.zy0 * C + 3 : (h.zy1 + 1) * C - 5
+  var stopped = w.eventMult === 0, angle = stopped ? -Math.PI / 2 : w.ticks / 3
+  ctx.save()
+  ctx.globalAlpha = fade
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 4, y - 4, 9, 9)
+  ctx.fillStyle = stopped ? pal.labelFaint : CLOCK_GLINT
+  clockRing(ctx, x, y, 3, 1)
+  ctx.fillRect(x, y, 1, 1)
+  ctx.fillRect(x + Math.round(Math.cos(angle) * 2), y + Math.round(Math.sin(angle) * 2), 1, 1)
+  if (stopped) {
+    ctx.fillStyle = pal.urgent
+    ctx.fillRect(x - 1, y + 2, 3, 1) // locked movement
+  } else {
+    ctx.fillStyle = pal.fireHot
+    ctx.fillRect(x - Math.round(Math.sin(angle) * 2), y + Math.round(Math.cos(angle) * 2), 1, 1)
+    drawEventHeat(ctx, w, pal, x, y, fade, h.mount === "ceiling" ? 1 : -1)
+  }
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = CLOCK_GLINT
+    ctx.fillRect(x - 2, y - 2.5, 1.5, 0.5)
+  }
   ctx.restore()
 }

@@ -466,6 +466,24 @@ it. The rider's state is `"hooked"`, and the crane positions them.
   and the routes are built around that.
 - Measured neutral (94.02% vs 94.08%, 800 plays). It is there for the ride.
 
+## The Clock Tower
+
+The sixteenth biome: the works of a tower clock (`skinClockTower`: DIRT
+blockwork with ten gear wheels set into it). Palette `% 16`, verdigris. Its
+mechanism is clockwork gates (`placeGates` … `stepGates`, `w.gates`):
+doorways through thin walls (≤3 cells) the colony meets, open 150 of every
+240 ticks and steel otherwise. An agent at a shut gate turns and waits
+(`waitFor`), and nobody bashes one.
+
+- **Toggling writes cells directly.** It bumps `terrainVersion` (repaint)
+  but not `carved`, which is the director's measure of progress. A clock
+  ticking is not progress.
+- **A gate never shuts on somebody standing in it** (`gateOccupied`).
+- **The turn at a shut gate is counted**, so a patient agent can still give
+  up and dig. Not counting it measured 0.2–0.5 worse.
+- Measured +0.1/+0.2 against no gates (400 plays × 2), 0.45 fewer bashers a
+  level.
+
 ## Staying current
 
 A tab is left open for days, so a deploy has to reach it without anyone pressing

@@ -128,7 +128,7 @@ var SKILL_LABELS = {
 // putting a new one anywhere but the end would re-skin every level above it.
 // Palette.js derives the same index with the same rule and must be kept in
 // step — see the note over poolTint there.
-var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room", "Building Site"]
+var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room", "Building Site", "Clock Tower"]
 
 // A small job on the route gives each biome a premise beyond merely reaching
 // the door. These are deliberately one mechanism with different casts: an
@@ -164,7 +164,9 @@ var MISSION_SPECS = {
   // Undelivered for a decade. Somebody has to sign for them.
   "Mail Room": { id: "parcels",   verb: "SIGN FOR THE PARCELS",  kind: "chest", count: 2 },
   // Nobody told the night shift the site was closing. Hard hats on, out.
-  "Building Site": { id: "crew",  verb: "SEND THE CREW HOME",    kind: "civilian", count: 3 }
+  "Building Site": { id: "crew",  verb: "SEND THE CREW HOME",    kind: "civilian", count: 3 },
+  // Up in the works since the last time it was wound. Nobody noticed.
+  "Clock Tower": { id: "keepers", verb: "FREE THE CLOCKMAKERS",  kind: "civilian", count: 2 }
 }
 
 // ---------------------------------------------------------------------------
@@ -804,7 +806,8 @@ function generate(level, attempt, colonySeed) {
     beltAt: null,     // and which way each feet cell is carried, -1/0/1
     frozen: [],       // the Ice Cave's colleagues in the ice; see placeFrozen
     pads: [],
-    cranes: [],       // the Building Site's gantry cranes; see placeCranes         // the Spaceship's transporter pairs; see placePads
+    cranes: [],       // the Building Site's gantry cranes; see placeCranes
+    gates: [],        // the Clock Tower's clockwork gates; see placeGates         // the Spaceship's transporter pairs; see placePads
     sinkholes: [],    // the Cavern's thin floors; see placeSinkholes
     k: K,
     decor: [],
@@ -1373,7 +1376,8 @@ var BIOME_MECHANISMS = {
   "Foundry": placeChains,
   "Cavern": placeSinkholes,
   "Mail Room": placeTubes,
-  "Building Site": placeCranes
+  "Building Site": placeCranes,
+  "Clock Tower": placeGates
 }
 
 // The Jungle's own mechanism: some walls have a vine down their face, and a
@@ -1795,6 +1799,95 @@ function shelfClimb(w, ag) {
 }
 
 // ---------------------------------------------------------------------------
+// Clockwork gates
+// ---------------------------------------------------------------------------
+//
+// The Clock Tower's own mechanism. Some of the thin walls the colony meets in
+// a corridor have a doorway cut through them, and the doorway is a gate on the
+// tower's clock: open for a while, shut for a while. Shut, it is steel, the
+// one honest "no", so nobody spends a basher on it, and somebody arriving at a
+// shut gate waits at it (`waitFor`, like the lip of a danger) instead of
+// pacing into the stall rules. Open, it is a way through that the bashers
+// would otherwise have had to make. A gate never shuts on somebody standing in
+// it. Toggling writes the cells directly: `carved` is the director's measure
+// of progress, and a clock ticking is not progress. Own stream.
+var GATE_CHANCE = 0.55     // per thin wall
+var GATE_MAX = 3
+var GATE_THICK = 3         // walls up to this thick get a doorway
+var GATE_PERIOD = 240      // ticks, open and shut
+var GATE_OPEN = 150        // ticks of it open (110 kept the colony waiting: 3% longer levels for nothing)
+
+function placeGates(w, corridors) {
+  var grng = makeRng(w.level * 8513 + 4441)
+  for (var ci = 0; ci < corridors.length && w.gates.length < GATE_MAX; ci++) {
+    var c = corridors[ci], fy = c.floorY - 1
+    var lo = Math.min(c.startX, c.handoffX), hi = Math.max(c.startX, c.handoffX)
+    for (var x = lo + 2; x < hi - 1 && w.gates.length < GATE_MAX; x++) {
+      var gate = gateFits(w, x, fy, c.dir)
+      if (!gate || grng() >= GATE_CHANCE) continue
+      gate.phase = Math.floor(grng() * GATE_PERIOD)
+      w.gates.push(gate)
+      x += GATE_THICK + 4
+    }
+  }
+  for (var i = 0; i < w.gates.length; i++) setGate(w, w.gates[i], gateOpenAt(w.gates[i], 0))
+}
+
+// A wall the colony meets coming along the corridor, no thicker than
+// GATE_THICK, taller than the doorway (so it has a lintel), with somewhere to
+// stand on the far side.
+function gateFits(w, x, fy, dir) {
+  if (!solid(w, x, fy) || solid(w, x - dir, fy) || !solid(w, x - dir, fy + 1)) return null
+  var t = wallThickness(w, x, fy, dir)
+  if (t > GATE_THICK || wallHeight(w, x, fy) <= AGENT_H) return null
+  var far = x + dir * t
+  if (!standable(w, far, fy) || !solid(w, far, fy + 1)) return null
+  var x0 = Math.min(x, x + dir * (t - 1)), x1 = Math.max(x, x + dir * (t - 1))
+  for (var gx = x0; gx <= x1; gx++) {
+    if (!solid(w, gx, fy + 1) || !solid(w, gx, fy - AGENT_H)) return null
+    for (var gy = fy - AGENT_H + 1; gy <= fy; gy++) if (at(w, gx, gy) === STEEL) return null
+  }
+  return { x0: x0, x1: x1, top: fy - AGENT_H + 1, bottom: fy, phase: 0, open: false, changedAt: -1 }
+}
+
+function gateOpenAt(g, ticks) { return (ticks + g.phase) % GATE_PERIOD < GATE_OPEN }
+
+function setGate(w, g, open) {
+  for (var x = g.x0; x <= g.x1; x++)
+    for (var y = g.top; y <= g.bottom; y++) w.terrain[y * COLS + x] = open ? EMPTY : STEEL
+  w.terrainVersion++
+  g.open = open
+}
+
+function stepGates(w) {
+  for (var i = 0; i < w.gates.length; i++) {
+    var g = w.gates[i], want = gateOpenAt(g, w.ticks)
+    if (want === g.open || (!want && gateOccupied(w, g))) continue
+    setGate(w, g, want)
+    g.changedAt = w.ticks
+  }
+}
+
+function gateOccupied(w, g) {
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state === "saved") continue
+    var x = Math.floor(ag.x), y = Math.floor(ag.y)
+    if (x >= g.x0 - 1 && x <= g.x1 + 1 && y >= g.top && y - AGENT_H + 1 <= g.bottom) return true
+  }
+  return false
+}
+
+// A shut gate dead ahead.
+function gateShutAt(w, x, footY) {
+  for (var i = 0; i < w.gates.length; i++) {
+    var g = w.gates[i]
+    if (!g.open && x >= g.x0 && x <= g.x1 && footY >= g.top && footY <= g.bottom) return g
+  }
+  return null
+}
+
+// ---------------------------------------------------------------------------
 // Cranes
 // ---------------------------------------------------------------------------
 //
@@ -2185,7 +2278,8 @@ var BIOME_SKINS = {
   "Data Center": skinDataCenter,
   "Library": skinLibrary,
   "Mail Room": skinMailRoom,
-  "Building Site": skinBuildingSite
+  "Building Site": skinBuildingSite,
+  "Clock Tower": skinClockTower
 }
 
 function skinSpaceship(w, rng) {
@@ -2450,6 +2544,29 @@ function skinBuildingSite(w, rng) {
       }
       setCell(w, x, y, mat)
     }
+}
+
+// The works of a tower clock. Blockwork (DIRT) with gear wheels set into it:
+// a rim of ROCK, teeth of ORE round the outside, an axle of ORE. Ten wheels
+// of several sizes, some overlapping, as a train of gears does; sixteen, with
+// spokes, read on the board as an orange lattice rather than as gears.
+function skinClockTower(w, rng) {
+  var x, y
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++) if (at(w, x, y) !== STEEL) setCell(w, x, y, DIRT)
+  for (var n = 0; n < 10; n++) {
+    var cx = irand(rng, 8, COLS - 9), cy = irand(rng, SKY + 4, ROWS - 6), r = irand(rng, 3, 7)
+    for (y = cy - r - 1; y <= cy + r + 1; y++)
+      for (x = cx - r - 1; x <= cx + r + 1; x++) {
+        if (y < SKY || y >= ROWS - 2 || x < 3 || x >= COLS - 3 || at(w, x, y) === STEEL || at(w, x, y) === EMPTY) continue
+        var d = Math.sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy))
+        var ang = Math.atan2(y - cy, x - cx)
+        var tooth = Math.cos(ang * (r + 3)) > 0.2
+        if (d > r + 0.5 && d <= r + 1.3 && tooth) setCell(w, x, y, ORE)
+        else if (d > r - 0.7 && d <= r + 0.5) setCell(w, x, y, ROCK)
+        else if (d < 1) setCell(w, x, y, ORE)
+      }
+  }
 }
 
 function skinMailRoom(w, rng) {
@@ -4683,6 +4800,11 @@ function wallBypassed(w, ag) {
 
   if (ag.special) { specialAtWall(w, ag); return true }
 
+  // A shut clockwork gate is steel too, but it will open: wait for it, at it,
+  // rather than pace into the stall rules. Still a counted turn: not counting
+  // it (so nobody gives up on a gate and digs) measured 0.2–0.5 worse.
+  if (gateShutAt(w, ax, footY)) { turnAround(w, ag); ag.waitFor = 12; return true }
+
   // Steel is the one honest "no". Nothing to try, so don't waste a skill on it.
   if (at(w, ax, footY) === STEEL) { turnAround(w, ag); return true }
 
@@ -5412,7 +5534,12 @@ var EVENTS = [
   // --- Building Site ---
   { id: "scopecreep",name: "Scope Creep",     biome: "Building Site", mech: "growth",   span: 13, high: 2 },
   { id: "unpoured", name: "Missed Deadline",  biome: "Building Site", mech: "collapse", at: "floor", span: 6, deep: 2 },
-  { id: "crunch",   name: "Crunch Time",      biome: "Building Site", mech: "blackout", mult: 2, ticks: 380 }
+  { id: "crunch",   name: "Crunch Time",      biome: "Building Site", mech: "blackout", mult: 2, ticks: 380 },
+
+  // --- Clock Tower ---
+  { id: "deadlock", name: "Deadlock",         biome: "Clock Tower", mech: "blackout", mult: 0, ticks: 280 },
+  { id: "leapsec",  name: "Leap Second",      biome: "Clock Tower", mech: "collapse", at: "floor", span: 6, deep: 2 },
+  { id: "race",     name: "Race Condition",   biome: "Clock Tower", mech: "blackout", mult: 2, ticks: 360 }
 ]
 
 function eventsFor(biome) {
@@ -9560,6 +9687,7 @@ function step(w) {
   stepFrozen(w)
   stepPads(w)
   stepCranes(w)
+  stepGates(w)
   stepSinkholes(w)
   var counts = stepAgents(w)
   var active = counts.active
