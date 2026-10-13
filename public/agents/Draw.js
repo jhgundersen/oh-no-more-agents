@@ -41,6 +41,143 @@ function clearLayer(ctx, w) {
   ctx.clearRect(0, 0, w.k.COLS * w.k.CELL, w.k.ROWS * w.k.CELL)
 }
 
+// Three stepped rings, with sparse ordered stipple on a half-pixel lattice.
+// No canvas filters, random draws or world caches. The fixed 8x8 sampling costs
+// about forty rectangles even for a blast; a larger light never costs more.
+var LIGHT_BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
+function drawLightPool(ctx, w, colour, x, y, rx, ry, strength) {
+  if ((w.res || 1) < 2 || strength <= 0) return
+  ctx.save()
+  ctx.fillStyle = colour
+  x = Math.round(x * 2) / 2; y = Math.round(y * 2) / 2
+  var sizes = [1, 0.72, 0.43], weights = [0.18, 0.25, 0.35]
+  for (var ring = 0; ring < 3; ring++) {
+    ctx.globalAlpha = strength * weights[ring]
+    drawLightSteps(ctx, x, y, rx * sizes[ring], ry * sizes[ring])
+  }
+  ctx.globalAlpha = strength * 0.7
+  drawLightDither(ctx, x, y, rx, ry)
+  ctx.restore()
+}
+
+function drawLightSteps(ctx, x, y, rx, ry) {
+  // Five horizontal courses make a hard octagonal silhouette, not a blur.
+  var widths = [0.52, 0.84, 1, 0.84, 0.52]
+  var top = Math.round((y - ry) * 2) / 2
+  for (var row = 0; row < 5; row++) {
+    var bottom = Math.round((y - ry + (row + 1) * ry * 0.4) * 2) / 2
+    var half = Math.round(rx * widths[row] * 2) / 2
+    ctx.fillRect(x - half, top, half * 2, bottom - top)
+    top = bottom
+  }
+}
+
+function drawLightDither(ctx, x, y, rx, ry) {
+  for (var row = 0; row < 8; row++) for (var col = 0; col < 8; col++) {
+    var dx = (col - 3.5) / 4, dy = (row - 3.5) / 4
+    var dist = Math.max(Math.abs(dx), Math.abs(dy)) + Math.min(Math.abs(dx), Math.abs(dy)) * 0.4
+    var threshold = dist < 0.43 ? 8 : dist < 0.72 ? 4 : 2
+    if (dist > 1 || LIGHT_BAYER[(row % 4) * 4 + col % 4] >= threshold) continue
+    ctx.fillRect(Math.round((x + dx * rx) * 2) / 2, Math.round((y + dy * ry) * 2) / 2, 0.5, 0.5)
+  }
+}
+
+function lightDecorAlive(w, d) {
+  var support = d.kind === "hang" ? d.y - 1 : d.y + 1
+  return !!w.terrain[support * w.k.COLS + d.x] && mechanismAir(w, d.x * w.k.CELL, d.y * w.k.CELL)
+}
+
+function drawTerrainLight(ctx, w, pal) {
+  if ((w.res || 1) < 2) return
+  var C = w.k.CELL, e = w.exit
+  drawLightPool(ctx, w, pal.exitGlow, (e.x + e.w / 2) * C, (e.y + e.h - 1) * C, 23, 15, 0.12)
+  for (var i = 0; i < w.pits.length; i++) drawPoolLight(ctx, w, pal, w.pits[i], false)
+  drawFixtureLight(ctx, w, pal)
+}
+
+function drawFixtureLight(ctx, w, pal) {
+  var C = w.k.CELL
+  for (var i = 0; i < w.decor.length; i++) {
+    var d = w.decor[i]
+    if (!lightDecorAlive(w, d)) continue
+    if (w.biome === "Library" && (d.kind === "hang" || d.kind === "tuft")) {
+      var y = d.kind === "hang" ? d.y * C + 9 : (d.y + 1) * C - 2
+      drawLightPool(ctx, w, pal.oreEdge, d.x * C + 2, y + 4, 11, 10, 0.12)
+    }
+    if (w.biome === "Mail Room" && (d.kind === "tuft" || (d.kind === "spire" && d.seed % 3 === 0)))
+      drawLightPool(ctx, w, pal.oreEdge, d.x * C + 4, (d.y + 1) * C - 8, 9, 7, 0.10)
+  }
+}
+
+function drawPoolLight(ctx, w, pal, p, moving) {
+  if (p.liquid !== "lava" && p.liquid !== "slag" && p.liquid !== "coolant") return
+  var C = w.k.CELL, wide = (p.x1 - p.x0 + 1) * C
+  var strength = moving ? 0.025 + 0.015 * Math.sin(w.ticks * 0.045 + p.seed) : 0.10
+  drawLightPool(ctx, w, pal.poolLip, (p.x0 * C + wide / 2), p.surfaceY * C - 2, Math.min(30, wide / 2 + 9), 13, strength)
+}
+
+function drawAnimatedLight(ctx, w, pal) {
+  if ((w.res || 1) < 2) return
+  for (var p = 0; p < w.pits.length; p++) drawPoolLight(ctx, w, pal, w.pits[p], true)
+  for (var h = 0; h < w.hazards.length; h++) drawHazardLight(ctx, w, pal, w.hazards[h])
+  for (var b = 0; b < w.blasts.length; b++) drawBlastLight(ctx, w, pal, w.blasts[b])
+  for (var i = 0; i < w.pads.length; i++) drawTransportLight(ctx, w, w.pads[i])
+  drawMuzzleLight(ctx, w, pal)
+}
+
+function drawHazardLight(ctx, w, pal, h) {
+  if (h.kind === "brazier") {
+    drawLightPool(ctx, w, pal.fireHot, (h.zx0 + h.zx1 + 1) * w.k.CELL / 2,
+      h.zy0 * w.k.CELL + 5, 16, 13, 0.12 + 0.025 * Math.sin(w.ticks * 0.8 + h.zx0))
+    return
+  }
+  if (h.phase !== "fire") return
+  var C = w.k.CELL, x = (h.zx0 + h.zx1 + 1) * C / 2
+  var y = (h.zy0 + h.zy1 + 1) * C / 2
+  if (h.kind === "flame" || h.kind === "molten") {
+    var pulse = 0.13 + 0.03 * Math.sin(w.ticks * 0.8 + h.zx0)
+    drawLightPool(ctx, w, pal.fireHot, x, y, 18, 14, pulse)
+  }
+  if (h.kind === "gun" || h.kind === "turret" || h.kind === "sniper")
+    drawLightPool(ctx, w, pal.fireHot, x, h.zy0 * C + 10, 11, 8, Math.max(0, 0.18 * (1 - h.t / 6)))
+}
+
+function drawBlastLight(ctx, w, pal, b) {
+  var age = w.ticks - b.t
+  if (age < 0 || age >= 13) return
+  var C = w.k.CELL, radius = b.r * C
+  drawLightPool(ctx, w, age < 2 ? BLAST_CORE : BLAST_MID, b.x * C, b.y * C,
+    radius * 1.8 + 8, radius * 1.3 + 6, 0.32 * (1 - age / 13))
+}
+
+function drawTransportLight(ctx, w, p) {
+  var age = w.ticks - p.usedAt
+  if (p.tube || p.usedAt < 0 || age < 0 || age >= PAD_FX_TICKS) return
+  var C = w.k.CELL, strength = 0.14 * (1 - age / PAD_FX_TICKS)
+  drawLightPool(ctx, w, PAD_LIGHT, (p.ax + 0.5) * C, (p.ay + 1) * C - 8, 14, 17, strength)
+  drawLightPool(ctx, w, PAD_LIGHT, (p.bx + 0.5) * C, (p.by + 1) * C - 8, 14, 17, strength)
+}
+
+function drawMuzzleLight(ctx, w, pal) {
+  var C = w.k.CELL
+  for (var i = 0; i < w.agents.length; i++) drawAgentMuzzleLight(ctx, w, pal, w.agents[i])
+  for (var e = 0; e < w.enemies.length; e++) {
+    var en = w.enemies[e]
+    if (en.gone || !(en.shotFor > 5)) continue
+    drawLightPool(ctx, w, pal.fireHot, en.x * C + en.dir * 7, (en.y + 1) * C - 8, 12, 9, 0.18)
+  }
+}
+
+function drawAgentMuzzleLight(ctx, w, pal, ag) {
+  if (ag.gone) return
+  var m = w.mission
+  var hunting = m && m.kind === "alien" && !m.done && ag.id === m.scoutId
+  var shot = hunting ? m.shotFor : ag.shotFor
+  if (!(shot > 0)) return
+  var C = w.k.CELL
+  drawLightPool(ctx, w, pal.fireHot, ag.x * C + (ag.dir || 1) * 10, (ag.y + 1) * C - 9, 10, 7, 0.16)
+}
+
 function drawTerrain(ctx, w, pal) {
   var k = w.k
   var C = k.CELL
@@ -73,6 +210,7 @@ function drawTerrain(ctx, w, pal) {
   ctx.fillStyle = wash
   ctx.fillRect(0, k.SKY * C, cols * C, (rows - k.SKY) * C)
 
+  drawTerrainLight(ctx, w, pal)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
   drawSea(ctx, w, pal)
@@ -1709,6 +1847,7 @@ function drawRackLights(ctx, w) {
     if (on === 0) continue
     ctx.fillStyle = (h >> 13) % 7 === 0 ? "#ffb13b" : "#5dffa0"
     var lx = T[i - 1] === k.EMPTY ? x * C : x * C + C - 1
+    drawLightPool(ctx, w, ctx.fillStyle, lx + 0.5, y * C + 1.5 + (h >> 6) % 2, 5, 4, 0.08)
     ctx.fillRect(lx, y * C + 1 + (h >> 6) % 2, 1, 1)
   }
 }
@@ -2337,6 +2476,7 @@ function drawSkyCountdown(ctx, pal, box, notice) {
 function drawActors(ctx, w, pal, opts) {
   var k = w.k
   clearLayer(ctx, w)
+  drawAnimatedLight(ctx, w, pal)
   drawMachines(ctx, w, pal)
   drawLifts(ctx, w, pal)
   drawPits(ctx, w, pal)
@@ -2351,6 +2491,14 @@ function drawActors(ctx, w, pal, opts) {
 
   drawEventBanner(ctx, w, pal)
 
+  drawActorFixtures(ctx, w, pal)
+  drawActorColony(ctx, w, pal, opts)
+  // Last, over everybody: whoever is standing in a fireball is behind it.
+  if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
+  drawLevelTransition(ctx, w, pal)
+}
+
+function drawActorFixtures(ctx, w, pal) {
   drawActorMines(ctx, w, pal)
   drawActorLadders(ctx, w, pal)
   drawActorParticles(ctx, w, pal)
@@ -2366,6 +2514,9 @@ function drawActors(ctx, w, pal, opts) {
   if (w.restockFx) drawRestockFx(ctx, w, pal, w.restockFx)
 
   if (w.biome === "Frost") drawPowderBursts(ctx, w, pal)
+}
+
+function drawActorColony(ctx, w, pal, opts) {
   for (var i = 0; i < w.agents.length; i++) {
     var ag = w.agents[i]
     if (ag.gone) { drawDeath(ctx, w, pal, ag); continue }
@@ -2379,9 +2530,6 @@ function drawActors(ctx, w, pal, opts) {
     drawEnemy(ctx, w, pal, enemy, opts)
     if (enemy.throttled > 0) drawThrottled(ctx, w, enemy.x * w.k.CELL, (enemy.y - 4) * w.k.CELL - 4, enemy.throttled)
   }
-  // Last, over everybody: whoever is standing in a fireball is behind it.
-  if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
-  drawLevelTransition(ctx, w, pal)
 }
 
 // Board transitions belong to the per-tick layer in every host. No timers,
