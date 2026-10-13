@@ -3099,3 +3099,32 @@ report card gains a fourth line, "+N RESCUED", with a small icon of each one
 rescued. That is legible at both resolutions.
 
 **Deployed** after 110 (name="build" content="8bd5664e"): follower art and stepWalk. Browser check clean.
+
+## 111 — 2026-10-13 · The Clock Tower and its gates (on a branch)
+
+A sixteenth biome. It is not springboards, which would have been the Jungle's
+vines and the Foundry's chains again with new art. Its mechanism is
+**clockwork gates**: some thin walls (≤3 cells) the colony meets in a
+corridor get a doorway with a lintel, and the doorway is a gate on the
+clock. It is open 150 of every 240 ticks and steel the rest. Somebody at a
+shut gate turns and waits (`waitFor`) instead of spending a basher on it, and
+a gate never shuts on somebody in it. Toggling writes cells directly and
+bumps only `terrainVersion`: `carved` is the director's progress, and a
+clock ticking is not progress.
+
+Measured on Clock Tower levels, 400 plays each, two samples, against no
+gates (94.33 / 94.19):
+- open 110 of 240: 94.22 / 94.16, levels 3% longer;
+- open 150 (kept): 94.53 / 94.29, 0.45 fewer bashers a level;
+- open 150 with the turn at a gate uncounted, so nobody gives up on a gate
+  and digs: 94.30 / 93.83. Reverted: the counted turn stays.
+
+Whole game, 200 levels: 99% cleared, no hangs. `sim inert` passes. Tests:
+gates are the Clock Tower's and have lintels, they open and shut on the
+clock without counting as carving, they never shut on somebody, and nobody
+bashes a shut one. The Clock Tower is skin, palette (verdigris, `% 16`),
+mission ("FREE THE CLOCKMAKERS") and events (Deadlock, Leap Second, Race
+Condition).
+
+On branch `codex/clock`: six art tests fail without Draw. Codex is drawing
+the tower and the gates.
