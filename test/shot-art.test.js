@@ -55,3 +55,10 @@ test("the umbrella shield draws at both resolutions, side-on and overhead", () =
     }
   }
 })
+
+test("the report card's battle line counts guards down and umbrella saves", () => {
+  assert.equal(D.battleLine({ enemiesKilled: 0 }), "")
+  assert.equal(D.battleLine({ enemiesKilled: 1, umbrellaSaves: 0 }), "1 GUARD DOWN")
+  assert.equal(D.battleLine({ enemiesKilled: 2, umbrellaSaves: 1 }), "2 GUARDS DOWN · 1 UMBRELLA SAVE")
+  assert.equal(D.battleLine({ enemiesKilled: 0, umbrellaSaves: 3 }), "3 UMBRELLA SAVES")
+})

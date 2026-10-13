@@ -3325,3 +3325,12 @@ the first click or key. Core files untouched: the Omarchy panel stays silent.
 **Checked in headless Chromium:** toggle turns it on and is saved; 14 sounds in
 15 s of level 1 at Steady speed, no console errors. Controls row: one line of
 eight at 1400 px, four and four at 800, wraps cleanly at 390. Tests 653 pass.
+
+## 118 — 2026-10-13 · The report card remembers the fight
+
+The end-of-level card counted who got home and who was rescued; a level where
+the colony fought through a guard post and put up four umbrellas under fire
+read exactly like a quiet one. New `battleLine`: "2 GUARDS DOWN · 3 UMBRELLA
+SAVES", in the warning colour under the rescue line, the plate growing by a
+row only when there was a fight. Looked at level 13 (Library): "+3 RESCUED"
+then "4 UMBRELLA SAVES", inside the plate, nothing overlapping. Tests 654.

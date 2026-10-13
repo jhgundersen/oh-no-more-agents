@@ -2741,10 +2741,20 @@ function drawEscortReport(ctx, w, pal, cx, y) {
   ctx.restore()
 }
 
+// How the fight went, when there was one: red team put down by the colony
+// (and by each other) and rounds stopped by an umbrella.
+function battleLine(w) {
+  var parts = []
+  if (w.enemiesKilled > 0) parts.push(w.enemiesKilled + (w.enemiesKilled === 1 ? " GUARD" : " GUARDS") + " DOWN")
+  if (w.umbrellaSaves > 0) parts.push(w.umbrellaSaves + " UMBRELLA " + (w.umbrellaSaves === 1 ? "SAVE" : "SAVES"))
+  return parts.join(" · ")
+}
+
 function drawLevelResults(ctx, w, pal) {
   var cx = Math.round(w.k.COLS * w.k.CELL / 2)
   var y = Math.round(w.k.ROWS * w.k.CELL / 2) - 31 + Math.max(0, 10 - w.doneTicks) * 2
-  drawTransitionPlate(ctx, w, pal, cx - 136, y, w.escortsHome > 0 ? 78 : 62)
+  var battle = battleLine(w), extra = (w.escortsHome > 0 ? 16 : 0) + (battle ? 16 : 0)
+  drawTransitionPlate(ctx, w, pal, cx - 136, y, 62 + extra)
   ctx.fillStyle = pal.decorLit
   drawTransitionText(ctx, "LEVEL " + w.level + " · REPORT", cx, y + 8, 1)
   ctx.fillStyle = pal.label
@@ -2752,6 +2762,10 @@ function drawLevelResults(ctx, w, pal) {
   ctx.fillStyle = w.saved === 0 ? pal.urgent : pal.exitLight
   drawTransitionText(ctx, levelVerdict(w), cx, y + 43, 1)
   drawEscortReport(ctx, w, pal, cx, y + 59)
+  if (battle) {
+    ctx.fillStyle = pal.warn
+    drawTransitionText(ctx, battle, cx, y + 61 + (w.escortsHome > 0 ? 16 : 0), 1)
+  }
 }
 
 function drawLevelClosing(ctx, w, pal) {
