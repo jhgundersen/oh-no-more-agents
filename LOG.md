@@ -3835,3 +3835,38 @@ reappeared further back. Sim now notes `thrownFrom` (bookkeeping) and Draw's
 ticks, up a 7-px arc and heels over head (`spriteFlip`) through the middle
 third, landing into its stunned pose. Looked at level 13's throw at ticks
 417–426: the flip reads over the next scuffle's cloud. Tests 711.
+
+## 144 — 2026-10-14 · Not tonight, agent
+
+The Bouncer has a nightclub-door silhouette now: eighteen-pixel shaved head
+and broad shoulders, black shirt and oxblood jacket, shades, an earpiece with
+a curly cable, and a red rejection pass on a lanyard. Its slower, heavy walk
+sways over planted boots; a living ordinary walker approaching from in front
+gets a flat stop palm. A lost scuffle reels the shoulders back and flings the
+arms out, with a six-tick white hit flash. Three hp pips stay opaque above it.
+Half-pixel cable, lenses, lapels and the pass's rejection cross are res-2 only.
+
+Its existing dated defeat now buckles at the knees, drops onto a shoulder,
+and spreads heavily on the floor; the pass flies off and dust marks the
+impact. Everything expires within the existing 32-tick window. Thrown agents
+raise an eight-tick landing puff at Sim's destination after the flight.
+Draw only reads the world; Sim and Palette are untouched.
+
+**Looked at:** level 13's actual seeded play, rendered with `tools/shoot.js`
+at ticks 129, 350, 360, 388, 417, 421, 425, 552, 580, 588 and 594: walking,
+scuffle, stop palm, thrown flight and landing, stagger/flash and defeat.
+Inspected `/tmp/codex-bouncer/sheet.png` (including tick 450's refusal and
+611's fading defeat), plus enlarged res-1 and res-2 pose sheets.
+
+**Checked:** seven new art tests cover both resolutions and facings, proximity,
+headroom, animation, hit flash, hp pips, finite defeat/landing timelines,
+context restoration and unchanged world state through level 13's real poses.
+`npm run check` (including `npm test`) passes. Old/new Draw produced **1,152
+identical seeded frames** on 96 levels without a Bouncer (levels 1–100, six
+moments, both resolutions, all seventeen biomes), with `Math.random` reset
+identically for each renderer. No whole-frame pins were added.
+**CRAP over 30: 0 before, 0 after**; highest new function 19, all new functions
+100% covered. Stamps refreshed.
+
+**Next:** leave the fight rules alone; this iteration gives the existing heavy
+its own readable performance.
