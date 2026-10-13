@@ -9069,60 +9069,78 @@ function swimColumn(w, ag, up, reach) {
     for (var turn = 0; turn < 2; turn++) {
       if (side === 0 && turn === 1) continue
       var x = here + (turn === 0 ? side : -side)
-      // Swimming sideways to the shaft is only swimming if the water between
-      // here and it is open. Without this a wide hunt reaches through rock and
-      // the diver glides into a wall to get to a chimney behind it.
-      if (side > SWIM_SIDESTEP && !clearAcross(w, here, x, footY)) continue
-      if (liftColumn(w, x)) continue
-      if (pitAt(w, x)) continue
-      // The column has to be clear from the agent's own feet outward, which
-      // includes the cell it is standing in when it steps sideways to the
-      // shaft.
-      if (!headroom(w, x, footY)) continue
-      // There has to be an opening at all. Without this the downward scan
-      // found the floor the agent was already standing on — the first solid
-      // cell below its feet — handed back the cell it was in, and the state
-      // machine bounced between walk and swim every tick: 322,956 swims in 120
-      // runs, every one of them zero cells long, and the colony bombed by the
-      // stall detector for standing still.
-      if (!up && solid(w, x, footY + 1)) continue
-      for (var d = 1; d <= SWIM_REACH; d++) {
-        var y = footY + (up ? -d : d)
-        if (y <= SKY || y >= ROWS - 1) break
-        if (up) {
-          // Rising: up the crevice, then out onto the ledge beside it. The
-          // landing is never inside the shaft — the chimney removed the floor
-          // there, which is the whole reason the shaft exists, so a riser
-          // looking for ground under its own feet finds none the whole way up
-          // and every ascending level was unwinnable. It has to kick sideways
-          // at the top, the way anybody coming up a hole in a floor does.
-          if (solid(w, x, y)) break
-          if (d <= AGENT_H) continue
-          for (var out = 1; out <= 2; out++) {
-            for (var oturn = 0; oturn < 2; oturn++) {
-              var lx = x + (oturn === 0 ? out : -out)
-              if (!headroom(w, lx, y) || !solid(w, lx, y + 1)) continue
-              // Reachable from the shaft: the cells between have to be open at
-              // this height or the "ledge" is on the other side of a wall.
-              var blocked = false
-              for (var step = 1; step <= out; step++)
-                if (solid(w, x + (oturn === 0 ? step : -step), y)) blocked = true
-              if (blocked) continue
-              return { x: lx + 0.5, y: y, shaftX: x + 0.5 }
-            }
-          }
-        } else {
-          // Sinking: through open water until ground. Anything solid is the
-          // floor, and it only counts if there is room to stand on it — and
-          // only if it is a storey down rather than a kerb, which the walk
-          // rules already handle better than a swim would.
-          if (!solid(w, x, y)) continue
-          if (d <= MAX_STEP + 1) break
-          if (!headroom(w, x, y - 1)) break
-          return { x: x + 0.5, y: y - 1, shaftX: x + 0.5 }
-        }
-      }
+      if (!swimShaftOpen(w, here, x, footY, up, side)) continue
+      var found = up ? riseFrom(w, x, footY) : sinkFrom(w, x, footY)
+      if (found) return found
     }
+  }
+  return null
+}
+
+function swimShaftOpen(w, here, x, footY, up, side) {
+  // Swimming sideways to the shaft is only swimming if the water between
+  // here and it is open. Without this a wide hunt reaches through rock and
+  // the diver glides into a wall to get to a chimney behind it.
+  if (side > SWIM_SIDESTEP && !clearAcross(w, here, x, footY)) return false
+  if (liftColumn(w, x)) return false
+  if (pitAt(w, x)) return false
+  // The column has to be clear from the agent's own feet outward, which
+  // includes the cell it is standing in when it steps sideways to the
+  // shaft.
+  if (!headroom(w, x, footY)) return false
+  // There has to be an opening at all. Without this the downward scan
+  // found the floor the agent was already standing on — the first solid
+  // cell below its feet — handed back the cell it was in, and the state
+  // machine bounced between walk and swim every tick: 322,956 swims in 120
+  // runs, every one of them zero cells long, and the colony bombed by the
+  // stall detector for standing still.
+  return up || !solid(w, x, footY + 1)
+}
+
+// Rising: up the crevice, then out onto the ledge beside it. The landing is
+// never inside the shaft — the chimney removed the floor there, which is the
+// whole reason the shaft exists, so a riser looking for ground under its own
+// feet finds none the whole way up and every ascending level was unwinnable.
+// It has to kick sideways at the top, the way anybody coming up a hole in a
+// floor does.
+function riseFrom(w, x, footY) {
+  for (var d = 1; d <= SWIM_REACH; d++) {
+    var y = footY - d
+    if (y <= SKY || y >= ROWS - 1) return null
+    if (solid(w, x, y)) return null
+    if (d <= AGENT_H) continue
+    var ledge = ledgeBeside(w, x, y)
+    if (ledge) return ledge
+  }
+  return null
+}
+
+function ledgeBeside(w, x, y) {
+  for (var out = 1; out <= 2; out++) {
+    for (var oturn = 0; oturn < 2; oturn++) {
+      var side = oturn === 0 ? 1 : -1, lx = x + side * out
+      if (!headroom(w, lx, y) || !solid(w, lx, y + 1)) continue
+      // Reachable from the shaft: the cells between have to be open at this
+      // height or the "ledge" is on the other side of a wall.
+      var blocked = false
+      for (var step = 1; step <= out; step++) if (solid(w, x + side * step, y)) blocked = true
+      if (!blocked) return { x: lx + 0.5, y: y, shaftX: x + 0.5 }
+    }
+  }
+  return null
+}
+
+// Sinking: through open water until ground. Anything solid is the floor, and
+// it only counts if there is room to stand on it — and only if it is a storey
+// down rather than a kerb, which the walk rules already handle better than a
+// swim would.
+function sinkFrom(w, x, footY) {
+  for (var d = 1; d <= SWIM_REACH; d++) {
+    var y = footY + d
+    if (y <= SKY || y >= ROWS - 1) return null
+    if (!solid(w, x, y)) continue
+    if (d <= MAX_STEP + 1 || !headroom(w, x, y - 1)) return null
+    return { x: x + 0.5, y: y - 1, shaftX: x + 0.5 }
   }
   return null
 }
@@ -9394,59 +9412,94 @@ function runDirector(w) {
   if (w.stallTicks < 300) return // ten seconds of genuinely nothing happening
   w.stallTicks = 0
 
-  // Help whoever is closest to the exit — they're the one most likely to
-  // finish the level if they can just get moving again.
-  var best = null
-  var bestD = Infinity
-  for (var i = 0; i < w.agents.length; i++) {
-    var ag = w.agents[i]
-    // Never the hero: the director reaches through the same toolbar gate as
-    // everyone, a special is barred from it, and a rescue aimed at the one
-    // colleague that cannot take it is a rescue nobody gets.
-    if (ag.gone || ag.state === "saved" || ag.special) continue
-    var d = Math.abs(ag.x - w.exit.x) + Math.abs(ag.y - w.exit.y) * 2
-    if (d < bestD) { bestD = d; best = ag }
-  }
+  var best = directorPick(w)
   if (!best) return
-
   // The director reaches into the same budget as everyone else, so it has to
   // go through the same gate — otherwise the one agent that is barred from the
   // toolbar gets handed a climber by the thing that rescues stalled levels,
   // which is exactly the kind of exception that quietly undoes a rule.
   w.acting = best
+  directorNudge(w, best)
+  w.acting = null
+}
 
-  var footY = Math.floor(best.y)
-  var ahead = Math.floor(best.x) + best.dir
-  var wantUp = exitAbove(w, best) && !liftRouted(w)
+// Help whoever is closest to the exit — they're the one most likely to
+// finish the level if they can just get moving again. Never the hero: the
+// director reaches through the same toolbar gate as everyone, a special is
+// barred from it, and a rescue aimed at the one colleague that cannot take it
+// is a rescue nobody gets.
+function directorPick(w) {
+  var best = null
+  var bestD = Infinity
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state === "saved" || ag.special) continue
+    var d = Math.abs(ag.x - w.exit.x) + Math.abs(ag.y - w.exit.y) * 2
+    if (d < bestD) { bestD = d; best = ag }
+  }
+  return best
+}
 
+// The first of these that applies and can be paid for.
+function directorNudge(w, best) {
   // Below the exit and pacing: nothing horizontal helps, and digging only
   // makes it worse. Hand them a climb.
-  if (wantUp && climbOut(w, best, grant)) {
-    // climbOut has already turned it to face whichever wall it is taking.
-  } else if (wantUp && best.state === "walk" && canStartBuild(w, best) && grant(w, "builder")) {
+  if (exitAbove(w, best) && !liftRouted(w)) { directorRaise(w, best); return }
+  if (directorBash(w, best)) return
+  if (startDescent(w, best, grant, true, false, false, true)) return
+  if (best.state === "walk" && canStartBuild(w, best) && grant(w, "builder")) {
+    startBuild(w, best, directorCrossing(w, best))
+    return
+  }
+  directorBomb(w, best)
+}
+
+// climbOut turns it to face whichever wall it is taking; failing a wall, a
+// staircase. Nothing else is any use to an agent below the exit.
+function directorRaise(w, best) {
+  if (climbOut(w, best, grant)) return
+  if (best.state === "walk" && canStartBuild(w, best) && grant(w, "builder")) {
     best.idle = 0
     startBuild(w, best)
-  } else if (!wantUp && solid(w, ahead, footY) && at(w, ahead, footY) !== STEEL && grant(w, "basher")) {
-    best.state = "bash"
-    best.timer = 0
-  } else if (startDescent(w, best, grant, true, false, false, true)) {
-  } else if (best.state === "walk" && canStartBuild(w, best) && grant(w, "builder")) {
-    var buildDir = buildDirection(w, best)
-    var crossing = false
-    for (var step = 1; step <= BUILD_REACH; step++) {
-      var pit = pitAt(w, Math.floor(best.x) + buildDir * step)
-      if (!pit) continue
-      var farLip = buildDir > 0 ? pit.x1 + 1 : pit.x0 - 1
-      crossing = Math.abs(farLip - best.x) <= BUILD_REACH
-      break
-    }
-    startBuild(w, best, crossing)
-  } else if (w.bombsUsed < 1 && w.rescues > 6 && boxedIn(w, best) && grant(w, "bomber")) {
-    w.bombsUsed++
-    best.state = "bomb"
-    best.fuse = BOMB_FUSE
+  } else directorAfterRaise(w, best)
+}
+
+// What the old single chain still tried when below the exit and no climb or
+// staircase could be had: the descent, the bridge, the bomb — never the bash.
+function directorAfterRaise(w, best) {
+  if (startDescent(w, best, grant, true, false, false, true)) return
+  if (best.state === "walk" && canStartBuild(w, best) && grant(w, "builder")) {
+    startBuild(w, best, directorCrossing(w, best))
+    return
   }
-  w.acting = null
+  directorBomb(w, best)
+}
+
+function directorBash(w, best) {
+  var ahead = Math.floor(best.x) + best.dir, footY = Math.floor(best.y)
+  if (!solid(w, ahead, footY) || at(w, ahead, footY) === STEEL || !grant(w, "basher")) return false
+  best.state = "bash"
+  best.timer = 0
+  return true
+}
+
+function directorBomb(w, best) {
+  if (w.bombsUsed >= 1 || w.rescues <= 6 || !boxedIn(w, best) || !grant(w, "bomber")) return
+  w.bombsUsed++
+  best.state = "bomb"
+  best.fuse = BOMB_FUSE
+}
+
+// Is the bridge it is about to build the one over a pit, reaching its far lip?
+function directorCrossing(w, best) {
+  var buildDir = buildDirection(w, best)
+  for (var step = 1; step <= BUILD_REACH; step++) {
+    var pit = pitAt(w, Math.floor(best.x) + buildDir * step)
+    if (!pit) continue
+    var farLip = buildDir > 0 ? pit.x1 + 1 : pit.x0 - 1
+    return Math.abs(farLip - best.x) <= BUILD_REACH
+  }
+  return false
 }
 
 // ---------------------------------------------------------------------------

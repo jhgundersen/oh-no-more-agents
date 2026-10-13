@@ -3559,3 +3559,21 @@ report card names the best of them under the battle line, numbered as agents
 in suits are: "MVP AGENT 001 · 2 SAVES". Three points a guard, two a save;
 specials are not eligible. Looked at level 13's card: fits inside the plate.
 (The transition font has no colon; it printed "MVP?" until dropped.) Tests 684.
+
+## 129 — 2026-10-13 · Crap: swimColumn and runDirector
+
+Game functions over CRAP 30: **7 → 5**, behaviour unchanged (fingerprint
+`7d414d92…` before and after; it covers Trench levels, where swimming is).
+
+- `swimColumn` (34) → `swimShaftOpen` (is this column a way at all),
+  `riseFrom` + `ledgeBeside` (up the chimney and out onto a ledge), `sinkFrom`.
+- `runDirector` (35) → `directorPick` (who) and `directorNudge` (what). The
+  first `directorNudge` was CRAP 44 by itself — the old chain's conditions all
+  came with it, and the tests reach only some of them — so it is split again
+  by rescue: `directorRaise` / `directorAfterRaise` for an agent below the
+  exit, `directorBash`, `directorBomb`, `directorCrossing`. The order of
+  attempts, including asking twice for a builder when below the exit, is the
+  old chain's exactly. All ≤ 22.
+
+Left: `generate`, `stepAgents`, `specialShapeCut`, `edgeAhead`, `fillEarth`.
+Tests 684.
