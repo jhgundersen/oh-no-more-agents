@@ -2915,3 +2915,5 @@ the basher used to hold a stub and now swings a pick through four frames,
 the digger used to crouch over nothing and now has a spade, and the builder
 lays each brick at the stair edge instead of carrying it. These skills are
 on screen in nearly every level.
+
+**Deployed** after 105 (name="build" content="0d0fabad"): picks, spades and laid bricks. Browser check clean.
