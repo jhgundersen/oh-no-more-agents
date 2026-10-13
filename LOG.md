@@ -3636,3 +3636,41 @@ Left over 30: `generate`, `stepAgents`, `specialShapeCut`, `fillEarth`.
 Meanwhile Codex is on `codex/boss`: The Moderator's own sprite (bulkier, a
 ban-hammer, a stagger pose), a boss defeat with the crown rolling off, and a
 brawl-cloud polish. Tests 689.
+## 133 — 2026-10-13 · The Moderator's armoury
+
+**Drawing only:** the boss now has a sprite of its own: a broad oxblood
+mantle and steel plate, a slit visor, a gold crown and a square ban-hammer
+slung behind its off shoulder. The silhouette stands 21 art pixels above
+the boots (22 on a walking bob), with half-pixel seams and glints
+at res 2. It walks, aims and fires through the gunner's existing weapon
+and muzzle timing, and keeps its jetpack. A hit flashes the plate white,
+reels the shoulders back and tips the crown; the three HP pips stay legible.
+
+**Defeat:** dated from `diedAt` at the last feet position, like the other
+enemies: knees, shoulder, then flat, while the crown pops off, bounces and
+rolls a few cells away. It fades out within the existing 32-tick window.
+No world writes or renderer RNG. The shared brawl cloud is unchanged.
+
+**Looked at:** actual play on 8 (seed 63365), 16 (seed 3) and 24 (seed 7),
+at res 1 and 2, enlarged without smoothing. Walk, jet, aim/fire, hit,
+stagger and six defeat ages; contact sheet `/tmp/codex-boss/sheet.png`.
+Level 8's aim/hit/fall were also rendered with `tools/shoot.js` at ticks
+371/326/634. The first kneeling pose sank below the floor; inspection caught
+it and the corrected knees keep their floor line.
+
+**Checks:** `npm test` and `npm run check` pass. Six new art tests cover
+both resolutions and facings, read-only drawing, headroom, the hammer,
+weapon timing, HP pips, the finite defeat window and context restoration.
+CRAP >30 stays **15 → 15** across game/tools (**7 → 7** in core); every
+changed/new drawing function is ≤15. Seeded old/new non-boss frame
+comparison: 3,094 byte-identical frames across 84 non-boss levels in 1–96,
+at both resolutions, including 287 brawl samples,
+with identical `Math.random` streams; no whole-frame snapshots in tests.
+
+Next: give the other named guard posts the same silhouette review.
+
+Reviewed and merged by the loop. On the contact sheet (levels 8, 16, 24, both
+resolutions) it reads as a boss at a glance: armoured, crowned, the ban-hammer
+on its back, a white flash and a stagger on each hit, and on defeat it goes to
+its knees and topples while the crown pops off and bounces away. The brawl
+cloud was left as it was. 695 tests pass after the merge.

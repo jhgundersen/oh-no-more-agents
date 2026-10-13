@@ -8069,35 +8069,166 @@ function drawEnemy(ctx, w, pal, en, opts) {
   var m = enemyMotion(w, en)
   var ox = Math.round(en.x * w.k.CELL) - SPRITE_W / 2 - en.dir * enemyRecoil(en)
   var oy = Math.round((en.y + 1) * w.k.CELL) - SPRITE_PX - m.bob
-  var fn = ENEMY_DRAW[en.kind] || drawGunner
+  var fn = en.boss ? drawModerator : (ENEMY_DRAW[en.kind] || drawGunner)
   fn(ctx, w, pal, en, ox, oy, en.dir, m)
-  if (en.boss) drawBossKit(ctx, w, en, ox, oy, en.dir)
   if (opts && opts.labels) drawEnemyLabel(ctx, w, en, ox, oy)
   ctx.globalAlpha = 1
 }
 
-// The Moderator (Sim's bossLevel): a gunner in heavy plate with a gold crown
-// on its crest, and its health over its head — BOSS_HP pips, one going dark
-// with each hit. A hit flashes it white for a few ticks.
+// The Moderator has its own silhouette: a crowned visor, broad oxblood plate
+// and a ban-hammer slung behind the off shoulder. The crown is 21 art pixels
+// above the boots; the health strip fits inside a corridor's 24px headroom.
 var BOSS_GOLD = "#e0b649", BOSS_PLATE = "#4a4a55", BOSS_PLATE_LIT = "#8a8a99"
-function drawBossKit(ctx, w, en, ox, oy, dir) {
+function drawModerator(ctx, w, pal, en, ox, oy, dir, m) {
+  var hurt = en.hurtAt === undefined ? 30 : w.ticks - en.hurtAt
+  var reel = en.state === "recover" && hurt >= 0 && hurt < 30
+    ? Math.max(1, 3 - Math.floor(hurt / 10)) : 0
+  var bx = ox - dir * reel, by = oy + Math.min(1, reel)
+  drawModeratorFeet(ctx, w, en, ox, oy, dir, m)
+  drawModeratorHammer(ctx, w, bx, by, dir)
+  drawModeratorPlate(ctx, w, bx, by, dir)
+  drawModeratorHead(ctx, w, bx, by, dir)
+  drawModeratorCrown(ctx, w, bx, by - 1, dir, reel ? 1 : 0)
+  var gunY = en.state === "aim" || en.shotFor > 0 ? 6 : 8
+  // Keep the gun at the ordinary muzzle, even while the armour reels away.
+  drawGunnerWeapon(ctx, w, en, ox, oy, dir, gunY)
+  if (en.state === "jet") drawModeratorJet(ctx, en, bx, by, dir)
+  if (hurt >= 0 && hurt < 6) drawModeratorFlash(ctx, bx, by, dir, hurt)
+  drawModeratorPips(ctx, en, ox, oy)
+}
+
+function drawModeratorPlate(ctx, w, ox, oy, dir) {
+  ctx.fillStyle = "#58152b"
+  blit(ctx, ox, oy, dir, -2, 6, 11, 8)             // red mantle, broad hem
+  ctx.fillStyle = "#8f1f35"
+  blit(ctx, ox, oy, dir, -1, 7, 9, 6)
+  ctx.fillStyle = "#25252b"
+  blit(ctx, ox, oy, dir, -2, 5, 12, 4)            // outlined shoulder shelf
+  blit(ctx, ox, oy, dir, 0, 8, 8, 5)
   ctx.fillStyle = BOSS_PLATE
-  blit(ctx, ox, oy, dir, -1, 7, 2, 4); blit(ctx, ox, oy, dir, 7, 7, 2, 4)   // pauldrons
-  blit(ctx, ox, oy, dir, 2, 8, 4, 3)                                           // breastplate
+  blit(ctx, ox, oy, dir, -1, 5, 4, 3)
+  blit(ctx, ox, oy, dir, 6, 5, 3, 3)
+  blit(ctx, ox, oy, dir, 1, 8, 6, 4)
   ctx.fillStyle = BOSS_PLATE_LIT
-  blit(ctx, ox, oy, dir, -1, 7, 2, 1); blit(ctx, ox, oy, dir, 7, 7, 2, 1)
+  blit(ctx, ox, oy, dir, -1, 5, 4, 1)
+  blit(ctx, ox, oy, dir, 6, 5, 3, 1)
+  blit(ctx, ox, oy, dir, 1, 8, 1, 3)
+  ctx.fillStyle = "#ff5268"
+  blit(ctx, ox, oy, dir, 3, 8, 3, 2)              // red team's enamel badge
   ctx.fillStyle = BOSS_GOLD
-  blit(ctx, ox, oy, dir, 1, -1, 6, 1)                                          // crown band
-  blit(ctx, ox, oy, dir, 1, -3, 1, 2); blit(ctx, ox, oy, dir, 3, -4, 2, 3); blit(ctx, ox, oy, dir, 6, -3, 1, 2)
+  blit(ctx, ox, oy, dir, 0, 12, 8, 1)
+  blit(ctx, ox, oy, dir, 3, 11, 2, 2)
+  if ((w.res || 1) >= 2) drawModeratorFine(ctx, ox, oy, dir)
+}
+
+function drawModeratorHead(ctx, w, ox, oy, dir) {
+  ctx.fillStyle = "#25252b"
+  blit(ctx, ox, oy, dir, 0, -1, 8, 5)
+  blit(ctx, ox, oy, dir, 1, 4, 6, 1)
+  ctx.fillStyle = BOSS_PLATE_LIT
+  blit(ctx, ox, oy, dir, 1, 0, 6, 1)
+  blit(ctx, ox, oy, dir, 1, 1, 1, 3)
+  ctx.fillStyle = "#8f1f35"
+  blit(ctx, ox, oy, dir, 2, 1, 5, 3)
+  ctx.fillStyle = "#16161b"
+  blit(ctx, ox, oy, dir, 3, 1, 5, 1)              // black slit, burning eye
+  ctx.fillStyle = "#ff5268"
+  blit(ctx, ox, oy, dir, 5, 1, 2, 1)
+  ctx.fillStyle = BOSS_PLATE
+  blit(ctx, ox, oy, dir, 3, 3, 4, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = "#ffe68a"
+    blitFine(ctx, ox, oy, dir, 6, 1, 0.5, 0.5)
+    ctx.fillStyle = "#b6b6c5"
+    blitFine(ctx, ox, oy, dir, 3, 3, 3, 0.5)
+  }
+}
+
+function drawModeratorHammer(ctx, w, ox, oy, dir) {
+  ctx.fillStyle = "#25252b"
+  blit(ctx, ox, oy, dir, -4, 0, 6, 5)             // massive square mallet
+  ctx.fillStyle = BOSS_PLATE_LIT
+  blit(ctx, ox, oy, dir, -4, 1, 6, 3)
+  ctx.fillStyle = "#d9d7cf"
+  blit(ctx, ox, oy, dir, -4, 1, 1, 3)
+  ctx.fillStyle = "#8f1f35"
+  blit(ctx, ox, oy, dir, -2, 1, 2, 3)             // red ban stripe
+  ctx.fillStyle = "#25252b"
+  blit(ctx, ox, oy, dir, -2, 5, 2, 9)
+  ctx.fillStyle = BOSS_GOLD
+  blit(ctx, ox, oy, dir, -2, 5, 1, 8)
+  blit(ctx, ox, oy, dir, -3, 12, 3, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = "#ff5268"
+    blitFine(ctx, ox, oy, dir, -2, 1.5, 2, 0.5)
+    ctx.fillStyle = "#ffffff"
+    blitFine(ctx, ox, oy, dir, -3, 1, 4, 0.5)
+  }
+}
+
+// tilt is a pixel-stepped slope: no rotation blurs the live sprite at res 1.
+function drawModeratorCrown(ctx, w, ox, oy, dir, tilt) {
+  ctx.fillStyle = "#78552b"
+  for (var i = 0; i < 7; i++)
+    blit(ctx, ox, oy, dir, i, 1 + Math.round((i - 3) * tilt / 3), 1, 1)
+  ctx.fillStyle = BOSS_GOLD
+  for (var j = 0; j < 7; j++)
+    blit(ctx, ox, oy, dir, j, Math.round((j - 3) * tilt / 3), 1, 1)
+  blit(ctx, ox, oy, dir, 0, -2 - tilt, 1, 2)
+  blit(ctx, ox, oy, dir, 3, -4, 1, 4)
+  blit(ctx, ox, oy, dir, 6, -2 + tilt, 1, 2)
+  ctx.fillStyle = "#ff5268"
+  blit(ctx, ox, oy, dir, 3, -1, 1, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = "#ffe68a"
+    blitFine(ctx, ox, oy, dir, 1, 0, 5, 0.5)
+    blitFine(ctx, ox, oy, dir, 3, -4, 0.5, 1)
+  }
+}
+
+function drawModeratorFine(ctx, ox, oy, dir) {
+  ctx.fillStyle = "#b6b6c5"
+  blitFine(ctx, ox, oy, dir, -1, 5, 4, 0.5)
+  blitFine(ctx, ox, oy, dir, 6, 5, 3, 0.5)
+  blitFine(ctx, ox, oy, dir, 2, 8, 0.5, 3)
+  ctx.fillStyle = "#25252b"
+  blitFine(ctx, ox, oy, dir, 2, 10.5, 4, 0.5)
+  ctx.fillStyle = "#ffe68a"
+  blitFine(ctx, ox, oy, dir, 3.5, 11.5, 1, 0.5)
+  ctx.fillStyle = "#d9d7cf"
+  blitFine(ctx, ox, oy, dir, 4, 8, 0.5, 1.5)
+}
+
+function drawModeratorFeet(ctx, w, en, ox, oy, dir, m) {
+  drawEnemyFeet(ctx, w, en, ox, oy, dir, m, 13, BOSS_PLATE)
+  ctx.fillStyle = BOSS_PLATE_LIT
+  blit(ctx, ox, oy, dir, 1 + m.stride, 13, 2, 1)
+  blit(ctx, ox, oy, dir, 5 - m.stride, 13, 2, 1)
+}
+
+function drawModeratorJet(ctx, en, ox, oy, dir) {
+  var flame = (en.anim >> 1) % 2
+  ctx.fillStyle = "#303039"
+  blit(ctx, ox, oy, dir, -1, 8, 2, 6)
+  ctx.fillStyle = "#ff8a35"
+  blit(ctx, ox, oy, dir, -1, 14, 2, 3 + flame)
+  ctx.fillStyle = "#ffe68a"
+  blit(ctx, ox, oy, dir, 0, 14, 1, 2 + (1 - flame))
+}
+
+function drawModeratorFlash(ctx, ox, oy, dir, age) {
+  ctx.fillStyle = "#ffffff"
+  ctx.globalAlpha = 0.75 * (1 - age / 6)
+  blit(ctx, ox, oy, dir, 0, -1, 8, 5)
+  blit(ctx, ox, oy, dir, -1, 5, 10, 3)
+  blit(ctx, ox, oy, dir, 1, 8, 6, 4)
+  ctx.globalAlpha = 1
+}
+
+function drawModeratorPips(ctx, en, ox, oy) {
   for (var i = 0; i < 3; i++) {
     ctx.fillStyle = i < en.hp ? "#ff5268" : "#3a2a30"
-    ctx.fillRect(ox + 1 + i * 3, oy - 7, 2, 1)
-  }
-  if (en.hurtAt !== undefined && w.ticks - en.hurtAt < 6) {
-    ctx.fillStyle = "#ffffff"
-    ctx.globalAlpha = 0.75 * (1 - (w.ticks - en.hurtAt) / 6)
-    ctx.fillRect(ox, oy, SPRITE_W, SPRITE_PX)
-    ctx.globalAlpha = 1
+    ctx.fillRect(ox + i * 3, oy - 7, 2, 1)
   }
 }
 
@@ -8200,10 +8331,85 @@ function drawEnemyDefeat(ctx, w, pal, en) {
   ctx.globalAlpha = Math.min(1, (ENEMY_DEFEAT_TICKS - age) / 10)
   // A force push throws the kit away from the facing, without moving Sim.
   if (en.diedBy === "force pushed") ctx.translate(-Math.min(12, Math.floor(age / 2)), 0)
-  draw(ctx, w, pal, age, en)
+  if (en.boss) drawDefeatModerator(ctx, w, pal, age, en)
+  else draw(ctx, w, pal, age, en)
   if (Object.prototype.hasOwnProperty.call(ENEMY_DEFEAT_CAUSE, en.diedBy))
     ENEMY_DEFEAT_CAUSE[en.diedBy](ctx, w, pal, age)
   ctx.restore()
+}
+
+// Three dated poses at the last feet position: knees, shoulder, then flat.
+// The loose crown travels independently; nothing survives the defeat window.
+function drawDefeatModerator(ctx, w, pal, age, en) {
+  spriteFlip = false
+  if (age < 8) drawModeratorKneeling(ctx, w, age)
+  else drawModeratorFallen(ctx, w, age)
+  drawModeratorCrownFall(ctx, w, age)
+  if (age >= 8 && age < 20) drawDeathDust(ctx, pal, age - 8, 8)
+}
+
+function drawModeratorKneeling(ctx, w, age) {
+  var drop = Math.floor(age / 3)
+  drawModeratorHammer(ctx, w, -5, -16 + drop, 1)
+  drawModeratorHead(ctx, w, -6, -16 + drop, 1)
+  ctx.fillStyle = "#58152b"
+  ctx.fillRect(-6, -9 + drop, 9, 7 - drop)
+  ctx.fillStyle = "#25252b"
+  ctx.fillRect(-7, -11 + drop, 12, 3)
+  ctx.fillStyle = BOSS_PLATE
+  ctx.fillRect(-6, -11 + drop, 4, 2)
+  ctx.fillRect(1, -11 + drop, 3, 2)
+  ctx.fillRect(-4, -8 + drop, 6, 4)
+  ctx.fillStyle = BOSS_PLATE_LIT
+  ctx.fillRect(-6, -11 + drop, 4, 1)
+  ctx.fillRect(1, -11 + drop, 3, 1)
+  ctx.fillRect(-4, -3, 4, 2); ctx.fillRect(1, -3, 3, 2)
+  ctx.fillStyle = "#ff5268"
+  ctx.fillRect(-2, -8 + drop, 2, 2)
+  ctx.fillStyle = "#16161b"
+  ctx.fillRect(-5, -1, 10, 1)
+}
+
+function drawModeratorFallen(ctx, w, age) {
+  var slumped = age < 14
+  ctx.fillStyle = "#58152b"
+  ctx.fillRect(slumped ? -8 : -11, slumped ? -8 : -4, 12, 4)
+  ctx.fillStyle = "#25252b"
+  ctx.fillRect(slumped ? -10 : -14, slumped ? -10 : -5, 7, 4)
+  ctx.fillRect(1, -3, 5, 3)
+  ctx.fillStyle = BOSS_PLATE
+  ctx.fillRect(slumped ? -7 : -10, slumped ? -7 : -4, 8, 3)
+  ctx.fillStyle = BOSS_PLATE_LIT
+  ctx.fillRect(slumped ? -9 : -13, slumped ? -10 : -5, 6, 1)
+  ctx.fillRect(slumped ? -7 : -10, slumped ? -7 : -4, 7, 1)
+  ctx.fillStyle = "#8f1f35"
+  ctx.fillRect(slumped ? -9 : -13, slumped ? -8 : -3, 4, 1)
+  // Hammer clatters behind the fallen shoulder; its gold haft stays visible.
+  ctx.fillStyle = BOSS_GOLD
+  ctx.fillRect(-3, -1, 10, 1)
+  ctx.fillStyle = BOSS_PLATE_LIT
+  ctx.fillRect(6, -4, 3, 4)
+  ctx.fillStyle = "#8f1f35"
+  ctx.fillRect(7, -3, 1, 3)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = "#b6b6c5"
+    ctx.fillRect(-8, -3.5, 5, 0.5)
+    ctx.fillRect(6, -4, 3, 0.5)
+  }
+}
+
+function drawModeratorCrownFall(ctx, w, age) {
+  var x = 1 + Math.floor(age * 0.6)
+  // Pop, fall, then two diminishing bounces along the floor (whole pixels).
+  var heights = [-17, -19, -19, -17, -13, -8, -4, -1, -3, -4, -2, -1, -2, -1, -1, -1]
+  var y = heights[Math.floor(age / 2)]
+  if (age >= 14 && (Math.floor(age / 3) % 2)) {
+    ctx.fillStyle = BOSS_GOLD
+    ctx.fillRect(x + 2, y - 5, 2, 6)
+    ctx.fillRect(x, y - 4, 2, 1); ctx.fillRect(x, y, 2, 1)
+    ctx.fillStyle = "#ff5268"
+    ctx.fillRect(x + 2, y - 2, 1, 1)
+  } else drawModeratorCrown(ctx, w, x, y - 1, 1, age < 14 ? -1 : 0)
 }
 
 function drawDefeatBody(ctx, w, age, coat, head) {
