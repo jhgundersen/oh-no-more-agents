@@ -5230,28 +5230,7 @@ function edgeAhead(w, ag, nx) {
   var ax = Math.floor(nx)
   var depth = dropDepth(w, ax, footY)
   var far = landingAhead(w, ag.x, footY, ag.dir)
-
-  // The top of a ladder is approached from the wall it rests on, facing out
-  // over its drop. It is a route for everybody in both directions, so take it
-  // before personality, special moves or the usual judgement about the fall.
-  var ladder = ladderDownAt(w, Math.floor(ag.x), ag.dir, footY)
-  if (ladder) { startLadderDown(ag, ladder); return }
-
-  // Same for a lift door, and for the same reason: it is a route everybody
-  // takes on the same terms, and the drop behind it is fifty rows of hoistway
-  // that no personality should be allowed to have an opinion about.
-  if (w.lifts.length) {
-    var shaftDoor = liftDoorAt(w, ax, footY)
-    if (shaftDoor) { useLift(w, ag, shaftDoor, footY); return }
-    // Off a storey — up a ramp somebody built, say — the shaft is open but
-    // there is no door and no landing. Nobody steps into a hoistway.
-    if (liftColumn(w, ax)) { turnAround(w, ag); return }
-  }
-
-  // Nothing down there at all. This case has to come first: an umbrella is no
-  // help over a shaft with no floor, and checking the floater branch ahead of
-  // it is exactly how a floater ends up drifting serenely out of the world.
-  var trait = traitOf(ag)
+  if (edgeIsRoute(w, ag, ax, footY)) return
 
   // On a level played upside down, a hole in the floor is not a route — it is
   // the way back to where you started. Sinking is free down here, so a diver
@@ -5266,39 +5245,67 @@ function edgeAhead(w, ag, nx) {
   }
 
   if (ag.special) { specialAtEdge(w, ag, nx, depth, far); return }
-
-  if (depth !== Infinity
-      && hazardZoneAt(w, ax, footY + depth, hazardPerceptive(ag))) {
-    // The landing is lethal, but the landing is not necessarily the route. If
-    // there is still ground at this height on the far side, stay above the
-    // danger and bridge to it. Level 15 is the worked example: every engineer
-    // saw both the sentry below and a ledge sixteen cells ahead, but this early
-    // return happened before any builder rule could consider the ledge.
-    if (far > 2 && canStartBuild(w, ag) && spend(w, ag, "builder")) {
-      startBuild(w, ag, true)
-      return
-    }
-    turnAround(w, ag)
+  if (depth !== Infinity && hazardZoneAt(w, ax, footY + depth, hazardPerceptive(ag))) {
+    edgeOverDanger(w, ag, far)
     return
   }
+  // Nothing down there at all. This case has to come before the floater: an
+  // umbrella is no help over a shaft with no floor, and checking the floater
+  // first is exactly how a floater ends up drifting serenely out of the world.
+  if (depth === Infinity) { edgeBottomless(w, ag, far); return }
+  edgeDrop(w, ag, nx, depth, far)
+}
 
+// The top of a ladder is approached from the wall it rests on, facing out
+// over its drop. It is a route for everybody in both directions, so take it
+// before personality, special moves or the usual judgement about the fall.
+// Same for a lift door, and for the same reason: it is a route everybody
+// takes on the same terms, and the drop behind it is fifty rows of hoistway
+// that no personality should be allowed to have an opinion about.
+function edgeIsRoute(w, ag, ax, footY) {
+  var ladder = ladderDownAt(w, Math.floor(ag.x), ag.dir, footY)
+  if (ladder) { startLadderDown(ag, ladder); return true }
+  if (!w.lifts.length) return false
+  var shaftDoor = liftDoorAt(w, ax, footY)
+  if (shaftDoor) { useLift(w, ag, shaftDoor, footY); return true }
+  // Off a storey — up a ramp somebody built, say — the shaft is open but
+  // there is no door and no landing. Nobody steps into a hoistway.
+  if (liftColumn(w, ax)) { turnAround(w, ag); return true }
+  return false
+}
 
-  if (depth === Infinity) {
-    if (far > 2 && crossingHelps(w, ag) && canStartBuild(w, ag, true) && spend(w, ag, "builder")) { startBuild(w, ag, true); return }
-    // Not when the way home is above: a blocker's job is to stop the colony
-    // walking into a hole on its route, and a hole below an agent that is
-    // already under the exit is not on anybody's route. Level 509 drops a
-    // third of its colony into a pocket at the bottom, and the ones that met
-    // the shaft down there planted their hands for a colony that could never
-    // arrive — x50,y55 held seven times as many blocker-ticks as the whole of
-    // the rest of that level. Turning round leaves them to the climb and dig
-    // rules, which are at least trying to get them out.
-    if (far <= 2 && !exitAbove(w, ag) && comingHere(w, ag) >= 2 - trait.blockBias
-        && spend(w, ag, "blocker")) { ag.state = "block"; return }
-    turnAround(w, ag)
+// The landing is lethal, but the landing is not necessarily the route. If
+// there is still ground at this height on the far side, stay above the
+// danger and bridge to it. Level 15 is the worked example: every engineer
+// saw both the sentry below and a ledge sixteen cells ahead, but this early
+// return happened before any builder rule could consider the ledge.
+function edgeOverDanger(w, ag, far) {
+  if (far > 2 && canStartBuild(w, ag) && spend(w, ag, "builder")) {
+    startBuild(w, ag, true)
     return
   }
+  turnAround(w, ag)
+}
 
+function edgeBottomless(w, ag, far) {
+  if (far > 2 && crossingHelps(w, ag) && canStartBuild(w, ag, true) && spend(w, ag, "builder")) { startBuild(w, ag, true); return }
+  // Not when the way home is above: a blocker's job is to stop the colony
+  // walking into a hole on its route, and a hole below an agent that is
+  // already under the exit is not on anybody's route. Level 509 drops a
+  // third of its colony into a pocket at the bottom, and the ones that met
+  // the shaft down there planted their hands for a colony that could never
+  // arrive — x50,y55 held seven times as many blocker-ticks as the whole of
+  // the rest of that level. Turning round leaves them to the climb and dig
+  // rules, which are at least trying to get them out.
+  if (far <= 2 && !exitAbove(w, ag) && comingHere(w, ag) >= 2 - traitOf(ag).blockBias
+      && spend(w, ag, "blocker")) { ag.state = "block"; return }
+  turnAround(w, ag)
+}
+
+// An ordinary drop: bridge it if this agent is the bridging kind, otherwise
+// step off — under an umbrella if the fall would hurt.
+function edgeDrop(w, ag, nx, depth, far) {
+  var trait = traitOf(ag)
   if (far > 2 && !exitBelow(w, ag) && depth > trait.bridgeAt + ag.bridgeBias
       && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return }
 
@@ -5307,7 +5314,7 @@ function edgeAhead(w, ag, nx) {
 
   // A drop in a Data Center updraft is no drop at all (see stepFall): the
   // colony steps off and lets the cold aisle carry it, and keeps its umbrella.
-  var drafted = w.updraft && w.updraft[Math.floor(nx)] && depth !== Infinity
+  var drafted = w.updraft && w.updraft[Math.floor(nx)]
   var wantsChute = !drafted && depth > killingFall(w) - trait.fallMargin
 
   if (!wantsChute) { ag.x = nx; startFall(w, ag); return }
@@ -5321,7 +5328,6 @@ function edgeAhead(w, ag, nx) {
 
   // Survivable after all, just not comfortably. Better than turning back.
   if (depth <= killingFall(w)) { ag.x = nx; startFall(w, ag); return }
-
   turnAround(w, ag)
 }
 

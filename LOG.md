@@ -3617,3 +3617,22 @@ away. Ordinary levels' cards are unchanged. Looked at level 8 at ticks 25 and
 30 (blink on and off). Tests 687.
 
 **Deployed** after 131 (name="build" content="faef039d"): The Moderator and its warning. Browser check clean.
+
+## 132 — 2026-10-13 · Crap: edgeAhead; sniper tests; Codex on the boss
+
+Game functions over CRAP 30: **6 → 4**.
+
+- `edgeAhead` (42) → `edgeIsRoute` (ladder top, lift door, open hoistway),
+  `edgeOverDanger`, `edgeBottomless` and `edgeDrop`, in the old order.
+  Fingerprint identical (`95742321…`). All ≤ 18.
+- `stepSniper` (48) and `sniperTarget` (32) had crossed 30 only because no
+  test reached them any more: the level a test once happened to find a wall
+  sniper on was reshuffled by the seventeenth biome. `test/sniper.test.js`
+  plays a sniper through charge → fire → rest → idle against an agent in line,
+  and drops a target that leaves. Now 16 and 6.
+
+Left over 30: `generate`, `stepAgents`, `specialShapeCut`, `fillEarth`.
+
+Meanwhile Codex is on `codex/boss`: The Moderator's own sprite (bulkier, a
+ban-hammer, a stagger pose), a boss defeat with the crown rolling off, and a
+brawl-cloud polish. Tests 689.
