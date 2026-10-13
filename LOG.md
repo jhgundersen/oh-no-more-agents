@@ -3057,3 +3057,43 @@ over-30 count is 21 → 20.
 
 Codex is on `codex/escort`: a following pose for the rescued, an arrival at
 the door, and the "+N RESCUED" line on the report card.
+
+## 110 — 2026-10-13 · Following, and making it home (merged)
+
+**Art:** escorted civilians and explorers lean into a hurried walk, face the
+route and pump their elbows; boars trot, birds hop and flap, monkeys scramble,
+and camels swing their legs in pairs. Unsupported followers tuck their legs;
+people reaching upwards lift a hand. Their movement state is derived in Draw
+from the next trail sample and terrain beneath their feet, not the leader's
+current state, which is ahead of them. A stationary trail or pickup delay
+stands still. No simulation state or render-side history was added.
+
+**Arrival:** `homeAt` starts a fourteen-tick rise and fade with four portal
+sparks. The subject keeps its silhouette while entering, then disappears.
+The report gains a separate "+N RESCUED" row with small silhouettes of the
+arrivals, leaving the verdict legible; only cards with rescues grow taller.
+The pixel font now has the plus sign that the old appended line lacked.
+
+**Looked at:** all four kinds, all three animal variants and both camel
+silhouettes running, falling, climbing and arriving, at res 1 and 2, scaled
+without smoothing. Report cards are drawn at their full art size too.
+
+![Escort poses and arrivals at both resolutions](/tmp/codex-escort/sheet.png)
+
+**Checks:** `npm run check` (including `npm test`) passes; stamps updated.
+New tests cover both resolutions and unspecified res, all themes, variants
+and directions, delayed motion, stationary trails, airborne poses, rising
+and fading arrivals, expiry, report layout, deterministic pixels, no RNG,
+world writes rejected by read-only proxies, and restored context/transform.
+Seeded comparison against `6cf82d4`: 60 levels × ticks 80/200/500/900/1800
+× res undefined/1/2 gives **807 identical frames without escorts**; 93 frames
+with escorts were excluded. No whole-frame hashes pinned in tests.
+CRAP over-30 count **21 → 21**, all new/changed functions below 30 (largest
+new function: `drawEscortPerson`, **20**). Sim.js and Palette.js are unchanged.
+Work on `codex/escort`; no push or deploy.
+
+Reviewed and merged by the loop. On the sheet, each kind (civilian,
+explorer, boar, bird, monkey, both camels) has a run cycle, a scramble in
+the air and a climb, and fades into the doorway over thirteen ticks. The
+report card gains a fourth line, "+N RESCUED", with a small icon of each one
+rescued. That is legible at both resolutions.
