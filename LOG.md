@@ -3742,3 +3742,5 @@ order. Fingerprint identical (`95742321…`).
 loop and 13 at the start of this one). What remains over 30 is the dev tooling
 (`tools/simcheck.js` commands, `crc32` in the renderer) and the Worker's
 `readStats`, none of which the tests exercise. Tests 695.
+
+**Deployed** after 138 (name="build" content="1fbceb20"): blood drops, brawl pop-in, crap splits. Browser check clean.
