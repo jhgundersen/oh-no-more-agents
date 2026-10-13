@@ -3092,6 +3092,14 @@ function cutTraverse(w, ag, act, dry) {
   return specialTraverse(w, ag, act, dry)
 }
 
+// Vector Van Damme kicks a three-wide block of wall clean off its footing and
+// it goes to pieces where it lands. It used to land whole, a few cells on,
+// and stay there — a wall moved rather than a wall gone — and wherever it
+// landed over a gap it plugged the colony's way down. Measured paired over
+// 160 levels: the rest of the colony 90.45% home with the old shove, 90.75%
+// shoved along solid floor only, 91.45% kicked to pieces (91.32% with no
+// kick at all). The shove's reach still decides whether there is room for
+// the kick at all; only the landing changed.
 function cutKick(w, ag, act, dry) {
   var fx = Math.floor(ag.x), fy = Math.floor(ag.y), d = ag.dir, moved = false, i, j
   var W = 3
@@ -3115,6 +3123,11 @@ function cutKick(w, ag, act, dry) {
         // Landing on itself is fine; landing on anything else is not.
         if (i + trySh < W) continue
         if (at(w, dx, fy - AGENT_H + j) !== EMPTY) { fits = false; break }
+        // Nor over a hole: terrain does not fall, so a block shoved over a gap
+        // hangs there — plugging the drop the colony used, or standing in
+        // its way further on. Kicked about like that it cost everyone else
+        // 0.9 points a level; shoved only along solid floor, it does not.
+        if (!solid(w, dx, fy + 1)) { fits = false; break }
       }
     if (fits) { shove = trySh; break }
   }
@@ -3126,7 +3139,6 @@ function cutKick(w, ag, act, dry) {
       var m2 = block[i][j]
       if (m2 === EMPTY) continue
       clearCell(w, fx + d * (1 + i), fy - AGENT_H + j)
-      setCell(w, fx + d * (1 + i + shove), fy - AGENT_H + j, m2)
       moved = true
     }
   return cutTail(w, fx, fy, d, moved)
@@ -7270,7 +7282,11 @@ function specialAtEdge(w, ag, nx, depth, far) {
     ag.state = before
   }
 
-  if (spec.act === "slab" && ag.cool <= 0 && depth > 2) {
+  // Only over a drop that would kill. A survivable gap is the colony's way
+  // down — the chasm everyone drops through to the next floor — and paving it
+  // closes that route behind the hero: the rest of the colony walked the whole
+  // corridor instead (iteration 54 learned the same thing from Frost ice).
+  if (spec.act === "slab" && ag.cool <= 0 && depth > killingFall(w)) {
     if (specialCut(w, ag, "slab")) { ag.cool = spec.cool; return }
   }
   if (depth === Infinity) { turnAround(w, ag); return }

@@ -2248,3 +2248,25 @@ colony ~1.3–1.9 points — their moves, not their survival. More heroes now
 end a level alive but stuck.
 
 **Deployed** after 81 (name="build" content="b63f974f"): hero fixes. Browser check clean.
+
+## 82 — 2026-10-13 · Heroes that closed the colony's way down
+
+**Found.** Guard Rails and Vector Van Damme cost the *rest* of the colony
+1.3–1.9 points (paired, 160 levels) — their moves, not their survival.
+- Guard Rails paved any gap deeper than 2 with a rock slab — including the
+  survivable chasms the colony drops through to the next floor. The same
+  mistake as 54's Frost ice.
+- Vector Van Damme's kick shoved a wall a few cells on, whole; terrain does
+  not fall, so a block shoved over a gap plugged it, and anywhere else it
+  was just a wall moved.
+
+**Changed.** The slab only over a drop that would kill (`depth >
+killingFall`). The kick sends the block to pieces where it lands.
+
+**Checked.** Rest of the colony / hero home, before → after: Guard Rails
+91.01% / 73% → 91.80% / 83%; Vector Van Damme 90.45% / 81% → 91.45% / 82%
+(shove kept but only along solid floor: 90.75%; no kick at all: 91.32%).
+510 tests pass; `sim play` and `inert` below.
+
+**Next.** What is left is a ~1 point cost every hero has on the rest of the
+colony, kick or no kick. Find out what it is.
