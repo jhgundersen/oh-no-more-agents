@@ -2941,3 +2941,80 @@ gap, with a colleague it does.
 Deployed 105's art at the start (above). Codex is on `codex/skills`: climbing,
 mining, blocking, bombing and floating at res 2, as 105 did for bash, dig
 and build.
+
+## 107 — 2026-10-13 · Art audit: grip, brace, fuse and float (merged)
+
+**Audit.** Continued 105 with five strips of actual play at res 2, enlarged
+with nearest-neighbour scaling. Climbing and floating are level 2, blocking
+level 3, bombing level 19; the Mine strip is level 2. Each strip has five
+phases, including the charge explosions and the umbrella's opening. Reviewed
+the before crops, intermediate sheet and final labelled contact sheet.
+
+- **Climbing:** the upright torso and one-pixel change of grip barely read as
+  climbing. The page body now stays outside the actual wall face, with two
+  palms on it, cuffs, a bent knee and a planted boot. Four phases of the
+  existing `anim` clock alternate reach, pull and the raised foot. Ladder
+  descents use the same contacts; Library shelf grips keep their own pose.
+- **Blocking:** arms were out, but dark sleeves had no palms and the legs
+  merged into a column. Added outward palms, cuffs and separated braced boots.
+  The watch, folded arms and toe-tap fidgets remain; quiet blockers hold both
+  arms out without a walk cycle.
+- **Bombing:** a flashing walker gave no account of the fuse. Added a small
+  charge held between both hands, a shortening lit fuse and three bounded
+  flecks in the final half-second. Knees and elbows fold down in the last
+  second. The numeric countdown, accelerating colour flash and blast are
+  retained: they already tell time and impact clearly.
+- **Floating:** retained the developed dome, panels, rim and breathing flex.
+  Added four narrow-to-open stages over the first cell of floating fall,
+  half-pixel sway, and a stem that reaches the passenger's grip. Opening and
+  sway read `fall` and ticks; no new clock or remembered progress.
+- **Mining left alone:** this simulation has no diagonal mining action or
+  diagonal tool/debris. The Mine skill plants a charge, turns the agent away
+  and later blows a hole. Its pulsing charge, countdown and larger blast
+  already describe that action clearly in the five play frames. Inventing a
+  swinging miner would describe an action the agent does not perform.
+
+**Before / after crops.** All five skills and their phases, before above
+after; temporary artifacts and reproduction scripts are in `/tmp/codex-skills/`:
+
+![Skill phases in play, before and after](/tmp/codex-skills/sheet.png)
+
+**Compatibility.** Res 2 only; there is no intended res-1 change. Against
+`fc05591`, seeded `Math.random` identically for generation and rendering:
+60 levels × ticks 80/200/500/900/1800 × res 1/undefined = **600 byte-identical
+frames**. Another **256 complete skill sprites** match at res 1/undefined,
+including both directions, wet/dry, fuse endings and the previous work tools.
+All **300 res-2 terrain layers** remain identical; **208 complete frames**
+match and **92 differ**. All **26,891 changed pixels** fall inside the selected
+skill sprite/effect bounds, including the wet climber's helmet bubbles.
+No new whole-frame hashes in tests. Draw reads world/agent state and uses
+the existing palette roles;
+Sim.js and Palette.js are unchanged.
+
+**Cost.** Paired before/after on the same world at res 2, alternating order,
+60 warm-up calls then median of 200 calls per renderer. Level 14 tick 701
+(16 visible agents, ten floating): drawActors **1.991 → 2.088 ms**,
+drawTerrain **20.292 → 20.266 ms**. Level 34 tick 601 (15 agents, eight
+climbing, two bashing): drawActors **1.548 → 1.588 ms**, drawTerrain
+**10.009 → 10.008 ms**. These are software-canvas timings; terrain is unchanged
+and the larger actor cost is 0.097 ms. The browser extension connection was
+unavailable. The offline renderer omits font text and approximates gradients;
+tests verify that the retained countdown emits 5/2/1/1 at the sampled fuses.
+
+**Checks.** `npm run check` (including `npm test`) passes; stamps updated.
+New tests cover both resolutions and unspecified res, both directions,
+wet/dry, all themes, finite half-pixel marks, contact geometry, opening,
+sway, fuse stages, braced feet, determinism, no RNG or world writes,
+balanced saves and restored context. Existing idle-gesture tests pass; bomber
+tailoring is checked against its new page silhouette. CRAP over-30 count
+**21 → 21**; new functions score **1–10**, largest changed function is
+`drawAgent` at **24.6**. Work on `codex/skills`; no push or deploy.
+
+Next: review these silhouettes in ordinary play with the retained countdown
+font when the Chromium extension is connected again.
+
+Reviewed and merged by the loop. On the sheet: blockers stand braced with
+both arms out where they used to be a walker standing still, the umbrella
+opens in stages instead of popping, and climbers reach with their hands on
+the face. The bomber's last moments are a small change. Mining was rightly
+left alone: a miner plants a charge, and there is no digging pose to draw.
