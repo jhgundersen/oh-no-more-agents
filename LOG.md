@@ -2567,3 +2567,5 @@ up and broad stride, the cautious raised shoulders and short steps, a
 pencil and screwdriver on the tinkerer, a pocket protector on the engineer,
 dirty knees on the burrower, a bag on the hoarder — and the real-level crowd
 shot still reads as one uniformed colony. Res-1 identical (560 frames).
+
+**Deployed** after 94 (name="build" content="de5da2a3"): patience 900, trait tells. Browser check clean.
