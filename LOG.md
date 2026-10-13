@@ -2585,3 +2585,15 @@ same number for every variant — rerun with a file each.)
 samples, with fewer bombs and timeouts.
 
 **Deployed** after 95 (name="build" content="d0fa156b"): blocker patience. Browser check clean.
+
+## 96 — 2026-10-13 · The director's wait (no change)
+
+**Measured.** How long the director waits on a stalled level before stepping
+in (`runDirector`, 300 ticks), over 420 levels: 150 → 94.35% home, 143
+bombs, 22 timeouts, 50s a level; 200 → 94.64%, 115 bombs, 14 timeouts, 48s;
+300 (current) → 94.41%, 82 bombs, 2 timeouts, 45s; 450 → 94.11%, 6
+timeouts. 200's quarter point costs seven times the timeouts and longer
+levels. Kept 300.
+
+Codex is on making active events visible — blackout / overclock and drift
+(fog, null gravity) had no look at all once the sky banner went.
