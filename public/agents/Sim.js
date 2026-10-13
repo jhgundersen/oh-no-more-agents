@@ -795,6 +795,82 @@ function generate(level, attempt, colonySeed) {
   // The layout belongs to the level; the colony is random unless tests pass a seed.
   if (colonySeed === undefined || colonySeed === null)
     colonySeed = Math.floor(Math.random() * 2147483647)
+  var w = newWorld(level, attempt, colonySeed)
+
+  fillEarth(w, rng)
+
+  // A tower is played in one of two directions, and the roll is the level's
+  // own — level 9 is always the one you climb. Nothing else consumes from the
+  // stream here, so the other eight biomes keep the layouts they always had.
+  var tower = w.biome === "Skyscraper"
+  if (tower) w.ascending = rng() < 0.5
+  var corridors = layCorridors(w, rng, tower)
+
+  // Which corridor the door is on. Every other biome runs the colony downward
+  // and it is the last one; a tower played upward puts it on the roof floor,
+  // and obstacle density, the mission and the bottom pit all follow it there.
+  w.exitCorridor = (tower && w.ascending) ? 0 : corridors.length - 1
+
+  var hazardCorridors = pickHazardCorridors(rng, corridors)
+
+  cutRoutes(w, rng, corridors, tower)
+
+
+  var hatch = placeHatch(w, rng, corridors, tower), first = hatch.first, hx = hatch.hx
+
+  var guardPlan = planGuard(w, level, corridors, hazardCorridors)
+
+  // A roaming armed squad is already the level's threat. Mixing it with up to
+  // three fixed hazards made the board unreadable and turned freezing effects
+  // into effortless executions, so enemy and hazard encounters alternate.
+  if (guardPlan) hazardCorridors = []
+
+  for (var py = first.floorY; py < first.floorY + 2; py++)
+    for (var px = hx - 2; px <= hx + 2; px++) setCell(w, px, py, STEEL)
+
+  var exit = placeExit(w, corridors, tower), last = exit.last, sealFrom = exit.sealFrom
+
+  w.corridors = corridors
+  setupColony(w, rng, attempt, tower)
+
+  for (var s = 0; s < SKILL_ORDER.length; s++) w.granted[SKILL_ORDER[s]] = 0
+
+  placePits(w, rng, corridors, last, hx, sealFrom, tower)
+
+  placeLevelHazards(w, rng, corridors, hazardCorridors)
+
+  placeMission(w, corridors)
+
+  // Waiting for a car is not the same kind of time as walking, and the clock
+  // was set for a game where every handoff was a fall. Two shafts, four or
+  // five stops and a colony of fifteen is most of a minute of standing at
+  // doors that nobody chose to spend.
+  if (tower) w.timeLimit += 30 * (8 + 10 * corridors.length)
+
+  // Fins are slower than shoes, and the clock never knew. SWIM_PACE takes 18%
+  // off every step a diver makes and the Trench was handed the same
+  // LEVEL_LIMIT as nine biomes where nobody is wading — so a level the colony
+  // was solving correctly could still be lost to the horn, which is the one
+  // kind of defeat a player cannot read. Level 100 needed 3509 ticks and had
+  // 3300. This is not a difficulty dial: it is the pace tax handed back, which
+  // is why it is exactly 1/SWIM_PACE and not a number that looked about right.
+  // Measured on level 100 over 60 colonies it took wipeouts from 8 to 3 and
+  // timeouts from 15 to 6; past this it buys nothing, which is the check that
+  // it is a tax and not a crutch.
+  if (w.submerged) w.timeLimit = Math.round(w.timeLimit / SWIM_PACE)
+
+  if (guardPlan) buildGuardBooth(w, guardPlan, corridors, last)
+
+  var mechanism = BIOME_MECHANISMS[w.biome]
+  if (mechanism) mechanism(w, corridors)
+
+  // Last, so that everything above this line still cuts freely (see clearCell).
+  w.bedFloor = corridors[corridors.length - 1].floorY
+
+  return w
+}
+
+function newWorld(level, attempt, colonySeed) {
   var w = {
     level: level,
     attempt: attempt,
@@ -923,14 +999,10 @@ function generate(level, attempt, colonySeed) {
     stoodDownAt: -1,  // and when, for Draw's banner
     nukeTimer: 0
   }
+  return w
+}
 
-  fillEarth(w, rng)
-
-  // A tower is played in one of two directions, and the roll is the level's
-  // own — level 9 is always the one you climb. Nothing else consumes from the
-  // stream here, so the other eight biomes keep the layouts they always had.
-  var tower = w.biome === "Skyscraper"
-  if (tower) w.ascending = rng() < 0.5
+function layCorridors(w, rng, tower) {
 
   // A Trench level played upside down — hatch on the sea floor, way out at the
   // surface — was tried and does not work, and the reason is worth writing
@@ -993,12 +1065,10 @@ function generate(level, attempt, colonySeed) {
   }
 
   if (tower) cutHoistways(w, corridors)
+  return corridors
+}
 
-  // Which corridor the door is on. Every other biome runs the colony downward
-  // and it is the last one; a tower played upward puts it on the roof floor,
-  // and obstacle density, the mission and the bottom pit all follow it there.
-  w.exitCorridor = (tower && w.ascending) ? 0 : corridors.length - 1
-
+function pickHazardCorridors(rng, corridors) {
   // Zero to three dangers, weighted toward one. Corridors are unique so even
   // the busiest roll distributes them through the level instead of stacking
   // three machines into one unavoidable knot.
@@ -1011,7 +1081,10 @@ function generate(level, attempt, colonySeed) {
     var ht = hazardCandidates[hs]; hazardCandidates[hs] = hazardCandidates[hj2]; hazardCandidates[hj2] = ht
   }
   var hazardCorridors = hazardCandidates.slice(0, Math.min(hazardCount, hazardCandidates.length))
+  return hazardCorridors
+}
 
+function cutRoutes(w, rng, corridors, tower) {
   for (var j = 0; j < corridors.length; j++) {
     var cur = corridors[j]
     placeObstacles(w, rng, cur, j, corridors)
@@ -1050,8 +1123,9 @@ function generate(level, attempt, colonySeed) {
         if (solid(w, tx, tc.floorY)) setCell(w, tx, tc.floorY, STEEL)
     }
   }
+}
 
-
+function placeHatch(w, rng, corridors, tower) {
   // The hatch sits in the open sky and drops into the first corridor through
   // a short shaft — 12 cells, comfortably inside SAFE_FALL, so the opening
   // moments are never a scramble.
@@ -1076,17 +1150,10 @@ function generate(level, attempt, colonySeed) {
     w.hatch = { x: hx, y: 3 }
   }
   w.startDir = first.dir
+  return { first: first, hx: hx }
+}
 
-  var guardPlan = planGuard(w, level, corridors, hazardCorridors)
-
-  // A roaming armed squad is already the level's threat. Mixing it with up to
-  // three fixed hazards made the board unreadable and turned freezing effects
-  // into effortless executions, so enemy and hazard encounters alternate.
-  if (guardPlan) hazardCorridors = []
-
-  for (var py = first.floorY; py < first.floorY + 2; py++)
-    for (var px = hx - 2; px <= hx + 2; px++) setCell(w, px, py, STEEL)
-
+function placeExit(w, corridors, tower) {
   // The exit closes out the corridor the route ends on, at the end it arrives
   // from — the bottom floor everywhere, and the top floor of a tower being
   // climbed. Its clearance is kept inside the floor's own bounds, which on a
@@ -1116,12 +1183,10 @@ function generate(level, attempt, colonySeed) {
     for (var sx2 = sealFrom; sx2 < sealFrom + 3; sx2++)
       for (var sy2 = last.floorY - CORR_H + 2; sy2 < last.floorY; sy2++)
         setCell(w, sx2, sy2, DIRT)
+  return { last: last, sealFrom: sealFrom }
+}
 
-  w.corridors = corridors
-  setupColony(w, rng, attempt, tower)
-
-  for (var s = 0; s < SKILL_ORDER.length; s++) w.granted[SKILL_ORDER[s]] = 0
-
+function placePits(w, rng, corridors, last, hx, sealFrom, tower) {
   // The hole in the bottom of the world. It goes in here, after the exit and
   // the wall in front of it are settled — a crossing has to be placed relative
   // to both — and before the floors are roughened.
@@ -1142,7 +1207,9 @@ function generate(level, attempt, colonySeed) {
   for (var bp = 0; bp < w.pits.length; bp++) if (w.pits[bp].crossing) w.skills.builder += 6
 
   for (var rf = 0; rf < corridors.length; rf++) roughFloor(w, corridors[rf], rng, w.biome)
+}
 
+function placeLevelHazards(w, rng, corridors, hazardCorridors) {
   placeDecor(w, rng, corridors)
   for (var hpi = 0; hpi < hazardCorridors.length; hpi++) {
     var placedHazard = placeHazard(w, rng, corridors, hazardCorridors[hpi])
@@ -1166,36 +1233,6 @@ function generate(level, attempt, colonySeed) {
   }
 
   w.hazard = w.hazards.length ? w.hazards[0] : null
-
-  placeMission(w, corridors)
-
-  // Waiting for a car is not the same kind of time as walking, and the clock
-  // was set for a game where every handoff was a fall. Two shafts, four or
-  // five stops and a colony of fifteen is most of a minute of standing at
-  // doors that nobody chose to spend.
-  if (tower) w.timeLimit += 30 * (8 + 10 * corridors.length)
-
-  // Fins are slower than shoes, and the clock never knew. SWIM_PACE takes 18%
-  // off every step a diver makes and the Trench was handed the same
-  // LEVEL_LIMIT as nine biomes where nobody is wading — so a level the colony
-  // was solving correctly could still be lost to the horn, which is the one
-  // kind of defeat a player cannot read. Level 100 needed 3509 ticks and had
-  // 3300. This is not a difficulty dial: it is the pace tax handed back, which
-  // is why it is exactly 1/SWIM_PACE and not a number that looked about right.
-  // Measured on level 100 over 60 colonies it took wipeouts from 8 to 3 and
-  // timeouts from 15 to 6; past this it buys nothing, which is the check that
-  // it is a tax and not a crutch.
-  if (w.submerged) w.timeLimit = Math.round(w.timeLimit / SWIM_PACE)
-
-  if (guardPlan) buildGuardBooth(w, guardPlan, corridors, last)
-
-  var mechanism = BIOME_MECHANISMS[w.biome]
-  if (mechanism) mechanism(w, corridors)
-
-  // Last, so that everything above this line still cuts freely (see clearCell).
-  w.bedFloor = corridors[corridors.length - 1].floorY
-
-  return w
 }
 
 // The red team's post, if this level has one: which corridor, roughly where,

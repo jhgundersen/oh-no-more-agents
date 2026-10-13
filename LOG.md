@@ -3726,3 +3726,19 @@ state switch is a table now; `hooked` and `zip` are absent from it on purpose.
 All ≤ 9. Fingerprint identical (`95742321…`); `npm run sim` unchanged.
 
 Only `generate` (77) is left over 30. Tests 695.
+
+## 138 — 2026-10-14 · Crap: generate — and none left in the game
+
+`generate` (77) now reads as the recipe it always was: `newWorld` (the world
+object), `fillEarth`, `layCorridors`, `pickHazardCorridors`, `cutRoutes`
+(obstacles, descents, chimneys, a tower's steel slabs), `placeHatch`,
+`planGuard`, `placeExit`, `setupColony`, `placePits` (bottom pit, crossings'
+bricks, rough floors), `placeLevelHazards` (decor, hazards, weather),
+`placeMission`, the booth and the biome's mechanism. Each piece was cut out
+whole, comments and all, by line range; the random draws are in the same
+order. Fingerprint identical (`95742321…`).
+
+**Game functions over CRAP 30: 0** (from 26 at the start of the previous
+loop and 13 at the start of this one). What remains over 30 is the dev tooling
+(`tools/simcheck.js` commands, `crc32` in the renderer) and the Worker's
+`readStats`, none of which the tests exercise. Tests 695.
