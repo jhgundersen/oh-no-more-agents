@@ -3257,3 +3257,5 @@ floor), so a miss reads as a miss.
 the trail joins agent to target, and the eye lands on the impact. Draw only;
 Sim untouched. Tests 647 → 649 (`test/shot-art.test.js`: grid, alpha, spark
 timing, res-1 integer pixels). New functions CRAP ≤ 4.6.
+
+**Deployed** after 115 (name="build" content="282b4092"): depth shading, guard posts from level 3, readable shots. Browser check clean.
