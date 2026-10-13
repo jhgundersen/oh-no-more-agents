@@ -20,3 +20,36 @@ for (const [biome, spec] of Object.entries(S.MISSION_SPECS)) {
     }
   })
 }
+
+test("a freed civilian follows an agent heading home, and goes in after it", () => {
+  let checked = 0
+  for (let lv = 1; lv <= 120 && checked < 3; lv++) {
+    const w = S.generate(lv, 0, lv * 7919 + 13)
+    if (!w.mission || w.mission.still) continue
+    let followed = null
+    while (!w.done && w.ticks < 6000) {
+      S.step(w)
+      followed = followed || w.mission.targets.find(t => t.escort >= 0)
+      if (followed && followed.home) break
+    }
+    if (!followed || !followed.home) continue
+    const lead = w.agents.find(a => a.id === followed.escort)
+    assert.equal(lead.state, "saved", "it went in after the agent it followed")
+    assert.ok(w.escortsHome >= 1)
+    assert.ok(w.saved <= w.released, "followers are not counted as agents")
+    checked++
+  }
+  assert.equal(checked, 3)
+})
+
+test("followers leave the frame when home and are named on the report card", () => {
+  const w = S.generate(1, 0, 3), pal = P.build(themeOf("tokyo-night").theme, 1)
+  w.mission = { kind: "civilian", targets: [{ x: 20, y: 30, freed: true, home: true, anim: 0, dir: 1 }], progress: 0, done: true }
+  const img = canvas(400, 248), blank = canvas(400, 248)
+  D.drawMission(img.ctx, w, pal)
+  w.mission.targets = []
+  D.drawMission(blank.ctx, w, pal)
+  assert.deepEqual(img.buf, blank.buf)
+  assert.equal(D.escortLine({ escortsHome: 2 }), " · +2 RESCUED")
+  assert.equal(D.escortLine({}), "")
+})

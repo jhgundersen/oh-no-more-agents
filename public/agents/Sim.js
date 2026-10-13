@@ -9333,8 +9333,9 @@ function stepFreedMission(w, m) {
   if (m.still) return
   for (var i = 0; i < m.targets.length; i++) {
     var t = m.targets[i]
-    if (!t.freed) continue
+    if (!t.freed || t.home) continue
     t.anim++
+    if (stepEscorted(w, t, m.targets)) continue
     var nx = t.x + t.dir * (m.kind === "animal" || m.kind === "camel" ? 0.09 : 0.065)
     if (nx < t.roamMin || nx > t.roamMax) { t.dir = -t.dir; continue }
     var cx = Math.floor(nx)
@@ -9353,6 +9354,76 @@ function stepFreedMission(w, m) {
     t.y = nextFloor
   }
 }
+// Out of the cage, a rescued civilian (or animal) attaches to the nearest
+// agent on foot that is heading for the door and walks in its footsteps, a
+// few paces behind, through whatever the agent does. When the agent goes
+// home, the follower walks the rest of the trail and goes in after it.
+// Render-only in effect: nothing here touches an agent, the exit or the
+// count of agents home; `w.escortsHome` is its own number, for the report.
+var ESCORT_REACH = 8       // cells, to pick an agent up
+var ESCORT_LAG = 10        // ticks behind it
+var ESCORT_GAP = 14        // ticks more for each follower already behind it
+
+function stepEscorted(w, t, targets) {
+  if (t.escort === undefined || t.escort < 0) {
+    var ag = escortFor(w, t)
+    if (!ag) return false
+    t.escort = ag.id
+    t.trail = []
+    // A second follower of the same agent walks further back, or the two
+    // would tread the same trail at the same delay and draw as one.
+    t.lag = ESCORT_LAG
+    for (var j = 0; j < targets.length; j++)
+      if (targets[j] !== t && targets[j].escort === ag.id && !targets[j].home) t.lag += ESCORT_GAP
+  }
+  var lead = agentById(w, t.escort)
+  if (lead && !lead.gone && lead.state !== "saved")
+    t.trail.push([lead.x, lead.y + 1, lead.dir])
+  else if (!lead || lead.state !== "saved") return escortLost(w, t)
+  if (t.trail.length > t.lag || (t.trail.length && lead && lead.state === "saved")) {
+    var p = t.trail.shift()
+    t.x = p[0]; t.y = p[1]; t.dir = p[2]
+  }
+  if (!t.trail.length && lead && lead.state === "saved") {
+    t.home = true
+    t.homeAt = w.ticks
+    w.escortsHome = (w.escortsHome || 0) + 1
+  }
+  return true
+}
+
+function escortFor(w, t) {
+  var best = null, bestD = ESCORT_REACH
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state !== "walk" || Math.abs(ag.y + 1 - t.y) > 1) continue
+    var toExit = w.exit.x + w.exit.w / 2 - ag.x
+    if (toExit * ag.dir <= 0) continue
+    var d = Math.abs(ag.x - t.x)
+    if (d < bestD) { best = ag; bestD = d }
+  }
+  return best
+}
+
+function agentById(w, id) {
+  for (var i = 0; i < w.agents.length; i++) if (w.agents[i].id === id) return w.agents[i]
+  return null
+}
+
+// The agent it was following is gone. Down to the nearest floor, and back to
+// wandering there.
+function escortLost(w, t) {
+  var cx = Math.floor(t.x)
+  var y = Math.floor(t.y)
+  while (y < ROWS - 1 && !solid(w, cx, y)) y++
+  t.y = y
+  t.escort = -1
+  t.trail = null
+  t.roamMin = t.x - 6
+  t.roamMax = t.x + 6
+  return false
+}
+
 // Everybody still out is holding a position, and there is nobody left to hold
 // it for. The old answer was the Lemmings one — blow them up so the level can
 // end — and it was the commonest single death on the board: 116 of 641 over

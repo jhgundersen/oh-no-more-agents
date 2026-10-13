@@ -3020,3 +3020,25 @@ the face. The bomber's last moments are a small change. Mining was rightly
 left alone: a miner plants a charge, and there is no digging pose to draw.
 
 **Deployed** after 107 (name="build" content="b2af17f9"): Chain of Thought (106) and the skills art. Browser check clean.
+
+## 108 — 2026-10-13 · The rescued follow the colony home
+
+**Looked at first:** Web Crawler costs 0.4–1.5 against no hero on three
+samples, but most of that is the hero itself dying (88% home). Fixing it
+would add about 0.1 to the game as a whole, so it was left.
+
+**Mechanic:** a mission's freed civilians (and animals and camels; not the
+Trench's chests) used to pace a twenty-cell strip as scenery. Now each one
+attaches to the nearest agent on foot within 8 cells that is heading for
+the door, and walks in its footsteps 10 ticks behind (`stepEscorted`, a
+trail of the agent's positions). A second follower of the same agent walks
+14 ticks further back, so the two do not draw as one. When the agent goes
+home, the follower walks the rest of the trail and goes in after it. If the
+agent dies, the follower drops to the floor and goes back to wandering
+(`escortLost`). The report card adds "· +N RESCUED" (`escortLine`).
+
+It is a story for the viewer, not a rule. Nothing here touches an agent, the
+exit or the home count: the fingerprint of 240 plays is identical before and
+after. Over 300 levels: 90 missions, 173 freed, 158 followed someone, and
+142 reached the exit. Tests: a follower goes in after the agent it followed,
+followers are not counted as agents, and they leave the frame when home.

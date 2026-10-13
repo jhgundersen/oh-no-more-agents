@@ -2641,6 +2641,11 @@ function levelVerdict(w) {
   return "MORE AGENTS REQUIRED"
 }
 
+// The mission's rescued who followed an agent home (Sim's stepEscorted).
+function escortLine(w) {
+  return w.escortsHome > 0 ? " · +" + w.escortsHome + " RESCUED" : ""
+}
+
 function drawLevelResults(ctx, w, pal) {
   var cx = Math.round(w.k.COLS * w.k.CELL / 2)
   var y = Math.round(w.k.ROWS * w.k.CELL / 2) - 31 + Math.max(0, 10 - w.doneTicks) * 2
@@ -2650,7 +2655,7 @@ function drawLevelResults(ctx, w, pal) {
   ctx.fillStyle = pal.label
   drawTransitionText(ctx, w.saved + " / " + w.toRelease + " HOME", cx, y + 22, 2)
   ctx.fillStyle = w.saved === 0 ? pal.urgent : pal.exitLight
-  drawTransitionText(ctx, levelVerdict(w), cx, y + 43, 1)
+  drawTransitionText(ctx, levelVerdict(w) + escortLine(w), cx, y + 43, 1)
 }
 
 function drawLevelClosing(ctx, w, pal) {
@@ -2976,6 +2981,7 @@ function drawMission(ctx, w, pal) {
 
   for (var i = 0; i < m.targets.length; i++) {
     var t = m.targets[i]
+    if (t.home) continue  // followed an agent in through the exit
     var x = Math.round(t.x * C), y = Math.round(t.y * C)
 
     if (!t.freed && !t.dead) drawMissionContainer(ctx, m.kind, x, y, pal)
