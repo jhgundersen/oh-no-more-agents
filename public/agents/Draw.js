@@ -6555,6 +6555,27 @@ function landSquash(w, ag) {
   return since < 3 ? 2 : (since < 6 ? 1 : 0)
 }
 
+// Up out of a won scuffle (Sim's brawlTick sets wonAt): the forward fist
+// punched at the sky, pumping twice, with two stars over it — the colony's
+// own colour for a moment it does not get many of.
+var VICTORY_TICKS = 18
+function drawVictory(ctx, w, ag, ox, oy, dir, robe, skin, st) {
+  if (ag.wonAt === undefined || st !== "walk") return
+  var age = w.ticks - ag.wonAt
+  if (age < 0 || age >= VICTORY_TICKS) return
+  var pump = (age >> 2) % 2
+  ctx.fillStyle = robe
+  blit(ctx, ox, oy, dir, 7, 2 + pump, 1, 6 - pump)        // forward arm, raised
+  ctx.fillStyle = skin
+  blit(ctx, ox, oy, dir, 7, pump, 2, 2)                   // the fist
+  ctx.fillStyle = BRAWL_STAR
+  for (var i = 0; i < 2; i++) {
+    var sx = dir > 0 ? ox + 9 + i * 3 : ox - 3 - i * 3, sy = oy - 3 - i * 2 - (age >> 3)
+    ctx.fillRect(sx - 1, sy, 3, 1)
+    ctx.fillRect(sx, sy - 1, 1, 3)
+  }
+}
+
 // Home. Arms up and a few sparks off the portal (the hop is on `oy`, above,
 // so the head goes with it) — the fade alone read as an agent switched off
 // rather than one that made it.
@@ -10275,6 +10296,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   drawAgentMarks(ctx, w, pal, ag, ox, oy, dir, st, bodyDrop)
 
   if (heightBodySaved) ctx.restore()
+  drawVictory(ctx, w, ag, ox, oy, dir, robe, skin, st)
 
   drawAgentLabel(ctx, w, pal, ag, ox, oy, st, opts)
 

@@ -80,3 +80,16 @@ test("the fight cloud draws at both resolutions and hides both fighters", () => 
     assert.equal(ctx.globalAlpha, 1)
   }
 })
+
+test("a won scuffle leaves the winner a victory pose for a moment, only when walking", () => {
+  const pal = P.build(themeOf("tokyo-night").theme, 5)
+  const { w, ag } = face()
+  const calls = []
+  const ctx = { globalAlpha: 1, fillStyle: "", fillRect(x, y, ww, hh) { calls.push([x, y, ww, hh]) } }
+  ag.wonAt = 10
+  for (const [t, st, want] of [[9, "walk", false], [10, "walk", true], [27, "walk", true], [28, "walk", false], [12, "fall", false]]) {
+    w.ticks = t; calls.length = 0
+    D.drawVictory(ctx, w, ag, 100, 100, 1, "#111", "#eee", st)
+    assert.equal(calls.length > 0, want, `tick ${t} ${st}`)
+  }
+})

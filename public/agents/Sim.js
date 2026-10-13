@@ -8942,6 +8942,7 @@ function brawlTick(w, en) {
   if (roll < brawlOdds(w, ag)) {
     killEnemy(w, en)
     if (en.gone) creditDowned(ag)
+    ag.wonAt = w.ticks + 1     // for Draw: the fist goes up as it gets up
     w.brawlsWon = (w.brawlsWon || 0) + 1
     w.lastEvent = "brawl won"
   } else {

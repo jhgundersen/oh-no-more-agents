@@ -3764,3 +3764,13 @@ share — was only ever checked by hand. `test/worker.test.js` runs the real
 
 `readStats` 56 → 7. What remains over 30 is dev tooling only (simcheck's
 commands, the renderer's `crc32`). Tests 695 → 701.
+
+## 140 — 2026-10-14 · Fist in the air
+
+An agent that wins a scuffle (122) used to stand up out of the cloud and walk
+on as if nothing had happened. Now `brawlTick` stamps `ag.wonAt` (bookkeeping;
+fingerprint unchanged) and the winner punches its forward fist at the sky for
+18 ticks, pumping twice, with two yellow stars rising over it. Only while it
+is walking, so a winner that is immediately falling or working is drawn as
+that. Looked at level 5's won brawl at ticks 327–336: the fist and stars read
+even next to the guard's defeat pose. Tests 702.
