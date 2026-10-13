@@ -2754,3 +2754,16 @@ line overflowed the board. Now one fitting in three is the board ("0 DAYS
 SAFE"), and the rest are caged work lamps.
 
 **Deployed** after 100 (name="build" content="03add31b"): the Building Site. Browser check clean.
+
+## 101 — 2026-10-13 · Crap: placeDecor
+
+`placeDecor` was a chain of per-biome branches, ten rate blocks and three
+fitting loops (CRAP 50, and the Building Site had just added another
+branch). Now there are two tables: `DECOR_RATES` (with `DECOR_DEFAULT`) and
+`CORRIDOR_FITTINGS` → `shipFittings`, `factoryFittings`, `officeFittings`,
+called corridor by corridor in the order they used to run, so the RNG stream
+is untouched. Verified on the generated decor and terrain of 300 levels
+(identical sha256). CRAP: placeDecor 50 → 13; over-30 count 26 → 22. The
+first name, `DECOR_FITTINGS`, was already taken in Draw.js; check-core-refs
+caught it, because the core files share one browser scope. Not deployed:
+nothing a player can see changed.

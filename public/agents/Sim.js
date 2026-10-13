@@ -2546,128 +2546,118 @@ function skinDesert(w, rng) {
   }
 }
 
+// Windows into the hull, strip lights, floor grating.
+function shipFittings(w, rng, sc) {
+  for (var sx2 = sc.x0 + 4; sx2 < sc.x1 - 6; sx2 += irand(rng, 9, 16)) {
+    // Set into the wall above the corridor, where there is wall to set it
+    // into.
+    var wy = sc.floorY - CORR_H - 4
+    if (solid(w, sx2, wy) && solid(w, sx2 + 3, wy)) {
+      w.decor.push({ x: sx2, y: wy, kind: "window", size: irand(rng, 2, 3), seed: Math.floor(rng() * 1000) })
+    }
+  }
+  // Strip lights along the ceiling and grating along the floor, on a
+  // regular pitch, because nothing on a ship is where it fell.
+  for (var lx = sc.x0 + 3; lx < sc.x1 - 3; lx += 11) {
+    var lceil = sc.floorY - CORR_H - 1
+    if (solid(w, lx, lceil)) w.decor.push({ x: lx, y: lceil + 1, kind: "strip", size: 2, seed: 0 })
+  }
+  for (var gx2 = sc.x0 + 2; gx2 < sc.x1 - 3; gx2 += 6) {
+    if (solid(w, gx2, sc.floorY) && !solid(w, gx2, sc.floorY - 1))
+      w.decor.push({ x: gx2, y: sc.floorY - 1, kind: "grate", size: 1, seed: gx2 })
+  }
+}
+
+// A flywheel, floor vents and pressure gauges.
+function factoryFittings(w, rng, fc) {
+  // One flywheel per corridor at most, and a big one. Seventeen small
+  // cogs at random heights read as stickers on the level rather than as
+  // machinery in it; one large wheel on a bracket reads as a machine room.
+  var cgy = fc.floorY - CORR_H - 4
+  for (var cgTry = 0; cgTry < 8; cgTry++) {
+    var cgx = fc.x0 + 6 + irand(rng, 0, Math.max(1, (fc.x1 - fc.x0) - 16))
+    if (!solid(w, cgx, cgy) || !solid(w, cgx + 4, cgy)) continue
+    w.decor.push({ x: cgx, y: cgy, kind: "cog", size: irand(rng, 4, 6), seed: Math.floor(rng() * 1000) })
+    break
+  }
+
+  // Vents in the floor, breathing smoke up into the corridor.
+  for (var vx = fc.x0 + 6; vx < fc.x1 - 5; vx += irand(rng, 26, 42)) {
+    if (solid(w, vx, fc.floorY) && !solid(w, vx, fc.floorY - 1))
+      w.decor.push({ x: vx, y: fc.floorY - 1, kind: "vent", size: 2, seed: Math.floor(rng() * 1000) })
+  }
+
+  // A pressure gauge or two, set into the wall over the walkway. Ornament
+  // rather than repetition: this is the detail that says the place runs on
+  // steam and somebody is supposed to be reading it.
+  for (var gx3 = fc.x0 + 14; gx3 < fc.x1 - 8; gx3 += irand(rng, 46, 74)) {
+    var gy3 = fc.floorY - CORR_H - 2
+    // Two cells of backing, not one: a gauge is drawn wider than the cell
+    // it is anchored to, and on a single solid cell it hangs out over the
+    // dark and goes back to looking like a sticker on the level.
+    if (solid(w, gx3, gy3) && solid(w, gx3 + 1, gy3) && solid(w, gx3, gy3 - 1))
+      w.decor.push({ x: gx3, y: gy3, kind: "gauge", size: 2, seed: Math.floor(rng() * 1000) })
+  }
+}
+
+// Ceiling strip lights and workstations.
+function officeFittings(w, rng, oc) {
+  // Strip lights on a fixed pitch. The ceiling is the one surface an
+  // office never leaves alone, and a regular row of them going away down
+  // the floor is most of what says "storey" rather than "corridor".
+  for (var olx = oc.x0 + 3; olx < oc.x1 - 3; olx += 9) {
+    var oceil = oc.floorY - CORR_H - 1
+    if (solid(w, olx, oceil)) w.decor.push({ x: olx, y: oceil + 1, kind: "strip", size: 2, seed: 0 })
+  }
+  // Workstations, spaced far enough apart that they read as furniture in
+  // a room rather than as texture on a floor.
+  for (var odx = oc.x0 + 6; odx < oc.x1 - 6; odx += irand(rng, 12, 22)) {
+    if (solid(w, odx, oc.floorY) && !solid(w, odx, oc.floorY - 1)
+        && !solid(w, odx + 1, oc.floorY - 1))
+      w.decor.push({ x: odx, y: oc.floorY - 1, kind: "desk", size: 2, seed: Math.floor(rng() * 1000) })
+  }
+}
+
+// How thick the general scatter lies in each biome: chance per floor cell and
+// per ceiling cell, the least gap between pieces, and what stands on floors.
+// Biomes not listed take the default, the cave's.
+var DECOR_DEFAULT = { floor: 0.13, ceil: 0.07, gap: 4, kinds: ["spire", "clump", "tuft", "tuft"] }
+var DECOR_RATES = {
+  "Jungle":    { floor: 0.34, ceil: 0.26, gap: 2, kinds: ["spire", "spire", "tuft", "tuft", "tuft", "clump"] },
+  "Ice Cave":  { floor: 0.20, ceil: 0.30, gap: 3, kinds: ["spire", "spire", "clump", "tuft"] },
+  "Spaceship": { floor: 0.18, ceil: 0.16, gap: 5, kinds: ["spire", "clump", "clump", "tuft"] },
+  // The lowest rates of any biome. The fittings below carry this room's
+  // character on their own, and the general scatter was competing with them.
+  "Factory":   { floor: 0.07, ceil: 0.05, gap: 7, kinds: ["spire", "spire", "clump"] },
+  // Pallets and spoil heaps on the floor, nothing grown on the ceiling yet.
+  "Building Site": { floor: 0.12, ceil: 0.04, gap: 5, kinds: ["clump", "clump", "spire", "tuft"] },
+  // Sacks and parcels on the floor; nothing grows in a sorting office.
+  "Mail Room": { floor: 0.10, ceil: 0.03, gap: 5, kinds: ["clump", "clump", "spire"] },
+  // Book piles on the floor, not much hanging: it is dusted, mostly.
+  "Library":   { floor: 0.12, ceil: 0.03, gap: 5, kinds: ["clump", "clump", "spire"] },
+  // Cable runs off the ceiling, almost nothing on the floor: it is swept.
+  "Data Center": { floor: 0.05, ceil: 0.10, gap: 6, kinds: ["clump", "spire"] },
+  // Sparse, and almost nothing hangs: there is no damp for it to grow in.
+  "Desert":    { floor: 0.11, ceil: 0.02, gap: 5, kinds: ["spire", "clump", "clump", "tuft"] },
+  // Nothing grows in an office. What is on the floor was put there, so the
+  // general scatter is turned right down and the fittings below do the work.
+  "Skyscraper": { floor: 0.06, ceil: 0.04, gap: 8, kinds: ["spire", "clump"] }
+}
+
+// The fittings a built biome puts in each corridor before the scatter, one
+// function per biome, called corridor by corridor.
+var CORRIDOR_FITTINGS = {
+  "Spaceship": shipFittings,
+  "Factory": factoryFittings,
+  "Skyscraper": officeFittings
+}
+
 function placeDecor(w, rng, corridors) {
-  var floorRate = 0.13, ceilRate = 0.07, gap = 4
-  var floorKinds = ["spire", "clump", "tuft", "tuft"]
-
-  if (w.biome === "Jungle") {
-    floorRate = 0.34; ceilRate = 0.26; gap = 2
-    floorKinds = ["spire", "spire", "tuft", "tuft", "tuft", "clump"]
-  } else if (w.biome === "Ice Cave") {
-    floorRate = 0.20; ceilRate = 0.30; gap = 3
-    floorKinds = ["spire", "spire", "clump", "tuft"]
-  } else if (w.biome === "Spaceship") {
-    floorRate = 0.18; ceilRate = 0.16; gap = 5
-    floorKinds = ["spire", "clump", "clump", "tuft"]
-  } else if (w.biome === "Factory") {
-    // The lowest rates of any biome. The fittings below carry this room's
-    // character on their own, and the general scatter was competing with them.
-    floorRate = 0.07; ceilRate = 0.05; gap = 7
-    floorKinds = ["spire", "spire", "clump"]
-  } else if (w.biome === "Building Site") {
-    // Pallets and spoil heaps on the floor, nothing grown on the ceiling yet.
-    floorRate = 0.12; ceilRate = 0.04; gap = 5
-    floorKinds = ["clump", "clump", "spire", "tuft"]
-  } else if (w.biome === "Mail Room") {
-    // Sacks and parcels on the floor; nothing grows in a sorting office.
-    floorRate = 0.10; ceilRate = 0.03; gap = 5
-    floorKinds = ["clump", "clump", "spire"]
-  } else if (w.biome === "Library") {
-    // Book piles on the floor, not much hanging: it is dusted, mostly.
-    floorRate = 0.12; ceilRate = 0.03; gap = 5
-    floorKinds = ["clump", "clump", "spire"]
-  } else if (w.biome === "Data Center") {
-    // Cable runs off the ceiling, almost nothing on the floor: it is swept.
-    floorRate = 0.05; ceilRate = 0.10; gap = 6
-    floorKinds = ["clump", "spire"]
-  } else if (w.biome === "Desert") {
-    // Sparse, and almost nothing hangs: there is no damp for it to grow in.
-    floorRate = 0.11; ceilRate = 0.02; gap = 5
-    floorKinds = ["spire", "clump", "clump", "tuft"]
-  } else if (w.biome === "Skyscraper") {
-    // Nothing grows in an office. What is on the floor was put there, so the
-    // general scatter is turned right down and the fittings below do the work.
-    floorRate = 0.06; ceilRate = 0.04; gap = 8
-    floorKinds = ["spire", "clump"]
-  }
-
-  if (w.biome === "Spaceship") {
-    for (var si = 0; si < corridors.length; si++) {
-      var sc = corridors[si]
-      for (var sx2 = sc.x0 + 4; sx2 < sc.x1 - 6; sx2 += irand(rng, 9, 16)) {
-        // Set into the wall above the corridor, where there is wall to set it
-        // into.
-        var wy = sc.floorY - CORR_H - 4
-        if (solid(w, sx2, wy) && solid(w, sx2 + 3, wy)) {
-          w.decor.push({ x: sx2, y: wy, kind: "window", size: irand(rng, 2, 3), seed: Math.floor(rng() * 1000) })
-        }
-      }
-      // Strip lights along the ceiling and grating along the floor, on a
-      // regular pitch, because nothing on a ship is where it fell.
-      for (var lx = sc.x0 + 3; lx < sc.x1 - 3; lx += 11) {
-        var lceil = sc.floorY - CORR_H - 1
-        if (solid(w, lx, lceil)) w.decor.push({ x: lx, y: lceil + 1, kind: "strip", size: 2, seed: 0 })
-      }
-      for (var gx2 = sc.x0 + 2; gx2 < sc.x1 - 3; gx2 += 6) {
-        if (solid(w, gx2, sc.floorY) && !solid(w, gx2, sc.floorY - 1))
-          w.decor.push({ x: gx2, y: sc.floorY - 1, kind: "grate", size: 1, seed: gx2 })
-      }
-    }
-  }
-
-  if (w.biome === "Factory") {
-    for (var fi = 0; fi < corridors.length; fi++) {
-      var fc = corridors[fi]
-      // One flywheel per corridor at most, and a big one. Seventeen small
-      // cogs at random heights read as stickers on the level rather than as
-      // machinery in it; one large wheel on a bracket reads as a machine room.
-      var cgy = fc.floorY - CORR_H - 4
-      for (var cgTry = 0; cgTry < 8; cgTry++) {
-        var cgx = fc.x0 + 6 + irand(rng, 0, Math.max(1, (fc.x1 - fc.x0) - 16))
-        if (!solid(w, cgx, cgy) || !solid(w, cgx + 4, cgy)) continue
-        w.decor.push({ x: cgx, y: cgy, kind: "cog", size: irand(rng, 4, 6), seed: Math.floor(rng() * 1000) })
-        break
-      }
-
-      // Vents in the floor, breathing smoke up into the corridor.
-      for (var vx = fc.x0 + 6; vx < fc.x1 - 5; vx += irand(rng, 26, 42)) {
-        if (solid(w, vx, fc.floorY) && !solid(w, vx, fc.floorY - 1))
-          w.decor.push({ x: vx, y: fc.floorY - 1, kind: "vent", size: 2, seed: Math.floor(rng() * 1000) })
-      }
-
-      // A pressure gauge or two, set into the wall over the walkway. Ornament
-      // rather than repetition: this is the detail that says the place runs on
-      // steam and somebody is supposed to be reading it.
-      for (var gx3 = fc.x0 + 14; gx3 < fc.x1 - 8; gx3 += irand(rng, 46, 74)) {
-        var gy3 = fc.floorY - CORR_H - 2
-        // Two cells of backing, not one: a gauge is drawn wider than the cell
-        // it is anchored to, and on a single solid cell it hangs out over the
-        // dark and goes back to looking like a sticker on the level.
-        if (solid(w, gx3, gy3) && solid(w, gx3 + 1, gy3) && solid(w, gx3, gy3 - 1))
-          w.decor.push({ x: gx3, y: gy3, kind: "gauge", size: 2, seed: Math.floor(rng() * 1000) })
-      }
-    }
-  }
-
-  if (w.biome === "Skyscraper") {
-    for (var oi = 0; oi < corridors.length; oi++) {
-      var oc = corridors[oi]
-      // Strip lights on a fixed pitch. The ceiling is the one surface an
-      // office never leaves alone, and a regular row of them going away down
-      // the floor is most of what says "storey" rather than "corridor".
-      for (var olx = oc.x0 + 3; olx < oc.x1 - 3; olx += 9) {
-        var oceil = oc.floorY - CORR_H - 1
-        if (solid(w, olx, oceil)) w.decor.push({ x: olx, y: oceil + 1, kind: "strip", size: 2, seed: 0 })
-      }
-      // Workstations, spaced far enough apart that they read as furniture in
-      // a room rather than as texture on a floor.
-      for (var odx = oc.x0 + 6; odx < oc.x1 - 6; odx += irand(rng, 12, 22)) {
-        if (solid(w, odx, oc.floorY) && !solid(w, odx, oc.floorY - 1)
-            && !solid(w, odx + 1, oc.floorY - 1))
-          w.decor.push({ x: odx, y: oc.floorY - 1, kind: "desk", size: 2, seed: Math.floor(rng() * 1000) })
-      }
-    }
-  }
+  var rates = DECOR_RATES[w.biome] || DECOR_DEFAULT
+  var floorRate = rates.floor, ceilRate = rates.ceil, gap = rates.gap
+  var floorKinds = rates.kinds
+  var fittings = CORRIDOR_FITTINGS[w.biome]
+  if (fittings) for (var fi = 0; fi < corridors.length; fi++) fittings(w, rng, corridors[fi])
 
   for (var i = 0; i < corridors.length; i++) {
     var c = corridors[i]
