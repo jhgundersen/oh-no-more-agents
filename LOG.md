@@ -2290,3 +2290,19 @@ across 79–83 the worst went from −3.4 to about −1, Beam Search and Guard
 Rails from heavy costs to near even, and heroes get home far more often.
 
 **Deployed** after 83 (name="build" content="51f5a1f2"): hero balance 82–83. Browser check clean.
+
+## 84 — 2026-10-13 · Crap: the rest of the catalogue
+
+**Changed.** More of `test/catalogue.test.js`: every hazard kind placed by
+hand and run through its cycle with the colony walking past; an enemy sniper
+level played until it has changed state; Fallback's net drawn through its
+life, with and without a special; Model Collapse's copy placement (ahead,
+same way, and no fourth generation). `drawAgent` was already split (21.5)
+— Codex did it in passing.
+
+**Tried and dropped.** A hand-placed sniper post to reach `stepSniper`'s
+fire path: the colony's line to it was blocked in that layout and the test
+only ever saw "idle". Not worth a level built for it.
+
+**Checked.** Over 30: 30 → 28; ten of those are the simcheck CLI, the
+render tool's crc32 and the worker's `readStats` — dev tooling no test runs.
