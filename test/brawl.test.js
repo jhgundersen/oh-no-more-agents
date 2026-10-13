@@ -93,3 +93,22 @@ test("a won scuffle leaves the winner a victory pose for a moment, only when wal
     assert.equal(calls.length > 0, want, `tick ${t} ${st}`)
   }
 })
+
+test("the Bouncer throws a lone agent back alive, and takes BOUNCER_HP scuffles to put down", () => {
+  const { w, ag, en } = face()
+  en.kind = "bouncer"; en.hp = S.BOUNCER_HP
+  let thrown = 0, won = 0
+  for (let t = 0; t < 400 && !en.gone; t++) {
+    Object.assign(ag, { gone: false, state: "walk", x: en.x - 0.3, stunFor: 0 })
+    en.state = "walk"
+    w.ticks = t * 37
+    if (!S.stepBrawl(w, en)) continue
+    while (en.state === "brawl") { w.ticks++; S.stepBrawl(w, en) }
+    if (ag.state === "stunned") { thrown++; assert.ok(!ag.gone, "thrown, not killed") }
+    else won++
+  }
+  assert.ok(en.gone, "put down in the end")
+  assert.equal(won, S.BOUNCER_HP)
+  assert.ok(thrown > 0)
+  assert.equal(w.lost, 0)
+})

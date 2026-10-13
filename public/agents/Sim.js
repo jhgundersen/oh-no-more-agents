@@ -1277,6 +1277,7 @@ function planGuard(w, level, corridors, hazardCorridors) {
   }
   else if (enemyKindRoll < 0.32) w.enemyRoster.push("operator")
   else if (enemyKindRoll < 0.57) w.enemyRoster.push("sniper")
+  else if (enemyKindRoll < 0.72) w.enemyRoster.push("bouncer")
   else {
     var enemyCount = irand(enemyRng, 1, 2)
     for (var er = 0; er < enemyCount; er++) w.enemyRoster.push("gun")
@@ -8315,7 +8316,7 @@ function spawnEnemy(w, kind) {
     deployLeft: kind === "operator" ? 6 : (kind === "sniper" ? 9 : 0),
     timer: 0, fall: 0, anim: 0, shoves: 0,
     targetId: 0, lineTo: 0, lineY: 0, shotFor: 0,
-    boss: !!w.bossPost, hp: w.bossPost ? BOSS_HP : 1,
+    boss: !!w.bossPost, hp: w.bossPost ? BOSS_HP : (kind === "bouncer" ? BOUNCER_HP : 1),
     gone: false
   }
 }
@@ -8767,7 +8768,7 @@ function stepEnemyWalk(w, en) {
   en.seekingUp = false
   if (enemyMakesRoom(w, en)) return
   if (en.kind === "xeno" && xenoCloses(w, en)) return
-  var target = en.kind === "xeno" ? null : enemyTarget(w, en, 24)
+  var target = en.kind === "xeno" || en.kind === "bouncer" ? null : enemyTarget(w, en, 24)
   if (target) return enemyEngages(en, target)
   en.targetId = 0
   if (seekEnemyJetUp(w, en)) {
@@ -8939,7 +8940,9 @@ function brawlTick(w, en) {
   if (!ag || ag.gone || ag.state !== "brawl") { en.state = "walk"; en.timer = 0; return }
   if (--en.brawlFor > 0) return
   var roll = (w.ticks * 37 + ag.id * 61 + en.id * 17) % 100
-  if (roll < brawlOdds(w, ag)) {
+  var odds = brawlOdds(w, ag) - (en.kind === "bouncer" ? BOUNCER_EDGE : 0)
+  if (en.kind === "bouncer" && roll >= odds) { bouncerThrows(w, en, ag); return }
+  if (roll < odds) {
     killEnemy(w, en)
     if (en.gone) creditDowned(ag)
     ag.wonAt = w.ticks + 1     // for Draw: the fist goes up as it gets up
@@ -8954,6 +8957,32 @@ function brawlTick(w, en) {
     en.state = "walk"; en.timer = 0
   }
   if (!ag.gone) { ag.state = "walk"; ag.idle = 0 }
+}
+
+// The Bouncer: the red team's one heavy with no gun. It walks its stretch of
+// corridor and nobody gets past it on their own — lose the scuffle and you
+// are thrown back down the corridor, winded but alive. It takes BOUNCER_HP
+// scuffles won to put down, and the odds of winning one are the brawl's
+// (better with company), so the colony gets past it the only way it can:
+// by piling up behind it and going in together.
+var BOUNCER_HP = 3
+var BOUNCER_THROW = 3      // cells an agent is thrown back
+var BOUNCER_EDGE = 20      // percent off the agent's brawl odds against it
+
+function bouncerThrows(w, en, ag) {
+  var back = ag.x >= en.x ? 1 : -1
+  for (var i = 0; i < BOUNCER_THROW * 4; i++) {
+    var nx = ag.x + back * 0.25
+    if (solid(w, Math.floor(nx), Math.floor(ag.y))) break
+    ag.x = nx
+  }
+  ag.dir = back
+  ag.state = "stunned"
+  ag.stunFor = 24
+  ag.thrownAt = w.ticks
+  en.state = "walk"
+  en.timer = 0
+  w.lastEvent = "thrown out"
 }
 
 function brawlOdds(w, ag) {

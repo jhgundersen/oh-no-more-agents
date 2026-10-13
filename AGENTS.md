@@ -503,6 +503,11 @@ from stable state (ticks, ids) so none draws on a random stream:
   with it for `BRAWL_TICKS`; 50% alone, +15% per colleague within four cells
   (up to three). Both are drawn as one cartoon fight cloud.
 
+- **The Bouncer** (`bouncerThrows`): a gunless post (15% of posts) that
+  walks its stretch of corridor. A scuffle lost to it throws the agent back
+  three cells, stunned but alive; it takes `BOUNCER_HP` 3 scuffles won, at
+  the brawl odds minus `BOUNCER_EDGE` 20, so the colony beats it by bunching
+  up. About two throws a level, put down in 10 of 18, nobody killed by it.
 - **The Moderator** (`bossLevel`): every eighth level (not the Trench) the
   post is one crowned gunner with `BOSS_HP` 3; any hit — round, scuffle,
   ricochet — only staggers it (`staggerBoss`) until the last. Those levels

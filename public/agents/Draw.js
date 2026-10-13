@@ -8362,7 +8362,41 @@ function drawBrawlStars(ctx, pal, cx, cy, t, step) {
 }
 var BRAWL_STAR = "#ffe68a"
 
-var ENEMY_DRAW = { gun: drawGunner, drone: drawDrone, operator: drawOperator,
+// The Bouncer (Sim: bouncerThrows): no gun, arms folded, bald, shades and an
+// earpiece, a size broader than a gunner in the red team's oxblood. Its arms
+// unfold while it is reeling from a lost scuffle, and its pips count the
+// scuffles still needed to put it down.
+var BOUNCER_SKIN = "#c9a28a", BOUNCER_SUIT = "#8f1f35", BOUNCER_DARK = "#5e1424"
+function drawBouncer(ctx, w, pal, en, ox, oy, dir, m) {
+  ctx.fillStyle = BOUNCER_SUIT
+  blit(ctx, ox, oy, dir, -1, 5, 10, 8)                 // shoulders and chest
+  ctx.fillStyle = BOUNCER_DARK
+  blit(ctx, ox, oy, dir, -1, 5, 10, 1)
+  ctx.fillStyle = BOUNCER_SKIN
+  blit(ctx, ox, oy, dir, 2, 0, 5, 5)                   // the head, shaved
+  ctx.fillStyle = "#16161c"
+  blit(ctx, ox, oy, dir, 2, 2, 5, 1)                   // shades
+  ctx.fillStyle = "#d9d7cf"
+  blit(ctx, ox, oy, dir, 1, 2, 1, 2)                   // earpiece
+  if (en.state === "recover") {
+    ctx.fillStyle = BOUNCER_SUIT
+    blit(ctx, ox, oy, dir, -2, 6, 1, 5); blit(ctx, ox, oy, dir, 9, 6, 1, 5)   // arms flung out
+    ctx.fillStyle = BOUNCER_SKIN
+    blit(ctx, ox, oy, dir, -2, 11, 1, 1); blit(ctx, ox, oy, dir, 9, 11, 1, 1)
+  } else {
+    ctx.fillStyle = BOUNCER_DARK
+    blit(ctx, ox, oy, dir, 0, 8, 8, 2)                 // arms folded
+    ctx.fillStyle = BOUNCER_SKIN
+    blit(ctx, ox, oy, dir, 0, 8, 1, 1); blit(ctx, ox, oy, dir, 7, 9, 1, 1)
+  }
+  drawEnemyFeet(ctx, w, en, ox, oy, dir, m, 13, BOUNCER_DARK)
+  for (var i = 0; i < 3; i++) {
+    ctx.fillStyle = i < en.hp ? "#ff5268" : "#3a2a30"
+    ctx.fillRect(ox + 1 + i * 3, oy - 3, 2, 1)
+  }
+}
+
+var ENEMY_DRAW = { bouncer: drawBouncer, gun: drawGunner, drone: drawDrone, operator: drawOperator,
   sniper: drawSniper, xeno: drawXeno, harpoon: drawHarpoon }
 
 // Like colony deaths, these are dated poses at the last position, not actors.

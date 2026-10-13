@@ -3799,3 +3799,28 @@ the tests) and `crc32` in the PNG writer.
 
 **CRAP over 30 in the whole repository: 0.** Highest now `walkHazardAhead`
 and `drawMachines` at 29.6. Tests 702 → 709.
+
+## 142 — 2026-10-14 · The Bouncer
+
+**Looked at first:** level 37 as a viewer, eight frames across its run. The
+colony went hatch → right-hand drop → bottom corridor and never walked the
+three in between. Measured over 200 levels it is an outlier: 90% of
+corridors are walked on average, five levels under 60%. Left alone.
+
+**Change:** a new red-team post with no gun. The Bouncer walks its stretch of
+corridor, arms folded, and every walker that reaches it is in a scuffle (the
+brawl from 122). Lose and you are thrown back three cells, stunned for 24
+ticks — alive. It takes three scuffles won to put down, at the brawl's odds
+less 20 points: 30% alone, 75% with three colleagues close. So a lone agent
+bounces off it, the queue piles up behind, and the crowd goes in together and
+wins. It takes the 0.57–0.72 slice of the post roll (15% of posts) from the
+gunners; the draws are unchanged.
+
+**Measured:** 18 Bouncer levels in 3–400: 95.4% home, put down in 10, 35
+throws, nobody killed by it (at 0 points off: 96.5%, 18 throws — too easy).
+All guard posts: home 91.07 → 91.93%. `npm run sim`: 99% / 92%, hangs 0.
+
+**Drawing:** `drawBouncer`, a size broader than a gunner, oxblood suit,
+shaved head, shades and an earpiece, arms folded (flung out while it reels),
+three pips over its head. Looked at level 13 (Library) walking and mid-scuffle.
+Tests 710.
