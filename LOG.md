@@ -3824,3 +3824,5 @@ All guard posts: home 91.07 → 91.93%. `npm run sim`: 99% / 92%, hangs 0.
 shaved head, shades and an earpiece, arms folded (flung out while it reels),
 three pips over its head. Looked at level 13 (Library) walking and mid-scuffle.
 Tests 710.
+
+**Deployed** after 142 (name="build" content="95a982af"): victory pose, the Bouncer. Browser check clean.
