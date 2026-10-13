@@ -2842,3 +2842,76 @@ Codex is on `codex/audit`: find the three weakest-looking things in the game
 as a whole and improve them, with before/after crops.
 
 **Deployed** after 104 (name="build" content="6ae9f5ce"): the leapers (103) and hitWall. Browser check clean. Codex was relaunched on the audit after a capacity error at its start.
+
+## 105 — 2026-10-13 · Art audit: show the work
+
+**Audit.** Rendered all fifteen biomes (levels 1–15) at res 2, enlarged
+with nearest-neighbour scaling, at early release, tick 500, a death, an
+actual event and the end. Varied colony seeds to find those moments; the
+Cavern and Building Site death supplements are levels 31 and 30. Trench
+has no entries in `EVENTS`, so its event slot is marked absent. Reviewed
+the fifteen five-frame strips, enlarged gameplay crops, isolated stroke
+phases and the finished before/after sheet. The exits, biome scenery,
+enemies and deaths have more developed silhouettes than the ordinary
+workers; the weakest three were:
+
+- **Bashing:** an empty-handed punch, with no clear cutting edge. Added a
+  steel pick with a dark socket, bright edge, stepped handle and gripping
+  hand; wind-up and strike follow the existing six-tick bash timer.
+- **Digging:** cuffs moving at the boots, with no visible shovel. Added a
+  tapered steel spade, shaft and grip; the blade alternates between the
+  floor and a lifted stroke on the seven-tick dig timer.
+- **Building:** the same brick held in the same place through every step.
+  The sleeve, cuff, palm and shaded brick now carry, reach and lower into
+  place on the six-tick build timer. The brick keeps the biome's dirt roles.
+
+These are frequently seen work: bashing appeared on 57 of 60 sampled levels,
+building on 44 and digging on 28. The figures keep their suits and helmets;
+tools use palette roles, opaque half-pixel marks and both facing directions.
+No extra particles, clocks, randomness or world writes.
+
+**Before / after crops.** Temporary audit artifacts, kept outside the commit
+as requested; the sheet includes gameplay crops and stroke phases:
+
+![Bashing before](/tmp/codex-audit/before-bash-play.png)
+![Bashing after](/tmp/codex-audit/after-bash-play.png)
+![Digging before](/tmp/codex-audit/before-dig-play.png)
+![Digging after](/tmp/codex-audit/after-dig-play.png)
+![Building before](/tmp/codex-audit/before-build-play.png)
+![Building after](/tmp/codex-audit/after-build-play.png)
+
+![Three changes, before and after](/tmp/codex-audit/sheet.png)
+
+**Compatibility.** Res 2 only: the panel's coarse art remains useful and
+these small tools need the page's extra pixels. Against `d287b08`, seeded
+`Math.random` identically before each generation/render: 60 levels × ticks
+80/200/500/900/1800 × res 1/undefined = **600 byte-identical frames**.
+At res 2, all 300 terrain layers are identical; 264 complete frames are
+identical and 36 differ, with all 2,450 changed pixels inside the selected
+workers' sprite bounds. No whole-frame hashes added to tests. Reproduction
+scripts and seed/tick manifest are in `/tmp/codex-audit/`.
+
+**Cost.** Paired before/after calls on the same world, alternating order,
+60 warm-up calls then median of 200 per renderer, res 2. Level 20 tick 531
+(18 agents, two enemies): drawActors **0.863 → 0.855 ms**, drawTerrain
+**12.330 → 12.343 ms**. The working stress sample, level 29 tick 991
+(14 agents, four bashers and two builders): drawActors **1.757 → 1.832 ms**,
+drawTerrain **21.868 → 21.863 ms**. These are the repo's software canvas,
+not browser frame timings; the Chromium extension connection was unavailable.
+The terrain path is unchanged; the extra worker art costs about 0.075 ms
+on that sample. The offline renderer skips browser-font text and approximates
+gradients, so the sky-band text was not part of the visual selection.
+
+**Checks.** `npm run check` (including `npm test`) passes; stamps updated.
+New tests cover both resolutions and unspecified res, both directions,
+wet/dry sprites, all five themes, stroke visibility, finite half-pixel
+coordinates, palette roles, bounds, determinism, read-only world/agent state,
+balanced saves and restored context. CRAP over-30 count **21 → 21**;
+new functions score **2–5**, changed entry points at most **11**.
+Work on `codex/audit`; no push or deploy.
+
+Reviewed and merged by the loop. The before/after sheet shows each change:
+the basher used to hold a stub and now swings a pick through four frames,
+the digger used to crouch over nothing and now has a spade, and the builder
+lays each brick at the stair edge instead of carrying it. These skills are
+on screen in nearly every level.
