@@ -228,3 +228,23 @@ test("condemn: a special at its limit goes up without the toolbar", () => {
   assert.equal(ag.state, "bomb")
   assert.ok(ag.condemned)
 })
+
+test("a parried round sometimes goes back into the guard who fired it", () => {
+  let back = 0, kept = 0
+  for (let t = 0; t < 200; t++) {
+    const w = S.generate(13, 0, 3)
+    const ag = floorAgent(w, 40)
+    const en = S.spawnEnemy(w, "gun")
+    en.x = 50; en.y = ag.y
+    w.enemies = [en]
+    w.ticks = t
+    S.umbrellaRicochet(w, ag, en)
+    if (en.gone) { back++; assert.equal(w.ricochets, 1) } else kept++
+  }
+  assert.ok(back > 0 && kept > back, `${back} back, ${kept} not`)
+  const w = S.generate(13, 0, 3), ag = floorAgent(w, 40)
+  S.umbrellaRicochet(w, ag, undefined)
+  const drone = S.spawnEnemy(w, "drone")
+  for (let t = 0; t < 100; t++) { w.ticks = t; S.umbrellaRicochet(w, ag, drone) }
+  assert.ok(!drone.gone, "a drone is not shot by its own round")
+})

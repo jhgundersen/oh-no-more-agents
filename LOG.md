@@ -3506,3 +3506,17 @@ Game functions over CRAP 30: **10 → 8**, behaviour unchanged.
 
 All ≤ 11. Fingerprint identical before and after (`498a5073…`, which already
 includes the brawls). Tests 682 pass.
+
+## 125 — 2026-10-13 · Ricochet
+
+The umbrella parry (116) stopped the round in the canopy and that was all.
+Now 35% of parried rounds go straight back into the guard who fired them
+(`umbrellaRicochet`, stable-state roll separate from the parry's; not off a
+drone). And every parry is seen: for three ticks the round strikes the
+canopy with a white flash and sparks thrown back toward the gun.
+
+**Measured** (238 guard-post plays): home on post levels 92.64 → 92.88%,
+guards down 183 → 190. At 20% it was 3 ricochets in 119 guard levels, too rare
+to be anything; at 35% it is a small surprise every dozen or so guard levels.
+Looked at level 13 ticks 183–185: tracer, flash on the canopy, sparks. Tests
+683.

@@ -4308,6 +4308,19 @@ function umbrellaParries(w, ag, fromX) {
   return true
 }
 
+// Now and then the round that hit the canopy goes straight back the way it
+// came, and the guard who fired it finds out what an umbrella is for. Rolled
+// from stable state, a separate draw from the parry's.
+var BROLLY_RICOCHET = 35
+
+function umbrellaRicochet(w, ag, by) {
+  if (!by || by.gone || by.kind === "drone") return
+  if ((w.ticks * 53 + ag.id * 29 + by.id * 7) % 100 >= BROLLY_RICOCHET) return
+  killEnemy(w, by)
+  w.ricochets = (w.ricochets || 0) + 1
+  w.lastEvent = "ricochet"
+}
+
 function brollyFacing(ag, fromX) {
   return !ag.brollyDir || (fromX >= ag.x ? 1 : -1) === ag.brollyDir
 }
@@ -8559,10 +8572,10 @@ function threatAhead(w, ag, reach) {
   return false
 }
 
-function woundFriendly(w, ag, fromX, lethal) {
+function woundFriendly(w, ag, fromX, lethal, by) {
   if (!ag || ag.gone || ag.state === "saved") return
   if (shieldStops(w, ag, fromX)) return
-  if (umbrellaParries(w, ag, fromX)) return
+  if (umbrellaParries(w, ag, fromX)) { umbrellaRicochet(w, ag, by); return }
   ag.wounds = lethal ? 2 : (ag.wounds || 0) + 1
   addBlood(w, ag.x, ag.y - 1.5, ag.wounds >= 2 ? 16 : 7)
   if (ag.wounds >= 2) {
@@ -8746,7 +8759,7 @@ function fireEnemyGun(w, en) {
         // that aims for over a second to graze somebody was the one red-team
         // roster the colony did not need to fear: 97.7% home against 94.9%
         // with no enemies at all, 0.08 deaths a level. Lethal: 94.5%, 0.58.
-        woundFriendly(w, ag, en.x, true)
+        woundFriendly(w, ag, en.x, true, en)
         // Parried: the round stops in the canopy, not in the agent behind it.
         if (!ag.gone && ag.brollyFor > 0 && ag.brollyDir) en.lineTo = ag.x + ag.brollyDir * 2
         return

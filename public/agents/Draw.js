@@ -6354,6 +6354,7 @@ function drawUmbrellaShield(ctx, w, pal, ag, ox, oy) {
   if (!ag.brollyDir) { drawUmbrellaOverhead(ctx, w, pal, ox, oy, open, brolly); return }
   var d = ag.brollyDir, half = Math.max(1, Math.round(6 * open))
   var shake = held < 8 && held % 2 ? 1 : 0
+  if (held < 3) drawCanopySpark(ctx, ox, oy, d, held)
   if ((w.res || 1) >= 2) { drawShieldCanopyFine(ctx, pal, ox, oy, d, open, shake * 0.5, brolly); return }
   ctx.fillStyle = pal.umbrellaStem
   blit(ctx, ox, oy, d, 7, 8, 3, 1)                         // shaft from the hand
@@ -6390,6 +6391,16 @@ function drawShieldCanopyFine(ctx, pal, ox, oy, d, open, shake, brolly) {
   ctx.globalAlpha = 1
   blitFine(ctx, ox, oy, d, base + 0.5, 8 - half - 0.5, 0.5, 0.5)       // tips
   blitFine(ctx, ox, oy, d, base + 0.5, 8 + half + 0.5, 0.5, 0.5)
+}
+
+// The round striking the canopy: a white flash and sparks thrown back toward
+// the gun for the first three ticks.
+function drawCanopySpark(ctx, ox, oy, d, held) {
+  ctx.fillStyle = held ? BRAWL_STAR : "#ffffff"
+  blit(ctx, ox, oy, d, 13, 7, 1, 2)
+  blit(ctx, ox, oy, d, 14 + held, 6 - held, 1, 1)
+  blit(ctx, ox, oy, d, 14 + held, 9 + held, 1, 1)
+  blit(ctx, ox, oy, d, 15 + held * 2, 8, 1, 1)
 }
 
 function drawUmbrellaOverhead(ctx, w, pal, ox, oy, open, brolly) {
