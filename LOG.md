@@ -3097,3 +3097,5 @@ explorer, boar, bird, monkey, both camels) has a run cycle, a scramble in
 the air and a climb, and fades into the doorway over thirteen ticks. The
 report card gains a fourth line, "+N RESCUED", with a small icon of each one
 rescued. That is legible at both resolutions.
+
+**Deployed** after 110 (name="build" content="8bd5664e"): follower art and stepWalk. Browser check clean.
