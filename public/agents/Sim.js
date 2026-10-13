@@ -3915,59 +3915,64 @@ function hazardSpec(id) {
   return HAZARDS[0]
 }
 
-function placeHazard(w, rng, corridors, ci, forced) {
-  var c = corridors[ci]
+// A kind this level has not got yet, from the biome's roster. Biome hazards
+// would be drowned out by the large shared roster under a flat draw, so nearly
+// half the time the local story is preferred when one exists.
+function pickHazardSpec(w, rng, forced) {
   var pool = (forced || hazardsFor(w.biome)).filter(function(candidate) {
     for (var hi = 0; hi < w.hazards.length; hi++) if (w.hazards[hi].kind === candidate.id) return false
     return true
   })
   if (!pool.length) pool = forced || hazardsFor(w.biome)
   var localPool = pool.filter(function(candidate) { return candidate.only && candidate.only.indexOf(w.biome) >= 0 })
-  // Biome hazards would be drowned out by the large shared roster under a
-  // flat draw. Nearly half the time, prefer the local story when one exists.
-  var spec = pick(rng, localPool.length && rng() < 0.45 ? localPool : pool)
+  return pick(rng, localPool.length && rng() < 0.45 ? localPool : pool)
+}
 
-  var lo = Math.min(c.startX, c.handoffX)
-  var hi = Math.max(c.startX, c.handoffX)
-  if (hi - lo < 30) return null
-
-  // Candidates, best first: just past an obstacle in the direction of travel.
-  // Everyone who gets through a wall arrives at the same few cells on the far
-  // side of it, which makes that the densest traffic on the corridor and the
-  // only spot where the timing is funny — you spend nine seconds bashing
-  // through and step straight into the machine gun.
+// Candidates, best first: just past an obstacle in the direction of travel.
+// Everyone who gets through a wall arrives at the same few cells on the far
+// side of it, which makes that the densest traffic on the corridor and the
+// only spot where the timing is funny — you spend nine seconds bashing
+// through and step straight into the machine gun. Failing that, anywhere
+// along the middle of the run.
+function hazardSpots(rng, c, spec, lo, hi) {
   var spots = []
   for (var oi = 0; oi < c.obstacles.length; oi++) {
     var past = c.obstacles[oi] + c.dir * (8 + irand(rng, 0, 5))
     if (past > lo + 4 && past < hi - spec.w - 2) spots.push(past)
   }
-  // Failing that, anywhere along the middle of the run.
   for (var f = 0; f < 12; f++) spots.push(Math.round(lo + (hi - lo) * (0.3 + rng() * 0.45)))
+  return spots
+}
 
-  var x = -1
-  for (var tryN = 0; tryN < spots.length; tryN++) {
-    var cand = spots[tryN]
-    if (cand + spec.w >= hi || cand <= lo) continue
-    var ok = true
-    // Not at a lift door. Everywhere else a danger catches whoever walks into
-    // it; at the doors it catches a queue that has chosen to stand still, and
-    // there is no reading and no timing that gets a colony out of that.
-    for (var lz = 0; lz < w.lifts.length && ok; lz++) {
-      var LZ = w.lifts[lz]
-      if (cand + spec.w + 9 >= LZ.x0 && cand - 9 <= LZ.x1) ok = false
-    }
-    if (!ok) continue
-    for (var q = 0; q < spec.w; q++) {
-      var qx = cand + q
-      if (solid(w, qx, c.floorY - 1) || solid(w, qx, c.floorY - 2)) { ok = false; break }
-      // And something to hang it from.
-      var anchor = spec.mount === "ceiling" ? c.floorY - CORR_H - 1 : c.floorY
-      if (!solid(w, qx, anchor)) { ok = false; break }
-    }
-    if (ok) { x = cand; break }
+function hazardSpotFits(w, c, spec, cand, lo, hi) {
+  if (cand + spec.w >= hi || cand <= lo) return false
+  // Not at a lift door. Everywhere else a danger catches whoever walks into
+  // it; at the doors it catches a queue that has chosen to stand still, and
+  // there is no reading and no timing that gets a colony out of that.
+  for (var lz = 0; lz < w.lifts.length; lz++) {
+    var LZ = w.lifts[lz]
+    if (cand + spec.w + 9 >= LZ.x0 && cand - 9 <= LZ.x1) return false
   }
-  if (x < 0) return null
+  var anchor = spec.mount === "ceiling" ? c.floorY - CORR_H - 1 : c.floorY
+  for (var q = 0; q < spec.w; q++) {
+    var qx = cand + q
+    if (solid(w, qx, c.floorY - 1) || solid(w, qx, c.floorY - 2)) return false
+    if (!solid(w, qx, anchor)) return false     // and something to hang it from
+  }
+  return true
+}
 
+function placeHazard(w, rng, corridors, ci, forced) {
+  var c = corridors[ci]
+  var spec = pickHazardSpec(w, rng, forced)
+  var lo = Math.min(c.startX, c.handoffX)
+  var hi = Math.max(c.startX, c.handoffX)
+  if (hi - lo < 30) return null
+  var spots = hazardSpots(rng, c, spec, lo, hi)
+  var x = -1
+  for (var tryN = 0; tryN < spots.length && x < 0; tryN++)
+    if (hazardSpotFits(w, c, spec, spots[tryN], lo, hi)) x = spots[tryN]
+  if (x < 0) return null
 
   var h = {
     kind: spec.id,
@@ -6225,100 +6230,109 @@ function herdSteer(w, ag) {
 }
 
 function stepFall(w, ag) {
+  var cx = Math.floor(ag.x)
+  var speed = descentSpeed(w, ag, cx), ny = ag.y + speed
+  cx = steerCanopy(w, ag, cx, ny)
+  if (fallInterrupted(w, ag, cx, ny)) return
+  if (!ag.floater && !ag.drafted && ag.fall > killingFall(w) - 6) {
+    var remaining = dropDepth(w, cx, Math.floor(ny))
+    if (ag.fall + remaining > killingFall(w) && take(w, "floater")) ag.floater = true
+  }
+  if (fallLands(w, ag, cx, ny)) return
+  ag.fall += speed
+  ag.y = ny
+}
+
+function descentSpeed(w, ag, cx) {
   // An umbrella under water is a diver with an umbrella. The water is already
   // slower than the canopy, so a sink is a sink whoever is holding what — with
   // one exception, and it is the whole reason a trench is frightening.
   var speed = w.submerged ? SINK_SPEED : (ag.floater && ag.fall > 2 ? FLOAT_SPEED : FALL_SPEED)
-  if (w.submerged && pitAt(w, Math.floor(ag.x))) speed = DOWNWELL_SPEED
+  if (w.submerged && pitAt(w, cx)) speed = DOWNWELL_SPEED
   // Null gravity. Everything falls at umbrella speed for the duration, which
   // does not change what is survivable — SAFE_FALL is a distance, not a speed
   // — but does change how long everybody spends in the air deciding.
   if (w.driftWhat === "fall" && w.eventDrift > 0) speed = Math.min(speed, FLOAT_SPEED)
-  var cx = Math.floor(ag.x)
   // The Data Center's updraft (see skinDataCenter): a body falling in a rack's
   // column of rising air comes down at umbrella speed and lands like it had
   // one, without spending one. The Desert's wind and the Trench's water follow
   // the same rule — one field, read in one place.
   if (w.updraft && w.updraft[cx]) { speed = Math.min(speed, FLOAT_SPEED); ag.drafted = true }
-  var ny = ag.y + speed
+  return speed
+}
 
-  // Several agents can already be in the air when the first one lands in a
-  // trap and teaches the colony about it. An ordinary fall is committed, but
-  // an open umbrella is steerable: drift out of newly-known reach instead of
-  // serenely floating into the same place after the warning has arrived.
-  if (ag.floater && w.wind) {
+// Several agents can already be in the air when the first one lands in a
+// trap and teaches the colony about it. An ordinary fall is committed, but
+// an open umbrella is steerable: drift with the wind, and out of newly-known
+// reach instead of serenely floating into the same place after the warning
+// has arrived. Returns the column it is falling in.
+function steerCanopy(w, ag, cx, ny) {
+  if (!ag.floater) return cx
+  if (w.wind) {
     var blownX = ag.x + w.wind * WIND_DRIFT
     if (!solid(w, Math.floor(blownX), Math.floor(ag.y)) && !solid(w, Math.floor(blownX), Math.floor(ag.y) - 1)) ag.x = blownX
   }
-  if (ag.floater) {
-    var airDanger = hazardZoneAt(w, cx, Math.floor(ny), false)
-    if (airDanger) {
-      var away = ag.x < hazardMid(airDanger).x ? -1 : 1
-      var driftX = ag.x + away * WALK_SPEED * 0.7
-      if (!solid(w, Math.floor(driftX), Math.floor(ag.y) - 1)) {
-        ag.x = driftX
-        cx = Math.floor(ag.x)
-      }
-    }
-  }
+  var airDanger = hazardZoneAt(w, cx, Math.floor(ny), false)
+  if (!airDanger) return cx
+  var away = ag.x < hazardMid(airDanger).x ? -1 : 1
+  var driftX = ag.x + away * WALK_SPEED * 0.7
+  if (solid(w, Math.floor(driftX), Math.floor(ag.y) - 1)) return cx
+  ag.x = driftX
+  return Math.floor(ag.x)
+}
 
+// Everything that ends a fall before the ground does. True when one did.
+function fallInterrupted(w, ag, cx, ny) {
   // Into the water, the coolant or the slag. This changes nothing about who
   // survives — the shaft under the surface is cut through the bedrock, and an
   // umbrella was never any use over it — it changes where they stop, which is
   // the entire point of putting a surface down there.
   var pool = liquidAt(w, cx, ny)
-  if (pool && ny >= pool.surfaceY) { sink(w, ag, pool); return }
-
+  if (pool && ny >= pool.surfaceY) { sink(w, ag, pool); return true }
   // Onto the roof of a car. Somebody who went into a hoistway by accident —
   // a bomb under the queue, an event, a floor that gave way — gets the one
   // break the shaft has to offer, provided the car is under them and has room.
   var deck = liftDeckUnder(w, cx, ag.y, ny)
   if (deck) {
-    if (ag.fall > killingFall(w) && !ag.floater) { ag.y = deck.car - 1; splat(w, ag); return }
+    if (ag.fall > killingFall(w) && !ag.floater) { ag.y = deck.car - 1; splat(w, ag); return true }
     ag.liftWant = exitAbove(w, ag) ? -1 : 1
     boardLift(w, ag, deck, deck.stops[deck.at])
-    return
+    return true
   }
-
-  var shaft = pitAt(w, cx)
-
   // Out through the bottom of the world. Has to be caught before the landing
-  // scan below, which would otherwise find the out-of-bounds STEEL that at()
+  // scan, which would otherwise find the out-of-bounds STEEL that at()
   // reports and land them on nothing.
   if (ny >= ROWS) {
     ag.gone = true
     w.lost++
     w.lastEvent = "fell"
-    return
+    return true
   }
+  return false
+}
 
-  if (!ag.floater && !ag.drafted && ag.fall > killingFall(w) - 6) {
-    var remaining = dropDepth(w, cx, Math.floor(ny))
-    if (ag.fall + remaining > killingFall(w) && take(w, "floater")) ag.floater = true
-  }
-
+function fallLands(w, ag, cx, ny) {
+  var shaft = pitAt(w, cx)
   for (var yy = Math.floor(ag.y) + 1; yy <= Math.floor(ny) + 1; yy++) {
     // Bricks or moved terrain below a pit's lip are debris in a bottomless
     // shaft, not a floor. Without this, level 13's agents built off the board
     // boundary, landed on row 61, and paced around inside the pit.
     if (shaft && yy >= shaft.floorY) continue
-    if (solid(w, cx, yy)) {
-      ag.y = yy - 1
-      var net = ag.fall > killingFall(w) && !ag.floater ? netAt(w, cx, ag.y) : null
-      if (net) net.caught = w.ticks
-      else if (ag.fall > killingFall(w) && !ag.floater && !ag.drafted) { splat(w, ag); return }
-      ag.drafted = false
-      ag.state = "walk"
-      ag.landedAt = w.ticks
-      ag.landedFrom = ag.fall
-      ag.fall = 0
-      ag.floater = false
-      herdSteer(w, ag)
-      return
-    }
+    if (!solid(w, cx, yy)) continue
+    ag.y = yy - 1
+    var net = ag.fall > killingFall(w) && !ag.floater ? netAt(w, cx, ag.y) : null
+    if (net) net.caught = w.ticks
+    else if (ag.fall > killingFall(w) && !ag.floater && !ag.drafted) { splat(w, ag); return true }
+    ag.drafted = false
+    ag.state = "walk"
+    ag.landedAt = w.ticks
+    ag.landedFrom = ag.fall
+    ag.fall = 0
+    ag.floater = false
+    herdSteer(w, ag)
+    return true
   }
-  ag.fall += speed
-  ag.y = ny
+  return false
 }
 
 function stepClimb(w, ag) {

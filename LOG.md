@@ -3490,3 +3490,19 @@ the exit on level 21 (ticks 438–452): arms up, rising into the light and
 fading. It already reads as a homecoming; left alone.
 
 **Deployed** after 123 (name="build" content="35ea39e8"): brawls, crap splits. Browser check clean.
+
+## 124 — 2026-10-13 · Crap: stepFall and placeHazard
+
+Game functions over CRAP 30: **10 → 8**, behaviour unchanged.
+
+- `stepFall` (40) → `descentSpeed`, `steerCanopy` (wind and drifting off a
+  newly known danger), `fallInterrupted` (pool, lift car, out of the world)
+  and `fallLands`. A first try named the speed helper `fallSpeed`, which
+  already existed (stepBomb's); the fingerprint run crashed on it at once.
+  Within one core file a second declaration silently replaces the first, and
+  `check-core-refs` only catches clashes across files — grep before naming.
+- `placeHazard` (33) → `pickHazardSpec`, `hazardSpots`, `hazardSpotFits`,
+  keeping the random draws in the same order.
+
+All ≤ 11. Fingerprint identical before and after (`498a5073…`, which already
+includes the brawls). Tests 682 pass.
