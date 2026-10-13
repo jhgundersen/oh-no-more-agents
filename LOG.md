@@ -2840,3 +2840,5 @@ over-30 count is 22 → 21.
 
 Codex is on `codex/audit`: find the three weakest-looking things in the game
 as a whole and improve them, with before/after crops.
+
+**Deployed** after 104 (name="build" content="6ae9f5ce"): the leapers (103) and hitWall. Browser check clean. Codex was relaunched on the audit after a capacity error at its start.
