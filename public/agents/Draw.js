@@ -2752,6 +2752,9 @@ function drawEscortReport(ctx, w, pal, cx, y) {
 // (and by each other) and rounds stopped by an umbrella.
 function battleLine(w) {
   var parts = []
+  var enemies = w.enemies || []
+  for (var b = 0; b < enemies.length; b++)
+    if (enemies[b].boss && enemies[b].gone) parts.push("THE MODERATOR DOWN")
   if (w.enemiesKilled > 0) parts.push(w.enemiesKilled + (w.enemiesKilled === 1 ? " GUARD" : " GUARDS") + " DOWN")
   if (w.umbrellaSaves > 0) parts.push(w.umbrellaSaves + " UMBRELLA " + (w.umbrellaSaves === 1 ? "SAVE" : "SAVES"))
   return parts.join(" · ")
@@ -8062,8 +8065,34 @@ function drawEnemy(ctx, w, pal, en, opts) {
   var oy = Math.round((en.y + 1) * w.k.CELL) - SPRITE_PX - m.bob
   var fn = ENEMY_DRAW[en.kind] || drawGunner
   fn(ctx, w, pal, en, ox, oy, en.dir, m)
+  if (en.boss) drawBossKit(ctx, w, en, ox, oy, en.dir)
   if (opts && opts.labels) drawEnemyLabel(ctx, w, en, ox, oy)
   ctx.globalAlpha = 1
+}
+
+// The Moderator (Sim's bossLevel): a gunner in heavy plate with a gold crown
+// on its crest, and its health over its head — BOSS_HP pips, one going dark
+// with each hit. A hit flashes it white for a few ticks.
+var BOSS_GOLD = "#e0b649", BOSS_PLATE = "#4a4a55", BOSS_PLATE_LIT = "#8a8a99"
+function drawBossKit(ctx, w, en, ox, oy, dir) {
+  ctx.fillStyle = BOSS_PLATE
+  blit(ctx, ox, oy, dir, -1, 7, 2, 4); blit(ctx, ox, oy, dir, 7, 7, 2, 4)   // pauldrons
+  blit(ctx, ox, oy, dir, 2, 8, 4, 3)                                           // breastplate
+  ctx.fillStyle = BOSS_PLATE_LIT
+  blit(ctx, ox, oy, dir, -1, 7, 2, 1); blit(ctx, ox, oy, dir, 7, 7, 2, 1)
+  ctx.fillStyle = BOSS_GOLD
+  blit(ctx, ox, oy, dir, 1, -1, 6, 1)                                          // crown band
+  blit(ctx, ox, oy, dir, 1, -3, 1, 2); blit(ctx, ox, oy, dir, 3, -4, 2, 3); blit(ctx, ox, oy, dir, 6, -3, 1, 2)
+  for (var i = 0; i < 3; i++) {
+    ctx.fillStyle = i < en.hp ? "#ff5268" : "#3a2a30"
+    ctx.fillRect(ox + 1 + i * 3, oy - 7, 2, 1)
+  }
+  if (en.hurtAt !== undefined && w.ticks - en.hurtAt < 6) {
+    ctx.fillStyle = "#ffffff"
+    ctx.globalAlpha = 0.75 * (1 - (w.ticks - en.hurtAt) / 6)
+    ctx.fillRect(ox, oy, SPRITE_W, SPRITE_PX)
+    ctx.globalAlpha = 1
+  }
 }
 
 // A scuffle (Sim's stepBrawl): the cartoon fight cloud. Both fighters vanish

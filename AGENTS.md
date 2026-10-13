@@ -503,7 +503,13 @@ from stable state (ticks, ids) so none draws on a random stream:
   with it for `BRAWL_TICKS`; 50% alone, +15% per colleague within four cells
   (up to three). Both are drawn as one cartoon fight cloud.
 
-The report card's battle line counts guards down and umbrella saves.
+- **The Moderator** (`bossLevel`): every eighth level (not the Trench) the
+  post is one crowned gunner with `BOSS_HP` 3; any hit — round, scuffle,
+  ricochet — only staggers it (`staggerBoss`) until the last. Those levels
+  sit near 84% home against 93% overall: the climax, on purpose.
+
+The report card's battle line counts guards down and umbrella saves, and
+names the boss when it falls; the MVP line names the agent who did most.
 
 ## The Rooftops
 

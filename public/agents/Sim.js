@@ -1203,7 +1203,8 @@ function planGuard(w, level, corridors, hazardCorridors) {
   // A separate deterministic stream keeps the red team optional without
   // reshuffling the established terrain, hazards, specials or personalities.
   var enemyRng = makeRng(level * 65537 + 4049)
-  if (level < 3 || enemyRng() >= 0.40) return null
+  var boss = bossLevel(w, level)
+  if (level < 3 || (enemyRng() >= 0.40 && !boss)) return null
   // Hide the post on a deeper corridor. Its exact depth and position use a
   // separate stream, so neither the established map nor the enemy roster is
   // reshuffled. Starting down-route means the guards must patrol and fly to
@@ -1242,7 +1243,20 @@ function planGuard(w, level, corridors, hazardCorridors) {
     var enemyCount = irand(enemyRng, 1, 2)
     for (var er = 0; er < enemyCount; er++) w.enemyRoster.push("gun")
   }
+  // The boss holds the post alone. The rolls above are still made, so the
+  // stream is the same for every level after this one.
+  if (boss) { w.enemyRoster = ["gun"]; w.bossPost = true }
   return guardPlan
+}
+
+// Every eighth level the post is held by The Moderator: a gunner like any
+// other, except that it takes BOSS_HP hits — rounds, scuffles, ricochets —
+// to put down, and each one only staggers it. Not in the Trench, where the
+// post is a dive crew's.
+var BOSS_EVERY = 8
+var BOSS_HP = 3
+function bossLevel(w, level) {
+  return level >= BOSS_EVERY && level % BOSS_EVERY === 0 && !submerged(w)
 }
 
 // Who is in the colony and what it carries: its size and pace out of the
@@ -4322,7 +4336,7 @@ function umbrellaRicochet(w, ag, by) {
   if (!by || by.gone || by.kind === "drone") return
   if ((w.ticks * 53 + ag.id * 29 + by.id * 7) % 100 >= BROLLY_RICOCHET) return
   killEnemy(w, by)
-  creditDowned(ag)
+  if (by.gone) creditDowned(ag)
   w.ricochets = (w.ricochets || 0) + 1
   w.lastEvent = "ricochet"
 }
@@ -7195,7 +7209,7 @@ function regularSidearm(w, ag) {
   ag.shotFor = 8
   ag.gunCool = SIDEARM_RELOAD + (ag.id % 5) * 7
   if (hit) {
-    if (targetKind === "enemy") { killEnemy(w, target); creditDowned(ag) }
+    if (targetKind === "enemy") { killEnemy(w, target); if (target.gone) creditDowned(ag) }
     else wreckHazard(w, target)
   }
 }
@@ -8213,6 +8227,7 @@ function spawnEnemy(w, kind) {
     deployLeft: kind === "operator" ? 6 : (kind === "sniper" ? 9 : 0),
     timer: 0, fall: 0, anim: 0, shoves: 0,
     targetId: 0, lineTo: 0, lineY: 0, shotFor: 0,
+    boss: !!w.bossPost, hp: w.bossPost ? BOSS_HP : 1,
     gone: false
   }
 }
@@ -8602,11 +8617,24 @@ function woundFriendly(w, ag, fromX, lethal, by) {
 
 function killEnemy(w, en) {
   if (!en || en.gone) return
+  if (en.hp > 1) { staggerBoss(w, en); return }
   en.gone = true
   en.state = "dead"
   w.enemiesKilled++
   addBlood(w, en.x, en.y - 1.5, 12)
   w.lastEvent = "red team down"
+}
+
+// A hit that does not put the boss down: it bleeds, reels back a step and
+// takes a moment to come again.
+function staggerBoss(w, en) {
+  en.hp--
+  en.hurtAt = w.ticks
+  addBlood(w, en.x, en.y - 1.5, 6)
+  en.state = "recover"
+  en.timer = 30
+  en.targetId = 0
+  w.lastEvent = "boss hit"
 }
 
 function sinkEnemy(w, en, pool) {
@@ -8825,7 +8853,7 @@ function brawlTick(w, en) {
   var roll = (w.ticks * 37 + ag.id * 61 + en.id * 17) % 100
   if (roll < brawlOdds(w, ag)) {
     killEnemy(w, en)
-    creditDowned(ag)
+    if (en.gone) creditDowned(ag)
     w.brawlsWon = (w.brawlsWon || 0) + 1
     w.lastEvent = "brawl won"
   } else {

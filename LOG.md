@@ -3579,3 +3579,31 @@ Left: `generate`, `stepAgents`, `specialShapeCut`, `edgeAhead`, `fillEarth`.
 Tests 684.
 
 **Deployed** after 129 (name="build" content="66e6c2ce"): MVP on the report card, crap splits. Browser check clean.
+
+## 130 — 2026-10-13 · The Moderator
+
+A fight needs a climax. Every eighth level (8, 16, 24 …; not the Trench,
+whose post is a dive crew) the guard post is always there and held by one
+boss: **The Moderator**, a gunner like the others — so every rule about
+gunners, parries, brawls and ricochets applies unchanged — except it takes
+three hits to put down. Each earlier hit staggers it (`staggerBoss`: bleeds,
+reels back for 30 ticks, loses its target) instead of killing it. The post's
+own rolls are still made, so the enemy stream is unchanged for other levels.
+
+**Measured** (640 plays, levels 1–320 × 2):
+
+| | before | HP 2 | **HP 3** |
+|---|---|---|---|
+| home, every-8th levels | 93.5% | 86.3% | **84.2%** |
+| boss down | — | 47 / 76 | 41 / 76 |
+| home, all levels | 94.27% | 93.37% | 93.11% |
+
+Three: a boss that falls to two hits did not feel like one, and 84% on one
+level in eight is a fight, not a wall. `npm run sim`: cleared 99%, home 91%,
+hangs 0.
+
+**Drawing:** `drawBossKit` over the gunner: a gold crown on its crest, steel
+pauldrons and breastplate, three red pips over its head that go dark with each
+hit, and a white flash when hit. Looked at level 8 (Factory) as it is shot
+and as it aims. The report card's battle line leads with "THE MODERATOR DOWN"
+when it falls. Tests 687 (`test/boss.test.js`).
