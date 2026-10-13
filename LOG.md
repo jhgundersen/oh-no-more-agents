@@ -2675,3 +2675,53 @@ them past the colony's way down and into the guards; lowering them *down*
 it still cost 0.8. To be looked at before it goes anywhere.
 
 **Deployed** after 98 (name="build" content="49330cff"): report card without the overlay.
+
+## 99 — 2026-10-13 · Building Site art and gantry rides
+
+**Why.** The fifteenth biome already had its concrete frame and cranes in the
+simulation, but drew cave props and an invisible ride. Its missing art rows
+also failed the biome coverage tests.
+
+**Changed.** Draw.js gives it scaffold poles, boards and braces in the far
+wall, concrete form ties and joins, grey blockwork infill, steel fixings,
+pallets of blocks, cones, striped barriers, cement mixers and grinding
+benches. Hanging hoardings read "SAFETY FIRST / 0 DAYS SINCE INCIDENT" at
+res 2, with a large zero and lettering bars at res 1. The exit is a scaffold
+gate under a striped hard-hat lintel; the guard booth says "BUILD FAILED".
+Concrete dust, rotating mixer drums and intermittent grinder sparks live on
+the actor pass. Fine backdrops, motes, props, surfaces and exits stay behind
+the res-2 guard. Scope Creep and Missed Deadline get striped site markers;
+Crunch Time uses the existing persistent fixture heat with its 380-tick
+visual mirror.
+
+The cranes carry a girder under the lowest roof across their span, end stops,
+a travelling trolley and warning lamp, a steel cable and hook block. The
+hook meets the rider's collar; arms hold up, legs dangle, a yellow hard hat
+and small sway keep the ride readable. The cable pays out down the hole.
+A short set-down dust puff reads the empty hook's reel-in distance, with no
+new timestamps or simulation state. Hooked drawing resets the shared sprite
+flip so a preceding ceiling walker cannot invert the rider. No Sim.js or
+Palette.js changes, world writes, renderer timers or random draws.
+
+**Checked.** `npm run check` and `npm test` pass; stamps updated. Seven new
+art tests cover both resolutions and an unspecified resolution, every crane
+phase, repeatable read-only drawing, roof clearance over twenty Building
+Site layouts, cable length, collar alignment, raised arms, dangling legs,
+sway, sprite-flip isolation, landing dust expiry, surviving-cell textures,
+all prop variants, sparks, the booth sign and event markers. The six existing
+art failures pass. Seeded old/new comparison: 1,120 frames of the other
+fourteen biomes, levels 1–75 excluding Building Sites, ticks 50/200/500/900,
+two themes, res 1 and 2, identical Math.random; zero byte differences.
+No whole-frame snapshots pinned. `npm run crap` used the locally cached
+crapper after its bootstrap could not resolve GitHub: baseline and final
+both 23 functions over 30, every added or changed function below 30
+(highest changed 27.7; new helpers at most 8.0).
+
+**Looked at.** `/tmp/codex-site/sheet.png`: levels 15, 30 and 45 in play at
+res 1 and 2, all three events and the prop set, enlarged without smoothing.
+Live level-15 crane samples include mid-lift at tick 65 and mid-descent at
+107; enlarged crops also cover travel and set-down. Reviewed the sheet and
+individual levels and ride crops. Work on `codex/site`; no push or deploy.
+
+**Next.** Review the Building Site and crane gameplay measurements before
+merging the biome.
