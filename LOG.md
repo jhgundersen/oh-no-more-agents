@@ -2673,3 +2673,5 @@ with a gantry crane. Two designs measured worse than no crane on 400 plays
 (93.0% and 93.3% vs 94.1% home): carrying riders *over* a floor hole took
 them past the colony's way down and into the guards; lowering them *down*
 it still cost 0.8. To be looked at before it goes anywhere.
+
+**Deployed** after 98 (name="build" content="49330cff"): report card without the overlay.
