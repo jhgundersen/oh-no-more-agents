@@ -294,6 +294,8 @@ its own stream, so the rest of the level is unchanged.
   strides from the corridor's start was crossed on 24 of 68 plays: the colony
   mostly arrives on a floor far along it, by a special or a dig. The rumble
   (`BOULDER_RUMBLE`) is the warning, and agents already run during it.
+- **Only those going its way run** (iteration 92): turning everyone ahead to
+  flee cost more than the boulder's own victims. 90.80 → 91.45% Ruins home.
 - **It takes at most one.** It shatters on the first body, blocker, special,
   wall or edge it meets. Agents in `fall` are never hit — they land in front
   and get to run like everyone else. Before that rule, and before running in

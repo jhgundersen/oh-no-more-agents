@@ -1502,8 +1502,12 @@ function boulderMeetsAgents(w, b, rolling) {
       shatterBoulder(w, b)
       return
     }
-    if (ahead > 0 && ahead < BOULDER_SIGHT && ag.state === "walk") {
-      ag.dir = b.dir
+    // Those already going its way run. Those facing it are not turned round:
+    // turning everybody ahead to flee sent the ones heading back for a reason
+    // — to a ladder, a route, home — off down the corridor at a sprint, and
+    // cost more than the boulder's own victims. Measured over 400 Ruins
+    // plays: turned 90.80% home, not turned 91.45% (crushes 22 → 39).
+    if (ahead > 0 && ahead < BOULDER_SIGHT && ag.state === "walk" && ag.dir === b.dir) {
       ag.sprintUntil = w.ticks + 2
     }
   }

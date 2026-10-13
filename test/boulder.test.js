@@ -49,12 +49,15 @@ function scene(state, ahead) {
   return { w, b, ag }
 }
 
-test("a walker ahead of it turns and runs", () => {
+test("a walker ahead going its way runs; one facing it is not turned round", () => {
   const { w, b, ag } = scene("walk", 12)
+  ag.dir = b.dir
   const pace = S.walkStep(ag, w)
   S.stepBoulder(w)
-  assert.equal(ag.dir, b.dir)
-  assert.ok(S.walkStep(ag, w) > pace * 1.5)
+  assert.ok(S.walkStep(ag, w) > pace * 1.5, "runs")
+  const facing = scene("walk", 12)
+  S.stepBoulder(facing.w)
+  assert.equal(facing.ag.dir, -facing.b.dir, "not turned round")
 })
 
 test("it takes the first body it reaches, and stops", () => {

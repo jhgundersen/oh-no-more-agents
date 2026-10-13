@@ -2483,3 +2483,21 @@ subtle on purpose — agents first). Actor pass +0.007 ms a frame; res-1
 identical over 560 seeded frames.
 
 **Deployed** after 91 (name="build" content="9f950c75"): obstacle split, light. Browser check clean.
+
+## 92 — 2026-10-13 · The Ruins: the boulder's flee was the cost
+
+**Why.** The Ruins is still the weakest biome (~91% home, others 92–96).
+Tried each suspect over 400 Ruins plays: events on / off 90.80 / 90.85% —
+not them. Boulder on / off 90.80 / 92.06% — 1.26 points, but it only crushed
+22, a third of that.
+
+**Found.** Splitting the boulder: never crushing 91.23%; never making anyone
+flee 91.40% (with crushes doubling to 43). The flee rule turned every walker
+ahead of it to run its way — including those heading back for a reason (a
+ladder, a route home) — and sent them off at a sprint.
+
+**Changed.** Only those already going its way sprint; nobody is turned round.
+91.45% (crushes 39): the boulder now costs ~0.6 instead of 1.26.
+
+**Checked.** Boulder test updated (runs if going its way; not turned if
+facing it). Check passes; `sim play` below. AGENTS.md's boulder section notes it.
