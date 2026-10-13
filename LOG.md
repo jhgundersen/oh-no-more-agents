@@ -3211,3 +3211,30 @@ blocks look like pillows; the gentler, longer ramp reads as a rock crust over a
 darker core. Desert and Ruins gain the most; built biomes are unchanged.
 Res 1 is untouched by construction. Tests 645 → 647 (`test/depth.test.js`);
 the new functions are CRAP 6–9.
+
+## 114 — 2026-10-13 · The fight comes sooner and more often
+
+**Looked at:** the live page for a minute, then counted fights. The page starts
+every visitor at level 1, and guard posts (the red team: patrols, drone
+operators, snipers) only came from **level 12**, in **22%** of levels. At ~47 s
+a level, a visitor watched about nine minutes of colony before the first fight
+the game is named for — and most never saw one.
+
+**Change:** `planGuard` now opens guard posts from **level 3** with **40%**
+chance. The threshold is the first draw of the post's own stream, so which
+levels gain a post changes but nothing else about any level does (the rest of
+the post's plan reads the same draws as before).
+
+**Measured** (480 plays, levels 1–240, two colonies each):
+
+|              | before | after |
+|---|---|---|
+| plays with a post | 102 | 190 |
+| home, all plays | 93.8% | 92.6% |
+| home where a post is | 89.8% | 89.4% |
+| first post (colony 0) | level 13 | level 5 |
+
+`npm run sim`: cleared 99 → 98%, home 92 → 90%, hangs 0. The cost per post is
+unchanged; the total cost is the price of fighting twice as often. Looked at
+levels 5 (Jungle) and 6 (Ice Cave): booths sit cleanly on the floor and the
+guards walk out to meet the colony. Tests 647 pass.

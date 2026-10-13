@@ -1198,7 +1198,7 @@ function planGuard(w, level, corridors, hazardCorridors) {
   // A separate deterministic stream keeps the red team optional without
   // reshuffling the established terrain, hazards, specials or personalities.
   var enemyRng = makeRng(level * 65537 + 4049)
-  if (level < 12 || enemyRng() >= 0.22) return null
+  if (level < 3 || enemyRng() >= 0.40) return null
   // Hide the post on a deeper corridor. Its exact depth and position use a
   // separate stream, so neither the established map nor the enemy roster is
   // reshuffled. Starting down-route means the guards must patrol and fly to
