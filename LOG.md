@@ -3099,3 +3099,51 @@ report card gains a fourth line, "+N RESCUED", with a small icon of each one
 rescued. That is legible at both resolutions.
 
 **Deployed** after 110 (name="build" content="8bd5664e"): follower art and stepWalk. Browser check clean.
+
+## 111 — 2026-10-13 · Clock Tower art and clockwork shutters
+
+**Art:** verdigris blockwork around brass teeth, spokes and axle fixings. The
+far wall is a huge clock face seen from behind, with reversed hands, a swinging
+pendulum, rocking escapement and slowly counter-rotating pinions. Moving scenery
+is clipped to open air on the actor pass. Dust crosses shafts of light; an
+occasional brass tooth falls. Weights, spare gears, chains and oil cans replace
+the generic cave props. The exit has a clock above its lintel; the guard booth
+says "WATCHDOG TIMER". Half-pixel engraving stays at res 2 and above.
+
+**Gates:** brass portcullises retract into a cassette over ten ticks from
+`changedAt`, with guides and crossbars. A small dial counts down to the next
+change from the phase and tick; alternating pawls supply the tick-tock. The
+actual `open` flag controls the shutter, so an occupied doorway held open by
+Sim never looks shut. Initial gates do not play a spurious transition.
+
+**Events:** Deadlock locks a fixture's dial; Race Condition spins two hands
+and sheds sparks. Their shared blackout mechanism has two visual durations,
+280 and 360 ticks, selected by its multiplier. Leap Second gets a broken-hand
+marker over the cracking floor and the existing falling rubble.
+
+**Looked at:** levels 16, 32 and 48 at res 1 and 2, enlarged without smoothing.
+Actual level-32 play at ticks 486/533/538/545/688 shows colleagues waiting at a
+shut gate, the start and middle of opening, passage, and the next closing stroke.
+The contact sheet also isolates the rear clock and its movement.
+
+![Clock Tower levels and gates at both resolutions](/tmp/codex-clock/sheet.png)
+
+**Compatibility:** seeded old/new Draw.js comparison on 60 levels of the other
+fifteen biomes, ticks 80/200/500/900/1800, res undefined/1/2: **900 identical
+frames**. `Math.random` was identically seeded for both runs. No whole-frame
+hashes are pinned in tests. Sim.js and Palette.js are unchanged.
+
+**Cost:** alternating software-canvas samples at res 2, 100 per workload,
+level 32 tick 486 versus Building Site level 15 tick 486. Median actor pass:
+**2.87 vs 1.88 ms** (1,770 vs 609 rectangles). Full terrain-plus-actor repaint:
+**20.13 vs 28.28 ms**; terrain is normally cached. These are software-raster
+measurements, not browser frame timings.
+
+**Checks:** `npm run check`, including `npm test`, passes; stamps updated.
+The six missing-biome failures pass. New tests cover gate phases and widths,
+monotonic travel inside the doorway, phase countdown, occupancy deferral,
+initial state, both resolutions and unspecified res, all themes, deterministic
+pixels, rejected world writes and RNG, restored alpha, scenery clipping,
+surviving terrain, props, booth copy and all three event visuals and expiry.
+CRAP over-30 count **20 → 20**; every new or changed function is below 30,
+with `drawEnemyHatch` highest at **29**. Work on `codex/clock`; no push or deploy.

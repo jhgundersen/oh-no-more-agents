@@ -55,7 +55,7 @@ test("visual duration mirrors match every rule event and fade at both ends", () 
   for (const ev of events) {
     const { w } = sample(ev, 1), kind = ev.mech === "blackout" ? "boost" : ev.what
     const field = kind === "boost" ? "eventBoost" : "eventDrift"
-    assert.equal(D.EVENT_VISUAL_SPANS[kind][ev.biome], ev.ticks)
+    assert.equal(D.eventVisualSpan(w, kind), ev.ticks)
     const fades = [ev.ticks, ev.ticks - 12, ev.ticks - 24, 15, 1, 0].map(left => {
       w[field] = left; return D.activeEventFade(w, kind)
     })
