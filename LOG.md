@@ -2288,3 +2288,5 @@ colony, kick or no kick. Find out what it is.
 where one point is ~23 of them) — near the noise. Stopping here on heroes:
 across 79–83 the worst went from −3.4 to about −1, Beam Search and Guard
 Rails from heavy costs to near even, and heroes get home far more often.
+
+**Deployed** after 83 (name="build" content="51f5a1f2"): hero balance 82–83. Browser check clean.
