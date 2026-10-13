@@ -5697,6 +5697,7 @@ var IDLE_SLEEVES = {
   drum: [[6, 10, 4, 1]], tie: [[5, 8, 2, 3]], tap: []
 }
 function drawIdleBody(ctx, w, pal, ag, ox, oy, dir, robe, drop, idle) {
+  if ((w.res || 1) >= 2 && idle.kind === "block") return drawBracedBlocker(ctx, w, pal, ag, ox, oy, dir, robe, idle)
   blit(ctx, ox, oy, dir, 1, 7 + Math.max(drop, -1), 6, 6 - Math.max(drop, -1))
   blit(ctx, ox, oy, dir, 2, 13, 2, 3)
   var toe = idle.pose === "tap" && idle.phase % 12 < 6 ? 1 : 0
@@ -5717,7 +5718,8 @@ function drawIdleFine(ctx, pal, ag, ox, oy, dir, drop, idle, w) {
   drawFineHead(ctx, pal, ag, ox + dir * look.x, oy, dir, drop + look.y - (idle.pose === "glance" ? 1 : 0))
   drawFineSuit(ctx, pal, ox, oy, dir, 7 + Math.max(drop, -1))
   var toe = idle.pose === "tap" && idle.phase % 12 < 6 ? 1 : 0
-  drawFineShoes(ctx, pal, ox, oy, dir, 2, 15.5, 4, 15.5 - toe, 2)
+  if (idle.kind === "block" && (w.res || 1) >= 2) drawFineShoes(ctx, pal, ox, oy, dir, 0, 15.5, 6, 15.5 - toe, 2)
+  else drawFineShoes(ctx, pal, ox, oy, dir, 2, 15.5, 4, 15.5 - toe, 2)
 }
 
 var IDLE_GESTURES = {
@@ -5802,6 +5804,7 @@ function drawIdleTie(ctx, w, pal, ox, oy, dir, robe, phase) {
 }
 
 function drawAgentBody(ctx, w, pal, ag, ox, oy, dir, robe, skin, st, bodyDrop, walkLead, squash, idle) {
+  if ((w.res || 1) >= 2 && st === "bomb") return drawBombPose(ctx, w, pal, ag, ox, oy, dir, robe)
   if (idle) return drawIdleBody(ctx, w, pal, ag, ox, oy, dir, robe, bodyDrop, idle)
   if (st === "height" && ag.heightMode === "cushion") return drawPoseTucked(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop)
   if (w.submerged && (st === "walk" || st === "swim")) return drawPoseSwim(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop)
@@ -5813,6 +5816,7 @@ function drawAgentBody(ctx, w, pal, ag, ox, oy, dir, robe, skin, st, bodyDrop, w
 
 function drawPoseClimb(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
   if (libraryShelfPose(w, ag)) return drawPoseShelf(ctx, w, pal, ag, ox, oy, dir, robe)
+  if ((w.res || 1) >= 2) return drawClimbingPose(ctx, w, pal, ag, ox, oy, dir, robe)
   blit(ctx, ox, oy, dir, 2, 7, 4, 6)
   blit(ctx, ox, oy, dir, 5, 3 + (ag.anim >> 3) % 2, 2, 4)   // hand over hand
   blit(ctx, ox, oy, dir, 3, 13, 3, 3)
@@ -5866,6 +5870,7 @@ function drawPoseStunned(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
 }
 
 function drawPoseBlock(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
+  if ((w.res || 1) >= 2) return drawBracedBlocker(ctx, w, pal, ag, ox, oy, dir, robe)
   blit(ctx, ox, oy, dir, 1, 7, 6, 6)
   blit(ctx, ox, oy, dir, -2, 8, 3, 2)
   blit(ctx, ox, oy, dir, 7, 8, 3, 2)
@@ -5948,7 +5953,7 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
     ? pal.umbrellas[(ag.id + (w.colonySeed || 0)) % pal.umbrellas.length]
     : pal.umbrella
 
-  if ((w.res || 1) >= 2) drawUmbrellaFine(ctx, pal, ox, oy, flex, brolly)
+  if ((w.res || 1) >= 2) drawFloatingUmbrella(ctx, w, pal, ag, ox, oy, flex, brolly)
   else {
 
   ctx.fillStyle = pal.umbrellaStem
@@ -6086,24 +6091,27 @@ function drawAgentHome(ctx, w, pal, ag, ox, oy, dir, robe, skin) {
 // in two-tone panels with the ribs running out to the tips, a lit rim, a
 // ferrule on top. `flex` lifts the crown the way the
 // coarse canopy's centre lifts, so it still breathes.
-function drawUmbrellaFine(ctx, pal, ox, oy, flex, brolly) {
-  var cx = ox + 4.5, top = oy - 11 - flex * 0.5, base = oy - 7
+function drawUmbrellaFine(ctx, pal, ox, oy, flex, brolly, spread) {
+  spread = spread === undefined ? 1 : spread
+  var cx = ox + 4.5, top = oy - 11 - flex * 0.5 + Math.round((1 - spread) * 6) / 2, base = oy - 7
+  var radius = Math.round(6.5 * spread * 2) / 2
   var rows = Math.round((base - top) * 2)
   for (var r = 0; r <= rows; r++) {
     var y = top + r * 0.5, q = (r + 1) / (rows + 1)
-    var half = Math.round(6.5 * Math.sqrt(1 - (1 - q) * (1 - q)) * 2) / 2
+    var half = Math.round(radius * Math.sqrt(1 - (1 - q) * (1 - q)) * 2) / 2
     ctx.fillStyle = brolly
     ctx.fillRect(cx - half, y, half * 2, 0.5)
     ctx.globalAlpha = 0.28                                  // every other panel in shade
     ctx.fillStyle = "#000000"
-    ctx.fillRect(cx - half * 0.5, y, half * 0.5, 0.5)
-    ctx.fillRect(cx + half * 0.5, y, half * 0.5, 0.5)
+    var panel = Math.round(half) / 2
+    ctx.fillRect(cx - panel, y, panel, 0.5)
+    ctx.fillRect(cx + panel, y, half - panel, 0.5)
     ctx.globalAlpha = 1
   }
   ctx.fillStyle = pal.umbrellaRim
-  ctx.fillRect(cx - 6.5, base, 13, 0.5)                     // the rim
+  ctx.fillRect(cx - radius, base, radius * 2, 0.5)                     // the rim
   for (var rib = -1; rib <= 1; rib += 2)                    // tips hanging off it
-    ctx.fillRect(cx + rib * 6.5 - (rib > 0 ? 0.5 : 0), base + 0.5, 0.5, 1)
+    ctx.fillRect(cx + rib * radius - (rib > 0 ? 0.5 : 0), base + 0.5, 0.5, 1)
   ctx.fillRect(cx - 0.5, top - 1, 1, 1)                     // ferrule
   ctx.fillStyle = pal.umbrellaStem
   ctx.fillRect(cx - 0.5, base + 0.5, 1, 6.5)                // shaft
@@ -6984,7 +6992,7 @@ var FINE_POSES = {
   climb: drawFineClimb, webup: drawFineWebUp, rappel: drawFineRappel,
   build: drawFineBuild, dig: drawFineDig, fall: drawFineFall, height: drawFineHeight,
   slide: drawFineSlide, stunned: drawFineStunned,
-  bomb: drawFineStride, jump: drawFineStride, ceil: drawFineStride
+  bomb: drawFineBomb, jump: drawFineStride, ceil: drawFineStride
 }
 function drawAgentFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w) {
   if (w && libraryShelfPose(w, ag)) {
@@ -7213,15 +7221,6 @@ function drawFineShoes(ctx, pal, ox, oy, dir, x1, y1, x2, y2, width) {
 
 function drawFineClimb(ctx, pal, ag, ox, oy, dir) {
   drawFineSuit(ctx, pal, ox, oy, dir, 7)
-  var hand = 3 + (ag.anim >> 3) % 2
-  ctx.fillStyle = pal.skin
-  blitFine(ctx, ox, oy, dir, 6, hand, 0.5, 1)
-  ctx.fillStyle = pal.shirt
-  blitFine(ctx, ox, oy, dir, 5.5, hand + 1, 1, 0.5)
-  ctx.fillStyle = pal.eye
-  blitFine(ctx, ox, oy, dir, 3.5, 15.5, 2.5, 0.5)
-  ctx.fillStyle = pal.lapel
-  blitFine(ctx, ox, oy, dir, 5, 14.5, 0.5, 0.5)          // bent knee
 }
 
 function drawFineWebUp(ctx, pal, ag, ox, oy, dir) {
@@ -7249,6 +7248,155 @@ function drawFineBuild(ctx, pal, ag, ox, oy, dir) {
   drawFineShoes(ctx, pal, ox, oy, dir, 2, 15.5, 4, 15.5, 2)
 }
 
+// Page skill silhouettes use the existing anim/fuse/fall clocks. The panel
+// keeps its coarse poses; no renderer-owned progress or extra particles.
+function climbContacts(w, ag, ox, dir) {
+  var phase = (ag.anim >> 2) % 4
+  var face = (Math.floor(ag.x) + dir + (dir < 0 ? 1 : 0)) * w.k.CELL
+  var x = dir > 0 ? face - ox : ox + SPRITE_W - face
+  return { x: Math.round(x * 2) / 2, hand: [2, 2, 5, 5][phase],
+    other: [7, 6, 3, 3][phase], knee: [12, 10, 10, 12][phase] }
+}
+
+function drawClimbingPose(ctx, w, pal, ag, ox, oy, dir, robe) {
+  ctx.save()
+  var grip = climbContacts(w, ag, ox, dir)
+  ctx.fillStyle = robe
+  blitFine(ctx, ox, oy, dir, 2, 7, 4, 6)
+  // Elbows bend into the pull; one boot is planted while the other rises.
+  blitFine(ctx, ox, oy, dir, 5, grip.hand + 1, 1.5, 7 - grip.hand)
+  blitFine(ctx, ox, oy, dir, 6, grip.hand + 1, grip.x - 5.5, 1)
+  blitFine(ctx, ox, oy, dir, 5, grip.other + 1, grip.x - 4.5, 1)
+  blitFine(ctx, ox, oy, dir, 2.5, 12, 2, 4)
+  blitFine(ctx, ox, oy, dir, 4.5, grip.knee, grip.x - 4, 1.5)
+  blitFine(ctx, ox, oy, dir, grip.x - 1.5, grip.knee + 1, 1.5, 2)
+  ctx.restore()
+}
+
+function drawClimbContactDetail(ctx, w, pal, ag, ox, oy, dir) {
+  if (libraryShelfPose(w, ag)) return // the actual shelf board supplies its grip
+  var grip = climbContacts(w, ag, ox, dir)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, grip.x - 1.5, grip.hand + 1, 1, 0.5)
+  blitFine(ctx, ox, oy, dir, grip.x - 1.5, grip.other + 1, 1, 0.5)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, grip.x - 0.5, grip.hand, 1, 1)
+  blitFine(ctx, ox, oy, dir, grip.x - 0.5, grip.other, 1, 1)
+  ctx.fillStyle = pal.eye
+  blitFine(ctx, ox, oy, dir, 2.5, 15.5, 2.5, 0.5)
+  blitFine(ctx, ox, oy, dir, grip.x - 1.5, grip.knee + 2.5, 2, 0.5)
+  ctx.fillStyle = pal.lapel
+  blitFine(ctx, ox, oy, dir, grip.x - 1.5, grip.knee, 1, 0.5)
+}
+
+function drawBracedBlocker(ctx, w, pal, ag, ox, oy, dir, robe, idle) {
+  ctx.save()
+  var toe = idle && idle.pose === "tap" && idle.phase % 12 < 6 ? 1 : 0
+  ctx.fillStyle = robe
+  blitFine(ctx, ox, oy, dir, 1, 7, 6, 6)
+  blitFine(ctx, ox, oy, dir, 0, 13, 3, 1.5)
+  blitFine(ctx, ox, oy, dir, 5, 13, 3, 1.5)
+  blitFine(ctx, ox, oy, dir, 0, 14, 2, 2)
+  blitFine(ctx, ox, oy, dir, 6, 14, 2, 2 - toe)
+  if (toe) blitFine(ctx, ox, oy, dir, 8, 14, 1, 0.5)
+  drawBlockArms(ctx, pal, ox, oy, dir, robe, idle)
+  drawFineShoes(ctx, pal, ox, oy, dir, 0, 15.5, 6, 15.5 - toe, 2)
+  ctx.restore()
+}
+
+function drawBlockArms(ctx, pal, ox, oy, dir, robe, idle) {
+  var pose = idle ? idle.pose : ""
+  var sides = pose === "fold" ? [] : (pose === "watch" ? [-1] : [-1, 1])
+  for (var i = 0; i < sides.length; i++) {
+    var left = sides[i] < 0, sleeve = left ? -2 : 7
+    ctx.fillStyle = robe
+    blitFine(ctx, ox, oy, dir, sleeve, 8, 3, 2)
+    ctx.fillStyle = pal.shirt
+    blitFine(ctx, ox, oy, dir, left ? -2 : 9.5, 8.5, 0.5, 1)
+    ctx.fillStyle = pal.skin
+    blitFine(ctx, ox, oy, dir, left ? -3 : 10, 8, 1, 2)
+  }
+  // Existing gestures still get their sleeves before their hands/props.
+  var sleeves = IDLE_SLEEVES[pose] || []
+  ctx.fillStyle = robe
+  for (var j = 0; j < sleeves.length; j++) {
+    var r = sleeves[j]
+    blitFine(ctx, ox, oy, dir, r[0], r[1], r[2], r[3])
+  }
+}
+
+function bombCrouch(ag) { return ag.fuse < 15 ? 2 : (ag.fuse < 30 ? 1 : 0) }
+
+function drawBombPose(ctx, w, pal, ag, ox, oy, dir, robe) {
+  ctx.save()
+  var tuck = bombCrouch(ag)
+  ctx.fillStyle = robe
+  blitFine(ctx, ox, oy, dir, 1, 7 + tuck, 6, 6 - tuck)
+  blitFine(ctx, ox, oy, dir, 1, 13, 2, 3)
+  blitFine(ctx, ox, oy, dir, 5, 13, 2, 3)
+  // Both hands hold the charge; at the end the elbows and knees fold in.
+  blitFine(ctx, ox, oy, dir, 0, 8 + tuck, 2, 3)
+  blitFine(ctx, ox, oy, dir, 6, 8 + tuck, 2, 3)
+  ctx.restore()
+}
+
+function drawFineBomb(ctx, pal, ag, ox, oy, dir) {
+  drawFineSuit(ctx, pal, ox, oy, dir, 7 + bombCrouch(ag))
+  drawFineShoes(ctx, pal, ox, oy, dir, 1, 15.5, 5, 15.5, 2)
+}
+
+function drawBombFuse(ctx, w, pal, ag, ox, oy, dir) {
+  var y = 10 + bombCrouch(ag), fuse = Math.max(0.5, Math.ceil((ag.fuse || 0) / 30) * 0.5)
+  ctx.fillStyle = pal.rigDark
+  blitFine(ctx, ox, oy, dir, 2.5, y, 3, 3)
+  ctx.fillStyle = pal.urgent
+  blitFine(ctx, ox, oy, dir, 3, y, 2, 0.5)
+  ctx.fillStyle = pal.steelEdge
+  blitFine(ctx, ox, oy, dir, 3, y + 0.5, 0.5, 1)
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, dir, 1.5, y + 1, 1, 1)
+  blitFine(ctx, ox, oy, dir, 5.5, y + 1, 1, 1)
+  ctx.fillStyle = pal.rig
+  blitFine(ctx, ox, oy, dir, 4, y - fuse, 0.5, fuse)
+  ctx.fillStyle = pal.fireHot
+  blitFine(ctx, ox, oy, dir, 3.5 + (ag.fuse % 2) * 0.5, y - fuse - 0.5, 1, 0.5)
+  if (ag.fuse < 15) {
+    // Three bounded flecks, only for the last half-second. No blast early.
+    blitFine(ctx, ox, oy, dir, 2, y - fuse - 1, 0.5, 0.5)
+    blitFine(ctx, ox, oy, dir, 5.5, y - fuse - 2, 0.5, 0.5)
+    blitFine(ctx, ox, oy, dir, 6.5, y - fuse, 0.5, 0.5)
+  }
+}
+
+function drawFloatingUmbrella(ctx, w, pal, ag, ox, oy, flex, brolly) {
+  ctx.save()
+  // fall is distance: the first cell under load unfolds over several ticks.
+  var spread = Math.min(1, Math.max(0.25, Math.ceil((ag.fall - 2) * 4) / 4))
+  var sway = Math.round(Math.sin(w.ticks * 0.09 + ag.id * 1.7) * 2) * 0.5
+  drawUmbrellaFine(ctx, pal, ox + sway, oy, flex, brolly, spread)
+  // The canopy sways above the grip, which stays attached to the passenger.
+  drawWorkHandle(ctx, pal, ox, oy, 1, 4 + sway, -0.5, 4, 5, pal.umbrellaStem)
+  ctx.fillStyle = pal.umbrellaStem
+  blitFine(ctx, ox, oy, 1, 4, 4, 0.5, 2)
+  ctx.restore()
+}
+
+function drawFloatGrip(ctx, w, pal, ag, ox, oy, dir) {
+  if (!ag.floater || !(ag.fall > 2)) return
+  ctx.fillStyle = pal.skin
+  blitFine(ctx, ox, oy, 1, 3.5, 4, 1.5, 1)
+}
+
+var SKILL_DETAIL_DRAW = { climb: drawClimbContactDetail, bomb: drawBombFuse, fall: drawFloatGrip }
+function drawSkillDetail(ctx, w, pal, ag, ox, oy, dir) {
+  if ((w.res || 1) < 2) return
+  var draw = SKILL_DETAIL_DRAW[ag.state]
+  if (!draw) return
+  ctx.save()
+  draw(ctx, w, pal, ag, ox, oy, dir)
+  ctx.restore()
+}
+
 // Work is read by the tool and its stroke, not by dust alone. The panel keeps
 // its old silhouettes; page tools use half pixels and the simulation's timer.
 // No sparks are invented here: the simulation already supplies impact dust.
@@ -7265,9 +7413,9 @@ function drawWorkTools(ctx, w, pal, ag, ox, oy, dir) {
 
 // Stair-step a handle on the half-pixel grid. Unlike rotating a thin
 // rectangle this stays crisp at every stroke and in either facing direction.
-function drawWorkHandle(ctx, pal, ox, oy, dir, x0, y0, x1, y1) {
+function drawWorkHandle(ctx, pal, ox, oy, dir, x0, y0, x1, y1, color) {
   var steps = Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) * 2)
-  ctx.fillStyle = pal.rig
+  ctx.fillStyle = color || pal.rig
   for (var i = 0; i <= steps; i++) {
     var p = steps ? i / steps : 0
     blitFine(ctx, ox, oy, dir, x0 + (x1 - x0) * p, y0 + (y1 - y0) * p, 1, 1)
@@ -9187,6 +9335,9 @@ function drawAgent(ctx, w, pal, ag, opts) {
   var ox = Math.round(ag.x * C) - SPRITE_W / 2
   var dir = ag.dir
   var st = ag.state
+  // At page resolution the body stays outside the face, with palms on it.
+  if ((w.res || 1) >= 2 && st === "climb" && !libraryShelfPose(w, ag))
+    ox += dir * (climbContacts(w, ag, ox, dir).x - 8)
   // A rider hangs off the car's own position, not its stale one: agents step
   // before lifts within a tick, so ag.y trails a descending car by a whole
   // LIFT_SPEED and the sprite floats above the floor plate. Stair riders walk
@@ -9336,6 +9487,7 @@ function agentDrawMotion(w, ag, st, idle) {
   var bodyDrop = st === "slide" ? 4 : ((st === "dig" || st === "camp") ? 2 : squash - bob)
 
   if (idle && st === "walk") { walkLead = 0; squash = 0; bodyDrop = 0 }
+  if ((w.res || 1) >= 2 && st === "bomb") bodyDrop = bombCrouch(ag)
 
   return { lead: walkLead, squash: squash, drop: bodyDrop }
 }
@@ -9351,6 +9503,7 @@ function drawAgentDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, squash, robe,
   }
   drawTraitDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, idle)
   drawWorkTools(ctx, w, pal, ag, ox, oy, dir)
+  drawSkillDetail(ctx, w, pal, ag, ox, oy, dir)
 }
 
 function drawAgentEffects(ctx, w, pal, ag, ox, oy, dir, hair, st, C) {

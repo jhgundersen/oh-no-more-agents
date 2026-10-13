@@ -130,11 +130,13 @@ for (const state of FINE_STATES) {
       // Full height spins are checked above; use an unrotated tucked frame
       // here so both masks share sprite coordinates.
       ag.heightTick = 0
-      w.res = 1
+      // Bombers now have a distinct braced/crouched page silhouette. Test
+      // tailoring against that pose; all other fine marks keep the panel mask.
+      w.res = state === "bomb" ? 2 : 1
       D.drawAgent(coarse.ctx, w, pal, ag, {})
       if (state === "swim") D.drawFineSwim(fine.ctx, pal, ag, 36, 48, dir)
       else {
-        const drop = state === "slide" ? 4 : (state === "dig" ? 2 : 0)
+        const drop = state === "bomb" ? D.bombCrouch(ag) : (state === "slide" ? 4 : (state === "dig" ? 2 : 0))
         const lead = [0, 1, 0, -1][(phase >> 2) % 4]
         D.drawAgentFine(fine.ctx, pal, ag, 36, 48, dir, drop, lead, 0, pal.robe)
       }
