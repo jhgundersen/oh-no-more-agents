@@ -3530,3 +3530,5 @@ levels change): the gap between two houses.
 
 **Measured** (240 Rooftops plays): levels with a line 52 → 97 of 120;
 home 94.88 → 95.24%; hangs 0. Tests 683.
+
+**Deployed** after 126 (name="build" content="6ada238d"): ricochets, Rooftops gaps, crap splits. Browser check clean.
