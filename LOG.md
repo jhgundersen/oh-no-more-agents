@@ -2403,3 +2403,23 @@ cleared, 93% home (not like-for-like — every level moved biome); `inert`,
 them, 6.4 rides a level.
 
 **Deployed** after 88 (name="build" content="febea1b4"): the Mail Room. Browser check clean.
+
+## 89 — 2026-10-13 · The sentry's reach
+
+**Why.** Per-biome tally across all fourteen: every biome 92–96% home except
+the Ruins (88.2%), with hazards its top killer. `sim hazards`: average 0.31
+kills a placement; the sentry ("Hall Monitor", every biome) 1.97 — 27% of all
+hazard deaths — and the Ruins' scarab 1.06.
+
+**Found.** The sentry wakes on anyone within reach (16) and fires along all of
+it after a 34-tick wind-up; a walker covers ~9.5 cells in that time, so
+anyone who walked in unaware was still in the beam, usually with company.
+
+**Changed.** Sentry reach 16 → 12, in Sim and in Draw's beam (which had its
+own 16).
+
+**Checked.** Levels with a sentry (28 in 1–1400): reach 16 / 12 / 10 →
+1.21 / 0.75 / 0.57 kills a level, 89.4 / 92.2 / 93.4% home. 12 keeps it the
+deadliest fixture. `sim play` 93 → 94% home. Scarab: 5 vs 3 projectiles
+0.92 vs 0.83 kills a placement, Ruins 90.8 vs 91.1% — not worth it; kept.
+528 tests pass.

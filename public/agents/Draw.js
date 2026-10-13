@@ -4330,7 +4330,7 @@ function drawHzSentry(ctx, w, pal, h, geo) {
   ctx.fillRect(cx - 2, y0 + 2, 4, 3)             // lens
   if (show) {
     ctx.fillStyle = hot
-    var sentryReach = 16 * C * h.dir
+    var sentryReach = 12 * C * h.dir        // Sim's sentry reach; keep the two together
     if (live) ctx.fillRect(Math.min(cx, cx + sentryReach), y0 + 4, Math.abs(sentryReach), 2)
     else for (var sight = 0; sight < Math.abs(sentryReach); sight += 5)
       ctx.fillRect(cx + sight * h.dir, y0 + 4, 1, 1)

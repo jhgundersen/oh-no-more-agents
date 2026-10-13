@@ -3258,7 +3258,11 @@ function cutPhase(w, ag, act, dry) {
 
 var HAZARDS = [
   { id: "gun",      name: "Token Sprayer", mech: "watch", mount: "ceiling", reach: 13, charge: 16, fire: 24, rest: 66, w: 5, h: 6 },
-  { id: "sentry",   name: "Hall Monitor", mech: "watch", mount: "wall", reach: 16, charge: 34, fire: 14, rest: 74, w: 3, h: 4 },
+  // Reach 12, was 16: an agent covers ~9.5 cells in its 34-tick wind-up, so
+  // at 16 anyone who walked in unaware died, often several to one shot —
+  // 1.21 a level, 27% of every hazard death. At 12: 0.75, still the worst.
+  // Draw mirrors the number for the beam (drawHzSentry).
+  { id: "sentry",   name: "Hall Monitor", mech: "watch", mount: "wall", reach: 12, charge: 34, fire: 14, rest: 74, w: 3, h: 4 },
   { id: "darts",    name: "Sharp Prompt", mech: "watch", mount: "wall", reach: 11, charge: 18, fire: 10, rest: 52, w: 3, h: 3 },
   { id: "flame",    name: "Thermal Throttler", mech: "watch", mount: "ceiling", reach: 9, charge: 30, fire: 26, rest: 70, w: 4, h: 6 },
   { id: "tesla",    name: "Power User", mech: "watch", mount: "floor", reach: 10, charge: 24, fire: 18, rest: 62, w: 5, h: 5 },
