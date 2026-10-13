@@ -3712,3 +3712,17 @@ outward as they fade), and swells in its last three ticks with the rays again
 before it breaks and one of the two gets up. `BRAWL_TICKS` travels on `w.k`
 so the drawing knows the age. Looked at level 5's scuffle at ticks 297–324.
 Tests 695.
+
+## 137 — 2026-10-14 · Crap: stepAgents
+
+Game functions over CRAP 30: **2 → 1**. `stepAgents` (58) is now the loop
+and the tally; one agent's tick is `stepOneAgent`, which reads as the order
+it always ran in — fade if home (`"fading"`), `agentReady` (out of a false
+floor in a pit, cooldowns, an infection running out), `agentActs` (timers,
+specials' reactions, the watchers, the sidearm, then its state's step from the
+`AGENT_STEPS` table, then `agentFlipCheck`), then `agentAtExit` (a shut door
+turns it back and counts it as `"door"`; an open one takes it home). The
+state switch is a table now; `hooked` and `zip` are absent from it on purpose.
+All ≤ 9. Fingerprint identical (`95742321…`); `npm run sim` unchanged.
+
+Only `generate` (77) is left over 30. Tests 695.

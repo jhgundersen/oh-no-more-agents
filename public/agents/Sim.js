@@ -9620,143 +9620,143 @@ function condemn(w, ag) {
 }
 
 function stepAgents(w) {
-  var active = 0
-  var blockers = 0
-  var moving = 0
-
+  var counts = { active: 0, blockers: 0, moving: 0 }
   for (var i = 0; i < w.agents.length; i++) {
     var ag = w.agents[i]
     if (ag.gone) continue
-
-    if (ag.state === "saved") {
-      ag.fade++
-      if (ag.fade > 14) ag.gone = true
-      continue
-    }
-
-    // A skill may have built a false floor inside a pit before another agent
-    // arrived. Anyone already standing below the recorded lip resumes falling
-    // instead of treating that debris as ordinary corridor ground.
-    var insidePit = pitAt(w, Math.floor(ag.x))
-    if (insidePit && ag.y >= insidePit.floorY && ag.state !== "fall") {
-      ag.floater = false
-      startFall(w, ag)
-    }
-
-    // Closer to home than this agent has ever been? Then whatever it's
-    // doing is working: clear both counters and let it get on with it.
-    w.acting = ag
-    if (ag.cool > 0) ag.cool--
-    if (ag.infected > 0 && --ag.infected === 0) { turnAgent(w, ag); continue }
-    tickAgentTimers(w, ag)
-
-    if (ag.special && ag.state === "walk") specialReacts(w, ag)
-    if (ag.rescueCool > 0) ag.rescueCool--
-    watchStill(w, ag)
-    watchProgress(w, ag)
-
-    var dirBeforeStep = ag.dir
-    regularSidearm(w, ag)
-    switch (ag.state) {
-      case "walk": stepWalk(w, ag); break
-      case "fall": stepFall(w, ag); break
-      case "climb": stepClimb(w, ag); break
-      case "build": stepBuild(w, ag); break
-      case "bash": stepBash(w, ag); break
-      case "dig": stepDig(w, ag); break
-      case "block": stepBlock(w, ag); break
-      case "bomb": stepBomb(w, ag); break
-      case "trick": stepTrick(w, ag); break
-      case "ceil":  stepCeiling(w, ag); break
-      case "rappel": stepRappel(w, ag); break
-      case "height": stepSpecialHeight(w, ag); break
-      case "webup": stepWebEscape(w, ag); break
-      case "stunned": stepStunned(w, ag); break
-      case "jump":  stepJump(w, ag); break
-      case "swim":  stepSwim(w, ag); break
-      case "slide": stepSlide(w, ag); break
-      case "camp":  stepCamp(w, ag); break
-      case "wait":  stepLiftWait(w, ag); break
-      case "ride":  stepLiftRide(w, ag); break
-      case "hooked": break   // the crane moves them; see stepCrane
-      case "zip": break      // the cable carries them; see stepZiplines
-      case "brawl": stepBrawlAgent(w, ag); break
-    }
-
-    // A one-cell trap can evade both stuck detectors: the agent technically
-    // changes cells and directions every tick, so it is neither stationary nor
-    // completing another full pacing bucket. Eighteen uninterrupted reversals
-    // is not navigation. End a special's loop with its usual condemned blast,
-    // which also has a chance to open the trap for everyone behind it.
-    if (ag.special && ag.state === "walk" && ag.dir !== dirBeforeStep) ag.flipTicks++
-    else ag.flipTicks = 0
-    if (ag.special && ag.flipTicks >= 18) {
-      ag.idle = Math.max(ag.idle, STUCK_LIMIT)
-      condemn(w, ag)
-    }
-
-    w.acting = null
-
-    if (ag.gone) continue
-
-    // Home. The mouth stays shut until the biome's job is finished. Reversing
-    // at its threshold is preferable to letting early arrivals vanish while
-    // the rest of the cast does the thing the level asked of them.
-    var e = w.exit
-    if (ag.x > e.x && ag.x < e.x + e.w && ag.y > e.y && ag.y < e.y + e.h + 1) {
-      if (w.mission && (!w.mission.done || w.ticks - w.mission.openedAt < 24)) {
-        // Finding the door shut is how an agent learns there is a job on.
-        // Without this the colony piles up on the threshold and only the
-        // scout ever goes looking, which is fine where the door sits in the
-        // middle of a long corridor and fatal where it does not: a tower puts
-        // the last car down a few cells from the mouth, and fifteen agents
-        // bounce between the shut door and the lift doors until the clock
-        // runs out. It steers the ones that have actually been there, so they
-        // set off in ones and twos rather than as a crowd.
-        ag.sawShut = true
-        // Shut is a door, not a wall, and the job is not always on the side of
-        // it the agent came from. A tower's cars can put the colony down on
-        // the far side of its own exit, and then the only way to the search
-        // point is through the doorway: the rebound threw them back west, the
-        // search steer turned them east again, and level 369 spent four
-        // thousand ticks with twelve agents in a one-cell tug of war that
-        // neither rule would ever lose — and which the loop detector could not
-        // see, because the rebound renews waitFor. Somebody on their way past
-        // is let past; only somebody who came to go home is turned around.
-        var beyond = goalX(w, ag)
-        var passing = ag.dir > 0 ? beyond > e.x + e.w : beyond < e.x
-        if (!passing) {
-          ag.x = ag.dir > 0 ? e.x - 1.2 : e.x + e.w + 1.2
-          turnAround(w, ag)
-          ag.waitFor = Math.max(ag.waitFor, 12)
-        }
-        active++
-        moving++
-        continue
-      }
-      ag.state = "saved"
-      ag.fade = 0
-      w.saved++
-      // A carrier that beats its own incubation to the door goes home with it
-      // and counts, like everybody else, as a rescue. It is the best outcome
-      // this event has and the colony has no idea it happened.
-      if (ag.infected > 0) { w.carrierHome = true; w.lastEvent = "carrier home" }
-      else w.lastEvent = "saved"
-      continue
-    }
-
-    active++
-    // A camped sniper counts with the blockers here: it is standing somewhere
-    // on purpose and it is never coming home either. Without this the level
-    // waits for it and every Beam Search level runs to the nuke.
-    if (ag.state === "block" || ag.state === "camp") blockers++
-    if (ag.state !== "walk" || ag.idle < 300) moving++
+    var outcome = stepOneAgent(w, ag)
+    if (outcome === "door") { counts.active++; counts.moving++ }
+    else if (outcome === "on") tallyAgent(counts, ag)
   }
-  return { active: active, blockers: blockers, moving: moving }
+  return counts
+}
+
+// One agent's tick. "on" when it is still out there to be counted, "door"
+// when it was turned back at a shut exit, anything else when it is not to be
+// counted this tick (fading home, turned, gone, or just arrived).
+function stepOneAgent(w, ag) {
+  if (ag.state === "saved") {
+    ag.fade++
+    if (ag.fade > 14) ag.gone = true
+    return "fading"
+  }
+  if (!agentReady(w, ag)) return "turned"
+  agentActs(w, ag)
+  if (ag.gone) return "gone"
+  var e = w.exit
+  if (ag.x > e.x && ag.x < e.x + e.w && ag.y > e.y && ag.y < e.y + e.h + 1) return agentAtExit(w, ag, e)
+  return "on"
+}
+
+// A camped sniper counts with the blockers: it is standing somewhere on
+// purpose and it is never coming home either. Without this the level waits
+// for it and every Beam Search level runs to the nuke.
+function tallyAgent(counts, ag) {
+  counts.active++
+  if (ag.state === "block" || ag.state === "camp") counts.blockers++
+  if (ag.state !== "walk" || ag.idle < 300) counts.moving++
+}
+
+// Before it acts: out of a pit it should be falling in, and through its
+// cooldowns. False when an infection running out has turned it.
+function agentReady(w, ag) {
+  // A skill may have built a false floor inside a pit before another agent
+  // arrived. Anyone already standing below the recorded lip resumes falling
+  // instead of treating that debris as ordinary corridor ground.
+  var insidePit = pitAt(w, Math.floor(ag.x))
+  if (insidePit && ag.y >= insidePit.floorY && ag.state !== "fall") {
+    ag.floater = false
+    startFall(w, ag)
+  }
+  w.acting = ag
+  if (ag.cool > 0) ag.cool--
+  if (ag.infected > 0 && --ag.infected === 0) { turnAgent(w, ag); return false }
+  return true
+}
+
+var AGENT_STEPS = {
+  walk: stepWalk, fall: stepFall, climb: stepClimb, build: stepBuild, bash: stepBash,
+  dig: stepDig, block: stepBlock, bomb: stepBomb, trick: stepTrick, ceil: stepCeiling,
+  rappel: stepRappel, height: stepSpecialHeight, webup: stepWebEscape, stunned: stepStunned,
+  jump: stepJump, swim: stepSwim, slide: stepSlide, camp: stepCamp, wait: stepLiftWait,
+  ride: stepLiftRide, brawl: stepBrawlAgent
+  // "hooked" and "zip": the crane and the line move them (stepCrane, stepZiplines).
+}
+
+function agentActs(w, ag) {
+  tickAgentTimers(w, ag)
+  if (ag.special && ag.state === "walk") specialReacts(w, ag)
+  if (ag.rescueCool > 0) ag.rescueCool--
+  watchStill(w, ag)
+  watchProgress(w, ag)
+
+  var dirBeforeStep = ag.dir
+  regularSidearm(w, ag)
+  var stepFn = AGENT_STEPS[ag.state]
+  if (stepFn) stepFn(w, ag)
+  agentFlipCheck(w, ag, dirBeforeStep)
+  w.acting = null
+}
+
+// A one-cell trap can evade both stuck detectors: the agent technically
+// changes cells and directions every tick, so it is neither stationary nor
+// completing another full pacing bucket. Eighteen uninterrupted reversals
+// is not navigation. End a special's loop with its usual condemned blast,
+// which also has a chance to open the trap for everyone behind it.
+function agentFlipCheck(w, ag, dirBeforeStep) {
+  if (ag.special && ag.state === "walk" && ag.dir !== dirBeforeStep) ag.flipTicks++
+  else ag.flipTicks = 0
+  if (ag.special && ag.flipTicks >= 18) {
+    ag.idle = Math.max(ag.idle, STUCK_LIMIT)
+    condemn(w, ag)
+  }
+}
+
+function agentAtExit(w, ag, e) {
+  // Home. The mouth stays shut until the biome's job is finished. Reversing
+  // at its threshold is preferable to letting early arrivals vanish while
+  // the rest of the cast does the thing the level asked of them.
+  if (w.mission && (!w.mission.done || w.ticks - w.mission.openedAt < 24)) {
+    // Finding the door shut is how an agent learns there is a job on.
+    // Without this the colony piles up on the threshold and only the
+    // scout ever goes looking, which is fine where the door sits in the
+    // middle of a long corridor and fatal where it does not: a tower puts
+    // the last car down a few cells from the mouth, and fifteen agents
+    // bounce between the shut door and the lift doors until the clock
+    // runs out. It steers the ones that have actually been there, so they
+    // set off in ones and twos rather than as a crowd.
+    ag.sawShut = true
+    // Shut is a door, not a wall, and the job is not always on the side of
+    // it the agent came from. A tower's cars can put the colony down on
+    // the far side of its own exit, and then the only way to the search
+    // point is through the doorway: the rebound threw them back west, the
+    // search steer turned them east again, and level 369 spent four
+    // thousand ticks with twelve agents in a one-cell tug of war that
+    // neither rule would ever lose — and which the loop detector could not
+    // see, because the rebound renews waitFor. Somebody on their way past
+    // is let past; only somebody who came to go home is turned around.
+    var beyond = goalX(w, ag)
+    var passing = ag.dir > 0 ? beyond > e.x + e.w : beyond < e.x
+    if (!passing) {
+      ag.x = ag.dir > 0 ? e.x - 1.2 : e.x + e.w + 1.2
+      turnAround(w, ag)
+      ag.waitFor = Math.max(ag.waitFor, 12)
+    }
+    return "door"
+  }
+  ag.state = "saved"
+  ag.fade = 0
+  w.saved++
+  // A carrier that beats its own incubation to the door goes home with it
+  // and counts, like everybody else, as a rescue. It is the best outcome
+  // this event has and the colony has no idea it happened.
+  if (ag.infected > 0) { w.carrierHome = true; w.lastEvent = "carrier home" }
+  else w.lastEvent = "saved"
+  return "home"
 }
 
 // Every per-agent countdown that only ever runs down. (`cool` and `infected`
-// run in stepAgents itself: one of them can end the agent's turn.)
+// run in agentReady: one of them can end the agent's turn.)
 var AGENT_COUNTDOWNS = ["blockFor", "coveredFor", "mineCool", "waitFor", "shotFor", "throttleFor", "debugFor", "restockFor",
   "netFor", "reloadFor", "gunCool", "shoveCool", "hazardGrace", "brollyFor"]
 function tickAgentTimers(w, ag) {
