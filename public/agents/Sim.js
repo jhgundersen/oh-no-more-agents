@@ -4623,7 +4623,9 @@ function placeBottomPit(w, rng, c, prev, sealFrom) {
   var roll = rng()
   if (roll < 0.12) return
 
-  var crossing = roll >= 0.52
+  // On the Rooftops nearly every level has one: the gap between two houses,
+  // which is what their lines are strung across.
+  var crossing = roll >= (w.biome === "Rooftops" ? 0.15 : 0.52)
   if (crossing) crossing = cutCrossing(w, rng, c, landing, sealFrom) !== null
 
   // A shaft on its own on the levels that rolled one, and behind the colony as

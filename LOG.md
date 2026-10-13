@@ -3520,3 +3520,13 @@ guards down 183 → 190. At 20% it was 3 ricochets in 119 guard levels, too rare
 to be anything; at 35% it is a small surprise every dozen or so guard levels.
 Looked at level 13 ticks 183–185: tracer, flash on the canopy, sparks. Tests
 683.
+
+## 126 — 2026-10-13 · A gap between every pair of houses
+
+The Rooftops' lines go over crossings, and only 43% of Rooftops levels rolled
+one, so most visits to the biome never saw its mechanism. On the Rooftops the
+crossing roll now passes at 0.15 instead of 0.52 (same draw, so only Rooftops
+levels change): the gap between two houses.
+
+**Measured** (240 Rooftops plays): levels with a line 52 → 97 of 120;
+home 94.88 → 95.24%; hangs 0. Tests 683.
