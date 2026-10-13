@@ -7549,10 +7549,21 @@ function stepSpecialHeight(w, ag) {
 // the colony's way down: they skipped the descent and wandered the floor above
 // until the level ended (a fifth of Speculative Decoders never got home).
 // Measured on two 160-level samples: Speculative Decoder +0.4/+0.3, Model
-// Collapse +1.9/+1.4. Chain of Thought was tried the same way and lost
-// 0.1–0.7, so it keeps leaping any gap (below) (iteration 103).
+// Collapse +1.9/+1.4 (iteration 103). Chain of Thought lost 0.1–0.7 the
+// same way: its leap takes nearby colleagues along, and that is worth doing
+// at any gap. So it leaps a survivable gap only with company (chainCompany,
+// below): +0.21/+0.37/+0.12 on three samples (iteration 106).
 function leapsGaps(spec) {
-  return spec.act === "speculate" || spec.act === "collapse"
+  return spec.act === "speculate" || spec.act === "collapse" || spec.act === "chain"
+}
+// A colleague on foot within the chain's reach (specialTraverse links them).
+function chainCompany(w, ag) {
+  for (var i = 0; i < w.agents.length; i++) {
+    var o = w.agents[i]
+    if (o === ag || o.gone || o.special || o.state !== "walk") continue
+    if (Math.abs(o.x - ag.x) <= 9 && Math.abs(o.y - ag.y) <= 3) return true
+  }
+  return false
 }
 
 function autoCompleteEdge(w, ag, nx, spec, far) {
@@ -7593,7 +7604,7 @@ function specialAtEdge(w, ag, nx, depth, far) {
   }
 
 
-  if (spec.act === "chain" && ag.cool <= 0 && far > 1 && specialLanding(w, ag, 14)) {
+  if (spec.act === "chain" && ag.cool <= 0 && far > 1 && chainCompany(w, ag) && specialLanding(w, ag, 14)) {
     ag.state = "trick"
     ag.timer = 0
     return

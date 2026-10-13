@@ -226,3 +226,16 @@ test("Speculative Decoder and Model Collapse leap a lethal gap, not the way down
     assert.equal(ag.state === "trick", leaps, `${id} at depth ${depth}`)
   }
 })
+
+test("Chain of Thought leaps a survivable gap only with colleagues to take", () => {
+  for (const company of [false, true]) {
+    const w = fresh(), x = 20, top = 20, depth = 6, bottom = top + depth
+    clear(w, x - 8, x + 12, top - 6, bottom); floor(w, x - 8, x, top + 1); floor(w, x + 4, x + 12, top + 1)
+    floor(w, x - 8, x + 12, bottom + 1)
+    const ag = { special: "chainthought", x: x + 0.5, y: top, dir: 1, state: "walk", anim: 0, turns: 0, floater: false, fall: 0, timer: 0, cool: 0 }
+    w.agents = [ag]
+    if (company) w.agents.push({ x: x - 3.5, y: top, dir: 1, state: "walk", gone: false })
+    S.specialAtEdge(w, ag, ag.x + S.WALK_SPEED, depth, 3)
+    assert.equal(ag.state === "trick", company)
+  }
+})

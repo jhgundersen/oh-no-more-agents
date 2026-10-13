@@ -2917,3 +2917,27 @@ lays each brick at the stair edge instead of carrying it. These skills are
 on screen in nearly every level.
 
 **Deployed** after 105 (name="build" content="0d0fabad"): picks, spades and laid bricks. Browser check clean.
+
+## 106 — 2026-10-13 · Chain of Thought leaps with company; Codex on the other skills
+
+Chain of Thought was the one leaper that 103 left alone: leaping only lethal
+gaps cost it 0.1–0.7. Its leap is different from the others'. It takes up to
+four nearby colleagues across with it (`specialTraverse`), and the colony
+does better with it than with no hero (94.22 vs 93.69). What failed was the
+hero alone: it leapt the way down by itself and was lost a quarter of the
+time. Now it leaps a survivable gap only with a colleague on foot within its
+reach (`chainCompany`). Alone, it leaps only lethal gaps, before its own way
+down.
+
+| sample | no hero | old | with company |
+|---|---|---|---|
+| A | 93.69 | 92.94 | 93.15 |
+| B | 92.77 | 90.82 | 91.19 |
+| C | 93.90 | 93.57 | 93.69 |
+
+Small, and positive on all three. Test: alone it does not leap a survivable
+gap, with a colleague it does.
+
+Deployed 105's art at the start (above). Codex is on `codex/skills`: climbing,
+mining, blocking, bombing and floating at res 2, as 105 did for bash, dig
+and build.
