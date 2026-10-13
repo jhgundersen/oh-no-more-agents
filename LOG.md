@@ -3615,3 +3615,5 @@ third line, blinking in the urgent colour — "WARNING · THE MODERATOR HOLDS
 THIS LEVEL" — and stays up 20 ticks longer so it can be read before it slides
 away. Ordinary levels' cards are unchanged. Looked at level 8 at ticks 25 and
 30 (blink on and off). Tests 687.
+
+**Deployed** after 131 (name="build" content="faef039d"): The Moderator and its warning. Browser check clean.
