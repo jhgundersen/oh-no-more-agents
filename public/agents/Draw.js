@@ -201,6 +201,7 @@ function drawTerrain(ctx, w, pal) {
 
   if (w.biome === "Library") drawLibraryStacks(ctx, w, pal)
   if (w.biome === "Mail Room") drawMailSlots(ctx, w, pal)
+  if (w.biome === "Building Site") drawSiteMaterials(ctx, w, pal)
   if ((w.res || 1) >= 2) drawTerrainFine(ctx, w, pal)
 
   drawFactoryPlates(ctx, w, pal)
@@ -343,7 +344,7 @@ function drawFactoryPlates(ctx, w, pal) {
 // while the colony digs around it.
 // Built places get no grain: on hull plate, office wall and machine housing it
 // read as dirt, and those biomes carry their own pattern (panels, bays, rivets).
-var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true, "Library": true, "Mail Room": true }
+var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true, "Library": true, "Mail Room": true, "Building Site": true }
 
 // One cell's grain: a dark fleck in a quarter of cells, a pale one in an
 // eighth, placed inside the cell by the hash.
@@ -411,7 +412,8 @@ var BACKDROPS = {
   "Cavern": backCavern, "Ruins": backRuins, "Frost": backFrost,
   "Foundry": backFoundry, "Jungle": backJungle, "Ice Cave": backIceCave,
   "Spaceship": backSpaceship, "Factory": backFactory, "Trench": backTrench,
-  "Desert": backDesert, "Data Center": backDataCenter, "Library": backLibrary, "Mail Room": backMailRoom
+  "Desert": backDesert, "Data Center": backDataCenter, "Library": backLibrary, "Mail Room": backMailRoom,
+  "Building Site": backBuildingSite
 }
 
 function drawBackdrop(ctx, w, pal) {
@@ -672,7 +674,8 @@ var BACKDROP_FINE = {
   "Foundry": backFoundryFine, "Jungle": backJungleFine, "Ice Cave": backIceCaveFine,
   "Spaceship": backSpaceshipFine, "Factory": backFactoryFine,
   "Skyscraper": backSkyscraperFine, "Trench": backTrenchFine,
-  "Desert": backDesertFine, "Data Center": backDataCenterFine, "Library": backLibraryFine, "Mail Room": backMailRoomFine
+  "Desert": backDesertFine, "Data Center": backDataCenterFine, "Library": backLibraryFine, "Mail Room": backMailRoomFine,
+  "Building Site": backBuildingSiteFine
 }
 
 function drawBackdropFine(ctx, w, pal) {
@@ -934,11 +937,12 @@ function drawDecor(ctx, w, pal) {
     var desert = w.biome === "Desert"
     drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert)
     if ((w.res || 1) >= 2) drawDecorFine(ctx, pal, d, px, py, py + C,
-      w.biome === "Mail Room" ? "mail" : w.biome === "Library" ? "library" : foundry ? "pipe" : ruins ? "ruins" : desert ? "desert" : jungle ? "jungle" : frost ? "frost" : "cave")
+      w.biome === "Building Site" ? "site" : w.biome === "Mail Room" ? "mail" : w.biome === "Library" ? "library" : foundry ? "pipe" : ruins ? "ruins" : desert ? "desert" : jungle ? "jungle" : frost ? "frost" : "cave")
   }
 }
 
 function drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert) {
+  if (w.biome === "Building Site") return drawSiteDecor(ctx, pal, d, px, py, w.k.CELL)
   if (w.biome === "Mail Room") return drawMailDecor(ctx, pal, d, px, py, w.k.CELL)
   if (w.biome === "Library") return drawLibraryDecor(ctx, pal, d, px, py, w.k.CELL)
   var C = w.k.CELL
@@ -1053,6 +1057,8 @@ function drawDecorFine(ctx, pal, d, px, top, base, look) {
 function fineSpireHeight(d) { return 3 + d.size * 3 }
 
 var DECOR_FINE = {
+  "spire:site": fineSiteCone, "clump:site": fineSitePallet,
+  "hang:site": fineSiteSign, "tuft:site": fineSiteEquipment,
   "spire:mail": fineMailSack, "clump:mail": fineMailParcels,
   "hang:mail": fineMailSign, "tuft:mail": fineMailFrank,
   "spire:library": fineLibraryLadder, "hang:library": fineLibraryLamp,
@@ -1178,7 +1184,7 @@ function drawExitBack(ctx, w, pal) {
   drawExitFrameFine(ctx, w, pal, x, y, ww, hh)
 }
 
-var EXIT_FRAMES = { "Library": drawExitLibrary, "Data Center": drawExitDataBack, "Mail Room": drawExitMail }
+var EXIT_FRAMES = { "Library": drawExitLibrary, "Data Center": drawExitDataBack, "Mail Room": drawExitMail, "Building Site": drawExitSite }
 function drawExitFrameBase(ctx, w, pal, x, y, ww, hh, cx3) {
   switch (w.biome) {
   case "Ruins":
@@ -1331,7 +1337,8 @@ var EXIT_FINE = {
   "Desert": drawExitDesertFine,
   "Data Center": drawExitDataFine,
   "Library": drawExitLibraryFine,
-  "Mail Room": drawExitMailFine
+  "Mail Room": drawExitMailFine,
+  "Building Site": drawExitSiteFine
 }
 
 function drawExitFrameFine(ctx, w, pal, x, y, ww, hh) {
@@ -1638,6 +1645,7 @@ function drawWaterLife(ctx, w, pal) {
 //   blink  >0: lit only for that share of a cycle (fireflies, glints)
 
 var AMBIENCE = {
+  "Building Site": [{ n: 48, vx: 0.07, vy: 0.09, sway: 2, size: 1, col: "dust", alpha: 0.34 }],
   "Mail Room": [{ n: 26, vx: 0.12, vy: 0.08, sway: 5, size: 2, col: "oreEdge", alpha: 0.55 },
                 { n: 16, vx: -0.08, vy: 0.06, sway: 3, size: 1, col: "urgent", alpha: 0.65 }],
   "Library":  [{ n: 36, vx: 0.015, vy: 0.025, sway: 2, size: 1, col: "dust", alpha: 0.24 }],
@@ -1740,7 +1748,8 @@ var AMBIENCE_FINE = {
   "Foundry": drawMoteFoundryFine, "Jungle": drawMoteJungleFine, "Ice Cave": drawMoteIceFine,
   "Spaceship": drawMoteSpaceshipFine, "Factory": drawMoteFactoryFine,
   "Skyscraper": drawMoteSkyscraperFine, "Trench": drawMoteTrenchFine,
-  "Desert": drawMoteDesertFine, "Data Center": drawMoteDataFine, "Library": drawMoteLibraryFine, "Mail Room": drawMoteMailFine
+  "Desert": drawMoteDesertFine, "Data Center": drawMoteDataFine, "Library": drawMoteLibraryFine, "Mail Room": drawMoteMailFine,
+  "Building Site": drawMoteSiteFine
 }
 
 // Check the complete half-pixel footprint: the motion can put a corner into
@@ -1948,6 +1957,7 @@ function drawBeltDrum(ctx, w, pal, x, top, side, dir) {
 
 function drawMachines(ctx, w, pal) {
   drawWaterLife(ctx, w, pal)
+  if (w.biome === "Building Site") drawSiteMachines(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
   if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
   if (w.updraft) drawUpdrafts(ctx, w, pal)
@@ -4135,6 +4145,7 @@ function drawEnemyHatch(ctx, w, pal, opts) {
   else if (biome === "Data Center") { wall = pal.steel; roof = pal.rigDark; edge = pal.oreEdge; sign = "SHADOW IT" }
   else if (biome === "Mail Room") { wall = pal.dirt; roof = pal.urgent; edge = pal.oreEdge; sign = "MAILER DAEMON" }
   else if (biome === "Library") { wall = pal.dirt; roof = pal.dirtShade; edge = pal.oreEdge; sign = "STACK OVERFLOW" }
+  else if (biome === "Building Site") { wall = pal.rock; roof = pal.ore; edge = pal.oreEdge; sign = "BUILD FAILED" }
 
   // Barely larger than an agent: a sentry booth, not a second landmark. Its
   // materials come from the current theme; biome identity is in the roofline.
@@ -4145,6 +4156,8 @@ function drawEnemyHatch(ctx, w, pal, opts) {
     ctx.fillRect(x - 6, y - 19, 12, 2); ctx.fillRect(x - 9, y - 17, 18, 2)
   } else if (biome === "Jungle") {
     ctx.fillRect(x - 11, y - 19, 22, 3); ctx.fillRect(x - 7, y - 22, 14, 3)
+  } else if (biome === "Building Site") {
+    drawSiteBoothTop(ctx, pal, x, y)
   } else if (biome === "Mail Room") {
     drawMailBoothTop(ctx, pal, x, y)
   } else if (biome === "Library") {
@@ -6205,7 +6218,7 @@ function drawReloadSign(ctx, ag, ox, oy, hair) {
 // These are visual durations only (guarded against EVENTS by the tests), so a
 // direct fireEvent and a scheduled one fade alike without a renderer clock.
 var EVENT_VISUAL_SPANS = {
-  boost: { Ruins: 420, Foundry: 360, Factory: 380, Skyscraper: 400, "Data Center": 300, "Mail Room": 360 },
+  boost: { Ruins: 420, Foundry: 360, Factory: 380, Skyscraper: 400, "Data Center": 300, "Mail Room": 360, "Building Site": 380 },
   sight: { Cavern: 420, Frost: 480, "Ice Cave": 450, Desert: 460, Library: 420 },
   fall: { Spaceship: 400 }
 }
@@ -6375,6 +6388,7 @@ function drawEventHeat(ctx, w, pal, x, y, fade, dir) {
 // growth, the floor's edge blinking in warning where it will rise. Then, for a
 // collapse, the rubble coming down. The banner says what; this says where.
 function drawEventSite(ctx, w, pal, fx) {
+  if (w.biome === "Building Site") drawSiteEventMarker(ctx, w, pal, fx)
   if (w.ticks < fx.fireAt) {
     var p = (w.ticks - fx.warnAt) / Math.max(1, fx.fireAt - fx.warnAt)
     if (fx.mech === "growth") drawGrowthWarning(ctx, w, pal, fx, p)
@@ -9077,6 +9091,7 @@ function drawDiverBubbles(ctx, w, pal, ag, ox, oy, drop) {
 }
 
 function drawAgent(ctx, w, pal, ag, opts) {
+  if (ag.state === "hooked") return drawHookedAgent(ctx, w, pal, ag, opts)
   var k = w.k
   var C = k.CELL
   var ox = Math.round(ag.x * C) - SPRITE_W / 2
@@ -9997,4 +10012,416 @@ function drawTubePuff(ctx, w, pal, port, age) {
     ctx.fillRect(x, y, (w.res || 1) >= 2 ? 1.5 : 2, 1)
   }
   ctx.globalAlpha = 1
+}
+
+// Building Site: the far scaffold is depth; the concrete frame is ground.
+// All scenery is a recipe of the level and tick, with no renderer-owned state.
+function backBuildingSite(ctx, r, b, pal) {
+  var offset = Math.floor(r() * 20)
+  for (var x = offset - 40; x < b.w; x += 40) {
+    ctx.fillStyle = pal.back
+    ctx.fillRect(x, b.y, 2, b.h)
+    ctx.fillRect(x + 32, b.y, 2, b.h)
+    for (var y = b.y + 12; y < b.y + b.h - 3; y += 28) {
+      ctx.fillStyle = pal.backDim
+      ctx.fillRect(x - 3, y, 40, 3) // scaffold boards
+      ctx.fillStyle = pal.backLit
+      ctx.fillRect(x, y - 12, 34, 1) // guardrail, well behind the walkers
+      ctx.fillRect(x - 1, y - 1, 4, 2); ctx.fillRect(x + 31, y - 1, 4, 2)
+      ctx.fillStyle = pal.back
+      for (var d = 0; d < 24; d++) ctx.fillRect(x + 3 + d, y - 24 + d, 1, 1)
+    }
+  }
+}
+function backBuildingSiteFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + b.w - 0.5, b.y, 0.5, b.h)
+  if (b.w > 4) {
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(b.x + 0.5, b.y + 0.5, b.w - 1, 0.5) // board grain and clamp edge
+  }
+}
+
+function drawSiteMaterials(ctx, w, pal) {
+  var k = w.k, C = k.CELL, fine = (w.res || 1) >= 2
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 0; x < k.COLS; x++) {
+    var m = w.terrain[y * k.COLS + x]
+    if (m === k.EMPTY || m === k.STEEL) continue
+    drawSiteCell(ctx, k, pal, m, x * C, y * C, x, y, fine)
+  }
+}
+function drawSiteCell(ctx, k, pal, m, px, py, x, y, fine) {
+  if (m === k.DIRT) {
+    // Quiet grey blockwork. The braces keep
+    // the hi-vis colour; filling every bay with it hid the concrete columns.
+    ctx.fillStyle = pal.rockShade
+    ctx.fillRect(px, py, 4, 4)
+    ctx.fillStyle = pal.rock
+    ctx.fillRect(px, py + 3, 4, 1)
+    ctx.fillRect(px + (y % 2 ? 1 : 3), py + 1, 1, 2)
+  } else if (m === k.ROCK) {
+    ctx.fillStyle = pal.rockShade
+    if (y % 3 === 0) ctx.fillRect(px, py + 3, 4, 1) // formwork joins
+    if ((x + y) % 3 === 0) ctx.fillRect(px + 2, py + 1, 1, 1) // tie holes
+  } else {
+    ctx.fillStyle = pal.oreShade
+    ctx.fillRect(px, py + 2, 4, 2)
+    ctx.fillStyle = pal.steelEdge
+    if ((x + y) % 3 === 0) ctx.fillRect(px + 1, py + 1, 1, 1) // steel fixing
+  }
+  if (fine) drawSiteCellFine(ctx, k, pal, m, px, py)
+}
+function drawSiteCellFine(ctx, k, pal, m, x, y) {
+  ctx.fillStyle = materialEdge(k, pal, m)
+  ctx.fillRect(x + 0.5, y + 0.5, 3, 0.5)
+  ctx.fillStyle = materialShade(k, pal, m)
+  ctx.fillRect(x + 3.5, y + 1, 0.5, 2)
+  if (m === k.ROCK) {
+    ctx.fillStyle = pal.rockEdge
+    ctx.fillRect(x + 2, y + 1, 0.5, 0.5) // edge of the form tie
+  }
+}
+
+function siteStripes(ctx, pal, x, y, width, height) {
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x, y, width, height)
+  ctx.fillStyle = pal.rigDark
+  for (var row = 0; row < height; row++) for (var col = 0; col < width; col++)
+    if ((col + row) % 6 < 3) ctx.fillRect(x + col, y + row, 1, 1)
+}
+function drawSiteDecor(ctx, pal, d, x, y, C) {
+  var base = y + C
+  if (d.kind === "spire") drawSiteCone(ctx, pal, x, base, d.size)
+  else if (d.kind === "clump") drawSitePallet(ctx, pal, x, base, d.size)
+  else if (d.kind === "hang") siteSignAt(d) ? drawSiteSign(ctx, pal, x, y) : drawSiteLamp(ctx, pal, x, y)
+  else drawSiteEquipment(ctx, pal, d, x, base)
+}
+function drawSiteCone(ctx, pal, x, base, size) {
+  var h = 5 + size * 2
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 2, base - 1, 9, 1)
+  ctx.fillStyle = pal.oreEdge
+  for (var row = 0; row < h - 1; row++) {
+    var half = Math.floor(row * 3 / h)
+    ctx.fillRect(x + 2 - half, base - h + row, half * 2 + 1, 1)
+  }
+  ctx.fillStyle = pal.shirt
+  ctx.fillRect(x + 1, base - h + 3, 3, 1)
+}
+function drawSitePallet(ctx, pal, x, base, size) {
+  ctx.fillStyle = pal.decorDim
+  ctx.fillRect(x - 2, base - 2, 13, 1)
+  ctx.fillRect(x - 1, base - 1, 2, 1); ctx.fillRect(x + 7, base - 1, 2, 1)
+  for (var row = 0; row <= size; row++) {
+    var top = base - 5 - row * 3, shift = row % 2
+    ctx.fillStyle = pal.rockEdge
+    ctx.fillRect(x + shift, top, 9, 2)
+    ctx.fillStyle = pal.rockShade
+    ctx.fillRect(x + shift + 4, top, 1, 2)
+  }
+  ctx.fillStyle = pal.ore
+  ctx.fillRect(x + 1, base - 5 - size * 3, 1, size * 3 + 3) // packing strap
+}
+// One hanging fitting in three is the safety board; a board on every one read
+// as wallpaper, four to a level. The rest are caged work lamps.
+function siteSignAt(d) { return d.seed % 3 === 0 }
+function drawSiteLamp(ctx, pal, x, y) {
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x + 2, y, 1, 4)
+  ctx.fillRect(x, y + 4, 5, 1); ctx.fillRect(x, y + 8, 5, 1)
+  ctx.fillRect(x, y + 5, 1, 3); ctx.fillRect(x + 4, y + 5, 1, 3)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x + 1, y + 5, 3, 3)
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x + 2, y + 6, 1, 1)
+}
+function drawSiteSign(ctx, pal, x, y) {
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x + 1, y, 1, 4); ctx.fillRect(x + 26, y, 1, 4)
+  ctx.fillRect(x - 5, y + 4, 44, 13)
+  ctx.fillStyle = pal.rockEdge
+  ctx.fillRect(x - 4, y + 5, 42, 11)
+  siteStripes(ctx, pal, x - 5, y + 4, 44, 2)
+  ctx.fillStyle = pal.rigDark
+  drawTransitionGlyph(ctx, TRANSITION_GLYPHS["0"], x, y + 9, 1)
+  ctx.fillRect(x + 6, y + 9, 24, 1); ctx.fillRect(x + 6, y + 12, 16, 1)
+}
+function drawSiteEquipment(ctx, pal, d, x, base) {
+  if (d.seed % 3 === 0) return drawSiteMixer(ctx, pal, x, base)
+  if (d.seed % 3 === 2) return drawSiteGrinder(ctx, pal, x, base)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x, base - 7, 1, 7); ctx.fillRect(x + 10, base - 7, 1, 7)
+  siteStripes(ctx, pal, x - 2, base - 7, 15, 3)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 2, base - 1, 5, 1); ctx.fillRect(x + 8, base - 1, 5, 1)
+}
+function drawSiteMixer(ctx, pal, x, base) {
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 1, base - 2, 3, 2); ctx.fillRect(x + 8, base - 2, 3, 2)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x + 1, base - 5, 1, 4); ctx.fillRect(x + 8, base - 5, 1, 4)
+  ctx.fillStyle = pal.ore
+  ctx.fillRect(x, base - 9, 8, 5); ctx.fillRect(x + 1, base - 11, 5, 2)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x, base - 9, 7, 1)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 7, base - 9, 2, 4) // tilted mouth, separate from the wheel
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x + 11, base - 8, 1, 5); ctx.fillRect(x + 9, base - 7, 5, 1)
+}
+function drawSiteGrinder(ctx, pal, x, base) {
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x - 2, base - 6, 14, 2)
+  ctx.fillRect(x - 1, base - 4, 1, 4); ctx.fillRect(x + 10, base - 4, 1, 4)
+  ctx.fillStyle = pal.rockEdge
+  ctx.fillRect(x + 1, base - 8, 5, 2)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x + 6, base - 10, 4, 3)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 7, base - 9, 2, 2)
+}
+function fineSiteCone(ctx, pal, d, x, base) {
+  ctx.fillStyle = pal.decorDim
+  ctx.fillRect(x + 2.5, base - 5 - d.size * 2, 0.5, 3)
+  ctx.fillStyle = pal.shirt
+  ctx.fillRect(x + 0.5, base - 2.5, 4, 0.5)
+}
+function fineSitePallet(ctx, pal, d, x, base) {
+  ctx.fillStyle = pal.rockShade
+  for (var row = 0; row <= d.size; row++)
+    ctx.fillRect(x + row % 2 + 0.5, base - 3.5 - row * 3, 8, 0.5)
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x - 1.5, base - 2, 11, 0.5)
+}
+// The lamp's cage wires and a glint on the bulb, at half pixels.
+function fineSiteLamp(ctx, pal, x, top) {
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 2, top + 5, 0.5, 3)
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x + 1.5, top + 5.5, 0.5, 0.5)
+}
+function fineSiteSign(ctx, pal, d, x, base, top) {
+  if (!siteSignAt(d)) return fineSiteLamp(ctx, pal, x, top)
+  ctx.fillStyle = pal.rockEdge
+  ctx.fillRect(x - 4, top + 7, 42, 9)
+  ctx.fillStyle = pal.rigDark
+  drawTransitionText(ctx, "SAFETY FIRST", x + 17, top + 8, 0.5)
+  drawTransitionText(ctx, "0 DAYS SAFE", x + 17, top + 12, 0.5)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 4.5, top + 6.5, 0.5, 9)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 36, top + 7.5, 0.5, 0.5); ctx.fillRect(x + 36, top + 14.5, 0.5, 0.5)
+}
+function fineSiteEquipment(ctx, pal, d, x, base) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x + 0.5, base - 5, 0.5, 3)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x + 1, base - 6.5, 8, 0.5)
+}
+
+function drawExitSite(ctx, pal, x, y, ww, hh) {
+  // A scaffold gate under the site's yellow lintel. The common lit mouth is
+  // kept clear, with a small hard hat on its sign rather than a second beacon.
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x - 4, y - 8, 2, hh + 8); ctx.fillRect(x + ww + 2, y - 8, 2, hh + 8)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 4, y - 2, 2, 2); ctx.fillRect(x + ww + 2, y - 2, 2, 2)
+  siteStripes(ctx, pal, x - 6, y - 7, ww + 12, 3)
+  ctx.fillStyle = pal.rockShade
+  ctx.fillRect(x - 1, y - 4, ww + 2, 4)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x + ww / 2 - 2, y - 4, 4, 2)
+  ctx.fillRect(x + ww / 2 - 3, y - 2, 6, 1)
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x - 6, y + hh - 1, ww + 12, 1)
+}
+function drawExitSiteFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 3.5, y - 7.5, 0.5, hh + 7.5)
+  ctx.fillRect(x + ww + 2.5, y - 7.5, 0.5, hh + 7.5)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x - 5.5, y - 6.5, ww + 11, 0.5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + ww / 2 + 1, y - 3.5, 0.5, 1.5)
+}
+function drawSiteBoothTop(ctx, pal, x, y) {
+  siteStripes(ctx, pal, x - 10, y - 18, 20, 3)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x + 5, y - 23, 1, 5); ctx.fillRect(x + 4, y - 23, 3, 1) // exposed rebar
+}
+function drawMoteSiteFine(ctx, w, pal, x, y) {
+  moteFineRect(ctx, w, x, y, 1, 0.5)
+  moteFineRect(ctx, w, x + 0.5, y + 0.5, 0.5, 1) // crumbling concrete flake
+}
+
+function drawSiteMachines(ctx, w, pal) {
+  for (var i = 0; i < w.cranes.length; i++) drawCrane(ctx, w, pal, w.cranes[i])
+  for (var j = 0; j < w.decor.length; j++) {
+    var d = w.decor[j]
+    if (d.kind !== "tuft" || !lightDecorAlive(w, d)) continue
+    if (d.seed % 3 === 2) drawSiteSparks(ctx, w, pal, d)
+    if (d.seed % 3 === 0) drawSiteMixerTurn(ctx, w, pal, d)
+  }
+}
+function drawSiteSparks(ctx, w, pal, d) {
+  if ((w.ticks + d.seed) % 100 > 28) return
+  var x = d.x * w.k.CELL + 8, y = (d.y + 1) * w.k.CELL - 7
+  ctx.save()
+  for (var i = 0; i < 8; i++) {
+    var age = (w.ticks + i * 5 + d.seed) % 16
+    var sx = x + Math.floor(age * (0.5 + i % 3 * 0.2)), sy = y - 2 + Math.floor(age * age / 32)
+    ctx.fillStyle = i % 3 ? pal.warn : pal.fireHot
+    ctx.globalAlpha = 1 - age / 20
+    if (mechanismAir(w, sx, sy)) ctx.fillRect(sx, sy, 1, 1)
+    if ((w.res || 1) >= 2 && mechanismAir(w, sx - 0.5, sy)) ctx.fillRect(sx - 0.5, sy, 0.5, 0.5)
+  }
+  ctx.restore()
+}
+function drawSiteMixerTurn(ctx, w, pal, d) {
+  var x = d.x * w.k.CELL + 3, y = (d.y + 1) * w.k.CELL - 7
+  var angle = w.ticks / 16 + d.seed
+  ctx.fillStyle = pal.oreShade
+  ctx.fillRect(x + Math.round(Math.cos(angle) * 2), y + Math.round(Math.sin(angle)), 1, 1)
+}
+
+// The simulation's lift is two rows. Its drop measures the rider's feet,
+// so the hook's tip meets the collar ten art pixels above them, not the feet.
+var SITE_HOIST = 2
+function craneRailY(w, crane) {
+  var C = w.k.CELL, roof = crane.y - 5
+  for (var x = Math.min(crane.ax, crane.hx); x <= Math.max(crane.ax, crane.hx); x++) {
+    var row = crane.y - 4
+    while (row > w.k.SKY && w.terrain[(row - 1) * w.k.COLS + x] === w.k.EMPTY) row--
+    roof = Math.max(roof, row)
+  }
+  return roof * C
+}
+function craneDrawing(w, crane) {
+  var C = w.k.CELL, grid = (w.res || 1) >= 2 ? 2 : 1
+  var moving = crane.phase === "across" || crane.phase === "back"
+  var sway = moving ? Math.round(Math.sin(w.ticks / 9) * grid) / grid : 0
+  var x = Math.round((crane.hookX + 0.5) * C * grid) / grid
+  var feet = Math.round((crane.y - SITE_HOIST + crane.drop + 1) * C * grid) / grid
+  return { x: x, tipX: x + sway, tipY: feet - 10, feet: feet, railY: craneRailY(w, crane) }
+}
+function drawCrane(ctx, w, pal, crane) {
+  var g = craneDrawing(w, crane), C = w.k.CELL
+  var left = Math.min(crane.ax, crane.hx) * C
+  var width = (Math.abs(crane.ax - crane.hx) + 1) * C
+  ctx.save()
+  drawCraneRail(ctx, w, pal, left, g.railY, width)
+  drawCraneCable(ctx, w, pal, g)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(g.x - 3, g.railY + 1, 6, 3) // trolley straddles the girder
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(g.x - 2, g.railY + 2, 4, 2)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(g.x - 3, g.railY + 1, 1, 1); ctx.fillRect(g.x + 2, g.railY + 1, 1, 1)
+  drawCraneHook(ctx, w, pal, g)
+  ctx.fillStyle = Math.floor(w.ticks / 12) % 2 ? pal.warn : pal.oreShade
+  ctx.fillRect(g.x + 3, g.railY + 3, 1, 2) // warning lamp, including while waiting
+  drawCraneLanding(ctx, w, pal, crane)
+  ctx.restore()
+}
+function drawCraneRail(ctx, w, pal, x, y, width) {
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x, y, width, 3)
+  ctx.fillStyle = pal.ore
+  ctx.fillRect(x, y, width, 1); ctx.fillRect(x, y + 2, width, 1)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x, y, 2, 4); ctx.fillRect(x + width - 2, y, 2, 4) // end stops
+  if ((w.res || 1) < 2) return
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x + 2, y, width - 4, 0.5)
+  ctx.fillStyle = pal.steelEdge
+  for (var bolt = 4; bolt < width - 2; bolt += 8) ctx.fillRect(x + bolt, y + 1, 0.5, 0.5)
+}
+function drawCraneCable(ctx, w, pal, g) {
+  var start = g.railY + 4, end = g.tipY - 3, length = end - start
+  if (length <= 0) return
+  ctx.fillStyle = pal.steelEdge
+  for (var y = start; y < end; y++) {
+    var grid = (w.res || 1) >= 2 ? 2 : 1
+    var x = Math.round((g.x + (g.tipX - g.x) * (y - start) / length) * grid) / grid
+    ctx.fillRect(x, y, 1 / grid, 1)
+  }
+}
+function drawCraneHook(ctx, w, pal, g) {
+  ctx.fillStyle = pal.ore
+  ctx.fillRect(g.tipX - 2, g.tipY - 4, 4, 3)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(g.tipX - 1, g.tipY - 3, 2, 1)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(g.tipX, g.tipY - 1, 1, 2)
+  ctx.fillRect(g.tipX - 1, g.tipY + 1, 2, 1)
+  ctx.fillRect(g.tipX - 1, g.tipY, 1, 1)
+  if ((w.res || 1) < 2) return
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(g.tipX - 1.5, g.tipY - 4, 3, 0.5)
+}
+function drawCraneLanding(ctx, w, pal, crane) {
+  // Release has no timestamp. The empty hook's reel-in distance gives the
+  // age of a normal set-down; a stalled release is too high to emit this puff.
+  if (crane.phase !== "back" || crane.hookX !== crane.hx || crane.usedAt < 0) return
+  var age = (crane.land - (crane.y - SITE_HOIST) - crane.drop) / 0.8
+  if (age < 0 || age >= 10) return
+  var x = (crane.hx + 0.5) * w.k.CELL, floor = (crane.land + 1) * w.k.CELL
+  ctx.save()
+  ctx.fillStyle = pal.dust
+  ctx.globalAlpha = (1 - age / 10) * 0.55
+  for (var i = 0; i < 6; i++) {
+    var px = Math.round(x + (i - 2.5) * (1 + age / 3)), py = floor - 1 - Math.floor(age / 3) - i % 2
+    if (mechanismAir(w, px, py)) ctx.fillRect(px, py, 1, 1)
+  }
+  ctx.restore()
+}
+function hookedDrawing(w, ag) {
+  for (var i = 0; i < w.cranes.length; i++) if (w.cranes[i].who === ag.id) return craneDrawing(w, w.cranes[i])
+  return { tipX: Math.round(ag.x * w.k.CELL), feet: Math.round((ag.y + 1) * w.k.CELL) }
+}
+function drawHookedAgent(ctx, w, pal, ag, opts) {
+  var g = hookedDrawing(w, ag), ox = g.tipX - 4, oy = g.feet - SPRITE_PX
+  var colors = agentDrawColors(w, pal, ag, "hooked"), dir = ag.dir
+  ctx.save()
+  spriteFlip = false
+  drawAgentHead(ctx, w, pal, ag, ox, oy, dir, colors.hair, colors.skin, "hooked", 0)
+  ctx.fillStyle = colors.robe
+  blit(ctx, ox, oy, dir, 2, 7, 4, 5)
+  blit(ctx, ox, oy, dir, 0, 4, 1, 5); blit(ctx, ox, oy, dir, 7, 4, 1, 5) // arms up
+  blit(ctx, ox, oy, dir, 1, 3, 2, 1); blit(ctx, ox, oy, dir, 5, 3, 2, 1)
+  var kick = Math.round(Math.sin(w.ticks / 7))
+  blit(ctx, ox, oy, dir, 2 + kick, 12, 1, 4); blit(ctx, ox, oy, dir, 5 - kick, 12, 1, 4)
+  ctx.fillStyle = colors.skin
+  blit(ctx, ox, oy, dir, 2, 4, 1, 1); blit(ctx, ox, oy, dir, 5, 4, 1, 1)
+  ctx.fillStyle = pal.lapel
+  blit(ctx, ox, oy, dir, 2, 7, 1, 1); blit(ctx, ox, oy, dir, 5, 7, 1, 1)
+  ctx.fillStyle = pal.oreEdge
+  blit(ctx, ox, oy, dir, 2, 0, 4, 2); blit(ctx, ox, oy, dir, 1, 2, 6, 1) // hard hat
+  ctx.fillStyle = pal.steelEdge
+  blit(ctx, ox, oy, dir, 4, 6, 1, 2) // collar caught by the hook
+  if ((w.res || 1) >= 2) drawHookedFine(ctx, pal, ag, ox, oy, dir, kick)
+  drawAgentLabel(ctx, w, pal, ag, ox, oy, "hooked", opts)
+  ctx.restore()
+}
+function drawHookedFine(ctx, pal, ag, ox, oy, dir, kick) {
+  ctx.fillStyle = pal.oreShade
+  blitFine(ctx, ox, oy, dir, 4.5, 0.5, 0.5, 1.5)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, 3.5, 8, 1, 2)
+  ctx.fillStyle = pal.rigDark
+  blitFine(ctx, ox, oy, dir, 2 + kick, 15.5, 1, 0.5)
+  blitFine(ctx, ox, oy, dir, 5 - kick, 15.5, 1, 0.5)
+}
+function drawSiteEventMarker(ctx, w, pal, fx) {
+  if (w.ticks >= fx.fireAt) return
+  var C = w.k.CELL, x = fx.x * C, y = fx.floorY * C
+  ctx.save()
+  ctx.globalAlpha = 0.65 + 0.25 * Math.sin(w.ticks / 7)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x, y - 7, 1, 7); ctx.fillRect(x + fx.span * C - 1, y - 7, 1, 7)
+  siteStripes(ctx, pal, x, y - 7, fx.span * C, 2)
+  ctx.fillStyle = pal.oreEdge
+  ctx.font = "bold 3px monospace"
+  ctx.fillText(fx.mech === "growth" ? "SCOPE +1" : "POUR PENDING", x + 2, y - 9)
+  ctx.restore()
 }

@@ -449,6 +449,23 @@ Spaceship's transporter rule (`placePads` with its own stream, pads marked
 capsule with the agent in it. Measured over 400 plays: 94.03% home with
 tubes vs 93.85%, 6.4 capsules a level.
 
+## The Building Site
+
+The fifteenth biome: a concrete frame going up (`skinBuildingSite`: ROCK
+columns and slabs on a grid of bays, ORE cross-bracing, DIRT blockwork).
+Palette `% 15`, hi-vis yellow. Its mechanism is gantry cranes (`placeCranes`
+… `stepCrane`, `w.cranes`): over a hole in a corridor floor that runs straight
+down to another corridor's floor, a hook lifts a walker and lowers them down
+it. The rider's state is `"hooked"`, and the crane positions them.
+
+- **Lower, don't carry over.** Carrying riders across the hole to its far side
+  cost a point: the hole is the colony's way down, and the far side is where
+  the guards are.
+- **The rider keeps its direction.** Turning riders to the lower corridor's
+  way cost 0.7 in condemned agents at its dead end. A faller keeps its way,
+  and the routes are built around that.
+- Measured neutral (94.02% vs 94.08%, 800 plays). It is there for the ride.
+
 ## Staying current
 
 A tab is left open for days, so a deploy has to reach it without anyone pressing

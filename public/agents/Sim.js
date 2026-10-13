@@ -128,7 +128,7 @@ var SKILL_LABELS = {
 // putting a new one anywhere but the end would re-skin every level above it.
 // Palette.js derives the same index with the same rule and must be kept in
 // step — see the note over poolTint there.
-var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room"]
+var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room", "Building Site"]
 
 // A small job on the route gives each biome a premise beyond merely reaching
 // the door. These are deliberately one mechanism with different casts: an
@@ -162,7 +162,9 @@ var MISSION_SPECS = {
   // Asleep over the documentation. Nobody has read this far before.
   "Library":   { id: "readers",   verb: "WAKE THE READERS",      kind: "civilian", count: 3 },
   // Undelivered for a decade. Somebody has to sign for them.
-  "Mail Room": { id: "parcels",   verb: "SIGN FOR THE PARCELS",  kind: "chest", count: 2 }
+  "Mail Room": { id: "parcels",   verb: "SIGN FOR THE PARCELS",  kind: "chest", count: 2 },
+  // Nobody told the night shift the site was closing. Hard hats on, out.
+  "Building Site": { id: "crew",  verb: "SEND THE CREW HOME",    kind: "civilian", count: 3 }
 }
 
 // ---------------------------------------------------------------------------
@@ -801,7 +803,8 @@ function generate(level, attempt, colonySeed) {
     belts: [],        // the Factory's conveyors; see placeBelts
     beltAt: null,     // and which way each feet cell is carried, -1/0/1
     frozen: [],       // the Ice Cave's colleagues in the ice; see placeFrozen
-    pads: [],         // the Spaceship's transporter pairs; see placePads
+    pads: [],
+    cranes: [],       // the Building Site's gantry cranes; see placeCranes         // the Spaceship's transporter pairs; see placePads
     sinkholes: [],    // the Cavern's thin floors; see placeSinkholes
     k: K,
     decor: [],
@@ -1369,7 +1372,8 @@ var BIOME_MECHANISMS = {
   "Spaceship": placePads,
   "Foundry": placeChains,
   "Cavern": placeSinkholes,
-  "Mail Room": placeTubes
+  "Mail Room": placeTubes,
+  "Building Site": placeCranes
 }
 
 // The Jungle's own mechanism: some walls have a vine down their face, and a
@@ -1790,6 +1794,184 @@ function shelfClimb(w, ag) {
     && w.shelves[y * COLS + x] === 1 && solid(w, x, y)
 }
 
+// ---------------------------------------------------------------------------
+// Cranes
+// ---------------------------------------------------------------------------
+//
+// The Building Site's own mechanism. A gantry crane runs under the roof of a
+// corridor that has a hole in its floor down to a corridor below: a hook waits
+// on the near side, and the walker who steps under it is lifted, run out over
+// the hole and lowered down it, set down walking on the floor below. The hole
+// is the colony's way down whether the crane is there or not; the hook makes
+// it a ride instead of a drop, and spends no umbrella on the long ones.
+// Whoever arrives while it is away takes the hole the old way.
+//
+// The first version carried riders *over* the hole to its far side. On this
+// game's levels the hole is the route and the far side is not, and it cost a
+// point of home: riders arrived alone where the guards were (iteration 98).
+// Lowered, they were then turned to face the lower corridor's way, and that
+// cost 0.7 more in condemned agents at its dead end: a faller keeps the way it
+// was walking, and so does a rider now (iteration 99).
+// Up to two per level, on corridors of their own; own stream.
+var CRANE_MAX = 2
+var CRANE_REACH = 14       // cells from pickup to the hole, at most
+var CRANE_LIFT = 2         // rows the hook raises a rider off the floor
+var CRANE_RISE = 0.2       // rows a tick, lifting off the floor
+var CRANE_LOWER = 0.4      // rows a tick, down the hole
+var CRANE_RUN = 0.3        // cells a tick, loaded
+var CRANE_BACK = 0.6       // cells a tick, empty
+var CRANE_STALL = 60       // ticks blocked before the hook lets go
+
+function placeCranes(w, corridors) {
+  var crng = makeRng(w.level * 6007 + 2213)
+  var start = irand(crng, 0, corridors.length - 1)
+  for (var n = 0; n < corridors.length && w.cranes.length < CRANE_MAX; n++) {
+    var c = corridors[(start + n) % corridors.length]
+    var crane = craneOver(w, c, corridors, irand(crng, 2, 4))
+    if (crane) w.cranes.push(crane)
+  }
+}
+
+// The first hole in this floor, walking the way the colony does, that goes
+// straight down to the floor of another corridor — not a pocket, not the
+// bottom of the world — with ground to wait on before it and air for the
+// rider all the way out to its middle.
+function craneOver(w, c, corridors, margin) {
+  var lo = Math.min(c.startX, c.handoffX) + 4, hi = Math.max(c.startX, c.handoffX) - 4
+  var feet = c.floorY - 1
+  for (var i = 0; i <= hi - lo; i++) {
+    var x = c.dir > 0 ? lo + i : hi - i
+    if (solid(w, x, c.floorY)) continue
+    var end = x
+    while (end + c.dir >= lo && end + c.dir <= hi && !solid(w, end + c.dir, c.floorY)) end += c.dir
+    var hx = Math.round((x + end) / 2), land = feet + dropDepth(w, hx, feet)
+    var below = corridorWithFeet(corridors, land)
+    var ax = padSpot(w, c, x - c.dir * margin)
+    if (!below || ax < 0 || Math.abs(hx - ax) > CRANE_REACH || !cranePathClear(w, ax, hx, feet)) {
+      i += Math.abs(end - x)
+      continue
+    }
+    return { ax: ax, hx: hx, y: feet, land: land, dir: c.dir, phase: "wait",
+             hookX: ax, drop: CRANE_LIFT, who: -1, stall: 0, usedAt: -1 }
+  }
+  return null
+}
+
+function corridorWithFeet(corridors, feet) {
+  for (var i = 0; i < corridors.length; i++) if (corridors[i].floorY - 1 === feet) return corridors[i]
+  return null
+}
+
+// Air for a whole rider at the height the hook carries one, every cell from
+// the pickup out to the hole.
+function cranePathClear(w, ax, hx, feet) {
+  var step = hx > ax ? 1 : -1
+  for (var x = ax; x !== hx + step; x += step) if (craneBlocked(w, x, feet - CRANE_LIFT)) return false
+  return true
+}
+
+function craneBlocked(w, x, feet) {
+  for (var y = feet - AGENT_H + 1; y <= feet; y++) if (solid(w, x, y)) return true
+  return false
+}
+
+function stepCranes(w) {
+  for (var i = 0; i < w.cranes.length; i++) stepCrane(w, w.cranes[i])
+}
+
+// `drop` is how far below the hook's top travel the rider's feet are: the
+// lift on the floor, zero in the air, and the whole way to `land` at the end.
+function stepCrane(w, k) {
+  if (k.phase === "wait") return craneWait(w, k)
+  if (k.phase === "back") return craneBack(w, k)
+  var ag = craneRider(w, k)
+  if (!ag) { k.phase = "back"; k.who = -1; return }
+  var top = k.y - CRANE_LIFT
+  if (k.phase === "up") {
+    k.drop = Math.max(0, k.drop - CRANE_RISE)
+    if (k.drop === 0) k.phase = "across"
+  } else if (k.phase === "across") {
+    var nx = k.hookX + k.dir * CRANE_RUN
+    if (Math.abs(nx - k.hx) < CRANE_RUN) nx = k.hx
+    if (!craneMove(w, k, ag, Math.floor(nx + 0.5 * k.dir + 0.5), top)) return
+    k.hookX = nx
+    if (k.hookX === k.hx) k.phase = "down"
+  } else if (k.phase === "down") {
+    var nd = Math.min(k.land - top, k.drop + CRANE_LOWER)
+    if (!craneMove(w, k, ag, k.hx, Math.floor(top + nd))) return
+    k.drop = nd
+    if (top + k.drop === k.land) { craneHold(k, ag); return craneLetGo(w, k, ag, k.dir) }
+  }
+  craneHold(k, ag)
+}
+
+// Somebody's bridge or rubble across the hook's way: wait for it, and if it
+// does not clear, put the rider down where they hang and go back.
+function craneMove(w, k, ag, x, feet) {
+  if (!craneBlocked(w, x, feet)) { k.stall = 0; return true }
+  if (++k.stall > CRANE_STALL) craneLetGo(w, k, ag, k.dir)
+  return false
+}
+
+function craneHold(k, ag) {
+  ag.x = k.hookX + 0.5
+  ag.y = k.y - CRANE_LIFT + k.drop
+}
+
+// Somebody under the hook, on foot, going the colony's way, with the hole
+// still open below: up they go.
+function craneWait(w, k) {
+  if (!solid(w, k.ax, k.y + 1) || !solid(w, k.hx, k.land + 1)) return
+  if (k.y + dropDepth(w, k.hx, k.y) !== k.land || !cranePathClear(w, k.ax, k.hx, k.y)) return
+  for (var j = 0; j < w.agents.length; j++) {
+    var ag = w.agents[j]
+    if (ag.gone || ag.state !== "walk" || ag.dir !== k.dir) continue
+    if (Math.floor(ag.x) !== k.ax || Math.floor(ag.y) !== k.y) continue
+    ag.state = "hooked"
+    ag.fall = 0
+    ag.idle = 0
+    k.who = ag.id
+    k.phase = "up"
+    k.usedAt = w.ticks
+    w.lastEvent = "crane"
+    return
+  }
+}
+
+function craneRider(w, k) {
+  for (var j = 0; j < w.agents.length; j++) {
+    var ag = w.agents[j]
+    if (ag.id === k.who) return (!ag.gone && ag.state === "hooked") ? ag : null
+  }
+  return null
+}
+
+// Set down, or let go where the hook stalled: walking either way, and with no
+// floor under them the walk becomes a fall like any other.
+function craneLetGo(w, k, ag, dir) {
+  ag.state = "walk"
+  ag.dir = dir
+  ag.idle = 0
+  ag.still = 0
+  ag.fall = 0
+  k.who = -1
+  k.stall = 0
+  k.phase = "back"
+}
+
+// Empty, it reels in, runs home fast at the top of its travel and lowers to
+// wait.
+function craneBack(w, k) {
+  if (k.drop > 0 && k.hookX !== k.ax) { k.drop = Math.max(0, k.drop - CRANE_LOWER * 2); return }
+  if (k.hookX !== k.ax) {
+    var nx = k.hookX - k.dir * CRANE_BACK
+    k.hookX = Math.abs(nx - k.ax) < CRANE_BACK ? k.ax : nx
+    return
+  }
+  k.drop = Math.min(CRANE_LIFT, k.drop + CRANE_RISE * 2)
+  if (k.drop === CRANE_LIFT) k.phase = "wait"
+}
+
 function placeMission(w, corridors) {
   // Optional, and rolled from its own stream so adding missions does not
   // reshuffle terrain, hazards, specials or events on established levels.
@@ -2002,7 +2184,8 @@ var BIOME_SKINS = {
   "Desert": skinDesert,
   "Data Center": skinDataCenter,
   "Library": skinLibrary,
-  "Mail Room": skinMailRoom
+  "Mail Room": skinMailRoom,
+  "Building Site": skinBuildingSite
 }
 
 function skinSpaceship(w, rng) {
@@ -2246,6 +2429,29 @@ function skinTrench(w, rng) {
 // with the letters (ORE) in every hole and a heavier ROCK rail every few rows
 // where the trolleys run. Regular, like the Data Center, but in small square
 // boxes rather than tall racks.
+// A frame going up. Concrete columns and slabs (ROCK) on a regular grid of
+// bays, each bay cross-braced corner to corner with steel (ORE), and the
+// blockwork infill (DIRT) between. The Skyscraper is this building finished;
+// here every bay shows how it is held up.
+function skinBuildingSite(w, rng) {
+  var x, y
+  var pitch = irand(rng, 10, 12), storey = irand(rng, 7, 9)
+  var ox = irand(rng, 0, pitch - 1), oy = irand(rng, 0, storey - 1)
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++) {
+      if (at(w, x, y) === STEEL) continue
+      var bx = (x + ox) % pitch, by = (y + oy) % storey
+      var mat = DIRT
+      if (bx === 0 || by === 0) mat = ROCK
+      else {
+        // Both diagonals of the bay, scaled from its height to its width.
+        var d = by * (pitch - 1) / (storey - 1)
+        if (Math.abs(bx - d) < 0.75 || Math.abs(pitch - bx - d) < 0.75) mat = ORE
+      }
+      setCell(w, x, y, mat)
+    }
+}
+
 function skinMailRoom(w, rng) {
   var x, y
   var ox = irand(rng, 0, 2), oy = irand(rng, 0, 1), rail = irand(rng, 7, 10)
@@ -2358,6 +2564,10 @@ function placeDecor(w, rng, corridors) {
     // character on their own, and the general scatter was competing with them.
     floorRate = 0.07; ceilRate = 0.05; gap = 7
     floorKinds = ["spire", "spire", "clump"]
+  } else if (w.biome === "Building Site") {
+    // Pallets and spoil heaps on the floor, nothing grown on the ceiling yet.
+    floorRate = 0.12; ceilRate = 0.04; gap = 5
+    floorKinds = ["clump", "clump", "spire", "tuft"]
   } else if (w.biome === "Mail Room") {
     // Sacks and parcels on the floor; nothing grows in a sorting office.
     floorRate = 0.10; ceilRate = 0.03; gap = 5
@@ -5184,7 +5394,12 @@ var EVENTS = [
   // --- Mail Room ---
   { id: "deadletter",name: "Dead Letter Queue",biome: "Mail Room", mech: "collapse", at: "floor", span: 6, deep: 2 },
   { id: "backlog",  name: "Backlog",          biome: "Mail Room", mech: "growth",   span: 12, high: 2 },
-  { id: "throttled",name: "Back Pressure",    biome: "Mail Room", mech: "blackout", mult: 2, ticks: 360 }
+  { id: "throttled",name: "Back Pressure",    biome: "Mail Room", mech: "blackout", mult: 2, ticks: 360 },
+
+  // --- Building Site ---
+  { id: "scopecreep",name: "Scope Creep",     biome: "Building Site", mech: "growth",   span: 13, high: 2 },
+  { id: "unpoured", name: "Missed Deadline",  biome: "Building Site", mech: "collapse", at: "floor", span: 6, deep: 2 },
+  { id: "crunch",   name: "Crunch Time",      biome: "Building Site", mech: "blackout", mult: 2, ticks: 380 }
 ]
 
 function eventsFor(biome) {
@@ -8830,6 +9045,7 @@ function stepAgents(w) {
       case "camp":  stepCamp(w, ag); break
       case "wait":  stepLiftWait(w, ag); break
       case "ride":  stepLiftRide(w, ag); break
+      case "hooked": break   // the crane moves them; see stepCrane
     }
 
     // A one-cell trap can evade both stuck detectors: the agent technically
@@ -9214,6 +9430,7 @@ function step(w) {
   stepBoulder(w)
   stepFrozen(w)
   stepPads(w)
+  stepCranes(w)
   stepSinkholes(w)
   var counts = stepAgents(w)
   var active = counts.active
