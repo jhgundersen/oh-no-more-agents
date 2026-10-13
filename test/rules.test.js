@@ -192,3 +192,39 @@ test("an umbrella overhead keeps off falling rock, snow and ice, not fire", () =
   other.state = "walk"; other.special = true
   assert.equal(S.umbrellaGuards(w, { kind: "snowball" }, other), false, "specials carry none")
 })
+
+// A stuck agent is condemned: it spends a bomber on itself, and the hole it
+// leaves may free the rest. Some states are never condemned, a waiting agent
+// is not stuck, and a stuck special first tries its own way out.
+test("condemn: a stuck walker spends a bomber on itself, and only then", () => {
+  const w = S.generate(13, 0, 3)
+  const ag = floorAgent(w, 40)
+  w.skills.bomber = 1
+  for (const state of ["bomb", "block", "camp", "saved", "swim"]) {
+    ag.state = state; S.condemn(w, ag)
+    assert.equal(ag.state, state, `${state} left alone`)
+  }
+  ag.state = "walk"; ag.waitFor = 5; S.condemn(w, ag)
+  assert.equal(ag.state, "walk", "waiting is not stuck")
+  ag.waitFor = 0
+  const broke = floorAgent(w, 30)
+  w.skills.bomber = 0
+  S.condemn(w, broke)
+  assert.equal(broke.state, "walk", "no bomber, no bomb")
+  w.skills.bomber = 1
+  S.condemn(w, ag)
+  assert.equal(ag.state, "bomb")
+  assert.ok(ag.condemned)
+  assert.equal(ag.fuse, S.BOMB_FUSE)
+  assert.equal(w.skills.bomber, 0)
+})
+
+test("condemn: a special at its limit goes up without the toolbar", () => {
+  const w = S.generate(13, 0, 3)
+  const ag = floorAgent(w, 40)
+  ag.special = true; ag.idle = S.STUCK_LIMIT
+  w.skills.bomber = 0
+  S.condemn(w, ag)
+  assert.equal(ag.state, "bomb")
+  assert.ok(ag.condemned)
+})

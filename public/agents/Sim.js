@@ -4004,45 +4004,67 @@ function placeHazard(w, rng, corridors, ci, forced) {
 
 function hazardCatches(w, h, ag) {
   if (ag.gone || ag.state === "saved") return false
-  var ax = Math.floor(ag.x)
   var ay = Math.floor(ag.y)
-  var spec = hazardSpec(h.kind)
-  var mid = (h.zx0 + h.zx1) / 2
-  var sameCorridor = Math.abs(ay - h.floorY) <= CORR_H
+  var g = {
+    ax: Math.floor(ag.x), ay: ay, spec: hazardSpec(h.kind), mid: (h.zx0 + h.zx1) / 2,
+    same: Math.abs(ay - h.floorY) <= CORR_H
+  }
+  return (HAZARD_REACHES[h.kind] || catchInBox)(w, h, ag, g)
+}
 
-  // These attacks leave the fixture instead of magically filling its box.
-  if (h.kind === "sentry" || h.kind === "frostjet" || h.kind === "hotaisle")
-    return sameCorridor && (ag.x - mid) * h.dir >= 0 && (ag.x - mid) * h.dir <= spec.reach
-  if (h.kind === "darts" || h.kind === "scarab") {
-    var projectileCount = h.kind === "scarab" ? 5 : 3
-    for (var projectile = 0; projectile < projectileCount; projectile++) {
-      var travelPx = h.kind === "scarab"
-        ? (projectile * 7 + w.ticks * 2) % (spec.reach * CELL)
-        : (h.t * 4 + projectile * 13) % (spec.reach * CELL)
-      var projectileX = mid + h.dir * travelPx / CELL
-      if (sameCorridor && Math.abs(ag.x - projectileX) <= (h.kind === "scarab" ? 1.2 : 0.9)) return true
-    }
-    return false
+// How each fixture reaches somebody, where it is not simply its box.
+var HAZARD_REACHES = {
+  sentry: catchFired, frostjet: catchFired, hotaisle: catchFired,
+  darts: catchProjectiles, scarab: catchProjectiles,
+  snake: catchLunge, echobat: catchEcho, sweeper: catchSweep,
+  rockfall: catchDrops, snowball: catchDrops, molten: catchDrops
+}
+
+// These attacks leave the fixture instead of magically filling its box.
+function catchFired(w, h, ag, g) {
+  var ahead = (ag.x - g.mid) * h.dir
+  return g.same && ahead >= 0 && ahead <= g.spec.reach
+}
+
+function catchProjectiles(w, h, ag, g) {
+  var scarab = h.kind === "scarab", count = scarab ? 5 : 3
+  for (var projectile = 0; projectile < count; projectile++) {
+    var travelPx = scarab
+      ? (projectile * 7 + w.ticks * 2) % (g.spec.reach * CELL)
+      : (h.t * 4 + projectile * 13) % (g.spec.reach * CELL)
+    var projectileX = g.mid + h.dir * travelPx / CELL
+    if (g.same && Math.abs(ag.x - projectileX) <= (scarab ? 1.2 : 0.9)) return true
   }
-  if (h.kind === "snake")
-    return sameCorridor && (ag.x - mid) * h.dir >= 0 && (ag.x - mid) * h.dir <= 3.5
-  if (h.kind === "echobat")
-    return sameCorridor && Math.abs(ag.x - mid) <= spec.reach * Math.min(1, h.t / Math.max(1, spec.fire))
-  if (h.kind === "sweeper") {
-    var sweepX = h.zx0 + (h.zx1 - h.zx0) * (0.5 + 0.5 * Math.sin(w.ticks * 0.05))
-    return sameCorridor && Math.abs(ag.x - sweepX) <= 1.2
+  return false
+}
+
+function catchLunge(w, h, ag, g) {
+  var ahead = (ag.x - g.mid) * h.dir
+  return g.same && ahead >= 0 && ahead <= 3.5
+}
+
+function catchEcho(w, h, ag, g) {
+  return g.same && Math.abs(ag.x - g.mid) <= g.spec.reach * Math.min(1, h.t / Math.max(1, g.spec.fire))
+}
+
+function catchSweep(w, h, ag, g) {
+  var sweepX = h.zx0 + (h.zx1 - h.zx0) * (0.5 + 0.5 * Math.sin(w.ticks * 0.05))
+  return g.same && Math.abs(ag.x - sweepX) <= 1.2
+}
+
+function catchDrops(w, h, ag, g) {
+  for (var drop = 0; drop < 4; drop++) {
+    var dropX = h.zx0 + 0.5 + ((drop * 2.3 + h.fired) % Math.max(1, h.zx1 - h.zx0 + 1))
+    var dropY = h.zy0 + ((h.t * 0.55 + drop * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))
+    if (Math.abs(ag.x - dropX) <= 1 && g.ay >= dropY && g.ay - (AGENT_H - 1) <= dropY + 1) return true
   }
-  if (h.kind === "rockfall" || h.kind === "snowball" || h.kind === "molten") {
-    for (var drop = 0; drop < 4; drop++) {
-      var dropX = h.zx0 + 0.5 + ((drop * 2.3 + h.fired) % Math.max(1, h.zx1 - h.zx0 + 1))
-      var dropY = h.zy0 + ((h.t * 0.55 + drop * 3.1) % Math.max(1, h.zy1 - h.zy0 + 1))
-      if (Math.abs(ag.x - dropX) <= 1 && ay >= dropY && ay - (AGENT_H - 1) <= dropY + 1) return true
-    }
-    return false
-  }
-  // Its feet are at ay and its body reaches AGENT_H-1 above, so a beam across
-  // its chest counts even when it is standing below the beam's own row.
-  return ax >= h.zx0 && ax <= h.zx1 && ay >= h.zy0 && ay - (AGENT_H - 1) <= h.zy1
+  return false
+}
+
+// Its feet are at ay and its body reaches AGENT_H-1 above, so a beam across
+// its chest counts even when it is standing below the beam's own row.
+function catchInBox(w, h, ag, g) {
+  return g.ax >= h.zx0 && g.ax <= h.zx1 && g.ay >= h.zy0 && g.ay - (AGENT_H - 1) <= h.zy1
 }
 
 function hazardWatching(w, h, spec) {
@@ -8592,9 +8614,23 @@ function stepEnemyFall(w, en) {
 
 function stepEnemyWalk(w, en) {
   en.seekingUp = false
-  // Give each hostile a little personal space. Later arrivals otherwise catch
-  // the first patrol and merge into one red blob even though they left the
-  // hatch separately.
+  if (enemyMakesRoom(w, en)) return
+  if (en.kind === "xeno" && xenoCloses(w, en)) return
+  var target = en.kind === "xeno" ? null : enemyTarget(w, en, 24)
+  if (target) return enemyEngages(en, target)
+  en.targetId = 0
+  if (seekEnemyJetUp(w, en)) {
+    en.seekingUp = true
+    if (en.state === "jet") return
+    // Continue walking toward the shaft selected above.
+  }
+  enemyStride(w, en)
+}
+
+// Give each hostile a little personal space. Later arrivals otherwise catch
+// the first patrol and merge into one red blob even though they left the
+// hatch separately.
+function enemyMakesRoom(w, en) {
   for (var pi = 0; pi < w.enemies.length; pi++) {
     var peer = w.enemies[pi]
     if (peer === en || peer.gone || Math.abs(peer.y - en.y) > 1.5
@@ -8603,79 +8639,60 @@ function stepEnemyWalk(w, en) {
     en.state = "recover"
     en.timer = 45
     en.targetId = 0
+    return true
+  }
+  return false
+}
+
+// A xeno does not shoot, so it never enters the aim-and-retreat branch. It
+// closes, and what it does on contact is not damage. True when it has acted.
+function xenoCloses(w, en) {
+  if (en.touchCool > 0) en.touchCool--
+  var prey = enemyTarget(w, en, 26)
+  if (!prey) { en.targetId = 0; return false }
+  en.targetId = prey.id
+  en.dir = prey.x >= en.x ? 1 : -1
+  if (Math.abs(prey.x - en.x) >= XENO_REACH || Math.abs(prey.y - en.y) >= 2.2) return false
+  // Past the cap it stops passing it on and is simply hostile, so a bad roll
+  // cannot turn the whole colony into the thing hunting it.
+  if (en.touchCool === 0 && infectAgent(w, prey)) en.touchCool = XENO_COOL
+  else woundFriendly(w, prey, en.x, false)
+  return true
+}
+
+function enemyEngages(en, target) {
+  en.targetId = target.id
+  var delta = target.x - en.x
+  en.dir = delta >= 0 ? 1 : -1
+  if (target.state === "walk" && Math.abs(delta) < 7) target.dir = -en.dir
+  // A gunner retreats for a beat when rushed. Simply reversing its walk
+  // direction let two moving bodies cross every frame and made it twitch
+  // left/right on exactly the same patch of floor.
+  //
+  // But it must not be able to do that for ever. The retreat was written
+  // for one agent walking up to it, and against a colony there is always
+  // somebody inside six cells, so it backed away from the crowd for the
+  // whole level: on 507 the gunner spent 53% of its life recovering and
+  // 2% aiming. After GUN_BACKOFF retreats without a shot it stands its
+  // ground: being useless is worse than the twitch this was guarding
+  // against. Three is where the behaviour is fixed without the gunner
+  // turning into a different enemy — gun levels sit at 73% agents home
+  // against 74% when it never stood at all, where standing after two
+  // costs a further three points.
+  if (Math.abs(delta) < 6 && (en.backedOff || 0) < GUN_BACKOFF) {
+    en.backedOff = (en.backedOff || 0) + 1
+    en.dir = delta >= 0 ? -1 : 1
+    en.state = "recover"
+    en.timer = 40
     return
   }
+  en.state = "aim"
+  en.timer = 0
+  en.lineTo = target.x
+  en.lineY = target.y - 2
+}
 
-  // A xeno does not shoot, so it never enters the aim-and-retreat branch
-  // below. It closes, and what it does on contact is not damage.
-  if (en.kind === "xeno") {
-    if (en.touchCool > 0) en.touchCool--
-    var prey = enemyTarget(w, en, 26)
-    if (prey) {
-      en.targetId = prey.id
-      en.dir = prey.x >= en.x ? 1 : -1
-      if (Math.abs(prey.x - en.x) < XENO_REACH && Math.abs(prey.y - en.y) < 2.2) {
-        // Past the cap it stops passing it on and is simply hostile, so a bad
-        // roll cannot turn the whole colony into the thing hunting it.
-        if (en.touchCool === 0 && infectAgent(w, prey)) en.touchCool = XENO_COOL
-        else woundFriendly(w, prey, en.x, false)
-        return
-      }
-    } else en.targetId = 0
-  }
-
-  var target = en.kind === "xeno" ? null : enemyTarget(w, en, 24)
-  if (target) {
-    en.targetId = target.id
-    var delta = target.x - en.x
-    en.dir = delta >= 0 ? 1 : -1
-    if (target.state === "walk" && Math.abs(delta) < 7) target.dir = -en.dir
-
-    if (Math.abs(delta) >= 6) {
-      en.state = "aim"
-      en.timer = 0
-      en.targetId = target.id
-      en.lineTo = target.x
-      en.lineY = target.y - 2
-      return
-    }
-    if (Math.abs(delta) < 6) {
-      // A gunner retreats for a beat when rushed. Simply reversing its walk
-      // direction let two moving bodies cross every frame and made it twitch
-      // left/right on exactly the same patch of floor.
-      //
-      // But it must not be able to do that for ever. The retreat was written
-      // for one agent walking up to it, and against a colony there is always
-      // somebody inside six cells, so it backed away from the crowd for the
-      // whole level: on 507 the gunner spent 53% of its life recovering and
-      // 2% aiming. After GUN_BACKOFF retreats without a shot it stands its
-      // ground: being useless is worse than the twitch this was guarding
-      // against. Three is where the behaviour is fixed without the gunner
-      // turning into a different enemy — gun levels sit at 73% agents home
-      // against 74% when it never stood at all, where standing after two
-      // costs a further three points.
-      if ((en.backedOff || 0) < GUN_BACKOFF) {
-        en.backedOff = (en.backedOff || 0) + 1
-        en.dir = delta >= 0 ? -1 : 1
-        en.state = "recover"
-        en.timer = 40
-        return
-      }
-      en.state = "aim"
-      en.timer = 0
-      en.lineTo = target.x
-      en.lineY = target.y - 2
-      return
-    }
-  } else {
-    en.targetId = 0
-    if (seekEnemyJetUp(w, en)) {
-      en.seekingUp = true
-      if (en.state === "jet") return
-      // Continue walking toward the shaft selected above.
-    }
-  }
-
+function enemyStride(w, en) {
   var speed = ENEMY_WALK_SPEED
   var nx = en.x + en.dir * speed
   var cx = Math.floor(nx), fy = Math.floor(en.y)

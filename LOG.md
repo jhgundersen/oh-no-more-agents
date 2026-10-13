@@ -3433,3 +3433,20 @@ rain, chimneys, aerials, pigeons, the front-door exit. Two fixes in review:
 Tests 675 pass.
 
 **Deployed** after 120 (name="build" content="9ecec7f1"): the Rooftops and their umbrella lines. Browser check clean.
+
+## 121 — 2026-10-13 · Crap: condemn, stepEnemyWalk, hazardCatches
+
+Game functions over CRAP 30: **13 → 10**, behaviour unchanged.
+
+- `condemn` (73) was short but untested (20% coverage). Two tests: every
+  state it leaves alone, a waiting agent, an empty toolbar, the bomb and fuse,
+  and a stuck special going up without the toolbar. Now 11.
+- `stepEnemyWalk` (39) → `enemyMakesRoom`, `xenoCloses`, `enemyEngages` and
+  `enemyStride`; the dead `if (|delta| >= 6) … if (|delta| < 6)` pair became
+  one rule. All ≤ 10.
+- `hazardCatches` (33) → a table, `HAZARD_REACHES`, of how each fixture reaches
+  somebody (`catchFired`, `catchProjectiles`, `catchLunge`, `catchEcho`,
+  `catchSweep`, `catchDrops`), with `catchInBox` for the rest. All ≤ 16.
+
+Simulation fingerprint (240 plays) identical before and after each split:
+`96144ab0…`. Tests 677 pass.
