@@ -3488,3 +3488,5 @@ answers to it (sidearm, umbrella parry, brawl) with their numbers, so the
 next change to any of them starts from the measurements. Looked at arrivals at
 the exit on level 21 (ticks 438–452): arms up, rising into the light and
 fading. It already reads as a homecoming; left alone.
+
+**Deployed** after 123 (name="build" content="35ea39e8"): brawls, crap splits. Browser check clean.
