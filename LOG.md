@@ -3835,3 +3835,11 @@ reappeared further back. Sim now notes `thrownFrom` (bookkeeping) and Draw's
 ticks, up a 7-px arc and heels over head (`spriteFlip`) through the middle
 third, landing into its stunned pose. Looked at level 13's throw at ticks
 417–426: the flip reads over the next scuffle's cloud. Tests 711.
+
+## 144 — 2026-10-14 · Saying so; a whoosh; Codex on the Bouncer
+
+The page's tagline and meta description never mentioned the fight the game
+is about. Now: "…and one umbrella each, fighting their way home past
+whatever is in the way." The sound effects (117) get a whoosh — a falling
+filtered-noise sweep — when the Bouncer throws somebody out. Meanwhile Codex
+is drawing the Bouncer properly on `codex/bouncer`. Tests 711.
