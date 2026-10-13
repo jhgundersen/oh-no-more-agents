@@ -3744,3 +3744,23 @@ loop and 13 at the start of this one). What remains over 30 is the dev tooling
 `readStats`, none of which the tests exercise. Tests 695.
 
 **Deployed** after 138 (name="build" content="1fbceb20"): blood drops, brawl pop-in, crap splits. Browser check clean.
+
+## 139 — 2026-10-14 · The Worker under test
+
+The game code is clean (138), but the Worker that counts rescues worldwide
+had no tests at all: `readStats` sat at CRAP 56 on 0% coverage, and the save
+route — the one piece of this project that writes to a database other people
+share — was only ever checked by hand. `test/worker.test.js` runs the real
+`fetch` handler against an in-memory stand-in for D1:
+
+- `GET /api/stats` returns the counter and the build, `no-store`; an empty
+  stats row reads as zero, not as an error.
+- `POST /api/saves` with a valid report writes one three-statement batch
+  bound to the event id and count, then returns the stats.
+- Bad JSON, a short event id, or zero saved: 400, and nothing written.
+- Over the per-minute limit: 429 with `retry-after: 60`, nothing written.
+- Unknown `/api/` paths and wrong methods: 404; everything else goes to the
+  static assets.
+
+`readStats` 56 → 7. What remains over 30 is dev tooling only (simcheck's
+commands, the renderer's `crc32`). Tests 695 → 701.
