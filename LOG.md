@@ -2657,3 +2657,5 @@ Work on `codex/events`; no push or deploy.
 Reviewed and merged by the loop: contact sheet checked at full size. Signal Loss
 haze and Overclock heat read as event state without hiding agents, and the
 inactive frames stay byte-identical.
+
+**Deployed** after 97 (name="build" content="471055c1"): event effects on the board. Browser check clean.
