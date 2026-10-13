@@ -3676,3 +3676,12 @@ its knees and topples while the crown pops off and bounces away. The brawl
 cloud was left as it was. 695 tests pass after the merge.
 
 **Deployed** after 133 (name="build" content="ffd75b91"): the Moderator's art, crap splits. Browser check clean.
+
+## 134 — 2026-10-13 · Blood as drops
+
+Blood particles were 3×3 squares at every resolution, deliberately loud; at
+res 2 that is 6×6 screen pixels each, and the boss's defeat on the contact
+sheet scattered them like red confetti. At res 2 a drop is now 2×2 (the same
+on-screen size as a res-1 pixel and a half) with a three-dot streak trailing
+back along its velocity at half alpha, so a spray reads as a spray; res 1
+keeps its squares. Looked at level 8 just after a hit on the boss. Tests 695.

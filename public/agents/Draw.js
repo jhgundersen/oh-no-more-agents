@@ -2880,6 +2880,20 @@ function drawActorLadders(ctx, w, pal) {
   }
 }
 
+// Blood at res 2: a two-pixel drop with a streak trailing back along the way
+// it is flying, so a spray reads as a spray. Three-pixel squares at this
+// resolution read as confetti.
+function drawBloodDrop(ctx, d, C) {
+  var x = Math.round(d.x * C * 2) / 2, y = Math.round(d.y * C * 2) / 2
+  ctx.fillRect(x, y, 2, 2)
+  var alpha = ctx.globalAlpha
+  ctx.globalAlpha = alpha * 0.55
+  for (var i = 1; i <= 3; i++)
+    ctx.fillRect(Math.round((x + 0.75 - (d.vx || 0) * C * i * 0.7) * 2) / 2,
+      Math.round((y + 0.75 - (d.vy || 0) * C * i * 0.7) * 2) / 2, 0.5, 0.5)
+  ctx.globalAlpha = alpha
+}
+
 function drawActorParticles(ctx, w, pal) {
   var k = w.k
   for (var p = 0; p < w.particles.length; p++) {
@@ -2889,7 +2903,8 @@ function drawActorParticles(ctx, w, pal) {
     if (d.blood) {
       ctx.globalAlpha = Math.min(1, d.life / 24)
       ctx.fillStyle = pal.blood
-      ctx.fillRect(Math.round(d.x * k.CELL), Math.round(d.y * k.CELL), 3, 3)
+      if ((w.res || 1) >= 2) drawBloodDrop(ctx, d, k.CELL)
+      else ctx.fillRect(Math.round(d.x * k.CELL), Math.round(d.y * k.CELL), 3, 3)
     } else {
       ctx.globalAlpha = 0.55
       ctx.fillStyle = pal.dust
