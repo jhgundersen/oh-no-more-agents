@@ -770,6 +770,7 @@ var K = {
   // Draw.js needs this one to know how much of an incubation is left to show.
   INCUBATION_TELL: INCUBATION_TELL,
   BROLLY_HOLD: BROLLY_HOLD,
+  BRAWL_TICKS: BRAWL_TICKS,
   // Force Push's reach, so Draw.js can fly the rocket exactly as far as the
   // simulation throws it. Drawn short of the hole it makes, it read as a dud.
   ROCKET_RANGE: ROCKET_RANGE,

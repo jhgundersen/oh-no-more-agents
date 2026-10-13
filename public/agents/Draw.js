@@ -8255,13 +8255,18 @@ function drawBrawl(ctx, w, pal, en) {
   var C = w.k.CELL, step = (w.res || 1) >= 2 ? 0.5 : 1
   var cx = Math.round(en.x * C), cy = Math.round((en.y + 1) * C) - 7
   var t = w.ticks, spin = t * 0.45
+  // It pops up out of the collision over four ticks and swells in the last
+  // three before it breaks, and both ends get a starburst of impact rays.
+  var age = (w.k.BRAWL_TICKS || 28) - (en.brawlFor || 0), left = en.brawlFor || 0
+  var grow = Math.min(1, (age + 1) / 4) + (left < 3 ? (3 - left) * 0.12 : 0)
   ctx.save()
+  if (age < 5 || left < 3) drawBrawlBurst(ctx, cx, cy, age < 5 ? age : 3 - left, step)
   // Every puff twice: a dark one a size up for the outline, then the dust.
   for (var pass = 0; pass < 2; pass++) {
     ctx.fillStyle = pass ? pal.dust : pal.rigDark
     for (var b = 0; b < 5; b++) {
-      var a = spin + b * 1.26, r = 3.5 + ((b + (t >> 2)) % 3) * 0.75
-      brawlBlob(ctx, cx + Math.cos(a) * 3, cy + Math.sin(a) * 2, r + (pass ? 0 : 1), step)
+      var a = spin + b * 1.26, r = (3.5 + ((b + (t >> 2)) % 3) * 0.75) * grow
+      brawlBlob(ctx, cx + Math.cos(a) * 3 * grow, cy + Math.sin(a) * 2 * grow, r + (pass ? 0 : 1), step)
     }
   }
   // Swirl marks going round inside it.
@@ -8274,6 +8279,20 @@ function drawBrawl(ctx, w, pal, en) {
   drawBrawlLimbs(ctx, w, pal, cx, cy, t)
   drawBrawlStars(ctx, pal, cx, cy, t, step)
   ctx.restore()
+}
+
+// Eight rays thrown out from the point of impact, white at the tips of the
+// first tick and yellow after, flying outward as they fade.
+function drawBrawlBurst(ctx, cx, cy, age, step) {
+  ctx.fillStyle = age === 0 ? "#ffffff" : BRAWL_STAR
+  ctx.globalAlpha = Math.max(0, 1 - age / 5)
+  for (var i = 0; i < 8; i++) {
+    var a = i * Math.PI / 4 + 0.39
+    for (var r = 6 + age * 2; r < 9 + age * 2; r += step)
+      ctx.fillRect(Math.round((cx + Math.cos(a) * r) / step) * step,
+        Math.round((cy + Math.sin(a) * r * 0.8) / step) * step, step, step)
+  }
+  ctx.globalAlpha = 1
 }
 
 function brawlBlob(ctx, x, y, r, step) {

@@ -3702,3 +3702,13 @@ it covers generation and every special).
 
 Left: `generate` (77) and `stepAgents` (58), the two top-level sequences.
 Tests 695.
+
+## 136 — 2026-10-14 · The brawl lands
+
+Codex left the fight cloud alone (133), so: it no longer appears at full size
+out of nowhere. It pops up out of the collision over four ticks behind a
+starburst of eight impact rays (white on the first tick, yellow after, flying
+outward as they fade), and swells in its last three ticks with the rays again
+before it breaks and one of the two gets up. `BRAWL_TICKS` travels on `w.k`
+so the drawing knows the age. Looked at level 5's scuffle at ticks 297–324.
+Tests 695.
