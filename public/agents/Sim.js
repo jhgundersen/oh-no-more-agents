@@ -95,7 +95,11 @@ var ROCKET_RANGE = 26    // how far Force Push's rocket will travel
 var ROCKET_BLAST = 4     // and the radius of the hole it leaves
 var ROCKET_FLIGHT = 16   // ticks the rocket is visibly in the air
 var GUN_BACKOFF = 3      // retreats a gunner gets before it has to stand and fire
-var BLOCK_PATIENCE = 600 // ticks a blocker will hold having stopped nobody
+// 300, was 600: a blocker that has stopped nobody for ten seconds is guarding
+// nothing, and its colleagues were pacing behind it into the stall rules.
+// 420 levels: 94.25 → 94.41% home; 420 fresh: 94.77 → 94.95%; fewer bombs
+// and timeouts in both.
+var BLOCK_PATIENCE = 300 // ticks a blocker will hold having stopped nobody
 var BLOCK_MAX = 900      // and the longest it will hold whatever happens
 
 // Infection. The incubation is long on purpose: the whole point is that an

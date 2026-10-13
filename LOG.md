@@ -2569,3 +2569,17 @@ dirty knees on the burrower, a bag on the hoarder — and the real-level crowd
 shot still reads as one uniformed colony. Res-1 identical (560 frames).
 
 **Deployed** after 94 (name="build" content="de5da2a3"): patience 900, trait tells. Browser check clean.
+
+## 95 — 2026-10-13 · Sensitivity of the other waiting rules
+
+**Why.** 92 and 93 showed rules that acted too eagerly costing more than they
+saved. Swept the rest of the waits over 420 levels.
+
+**Measured.** STILL_ESCAPE 130 → 200: no change. HAZARD_WAIT 260 → 400: no
+change. BLOCK_PATIENCE 600 → 400: 94.37%, → 300: 94.41% (from 94.25%), bombs
+94 → 82, timeouts 4 → 2. On 420 fresh levels 300: 94.77 → 94.95%.
+(A first parallel sweep shared one temp file between runs and reported the
+same number for every variant — rerun with a file each.)
+
+**Changed.** BLOCK_PATIENCE 300. Small, but the same direction in both
+samples, with fewer bombs and timeouts.
