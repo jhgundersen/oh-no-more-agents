@@ -4818,3 +4818,5 @@ in ordinary play; these are Node raster times, not browser FPS.
 `codex/frost` only; no push or deployment.
 
 Reviewed and merged by the loop. Level 3, tick 400, full frame against main at 1x: a green aurora along the back, white snow caps on every floor edge, blue ice on the pillars, snowfall; the original rock untouched beneath. Still a grey biome, but now a cold one.
+
+**Deployed** after 182 (name="build" content="9973a8a5"), gated on a passing check (837 tests): the Frost art. Level 3 in headless Chromium, no console errors.
