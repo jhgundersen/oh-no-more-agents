@@ -126,8 +126,10 @@ test("report numbers respond to saves and added colleagues, independently of the
     const report = () => {
       const r = recording(w)
       D.drawLevelTransition(r.ctx, w, r.pal)
-      // Only the large numeric line; no whole-frame snapshot.
-      return r.img.buf.slice(115 * res * 400 * res * 3, 125 * res * 400 * res * 3)
+      // Only the large numeric line (22px below the plate's top, 10 tall); no
+      // whole-frame snapshot. The plate is centred on its height, so ask where.
+      const top = D.reportTop(w, D.reportRows(w, r.pal)).y + 22
+      return r.img.buf.slice(top * res * 400 * res * 3, (top + 10) * res * 400 * res * 3)
     }
     const before = report()
     w.lost = 99

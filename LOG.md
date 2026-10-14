@@ -6610,3 +6610,38 @@ only records `duckAppeared`, read by nothing in it.
 lines and glyphs read-only, and in headless Chromium a finished level records
 "agi" and "duck" in this browser while a page with localStorage blocked shows
 no strip and throws nothing). `npm run check` 1057/1057; CRAP under 30.
+
+## 226 — 2026-10-15 · Consolidation: the card, the bubbles, the dark
+
+A pass over the gags of the last iterations together, before adding more.
+Screenshots in headless Chromium of the busiest realistic report card (AGI
+bonus, two rescues, a fight, umbrella saves and landings, a commit line, the
+sightings strip) at 1280×900, 390×844 and 844×390:
+`shots/consolidation/report-{desktop,portrait,landscape}.png`.
+
+- **The report card ran off the board.** Its top was fixed, and the full house
+  — eight rows — pushed the bottom edge and the last line past the 248px
+  board. Now the plate is centred on its own height (`reportTop`, also used by
+  the transitions test instead of a pinned row), umbrella landings join the
+  fight line when both fit ("3 GUARDS DOWN · 2 UMBRELLA SAVES · 5 UMBRELLA
+  LANDINGS"), the AGI row is "AGI ACHIEVED · +1 BONUS", and the commit line no
+  longer repeats the AGI when the card already says it. Six rows; it fits with
+  room at all three sizes.
+- **Bubbles.** No quips over a finished level (an "LGTM" was showing beside
+  the card). At most two speakers at once, newest first, a merge conflict's two
+  bubbles counting as one conversation (`quipAllowed`, worked out from the
+  world each frame). A bubble that would cover the exit or a hazard's zone is
+  lifted clear of it, or not drawn if there is no room above
+  (`bubbleClear`). Quips were already page-resolution only, so the panel at 1x
+  never shows text it cannot render.
+- **The outage hid event and boss warnings.** It was drawn after the event
+  banner. The banner now draws after the outage; the outage already stayed off
+  the report card, and the standup is drawn by the page instead of the actor
+  pass, so the dark never reaches it.
+
+**Tests:** `consolidation.test.js` (5: the busiest card inside the board on
+three levels with every row inside the plate and the AGI said once; two
+speakers at most with the conflict pair counted once; bubbles lifted clear of
+the exit and a hazard or not shown; no quips over the card; the warning drawn
+after the dark and nothing over the card). `npm run check` 1062/1062; CRAP
+under 30.

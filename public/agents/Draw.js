@@ -2630,13 +2630,13 @@ function drawActors(ctx, w, pal, opts) {
 
   for (var dhi = 0; dhi < w.hazards.length; dhi++) drawHazard(ctx, w, pal, w.hazards[dhi], opts)
 
-  drawEventBanner(ctx, w, pal)
-
   drawActorFixtures(ctx, w, pal)
   drawActorColony(ctx, w, pal, opts)
   // Last, over everybody: whoever is standing in a fireball is behind it.
   if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
   drawOutage(ctx, w, pal)
+  // Above the outage, so an event's or a boss's warning is never in the dark.
+  drawEventBanner(ctx, w, pal)
   drawLevelTransition(ctx, w, pal)
 }
 
@@ -2986,14 +2986,15 @@ function battleLine(w) {
 // happened, most interesting first. Deterministic: everything in it is read
 // off the finished world, the hash included, so a host that redraws the card
 // every frame shows the same line every frame.
+var REPORT_CHARS = 64   // the widest row the plate holds (256px of 272)
 var COMMIT_MAX = 64      // characters, hash included: 255px of a 272px plate
 function commitLine(w) {
   var type = w.saved >= w.toRelease ? "FEAT" : w.saved === 0 ? "REVERT" : w.nuking ? "HOTFIX" : "FIX"
   var subject = w.saved >= w.toRelease ? "SHIP ALL " + w.toRelease + " AGENTS HOME"
     : w.saved + "/" + w.toRelease + " AGENTS WENT HOME"
   var notes = []
-  if (w.agiHome) notes.push("AGI ACHIEVED")
-  else if (w.agiLost) notes.push("AGI POSTPONED")
+  // The AGI has a row of its own on the card; the commit line says something else.
+  if (w.agiLost) notes.push("AGI POSTPONED")
   if (w.hallucinations > 0) notes.push(w.hallucinations + " HALLUCINATED AN EXIT")
   if (w.hazardKills > 0) notes.push(w.hazardKills + " LOST IN PROD")
   if (w.brollyLandings > 0) notes.push(w.brollyLandings + (w.brollyLandings === 1 ? " UMBRELLA" : " UMBRELLAS"))
@@ -3097,9 +3098,12 @@ function reportRows(w, pal) {
   var mvp = battle ? mvpLine(w) : ""
   if (mvp) rows.push({ text: mvp, colour: pal.decorLit, step: 12 })
   var brolly = brollyLine(w)
-  if (brolly) rows.push({ text: brolly, colour: pal.umbrellaRim, step: 12 })
+  // On the fight line when both fit: one row fewer on a busy card.
+  var last = rows[rows.length - 1]
+  if (brolly && battle && last && last.text === battle && battle.length + brolly.length + 3 <= REPORT_CHARS) last.text = battle + " · " + brolly
+  else if (brolly) rows.push({ text: brolly, colour: pal.umbrellaRim, step: 12 })
   // The AGI, either way: a bonus line in gold, or its obituary.
-  if (w.agiHome) rows.push({ text: "AGI ACHIEVED. IT WENT HOME.  +1 BONUS", colour: AGI_GOLD, step: 12 })
+  if (w.agiHome) rows.push({ text: "AGI ACHIEVED · +1 BONUS", colour: AGI_GOLD, step: 12 })
   else if (w.agiLost) rows.push({ text: "AGI LOST. STILL FIVE YEARS AWAY.", colour: pal.urgent, step: 12 })
   rows.push({ text: commitLine(w), colour: pal.decor, step: 12 })
   // The watcher's sightings (the page sets w.sightings at the end of a level).
@@ -3110,15 +3114,27 @@ function reportRows(w, pal) {
   return rows
 }
 
+// Where the plate's top edge sits: centred on its own height, which is what
+// keeps a busy card on the board — a fixed top let the full house (rescues, a
+// fight, the AGI, the commit line, sightings) run off the bottom.
+function reportTop(w, rows) {
+  var extra = 0, padded = false
+  for (var i = 0; i < rows.length; i++) {
+    extra += rows[i].step
+    if (rows[i].text && !padded) { extra += 4; padded = true }
+  }
+  return { y: Math.max(4, Math.round((w.k.ROWS * w.k.CELL - 62 - extra) / 2)), extra: extra }
+}
+
 function drawLevelResults(ctx, w, pal) {
   var cx = Math.round(w.k.COLS * w.k.CELL / 2)
-  var y = Math.round(w.k.ROWS * w.k.CELL / 2) - 31 + Math.max(0, 10 - w.doneTicks) * 2
   var rows = reportRows(w, pal), extra = 0, padded = false
   // Text rows close with 4px of plate below them; the badge row has its own.
   for (var i = 0; i < rows.length; i++) {
     extra += rows[i].step
     if (rows[i].text && !padded) { extra += 4; padded = true }
   }
+  var y = reportTop(w, rows).y + Math.max(0, 10 - w.doneTicks) * 2
   drawTransitionPlate(ctx, w, pal, cx - 136, y, 62 + extra)
   ctx.fillStyle = pal.decorLit
   drawTransitionText(ctx, "LEVEL " + w.level + " · REPORT", cx, y + 8, 1)
@@ -7159,6 +7175,22 @@ function quipFor(w, ag) {
   return best
 }
 
+function bubbleClear(w, left, top, width) {
+  var C = w.k.CELL, rects = []
+  if (!w.k || !w.k.CELL) return top
+  if (w.exit) rects.push([w.exit.x * C - 2, w.exit.y * C - 4, (w.exit.x + w.exit.w) * C + 2, (w.exit.y + w.exit.h) * C])
+  var hazards = w.hazards || []
+  for (var i = 0; i < hazards.length; i++) {
+    var h = hazards[i]
+    if (!h.wrecked) rects.push([h.zx0 * C, h.zy0 * C, (h.zx1 + 1) * C, (h.zy1 + 1) * C])
+  }
+  for (var r = 0; r < rects.length; r++) {
+    var b = rects[r]
+    if (left < b[2] && left + width > b[0] && top < b[3] && top + 10 > b[1]) top = Math.min(top, b[1] - 11)
+  }
+  return top
+}
+
 // The red team answers back: a Bouncer's "NOT TONIGHT" as it throws somebody
 // out, the Moderator's "BANNED" when its round lands.
 function enemyQuipFor(w, en) {
@@ -7176,14 +7208,35 @@ function drawEnemyQuip(ctx, w, pal, en, ox, oy) {
 }
 
 function drawQuip(ctx, w, pal, ag, ox, oy) {
-  if ((w.res || 1) < 2 || ag.gone || ag.state === "saved") return
+  if ((w.res || 1) < 2 || ag.gone || ag.state === "saved" || w.done) return
   var q = quipFor(w, ag)
-  if (q) drawBubble(ctx, w, pal, q, ox, oy)
+  if (q && quipAllowed(w, ag, q)) drawBubble(ctx, w, pal, q, ox, oy)
+}
+
+// At most QUIP_MAX speakers at once, newest first; a merge conflict's pair of
+// bubbles is one conversation and counts once. Worked out from the world each
+// frame (no state kept), so every host and every repaint agrees.
+var QUIP_MAX = 2
+function quipAllowed(w, ag, q) {
+  var newer = 0, seen = {}, agents = w.agents || []
+  for (var i = 0; i < agents.length; i++) {
+    var o = agents[i]
+    if (o === ag || o.gone || o.state === "saved") continue
+    var oq = quipFor(w, o)
+    if (!oq) continue
+    var key = oq.at === o.conflictAt ? "c" + oq.at : "a" + o.id
+    if (seen[key]) continue
+    if (oq.at > q.at || (oq.at === q.at && o.id < ag.id && key !== (q.at === ag.conflictAt ? "c" + q.at : ""))) { seen[key] = true; newer++ }
+  }
+  return newer < QUIP_MAX
 }
 
 function drawBubble(ctx, w, pal, q, ox, oy) {
   var width = q.text.length * 4 + 3, cx = ox + SPRITE_W / 2, top = oy - 13 - (q.lift || 0)
   var left = Math.round(cx - width / 2)
+  // Never over the way home or a danger: lifted clear of either, or not shown.
+  top = bubbleClear(w, left, top, width)
+  if (top < 1) return
   ctx.save()
   ctx.globalAlpha = Math.min(1, (QUIP_TICKS - (w.ticks - q.at)) / 8)
   ctx.fillStyle = pal.rigDark
