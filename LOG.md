@@ -5987,3 +5987,91 @@ Terrain is cached in play; these are Node software raster times, not browser FPS
 
 **Next:** ready for Clock Tower art review. Commit on `codex/clocktower`
 only; no push or deployment.
+
+## 204 — 2026-10-15 · Rain above the city (on a branch)
+
+**Asked:** Rooftops page art, level 17, on `codex/rooftops` based on the
+approved `codex/clocktower` (`09030ca`). Preserve rain, washing and umbrella
+rides from 119–120; keep the skyline quieter than terrain, neighbours varied,
+and suits, canopies, hazards and the way out legible.
+
+**Changed:** res-2-only dark city terraces, uneven roofs, sparse warm windows
+and small pink OPEN neon signs. Service stretches rotate through cylindrical
+water tanks with bands and legs, paired chimney pots, TV aerials, three pigeons
+on a ledge and satellite dishes. Heights, widths and window patterns vary;
+no neighbouring fixtures share a kind. Static buildings, fittings and signs
+sit beneath playable masonry on the terrain cache. Half-pixel blue-grey wet
+glints sit on surviving exposed non-steel ledges before the original props.
+The original moon, rain, washing, pigeons, aerials, chimney steam, rain splashes,
+zipline geometry, riders, hazards and exit recipes are unchanged. No Sim.js or
+Palette.js changes.
+
+Four faint drifting flecks per new chimney are pure functions of ticks and
+level, with no scenery state or RNG. The live layer emits at most 32 small
+rectangles in the tested layouts; 8–12 survive clipping on levels 17/36/55/74
+at tick 400. It rejects terrain and complete original prop, washing, cable,
+post, rider, hazard, pit and exit bounds. Static scenery is not repainted per
+frame. Added layers self-gate; res 1 and unspecified res retain original pixels.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-rooftops/coverage-safe.sh` pass: **962** tests in both check and
+coverage, including twelve new page-art tests. Check took 105.00 s; coverage
+took 123.21 s, including guard pauses.
+New tests cover biome/resolution gating, forbidden RNG and world writes,
+deterministic digests, half-pixel geometry and restored canvas state, fixed
+anchors and differing adjacent fixtures, five-theme terrain/backdrop contrast,
+whole-sign rejection, glints only on intact exposed non-steel ground, bounded
+slow motion and full terrain/fixture/ride reservations, paint order, opaque
+faces/shirts/eyes/canopies/stems, original component hashes and four 600-tick
+rainy Rooftops playthroughs with matching complete world digests.
+CRAP: **0** functions at or above 30, maximum **29.3**. All fourteen new
+helpers have **100%** coverage and score at most **8.0**.
+
+Heap 2048 MB and `ulimit -v 6000000`; one check worker and two coverage
+workers. `test/factory-art.test.js` remains excluded. The continuous queue
+paused only our test process tree while another full run was active, then
+resumed it. Assertions use digests, component fill recording is capped at
+20k, paint order streams under 100k calls and live footprint loops are bounded
+by one cell. Completion markers distinguish pending from passed phases.
+
+**Looked:** level 17, seed 3, tick 400 at 1× and actual `shoot.js crop 17`.
+Matching parent/branch frames for levels 17/36/55 at ticks 77/476, 2× crops and
+4× details are in `/tmp/codex-rooftops/sheet.png`; level 74 is checked in five
+themes. `readability-sheet.png` pairs open/furled umbrellas and seven original
+hazards at idle/charge/fire/rest. `zips-sheet.png` follows a real level-36
+umbrella ride through boarding, midway and landing (44 steps). Background
+fittings stay dark, neon labels are complete, terrain retains its stronger
+plane and agents, canopies, warning colours, rain and the exit remain clear.
+Ran the requested `npm run compare -- codex/rooftops 17 --out
+/tmp/codex-rooftops/compare-main.png` from main against the committed branch.
+Also ran `--base codex/clocktower --seed 3 --ticks 400` into
+`compare-parent.png` to isolate the art against its direct parent. Viewed both
+full frames and their automatically selected 2× crops. Each command took
+**0.28 s**, peak child RSS under **103 MB**.
+
+Seeded comparison: 1,080 identical other-biome frames, 60 identical Rooftops
+res-1/unspecified-res frames and 30 changed Rooftops res-2 frames: two layouts,
+three tick states and five themes. This took 16.84 s, peak RSS 205 MB.
+
+**Pipeline:** retained the fast software rasterizer and zero-copy comparison
+buffers. Crop/phase images share one seeded world; the sheet builder composes
+only the labelled review sheet. Final comparisons use the shared git-object
+comparison command from main without checking out files or copying main's
+package/tool changes onto this older art ancestry. Full runs remain serialized
+and continuously monitored, including the pauses noted above. No new slow
+rendering or comparison step required a source/tool change.
+
+**Measured:** warmed res-2 software rasterizer at tick 476, median of nine
+batches of forty frames, interleaved parent/branch, after tests and coverage.
+Level 17: actors **0.628 → 0.645 ms**, full terrain + actors
+**9.425 → 9.802 ms**.
+Level 55: actors **0.467 → 0.487 ms**, full terrain + actors
+**9.823 → 10.247 ms**.
+Subway control, level 18: actors **1.091 → 1.096 ms**, full terrain + actors
+**15.116 → 15.084 ms**. The new live pass adds roughly 17–20 microseconds
+on the sampled Rooftops frames.
+Terrain is cached in play; these are Node software raster times, not browser FPS.
+
+**Next:** ready for Rooftops art review. Commit on `codex/rooftops` only;
+no push or deployment.
