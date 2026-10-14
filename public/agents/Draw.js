@@ -207,6 +207,7 @@ function drawTerrain(ctx, w, pal) {
   drawBackdrop(ctx, w, pal)
   drawDataHall(ctx, w)
   drawReadingHall(ctx, w)
+  drawPostalHall(ctx, w)
   if (desertPage(w)) drawDesertRelics(ctx, w)
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
 
@@ -2611,6 +2612,7 @@ function drawActors(ctx, w, pal, opts) {
   drawAbyssLife(ctx, w)
   drawDataStatus(ctx, w)
   drawReadingDust(ctx, w)
+  drawPostalCycle(ctx, w)
   drawDrips(ctx, w, pal)
   drawMachines(ctx, w, pal)
   drawActiveEventAir(ctx, w, pal)
@@ -16557,6 +16559,216 @@ function drawReadingDust(ctx, w) {
       // all original hazard zones clear, including a crossed cell corner.
       if (abyssClear(w, x, y, 1, 0.5, boxes)) ctx.fillRect(x, y, 1, 0.5)
     }
+  }
+  ctx.restore()
+}
+
+// Page-only sorting office. Muted pigeonholes and service-wall fittings are
+// cached below playable terrain. Small envelopes and press heads animate on
+// the actor layer, before the original tubes, hazards, people and umbrellas.
+function mailroomPage(w) { return w.biome === "Mail Room" && (w.res || 1) >= 2 }
+
+var POST_BACK = "#242329"
+var POST_WOOD = "#625348"
+var POST_EDGE = "#887861"
+var POST_PAPER = "#b9a78a"
+var POST_FOLD = "#6e6253"
+var POST_STAMP = "#95605e"
+var POST_MACHINE = "#43594f"
+var POST_METAL = "#626966"
+
+function postalBays(w, row) {
+  var c = w.corridors[row], bays = [], C = w.k.CELL
+  for (var x = (c.x0 + 7) * C + row % 2 * 8; x + 48 <= (c.x1 - 5) * C; x += 64)
+    bays.push({ x: x, y: c.floorY * C - 28, seed: w.level * 23 + row * 37 + x })
+  return bays
+}
+
+function drawPostalHall(ctx, w) {
+  if (!mailroomPage(w)) return
+  ctx.save()
+  for (var row = 0; row < w.corridors.length; row++) {
+    var bays = postalBays(w, row)
+    for (var i = 0; i < bays.length; i++) drawPostalBay(ctx, bays[i])
+    drawPostalChute(ctx, (w.corridors[row].x1 - 17) * w.k.CELL, w.corridors[row].floorY * w.k.CELL)
+  }
+  var stations = postalStations(w)
+  for (var j = 0; j < stations.length; j++) drawPostalFrank(ctx, stations[j])
+  drawPostalReturn(ctx, w)
+  ctx.restore()
+}
+
+function drawPostalBay(ctx, b) {
+  ctx.fillStyle = POST_BACK
+  ctx.fillRect(b.x, b.y, 48, 20)
+  ctx.fillStyle = POST_WOOD
+  ctx.globalAlpha = 0.5
+  ctx.fillRect(b.x, b.y, 1, 20)
+  ctx.fillRect(b.x + 47, b.y, 1, 20)
+  for (var row = 0; row < 3; row++) for (var col = 0; col < 4; col++) {
+    var x = b.x + 2 + col * 11.5, y = b.y + 1 + row * 6, seed = b.seed + row * 17 + col * 7
+    ctx.fillStyle = POST_WOOD
+    ctx.globalAlpha = 0.45 - row * 0.04
+    ctx.fillRect(x, y + 5, 10.5, 0.5)
+    ctx.fillRect(x + 10.5, y, 0.5, 5.5)
+    if (seed % 4 === 0) continue
+    ctx.globalAlpha = 0.38 - row * 0.025
+    drawPostalLetter(ctx, x + 1 + seed % 3, y + 2 + seed % 2 * 0.5, seed)
+  }
+  ctx.globalAlpha = 1
+}
+
+function drawPostalLetter(ctx, x, y, seed) {
+  ctx.fillStyle = POST_PAPER
+  ctx.fillRect(x, y, 5, 2.5)
+  ctx.fillStyle = POST_FOLD
+  ctx.fillRect(x + 1, y + 0.5, 1, 0.5)
+  ctx.fillRect(x + 2, y + 1, 1, 0.5)
+  ctx.fillRect(x + 3, y + 0.5, 1, 0.5)
+  ctx.fillStyle = POST_STAMP
+  ctx.fillRect(x + 4, y + 0.5, 0.5, 0.5)
+  if (seed % 3 !== 0) return
+  ctx.fillStyle = POST_PAPER
+  ctx.fillRect(x - 0.5, y + 2, 4.5, 0.5)
+}
+
+function postalStations(w) {
+  var stations = [], C = w.k.CELL
+  for (var row = 0; row < w.corridors.length; row++) stations.push({ x: (w.corridors[row].x0 + 22) * C,
+    base: w.corridors[row].floorY * C, seed: w.level * 31 + row * 47 })
+  return stations
+}
+
+function drawPostalFrank(ctx, b) {
+  ctx.fillStyle = POST_BACK
+  ctx.fillRect(b.x - 16, b.base - 4, 34, 3)
+  ctx.fillStyle = POST_WOOD
+  ctx.fillRect(b.x - 16, b.base - 4, 34, 0.5)
+  ctx.fillStyle = POST_MACHINE
+  ctx.fillRect(b.x - 5, b.base - 14, 14, 9)
+  ctx.fillRect(b.x - 3, b.base - 17, 10, 3)
+  ctx.fillStyle = POST_METAL
+  ctx.fillRect(b.x - 4.5, b.base - 13.5, 0.5, 7.5)
+  ctx.fillRect(b.x - 3, b.base - 17, 10, 0.5)
+  ctx.fillStyle = POST_BACK
+  ctx.fillRect(b.x - 2, b.base - 12, 9, 5)
+  ctx.fillStyle = POST_EDGE
+  ctx.fillRect(b.x - 13, b.base - 5, 12, 0.5)
+  ctx.fillRect(b.x + 6, b.base - 5, 10, 0.5)
+  ctx.fillStyle = POST_PAPER
+  ctx.globalAlpha = 0.55
+  ctx.fillRect(b.x - 14, b.base - 7, 5, 1)
+  ctx.fillRect(b.x - 13.5, b.base - 8, 4, 1)
+  ctx.globalAlpha = 1
+  ctx.fillStyle = POST_STAMP
+  ctx.fillRect(b.x + 7, b.base - 14, 1, 1)
+}
+
+function drawPostalChute(ctx, x, base) {
+  ctx.fillStyle = POST_METAL
+  ctx.globalAlpha = 0.65
+  ctx.fillRect(x - 4, base - 27, 12, 6)
+  ctx.fillStyle = POST_BACK
+  ctx.fillRect(x - 3, base - 26, 10, 3.5)
+  ctx.fillStyle = POST_EDGE
+  ctx.fillRect(x - 4, base - 22, 12, 0.5)
+  for (var step = 0; step < 5; step++) {
+    ctx.fillStyle = POST_WOOD
+    ctx.fillRect(x + 5 + step * 2, base - 21 + step * 2, 3, 2.5)
+    ctx.fillStyle = POST_METAL
+    ctx.fillRect(x + 5 + step * 2, base - 21 + step * 2, 3, 0.5)
+  }
+  ctx.fillStyle = POST_WOOD
+  ctx.fillRect(x + 5, base - 24, 5, 3)
+  ctx.fillStyle = POST_PAPER
+  ctx.fillRect(x + 7, base - 24, 0.5, 3)
+  ctx.fillRect(x + 5, base - 22.5, 5, 0.5)
+  ctx.globalAlpha = 1
+}
+
+function postalReserved(w) {
+  var boxes = abyssReserved(w)
+  // Mail signs hang below the generic decor bounds; franking trays reach
+  // farther right. Reserve their complete silhouettes, including small labels.
+  var C = w.k.CELL
+  for (var d = 0; d < w.decor.length; d++) {
+    var prop = w.decor[d], x = prop.x * C, y = prop.y * C
+    if (prop.kind === "hang") boxes.push({ x: x - 3, y: y + 3.5, width: 12, height: 6 })
+    else if (prop.kind === "tuft" || (prop.kind === "spire" && prop.seed % 3 === 0))
+      boxes.push({ x: x - 3, y: y + C - 9, width: 17, height: 9 })
+  }
+  for (var i = 0; i < w.pads.length; i++) {
+    if (!w.pads[i].tube) continue
+    var route = tubeRoute(w, w.pads[i])
+    for (var j = 1; j < route.length; j++) {
+      var a = route[j - 1], b = route[j]
+      boxes.push({ x: Math.min(a.x, b.x) - 6, y: Math.min(a.y, b.y) - 6,
+        width: Math.abs(a.x - b.x) + 12, height: Math.abs(a.y - b.y) + 12 })
+    }
+    // Hoppers extend below the pipe centreline; keep the flap and lamps clear.
+    for (var end = 0; end < 2; end++) {
+      var port = route[end ? route.length - 1 : 0]
+      boxes.push({ x: port.x - 8, y: port.y - 2, width: 16, height: 12 })
+    }
+  }
+  return boxes
+}
+
+function postalReturnBox(w) {
+  var c = w.corridors[Math.floor(w.corridors.length / 2)]
+  return { x: (c.x0 + 35) * w.k.CELL, y: c.floorY * w.k.CELL - 18, width: 28, height: 18 }
+}
+
+function postalBoxClear(w, b, boxes) {
+  if (!assemblyUnreserved(boxes, b.x, b.y, b.width, b.height)) return false
+  var C = w.k.CELL
+  for (var y = Math.floor(b.y / C); y <= Math.floor((b.y + b.height - 0.5) / C); y++)
+    for (var x = Math.floor(b.x / C); x <= Math.floor((b.x + b.width - 0.5) / C); x++)
+      if (w.terrain[y * w.k.COLS + x] !== w.k.EMPTY) return false
+  return true
+}
+
+function drawPostalReturn(ctx, w) {
+  var b = postalReturnBox(w)
+  // Reject the entire bin if a wall or fixture would cut its small label.
+  if (!postalBoxClear(w, b, postalReserved(w))) return
+  ctx.fillStyle = POST_WOOD
+  ctx.globalAlpha = 0.7
+  ctx.fillRect(b.x, b.y, 28, 2)
+  ctx.fillRect(b.x + 1, b.y + 2, 26, 14)
+  ctx.fillStyle = POST_BACK
+  ctx.fillRect(b.x + 1, b.y + 0.5, 26, 1)
+  ctx.fillStyle = POST_PAPER
+  drawTransitionText(ctx, "RETURN", b.x + 14, b.y + 4, 0.5)
+  drawTransitionText(ctx, "TO", b.x + 14, b.y + 7.5, 0.5)
+  drawTransitionText(ctx, "SENDER", b.x + 14, b.y + 11, 0.5)
+  ctx.globalAlpha = 1
+}
+
+function drawPostalCycle(ctx, w) {
+  if (!mailroomPage(w)) return
+  ctx.save()
+  var stations = postalStations(w), boxes = postalReserved(w)
+  var ink = { fillStyle: POST_PAPER, fillRect: function(x, y, width, height) {
+    if (!abyssClear(w, x, y, width, height, boxes)) return
+    ctx.fillStyle = this.fillStyle; ctx.fillRect(x, y, width, height)
+  } }
+  for (var i = 0; i < stations.length; i++) {
+    var b = stations[i], phase = Math.floor(((w.ticks + b.seed) % 120) / 30)
+    var x = b.x + [-11, -3, 4, 12][phase], y = b.base - 7
+    // A stamp must not survive on its own when the envelope is occluded.
+    if (abyssClear(w, x, y, 4, 2, boxes)) {
+      ctx.globalAlpha = 0.7
+      ink.fillStyle = POST_PAPER; ink.fillRect(x, y, 4, 2)
+      ink.fillStyle = POST_FOLD; ink.fillRect(x + 1, y + 1, 2, 0.5)
+      ink.fillStyle = POST_STAMP
+      if (phase >= 2) ink.fillRect(x + 3, y, 1, 1)
+    }
+    ctx.globalAlpha = 0.8
+    ink.fillStyle = POST_METAL
+    ink.fillRect(b.x - 1, b.base - 13 + (phase === 1 ? 2 : 0), 3, 1)
+    ink.fillStyle = POST_EDGE
+    ink.fillRect(b.x - 1, b.base - 15, 3, 0.5)
   }
   ctx.restore()
 }
