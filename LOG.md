@@ -4261,3 +4261,5 @@ stone: the hull is now kept within the dock's water (moored, not beached).
 White life rings hung on every net and every lamp — the Rooftops' white
 washing again — now on one net in three and no lamps. The ticker said "THE
 TRAIN LEAVES" for a boat; it says FERRY. 775 tests pass; nothing over CRAP 30.
+
+**Deployed** after 163 (name="build" content="7d8bd9e9"), gated on a passing check: the Harbour and its ferry, the folding umbrella. Browser check clean.
