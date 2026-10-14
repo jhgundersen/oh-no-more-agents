@@ -127,3 +127,15 @@ test("a merge conflict has a cue", () => {
   w.conflicts = 1; sfx.observe(w)
   assert.equal(played.length, 3)
 })
+
+test("an outage winds down and back up", () => {
+  const { sfx, played } = load()
+  sfx.setOn(true)
+  const w = { ...world(), ticks: 299, outage: { at: 300, len: 120 } }
+  sfx.observe(w); sfx.observe(w)
+  w.ticks = 300; sfx.observe(w)
+  const down = played.length
+  assert.ok(down > 0)
+  w.ticks = 420; sfx.observe(w)
+  assert.ok(played.length > down)
+})

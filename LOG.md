@@ -6546,3 +6546,28 @@ layout, hazards and events. On the way: a constant declared inside `generate`
 at column 0 is read by the test loader as a top-level name and fails it; the
 constants live at the top of the file. One test. `npm run check` 1047/1047;
 CRAP under 30.
+
+## 223 — 2026-10-15 · Outages
+
+About one level in twelve (8.3% of 1200 generated), never before level 6, the
+lights go out for four seconds somewhere between ten and thirty seconds in.
+The board dims to near-black over ten ticks — with a brief flicker as it goes
+— and only what would glow in the dark shows: every agent's eyes and hat
+brim, the exit's lit threshold, each fixture's red warning lamp. A status page
+across the top says **INVESTIGATING - DEGRADED PERFORMANCE** with a red dot,
+then **RESOLVED** with a green one for two seconds after the lights return.
+sfx.js winds the hum down and back up. With `prefers-reduced-motion` (the page
+sets `w.reducedMotion`) the dim is gentler and does not flicker. Purely visual:
+`rollOutage` decides at generation from its own stream off the colony seed, so
+a shared link replays the same outage at the same moment, and nothing in the
+simulation reads it — a level plays identically with the lights on or off
+(tested on three levels).
+
+**Tooling:** the test loader (`tools/load-core.js`) now exports every name in
+a `var A = 1, B = 2` declaration, not only the first. Tests reading
+`OUTAGE_RESOLVED` (and before it `STANDUP_TURN`) silently got `undefined`.
+
+**Tests:** `outage.test.js` (3: rate, timing, determinism; the simulation is
+unchanged by it; dark only in its window, banner phases, gentler with reduced
+motion, nothing over the report card, read-only), a cue test in
+`sfx.test.js`. `npm run check` 1051/1051; CRAP under 30.

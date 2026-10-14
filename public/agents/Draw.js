@@ -2636,7 +2636,74 @@ function drawActors(ctx, w, pal, opts) {
   drawActorColony(ctx, w, pal, opts)
   // Last, over everybody: whoever is standing in a fireball is behind it.
   if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
+  drawOutage(ctx, w, pal)
   drawLevelTransition(ctx, w, pal)
+}
+
+// ---------------------------------------------------------------------------
+// Outages (Sim's rollOutage): the lights go out
+// ---------------------------------------------------------------------------
+// Near-black over the whole board, with only what would glow in the dark left
+// showing — eyes and hat brims, the exit's light, a fixture's warning lamp —
+// and a status page across the top: INVESTIGATING, then RESOLVED. Ten ticks in
+// and out. `w.reducedMotion` (set by the page from prefers-reduced-motion) gets
+// a gentler dim with no flicker. Draw only: nothing here is read by Sim.
+var OUTAGE_FADE = 10, OUTAGE_RESOLVED = 60
+function outageLevel(w) {
+  var o = w.outage
+  if (!o) return 0
+  var t = w.ticks - o.at
+  if (t < 0 || t >= o.len) return 0
+  return Math.min(1, t / OUTAGE_FADE, (o.len - t) / OUTAGE_FADE)
+}
+function drawOutage(ctx, w, pal) {
+  var o = w.outage
+  if (!o || w.done) return
+  var t = w.ticks - o.at
+  if (t < 0 || t >= o.len + OUTAGE_RESOLVED) return
+  var dark = outageLevel(w), C = w.k.CELL, W = w.k.COLS * C
+  ctx.save()
+  if (dark > 0) {
+    var flicker = !w.reducedMotion && t > OUTAGE_FADE && t < 2 * OUTAGE_FADE && (t >> 1) % 2 ? 0.7 : 1
+    ctx.globalAlpha = dark * (w.reducedMotion ? 0.6 : 0.9) * flicker
+    ctx.fillStyle = "#04050a"
+    ctx.fillRect(0, 0, W, w.k.ROWS * C)
+    ctx.globalAlpha = dark
+    drawOutageGlows(ctx, w, pal)
+  }
+  drawStatusBanner(ctx, w, pal, t < o.len ? "INVESTIGATING - DEGRADED PERFORMANCE" : "RESOLVED", t < o.len ? pal.warn : "#57d36b", W)
+  ctx.restore()
+}
+function drawOutageGlows(ctx, w, pal) {
+  var C = w.k.CELL, e = w.exit
+  ctx.fillStyle = pal.exitLight
+  ctx.fillRect(e.x * C + 2, (e.y + e.h) * C - 2, e.w * C - 4, 1)          // the threshold still lit
+  for (var h = 0; h < w.hazards.length; h++) {
+    var hz = w.hazards[h]
+    if (hz.wrecked) continue
+    ctx.fillStyle = pal.urgent
+    ctx.fillRect(Math.round((hz.zx0 + hz.zx1) / 2 * C), Math.round(hz.zy0 * C), 2, 2)
+  }
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state === "saved") continue
+    var x = Math.round(ag.x * C), y = Math.round((ag.y + 1) * C) - SPRITE_PX
+    ctx.fillStyle = pal.label
+    ctx.fillRect(x - 3, y + 2, 6, 1)                                     // hat brim
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(x + (ag.dir > 0 ? 0 : -2), y + 4, 1, 1)                 // eyes
+    ctx.fillRect(x + (ag.dir > 0 ? 2 : 0), y + 4, 1, 1)
+  }
+}
+function drawStatusBanner(ctx, w, pal, text, ink, W) {
+  var width = text.length * 4 + 14, left = Math.round(W / 2 - width / 2)
+  ctx.globalAlpha = 1
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(left, 3, width, 11)
+  ctx.fillStyle = ink
+  ctx.fillRect(left + 4, 7, 3, 3)                                        // the status dot
+  ctx.fillStyle = "#f4f4ec"
+  drawTransitionText(ctx, text, W / 2 + 4, 6, 1)
 }
 
 // A dreamer's exit. The same lit mouth as the real one, so it is believable

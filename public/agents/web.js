@@ -465,6 +465,7 @@
     world.res = RES
     world.doneHold = DONE_HOLD
     if (milestone) world.milestone = milestone
+    world.reducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
     completionLine = ""
     lastTerrainVersion = 0
     rebuildPalette()

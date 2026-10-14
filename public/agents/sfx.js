@@ -17,7 +17,7 @@
   var last = {}            // sound name -> time it last played (ms)
   var seen = null          // what the previous tick looked like
 
-  var GAPS = { chime: 600, zing: 120, whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0, clang: 200, radio: 800, jingle: 600, dream: 400, wake: 300, busy: 1500, served: 90, agi: 600, agiHome: 0, agiLost: 0, quack: 300, plop: 300, pep: 120, murmur: 300, conflict: 400 }
+  var GAPS = { chime: 600, zing: 120, whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0, clang: 200, radio: 800, jingle: 600, dream: 400, wake: 300, busy: 1500, served: 90, agi: 600, agiHome: 0, agiLost: 0, quack: 300, plop: 300, pep: 120, murmur: 300, conflict: 400, powerdown: 0, powerup: 0 }
 
   function ensure() {
     if (ctx) return ctx
@@ -104,6 +104,9 @@
     murmur: function () { noise(0.3, 0.25, "lowpass", 500); tone("sine", 180, 150, 0.25, 0.15); tone("sine", 240, 210, 0.2, 0.1, 0.08) },
     // A merge conflict: two notes a semitone apart, then the one that gives way.
     conflict: function () { tone("square", 440, 440, 0.12, 0.2); tone("square", 466, 466, 0.12, 0.2); tone("square", 392, 330, 0.1, 0.2, 0.16) },
+    // An outage: the hum winding down, and back up when it is resolved.
+    powerdown: function () { tone("sawtooth", 220, 55, 0.6, 0.18); noise(0.3, 0.2, "lowpass", 300) },
+    powerup: function () { tone("sawtooth", 55, 220, 0.4, 0.15); tone("sine", 880, 880, 0.08, 0.2, 0.4) },
     fanfare: function (good) {
       var notes = good ? [523, 659, 784, 1047] : [392, 330, 262, 196]
       for (var i = 0; i < notes.length; i++) tone("square", notes[i], notes[i], 0.11, 0.35, i * 0.1)
@@ -176,6 +179,8 @@
     if (now.ducked > was.ducked) play("quack")
     if (now.peps > was.peps) play("pep")
     if (now.conflicts > was.conflicts) play("conflict")
+    if (w.outage && w.ticks === w.outage.at) play("powerdown")
+    if (w.outage && w.ticks === w.outage.at + w.outage.len) play("powerup")
     // The AGI's own cue takes the place of the ordinary one for that agent.
     if (now.agiHome && !was.agiHome) play("agiHome")
     else if (now.saved > was.saved) play("home")

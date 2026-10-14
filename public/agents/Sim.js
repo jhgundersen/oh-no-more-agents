@@ -999,6 +999,7 @@ function newWorld(level, attempt, colonySeed) {
     agiRng: makeRng(colonySeed + 433494437),
     duckRng: makeRng(colonySeed + 179424673),
     conflictRng: makeRng(colonySeed + 2038074743),
+    outage: null,      // { at, len } when the lights will go out; purely visual, see rollOutage
     conflicts: 0,      // merge conflicts resolved, for the report card and sfx
     duck: null,        // the rubber duck, while there is one; see stepDuck
     ducked: 0,         // problems explained to it, for the report card
@@ -1402,6 +1403,7 @@ w.releaseInterval = irand(rng, 24, 34)
 // second, smaller number to reach: the bar is the whole colony. Anything
 // that needs a pass/fail line for tuning sets its own — see tools/simcheck.
 w.traitBag = traitBag(w, w.toRelease)
+w.outage = rollOutage(w)
 
 w.skills = {
   climber: irand(rng, 12, 18) + attempt * 2,
@@ -6931,6 +6933,24 @@ function pepTalk(w, ag) {
   if (ag.state === "walk" && !ag.special && ag.idle > PEP_STUCK) { ag.dir = -ag.dir; ag.turns = 0 }
   else if (ag.state === "walk") ag.pepUntil = w.ticks + PEP_BOOST
   return true
+}
+
+// ---------------------------------------------------------------------------
+// Outages
+// ---------------------------------------------------------------------------
+// About one level in twelve, never in the first five, the lights go out for
+// four seconds and a status page says so. Nothing in the simulation looks at
+// this: the colony carries on exactly as it would have, and Draw dims the
+// board over it. Decided at generation from the colony's own stream, so a
+// shared link replays the same outage at the same moment.
+var OUTAGE_CHANCE = 1 / 12
+var OUTAGE_FROM = 6        // first level it can happen on
+var OUTAGE_LEN = 120       // ticks of dark
+
+function rollOutage(w) {
+  var r = makeRng(w.colonySeed + 715827883)
+  if (w.level < OUTAGE_FROM || r() >= OUTAGE_CHANCE) return null
+  return { at: 300 + Math.floor(r() * 600), len: OUTAGE_LEN }
 }
 
 // ---------------------------------------------------------------------------
