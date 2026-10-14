@@ -5,6 +5,9 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
+// Byte comparison without assert's diff: a failed deepEqual on two frame
+// buffers builds a diff of them (see AGENTS.md).
+const same = (a, b) => Buffer.from(a.buffer, a.byteOffset, a.length).equals(Buffer.from(b.buffer, b.byteOffset, b.length))
 const fresh = (res = 1, level = 2) => {
   const w = S.generate(level, 0, 8128)
   w.res = res
@@ -29,18 +32,26 @@ function recording(w, name = "tokyo-night") {
 }
 
 test("intro draws at several ages in every biome/theme and leaves the world/context alone", () => {
+  // One world per age, serialised once on each side. The intro does not
+  // branch on theme, so every age, level and resolution is drawn in one theme
+  // and the other themes get every age at res 2 on a level of each biome
+  // half: this file ran last and alone at the end of `npm run coverage`.
   for (const res of [undefined, 1, 2]) for (let level = 1; level <= 12; level++) {
-    for (const name of Object.keys(THEMES)) for (const ticks of [0, 1, 6, 12, 24, 32, 39]) {
+    for (const ticks of [0, 1, 6, 12, 24, 32, 39]) {
       const w = fresh(res, level); w.ticks = ticks
-      const r = recording(w, name), before = JSON.stringify(w)
-      r.ctx.fillStyle = "#abcdef"
-      const blank = r.img.buf.slice()
-      D.drawLevelTransition(r.ctx, w, r.pal)
-      assert.ok(r.rects.length > 0)
-      assert.notDeepEqual(r.img.buf, blank)
+      const before = JSON.stringify(w)
+      const themes = res === 2 && (level === 1 || level === 7) ? Object.keys(THEMES) : ["tokyo-night"]
+      for (const name of themes) {
+        const r = recording(w, name)
+        r.ctx.fillStyle = "#abcdef"
+        const blank = r.img.buf.slice()
+        D.drawLevelTransition(r.ctx, w, r.pal)
+        assert.ok(r.rects.length > 0)
+        assert.ok(!same(r.img.buf, blank))
+        assert.equal(r.ctx.fillStyle, "#abcdef")
+        assert.equal(r.ctx.globalAlpha, 1)
+      }
       assert.equal(JSON.stringify(w), before)
-      assert.equal(r.ctx.fillStyle, "#abcdef")
-      assert.equal(r.ctx.globalAlpha, 1)
     }
   }
 })
@@ -88,7 +99,7 @@ test("results include the live total, all verdicts, and override an unfinished i
       const expected = recording(w)
       D.drawLevelResults(expected.ctx, w, expected.pal)
       D.drawLevelClosing(expected.ctx, w, expected.pal)
-      assert.deepEqual(r.img.buf, expected.img.buf)
+      assert.ok(same(r.img.buf, expected.img.buf), `results stage only: res ${res}, ${verdict}, age ${age}`)
     }
   }
 })

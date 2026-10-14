@@ -26,18 +26,8 @@ function draw(w, level) {
   }
 }
 
-for (const ev of S.EVENTS) {
-  test(`event ${ev.id} (${ev.biome}) fires and the level plays on`, () => {
-    const level = levelWith(S, ev.biome)
-    const w = S.generate(level, 0, 3)
-    for (let t = 0; t < 250; t++) S.step(w)
-    S.fireEvent(w, ev)
-    assert.ok(w.eventLog.includes(ev.id))
-    for (let t = 0; t < 60; t++) S.step(w)
-    draw(w, level)
-    playOut(w)
-  })
-}
+// Every event is played in catalogue-events.test.js, sharded off this file so
+// the two run in parallel.
 
 for (const spec of S.SPECIALS) {
   test(`${spec.name} plays a level to the end`, () => {

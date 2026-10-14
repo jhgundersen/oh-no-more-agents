@@ -101,6 +101,15 @@ var EVENT_LINES = {
     "Grounding was applied on arrival. Mostly to the agent's expectations."
   ],
 
+  // Only when a 429 sign actually held a crowd.
+  ratelimit: [
+    "429 Too Many Requests. The colony was asked to retry with backoff.",
+    "The exit has a rate limit. The agents have a queue. Everyone is very polite.",
+    "Too many agents in one place. Please try again in a few seconds.",
+    "A token bucket was briefly drawn as a queue of people in suits.",
+    "They respected the Retry-After header. A first for any client."
+  ],
+
   // Only when a carrier actually reached the door still carrying it.
   carrier: [
     "One of them took it home with it. Nobody noticed.",
@@ -132,6 +141,7 @@ function outcomeLine(w) {
   for (var m in (w.eventMechs || {})) add(m, true)
   add("carrier", w.carrierHome === true)
   add("mirage", w.hallucinations > 0)
+  add("ratelimit", w.rateLimited > 0)
   var pool = facts.length && Math.random() < 0.78 ? facts : outcome
   return pool[Math.floor(Math.random() * pool.length)]
 }

@@ -4,6 +4,9 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
+// Byte comparison without assert's diff: a failed deepEqual on two frame
+// buffers builds a diff of them (see AGENTS.md).
+const same = (a, b) => Buffer.from(a.buffer, a.byteOffset, a.length).equals(Buffer.from(b.buffer, b.byteOffset, b.length))
 const kinds = ["civilian", "explorer", "animal", "camel"]
 function fixture(kind, res, variant = 0, dir = 1) {
   const w = S.generate(1, 0, 321)
@@ -57,8 +60,14 @@ function render(w, pal, draw = D.drawMission) {
 }
 
 test("each follower hurries in both directions at both resolutions, without state or context writes", () => {
-  for (const name of Object.keys(THEMES)) for (const kind of kinds) {
-    for (const res of [undefined, 1, 2]) for (const variant of [0, 1, 2]) for (const dir of [-1, 1]) {
+  // The drawing does not branch on theme, so the full matrix runs in one and
+  // every theme gets one case: the same coverage for a fifth of the frames.
+  const cases = []
+  for (const kind of kinds) for (const res of [undefined, 1, 2]) for (const variant of [0, 1, 2]) for (const dir of [-1, 1])
+    cases.push({ name: "tokyo-night", kind, res, variant, dir })
+  for (const name of Object.keys(THEMES)) for (const kind of kinds) cases.push({ name, kind, res: 2, variant: 0, dir: 1 })
+  for (const { name, kind, res, variant, dir } of cases) {
+    {
       const { w, t } = fixture(kind, res, variant, dir), pal = P.build(themeOf(name).theme, 1)
       const frames = []
       for (const anim of [0, 3, 6, 9]) {
@@ -66,7 +75,7 @@ test("each follower hurries in both directions at both resolutions, without stat
         const img = render(w, pal)
         assert.ok(img.calls.length > 0)
         assert.equal(img.calls.some(c => c.width === 0.5 || c.height === 0.5), res === 2)
-        assert.deepEqual(img.buf, render(w, pal).buf, "deterministic drawing")
+        assert.ok(same(img.buf, render(w, pal).buf), "deterministic drawing")
         frames.push(Buffer.from(img.buf).toString("base64"))
       }
       assert.ok(new Set(frames).size >= 3, "stride and bounce are visible")

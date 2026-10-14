@@ -2655,13 +2655,44 @@ function drawMirage(ctx, w, pal, m) {
   ctx.restore()
 }
 
+// The 429 sign: a little post-mounted plate over the crowd that pops up, sits
+// there while the queue drains, and drops away once it has. Red for the code,
+// the colony's own label colour for the post. Whole art pixels.
+function drawRateLimitSign(ctx, w, pal, rl) {
+  var C = w.k.CELL
+  var cx = Math.round(rl.x * C), foot = (rl.y + 1) * C
+  var age = w.ticks - rl.at
+  var gone = rl.clearAt >= 0 ? w.ticks - rl.clearAt : 0
+  var pop = Math.min(1, age / 6)                               // springs up
+  var drop = Math.max(0, gone - 18)                           // and sinks away
+  var top = foot - Math.round(30 * pop) + drop * 2
+  if (top >= foot - 4) return
+  ctx.save()
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(cx, top + 9, 1, foot - top - 9)                 // the post
+  ctx.fillRect(cx - 9, top - 1, 19, 11)                        // plate shadow
+  ctx.fillStyle = gone > 0 ? pal.label : pal.urgent
+  ctx.fillRect(cx - 8, top, 17, 9)
+  ctx.fillStyle = "#ffffff"
+  // Blink for the first second, steady after.
+  if (age > 30 || Math.floor(age / 5) % 2 === 0) drawTransitionText(ctx, "429", cx + 1, top + 2, 1)
+  ctx.restore()
+}
+
+// What the colony is going through rather than what is on the level: a
+// dreamer's mirage, the 429 sign over a queue.
+function drawColonyAsides(ctx, w, pal) {
+  if (w.mirages) for (var mi = 0; mi < w.mirages.length; mi++) drawMirage(ctx, w, pal, w.mirages[mi])
+  if (w.rateLimit) drawRateLimitSign(ctx, w, pal, w.rateLimit)
+}
+
 function drawActorFixtures(ctx, w, pal) {
   drawActorMines(ctx, w, pal)
   drawActorLadders(ctx, w, pal)
   drawActorParticles(ctx, w, pal)
   if (w.prints && w.prints.length) drawPrints(ctx, w, pal)
   if (w.eventSiteFx) drawEventSite(ctx, w, pal, w.eventSiteFx)
-  if (w.mirages) for (var mi = 0; mi < w.mirages.length; mi++) drawMirage(ctx, w, pal, w.mirages[mi])
+  drawColonyAsides(ctx, w, pal)
   if (w.boulder) drawBoulder(ctx, w, pal, w.boulder)
   if (w.frozen) for (var fz = 0; fz < w.frozen.length; fz++) drawFrozen(ctx, w, pal, w.frozen[fz])
   if (w.pads) for (var pd = 0; pd < w.pads.length; pd++) drawPadPair(ctx, w, pal, w.pads[pd])
@@ -6272,12 +6303,15 @@ var AGENT_POSES = {
 var IDLE_REPERTOIRE = {
   block: ["tap", "watch", "fold"], wait: ["phone", "glance", "yawn"],
   camp: ["watch", "glance", "tie"], held: ["drum", "tie", "yawn"],
-  stuck: ["tie", "watch", "fold"]
+  stuck: ["tie", "watch", "fold"],
+  // Held by a 429 sign: checking the status page, the time, and tapping a foot.
+  queue: ["phone", "watch", "tap"]
 }
 function agentIdleKind(ag) {
   if (ag.id === undefined || ag.shotFor > 0) return ""
   if (IDLE_REPERTOIRE[ag.state]) return ag.state
   if (ag.state !== "walk") return ""
+  if (ag.queueFor > 0) return "queue"
   if (ag.waitFor > 0) return "held"
   return ag.still > 24 ? "stuck" : ""
 }
@@ -6288,7 +6322,9 @@ function agentIdle(w, ag) {
   var clock = w.ticks + ag.id * 47
   var phase = clock % period
   var turn = (Math.floor(clock / period) + ag.id) % 3
-  return { kind: kind, phase: phase, pose: phase < 36 ? IDLE_REPERTOIRE[kind][turn] : "" }
+  // A queue is short, so it shows its pose the whole time rather than now and then.
+  var posing = phase < 36 || kind === "queue"
+  return { kind: kind, phase: phase, pose: posing ? IDLE_REPERTOIRE[kind][turn] : "" }
 }
 
 // Sleeve rectangles. Hands and props go on after the suit's fine pass, so a

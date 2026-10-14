@@ -5202,3 +5202,54 @@ list. `npm run check` 888/888 in 15 s, run under `systemd-run -p MemoryMax=6G`.
 `node-test-guard` note (from the supervisor).
 
 **Deployed** after 193 (name="build" content="b6092665"), gated on a passing check (888 tests): the dreamer. Levels 1, 8 and 13 in headless Chromium, no console errors.
+
+## 194 — 2026-10-14 · Faster tests, and 429 Too Many Requests
+
+**Tooling, measured on 16 cores:** `npm run check` **15.7 s → 10.1 s**,
+`npm run coverage` **55 s → 30 s**, `npm run crap` (which runs coverage
+itself) **~85 s → 32 s**. Coverage was CPU-bound (8.5 min CPU in under a
+minute of wall time) with a tail of one or two late, heavy files running alone,
+so splitting files alone changed nothing; what moved it was doing less work:
+- `tools/render.js`: `parseColor` is cached per string (it ran several regexes
+  per fillRect), and a scaled-but-not-rotated transform — every res-2 frame —
+  now tests columns and rows once each with the same arithmetic as the
+  per-pixel inverse map and fills the product; an opaque fill writes instead of
+  blending. Bit-identical: a 78-frame spread over 14 levels, both resolutions,
+  three themes, plus rotated/flipped/translucent fills, hashes the same before
+  and after, and every pinned hash in the suite still passes. Full frames
+  render ~1.7× faster. The fill code moved out of `canvas` into named
+  functions (crapper scored the closures as part of `canvas`: 36).
+- `hazards.test.js` 7.5 s → 2.8 s: a read-only proxy (writes throw) instead
+  of `JSON.stringify` of the world before and after each of ~4,000 frames, and
+  a byte compare against a cached blank instead of base64 strings.
+- `escort-art` 7.1 s → 2.3 s and `transitions` 6.4 s → 2.8 s: the drawing does
+  not branch on theme, so the full matrix runs in one theme and every theme
+  gets a representative case; frames compare by bytes, not `deepEqual`.
+- `play.test.js` sharded into three passes (`play-levels.js`), the event
+  playthroughs into `catalogue-events.test.js`, the biome half of backdrops into
+  `backdrops-2.test.js` (`backdrops-biomes.js`), so the heavy files overlap.
+- `crop()` rounds its origin: a fractional one silently returned a black image.
+No `check:quick`: at 10 s the full check is the inner loop.
+
+**Gameplay — 429 Too Many Requests.** When five or more ordinary walkers bunch
+inside five cells of one floor, the first such crowd of a level (after tick 240)
+gets a coin toss (60%); on heads a red **429** sign springs up on a post over
+them, everybody in the crowd stands still checking a phone, a watch or tapping
+a foot, and they are let go from the front one every 16 ticks after a 54-tick
+hold — a token bucket drawn as a queue. Once a level at most. It cannot hold
+anybody for good: every hold is a countdown, a queued agent is invisible to the
+stuck watchers, and a fall, a skill, a hero, a fight or the floor going ends its
+turn in the queue at once; nobody is queued by the exit, by the hatch, in a
+known hazard's reach or over a pit. Outcome gains five Retry-After lines, only
+when a queue happened. Over 120 runs of levels 1–60: fired on 13, held 68
+agents, longest hold 134 ticks, none still queued at the end; `simcheck play 60`
+unchanged (60/60, 881/929, 0 hangs).
+
+**Tests:** `ratelimit.test.js` (8): crowd detection and its exclusions, front-
+first release in both directions, a queue that stands still then drains and
+takes the sign down, early release on a fall/hero/lost floor, once-a-level and
+the coin, 30 played levels with the coin forced (no hangs, bounded holds), the
+sign's pop/blink/linger/sink on whole pixels via the actor pass, outcome lines.
+`xeno.test.js` (4): `xenoCloses` lost its incidental coverage when the casts
+reshuffled (CRAP 58.3); now reached directly. `idle.test.js` learns the queue
+pose. `npm run check` 903/903; CRAP worst 29.0.

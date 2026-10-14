@@ -6,8 +6,9 @@ import { canvas, themeOf } from "../tools/render.js"
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
 const theme = themeOf("tokyo-night"), pal = P.build(theme.theme, 1)
 function sample(kind, id = 5, dir = 1) {
-  return { id, x: 4, y: 6, dir, state: ["held", "stuck"].includes(kind) ? "walk" : kind,
-    anim: 11, waitFor: kind === "held" ? 10 : 0, still: kind === "stuck" ? 30 : 0 }
+  return { id, x: 4, y: 6, dir, state: ["held", "stuck", "queue"].includes(kind) ? "walk" : kind,
+    anim: 11, waitFor: kind === "held" ? 10 : 0, still: kind === "stuck" ? 30 : 0,
+    queueFor: kind === "queue" ? 10 : 0 }
 }
 function render(w, ag) {
   const res = w.res || 1, img = canvas(32 * res, 32 * res, theme.background)
@@ -33,7 +34,8 @@ for (const [kind, repertoire] of Object.entries(D.IDLE_REPERTOIRE)) {
         }
       }
       assert.deepEqual([...frames.keys()].sort(), [...repertoire].sort())
-      assert.equal(quiet.size, 1, "quiet stance never walks or bobs")
+      // A 429 queue is short and poses throughout; everything else rests between fidgets.
+      assert.equal(quiet.size, kind === "queue" ? 0 : 1, "quiet stance never walks or bobs")
       for (const [pose, pixels] of frames) {
         assert.ok([...pixels].some(frame => !quiet.has(frame)), `${pose} must read at res ${res}`)
         if ((["tap", "drum", "tie"].includes(pose) || (pose === "phone" && res === 2))) assert.ok(pixels.size > 1, `${pose} moves`)

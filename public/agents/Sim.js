@@ -987,6 +987,9 @@ function newWorld(level, attempt, colonySeed) {
     dreamRng: makeRng(colonySeed + 15485863),
     mirages: [],       // exits only a dreamer can see; see dreamSteer
     hallucinations: 0,
+    limitRng: makeRng(colonySeed + 2750159),
+    rateLimit: null,   // the 429 sign and its queue, while one is up; see stepRateLimit
+    rateLimited: 0,    // how many were held by it, for the report card
 
     // Events: what may happen to this level while it is being played, and the
     // modifiers a live one has switched on. See the block above stepEvents.
@@ -6056,6 +6059,7 @@ function spawn(w) {
     goalMark: 0,       // which beacon markD was measured against
     fuse: 0,
     waitFor: 0,       // holding at a danger for its reload, rather than pacing
+    queueFor: 0,      // standing in a 429 queue; see stepRateLimit
     mineCool: 0,      // one charge at a time, and not again until it has gone off
     shieldFor: 0,     // ticks left on the plate; renewed while a threat is in front
     throttleFor: 0,   // Rate Limiter's pose and signal, after it throttles something
@@ -6742,6 +6746,97 @@ function stepMirages(w) {
     if (m.reached || !walking || ag.dir !== m.dir || Math.floor(ag.y) !== m.y ||
         w.ticks - m.born > MIRAGE_LIFE) m.popped = w.ticks
   }
+}
+
+// ---------------------------------------------------------------------------
+// 429 Too Many Requests
+// ---------------------------------------------------------------------------
+// When the colony bunches up — five or more walkers inside a few cells of one
+// floor — the level may put up a sign and make them take turns. Everybody in
+// the crowd stands still; then they are let go one at a time from the front,
+// a fixed interval apart, which is a token bucket drawn as a queue. Once a
+// level at most, and only on a coin toss when the crowd first forms, so it
+// stays a gag rather than a mechanic you wait through.
+//
+// It can never hold anyone for good: every hold is a countdown that ends on
+// its own, a queued agent is invisible to the stuck watchers (standing in a
+// queue is the plan, not a stall), and anything that changes the agent's
+// situation — the floor going, a fall, a skill, a fight — ends its turn in
+// the queue at once. Nobody is held where something can hurt them, or by the
+// exit, where a crowd is a crowd going home.
+var LIMIT_CROWD = 5       // walkers it takes
+var LIMIT_SPAN = 5        // cells they have to be inside
+var LIMIT_CHANCE = 0.6    // that a first crowd gets the sign at all
+var LIMIT_EARLIEST = 240  // let the colony out of the hatch first
+var LIMIT_HOLD = 54       // ticks the front of the queue stands still
+var LIMIT_EVERY = 16      // ticks between each agent behind it being let go
+var LIMIT_SIGN = 30       // ticks the sign stays after the last one goes
+
+function queued(w, ag) {
+  if (!(ag.queueFor > 0)) return false
+  if (ag.state !== "walk" || ag.special || unsupported(w, ag)) { ag.queueFor = 0; return false }
+  ag.queueFor--
+  // Facing the sign while it waits; Draw reads queueFor for the pose.
+  ag.still = 0
+  return true
+}
+
+function stepRateLimit(w) {
+  var rl = w.rateLimit
+  if (rl) {
+    var waiting = 0
+    for (var i = 0; i < w.agents.length; i++) if (w.agents[i].queueFor > 0) waiting++
+    if (waiting > 0) rl.clearAt = -1
+    else if (rl.clearAt < 0) rl.clearAt = w.ticks
+    else if (w.ticks - rl.clearAt > LIMIT_SIGN) w.rateLimit = null
+    return
+  }
+  if (w.rateLimitDone || w.done || w.nuking || w.ticks < LIMIT_EARLIEST || w.ticks % 15 !== 0) return
+  var crowd = findCrowd(w)
+  if (!crowd) return
+  w.rateLimitDone = true                  // first crowd, sign or no sign
+  if (w.limitRng() >= LIMIT_CHANCE) return
+  queueCrowd(w, crowd)
+}
+
+// The biggest bunch of ordinary walkers on any one floor, if it is big enough
+// and somewhere it is safe to stand still.
+function findCrowd(w) {
+  var best = null
+  for (var i = 0; i < w.agents.length; i++) {
+    var A = w.agents[i]
+    if (!limitable(w, A)) continue
+    var group = []
+    for (var j = 0; j < w.agents.length; j++) {
+      var B = w.agents[j]
+      if (limitable(w, B) && Math.floor(B.y) === Math.floor(A.y) && B.x >= A.x && B.x < A.x + LIMIT_SPAN) group.push(B)
+    }
+    if (group.length >= LIMIT_CROWD && (!best || group.length > best.length)) best = group
+  }
+  return best
+}
+
+function limitable(w, ag) {
+  if (ag.gone || ag.special || ag.state !== "walk" || unsupported(w, ag)) return false
+  var x = Math.floor(ag.x), y = Math.floor(ag.y)
+  return eventSafeX(w, x) && !hazardZoneAt(w, x, y, true) && !pitAt(w, x)
+}
+
+function queueCrowd(w, crowd) {
+  // The front is the end the most of them are walking toward.
+  var heading = 0
+  for (var i = 0; i < crowd.length; i++) heading += crowd[i].dir
+  var dir = heading >= 0 ? 1 : -1
+  crowd.sort(function (a, b) { return (b.x - a.x) * dir })
+  var sum = 0
+  for (var n = 0; n < crowd.length; n++) {
+    crowd[n].queueFor = LIMIT_HOLD + n * LIMIT_EVERY
+    sum += crowd[n].x
+  }
+  w.rateLimit = { x: sum / crowd.length, y: Math.floor(crowd[0].y), dir: dir, at: w.ticks,
+    count: crowd.length, clearAt: -1 }
+  w.rateLimited += crowd.length
+  feedNote(w, "429 TOO MANY REQUESTS")
 }
 
 function stepFall(w, ag) {
@@ -10137,6 +10232,7 @@ var AGENT_STEPS = {
 
 function agentActs(w, ag) {
   tickAgentTimers(w, ag)
+  if (queued(w, ag)) { w.acting = null; return }
   if (ag.special && ag.state === "walk") specialReacts(w, ag)
   if (ag.rescueCool > 0) ag.rescueCool--
   watchStill(w, ag)
@@ -10508,6 +10604,7 @@ function finishWorldStep(w, active, blockers, moving) {
 
   stepEvents(w)
   stepMirages(w)
+  stepRateLimit(w)
   stepMission(w)
   stepHazard(w)
   stepMines(w)

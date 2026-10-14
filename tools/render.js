@@ -54,7 +54,18 @@ export function themeOf(name) {
   }
 }
 
+// Parsed once per string: the regexes below ran on every fillRect, and a test
+// run draws tens of millions of them. Callers never modify what comes back.
+const COLORS = new Map()
 function parseColor(c) {
+  if (typeof c === "string") {
+    let hit = COLORS.get(c)
+    if (!hit) { hit = parseColorUncached(c); COLORS.set(c, hit) }
+    return hit
+  }
+  return parseColorUncached(c)
+}
+function parseColorUncached(c) {
   if (c && typeof c === "object" && c.__stops) {
     const s = c.__stops
     return s.length ? parseColor(s[Math.floor(s.length / 2)]) : [136, 136, 136, 1]
@@ -69,6 +80,81 @@ function parseColor(c) {
   m = c.match(/rgba?\(([^)]+)\)/)
   if (m) { const p = m[1].split(",").map(Number); return [p[0] | 0, p[1] | 0, p[2] | 0, p.length > 3 ? p[3] : 1] }
   return [136, 136, 136, 1]
+}
+
+const isIdentity = m => m[0] === 1 && m[1] === 0 && m[2] === 0 && m[3] === 1 && m[4] === 0 && m[5] === 0
+
+// Fills the device rectangle [x0, x1) × [y0, y1) with `col` at alpha `a`. An
+// opaque fill is a plain write: buf·0 + col·1 is col, so the bytes are the same.
+function fillSpan({ buf, W }, col, a, x0, x1, y0, y1) {
+  const r = col[0], g = col[1], b = col[2]
+  for (let yy = y0; yy < y1; yy++) {
+    let i = (yy * W + x0) * 3
+    if (a === 1) for (let xx = x0; xx < x1; xx++, i += 3) { buf[i] = r; buf[i + 1] = g; buf[i + 2] = b }
+    else for (let xx = x0; xx < x1; xx++, i += 3) {
+      buf[i] = buf[i] * (1 - a) + r * a
+      buf[i + 1] = buf[i + 1] * (1 - a) + g * a
+      buf[i + 2] = buf[i + 2] * (1 - a) + b * a
+    }
+  }
+}
+
+function fillRect(surface, state, x, y, w, h) {
+  const col = parseColor(state.fillStyle)
+  const a = Math.max(0, Math.min(1, state.globalAlpha * col[3]))
+  if (a <= 0) return
+  if (w < 0) { x += w; w = -w }
+  if (h < 0) { y += h; h = -h }
+  const { W, H } = surface, m = state.m
+  if (isIdentity(m)) {
+    const rx = Math.round(x), ry = Math.round(y)
+    fillSpan(surface, col, a, Math.max(0, rx), Math.min(W, rx + Math.round(w)), Math.max(0, ry), Math.min(H, ry + Math.round(h)))
+    return
+  }
+  fillTransformed(surface, col, a, m, x, y, w, h)
+}
+
+// Transformed: walk the destination bounding box and inverse-map each pixel
+// back into the rectangle. Slower than the fast path and exact, which is what
+// a rotated pixel sprite needs.
+function fillTransformed(surface, col, a, m, x, y, w, h) {
+  const { W, H } = surface
+  const px = (cx, cy) => [m[0] * cx + m[2] * cy + m[4], m[1] * cx + m[3] * cy + m[5]]
+  const corners = [px(x, y), px(x + w, y), px(x, y + h), px(x + w, y + h)]
+  const det = m[0] * m[3] - m[1] * m[2]
+  if (!det) return
+  const inv = [m[3] / det, -m[1] / det, -m[2] / det, m[0] / det,
+               (m[2] * m[5] - m[3] * m[4]) / det, (m[1] * m[4] - m[0] * m[5]) / det]
+  const x0 = Math.max(0, Math.floor(Math.min(...corners.map(c => c[0]))))
+  const y0 = Math.max(0, Math.floor(Math.min(...corners.map(c => c[1]))))
+  const xe = Math.min(W, Math.ceil(Math.max(...corners.map(c => c[0]))))
+  const ye = Math.min(H, Math.ceil(Math.max(...corners.map(c => c[1]))))
+  const inside = (xx, yy) => {
+    const sx = inv[0] * (xx + 0.5) + inv[2] * (yy + 0.5) + inv[4]
+    const sy = inv[1] * (xx + 0.5) + inv[3] * (yy + 0.5) + inv[5]
+    return [sx >= x && sx < x + w, sy >= y && sy < y + h]
+  }
+  // Scaled or flipped but not rotated — every res-2 frame. The inside test
+  // then splits into a column test and a row test; run each once with the
+  // same arithmetic and fill the product, which is the same set of pixels
+  // without a test per pixel.
+  if (inv[1] === 0 && inv[2] === 0) {
+    const cols = passing(x0, xe, xx => inside(xx, y0)[0]), rows = passing(y0, ye, yy => inside(x0, yy)[1])
+    if (cols && rows) fillSpan(surface, col, a, cols[0], cols[1], rows[0], rows[1])
+    return
+  }
+  for (let yy = y0; yy < ye; yy++) for (let xx = x0; xx < xe; xx++) {
+    const [inX, inY] = inside(xx, yy)
+    if (inX && inY) fillSpan(surface, col, a, xx, xx + 1, yy, yy + 1)
+  }
+}
+
+// The run of [from, to) for which `test` holds — one run, because the mapping
+// is monotonic along an axis — or null.
+function passing(from, to, test) {
+  let lo = -1, hi = -1
+  for (let i = from; i < to; i++) if (test(i)) { if (lo < 0) lo = i; hi = i + 1 }
+  return lo < 0 ? null : [lo, hi]
 }
 
 export function canvas(W, H, background) {
@@ -89,8 +175,8 @@ export function canvas(W, H, background) {
     m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3],
     m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]
   ]
-  const isIdentity = m => m[0] === 1 && m[1] === 0 && m[2] === 0 && m[3] === 1 && m[4] === 0 && m[5] === 0
 
+  const surface = { buf, W, H }
   const ctx = {
     get fillStyle() { return state.fillStyle },
     set fillStyle(v) { state.fillStyle = v },
@@ -99,50 +185,7 @@ export function canvas(W, H, background) {
     set font(v) { }, set textAlign(v) { }, set strokeStyle(v) { }, set lineWidth(v) { },
     canvas: { width: W, height: H },
 
-    fillRect(x, y, w, h) {
-      const col = parseColor(state.fillStyle)
-      const a = Math.max(0, Math.min(1, state.globalAlpha * col[3]))
-      if (a <= 0) return
-      if (w < 0) { x += w; w = -w }
-      if (h < 0) { y += h; h = -h }
-      const blend = (xx, yy) => {
-        if (xx < 0 || yy < 0 || xx >= W || yy >= H) return
-        const i = (yy * W + xx) * 3
-        buf[i] = buf[i] * (1 - a) + col[0] * a
-        buf[i + 1] = buf[i + 1] * (1 - a) + col[1] * a
-        buf[i + 2] = buf[i + 2] * (1 - a) + col[2] * a
-      }
-
-      const m = state.m
-      if (isIdentity(m)) {
-        const rx = Math.round(x), ry = Math.round(y)
-        const x1 = Math.min(W, rx + Math.round(w)), y1 = Math.min(H, ry + Math.round(h))
-        for (let yy = Math.max(0, ry); yy < y1; yy++)
-          for (let xx = Math.max(0, rx); xx < x1; xx++) blend(xx, yy)
-        return
-      }
-
-      // Transformed: walk the destination bounding box and inverse-map each
-      // pixel back into the rectangle. Slower than the fast path and exact,
-      // which is what a rotated pixel sprite needs.
-      const px = (cx, cy) => [m[0] * cx + m[2] * cy + m[4], m[1] * cx + m[3] * cy + m[5]]
-      const corners = [px(x, y), px(x + w, y), px(x, y + h), px(x + w, y + h)]
-      const det = m[0] * m[3] - m[1] * m[2]
-      if (!det) return
-      const inv = [m[3] / det, -m[1] / det, -m[2] / det, m[0] / det,
-                   (m[2] * m[5] - m[3] * m[4]) / det, (m[1] * m[4] - m[0] * m[5]) / det]
-      const x0 = Math.max(0, Math.floor(Math.min(...corners.map(c => c[0]))))
-      const y0 = Math.max(0, Math.floor(Math.min(...corners.map(c => c[1]))))
-      const xe = Math.min(W, Math.ceil(Math.max(...corners.map(c => c[0]))))
-      const ye = Math.min(H, Math.ceil(Math.max(...corners.map(c => c[1]))))
-      for (let yy = y0; yy < ye; yy++) {
-        for (let xx = x0; xx < xe; xx++) {
-          const sx = inv[0] * (xx + 0.5) + inv[2] * (yy + 0.5) + inv[4]
-          const sy = inv[1] * (xx + 0.5) + inv[3] * (yy + 0.5) + inv[5]
-          if (sx >= x && sx < x + w && sy >= y && sy < y + h) blend(xx, yy)
-        }
-      }
-    },
+    fillRect(x, y, w, h) { fillRect(surface, state, x, y, w, h) },
 
     fillText() { },
     clearRect() { },
@@ -166,6 +209,9 @@ export function canvas(W, H, background) {
 // A rectangle out of an image, as a new image. For looking at texture rather
 // than at layout.
 export function crop(img, x, y, w, h) {
+  // Whole pixels: a fractional origin indexed between bytes and came back as
+  // a silently black image.
+  x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h)
   const out = canvas(w, h, "#000000")
   for (let yy = 0; yy < h; yy++) {
     for (let xx = 0; xx < w; xx++) {
