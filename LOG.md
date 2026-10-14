@@ -6773,3 +6773,45 @@ dark and the new intro copy on the page. Follow-up seen there: the event
 banner and the outage's status banner share the top of the board, and the
 event banner covers the status one — the status banner should move down while
 an event warning is up.
+
+## 229 — 2026-10-15 · The outage status sits below the sky
+
+On production an event warning ("INCOMING · Fire Drill") covered the outage's
+INVESTIGATING line: both used the top of the board. The sky band is where event
+warnings and the hero's card live, so the status banner now sits just below
+it. One test.
+
+## 230 — 2026-10-15 · Instant replay
+
+When a level ends with a moment worth seeing again, it is played back before
+the report card, under an **INSTANT REPLAY** tag with a blinking red dot and a
+letterbox bar. Sim notes moments as they happen (`noteMoment`; bookkeeping
+only, nothing in the simulation reads them, and a level plays identically
+without them): an umbrella opened with six cells or less to go (3), a bridge
+landed with somebody right behind the builder (3), a ricochet (3), a parry (2,
+or 4 with a boss on the board), a merge conflict (2), the last agent home in
+the final ten seconds (4), the AGI home (5). The page takes the best moment
+scoring 3 or more — about 30% of levels; none, no replay — generates the level
+again from its seed and re-simulates it to two seconds before the moment, then
+plays three seconds at the usual speed. No frames are kept: the simulation is
+deterministic (page randomness only feeds animation phase and particles), the
+re-simulation runs 150 ticks per page tick so a phone never stalls, the
+watcher's pep talks are replayed at their ticks, and if the re-simulation does
+not note the same moment on the same tick the replay gives up rather than show
+something that did not happen. The finished world, its report card and its
+rescues are untouched; a tap skips. The page exposes `window.AgentReplay()`
+read-only for tools and tests.
+
+**Measured:** all 70 replay-worthy moments in 240 runs (levels 1–60) reproduce
+from the seed. Worst case for a phone — level 25, a moment at tick 1613, 4x CPU
+throttling at 390×844 — no long tasks and no frame over 17 ms while it rewinds.
+`npm run fps` unchanged (60 fps, 7–12% main thread). Screenshot:
+`shots/replay.png` (the AGI walking home, level 1 seed 2).
+
+**Tests:** `replay.test.js` (4: moments noted and changing nothing; every
+replay-worthy moment on 30 levels × 3 seeds re-noted by a re-simulation; the
+tag only while replaying; in headless Chromium a level ending with the AGI
+replays it while the report card waits, a click skips to the card without
+pausing, and a level with no big moment goes straight to the card). The
+bridge landing moved into `landBridge` to keep `stepBuild` under the CRAP gate.
+`npm run check` 1079/1079; CRAP under 30.

@@ -479,6 +479,7 @@
   function tick() {
     if (!world) return
     if (standup) { stepStandup(); return }
+    if (replay) { stepReplay(); return }
     step(world)
     if (window.AgentSfx) AgentSfx.observe(world)
 
@@ -491,6 +492,7 @@
     if (world.done && completionLine === "") {
       completionLine = outcomeLine(world)
       noteSightings(world)
+      startReplay(world)
       lifetimeSaved += world.saved
       if (world.saved > 0) levelsCleared += 1
       enqueueGlobalSaves(world.saved)
@@ -508,6 +510,75 @@
       if (++transitions % STANDUP_EVERY === 0 && startStandup()) return
       advance(1); applyUpdate()
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Instant replay (Sim's moments, Draw's drawReplayTag)
+  // -------------------------------------------------------------------------
+  // When a level ends with a moment worth seeing again, the best one is played
+  // back before the report card: the level is generated again from its seed
+  // and re-simulated to just before the moment — no frames are kept, and the
+  // simulation is deterministic, so this is the same run — then played at the
+  // usual speed for about three seconds under an INSTANT REPLAY tag. The
+  // re-simulation is spread over a few ticks so a phone does not stall, any pep
+  // talks the watcher gave are given again at the same ticks, and if the replay
+  // does not note the same moment on the same tick it gives up rather than show
+  // something that did not happen. A tap skips it. The finished world,
+  // its report and its rescues are untouched throughout.
+  var REPLAY_MIN = 3, REPLAY_BEFORE = 60, REPLAY_AFTER = 30, REPLAY_CATCHUP = 150
+  var replay = null
+  // Read-only, for tools and tests (like AgentWorld).
+  window.AgentReplay = function () { return replay && { kind: replay.best.kind, t: replay.sim.ticks, from: replay.from, to: replay.to } }
+
+  function bestMoment(w) {
+    var best = null
+    for (var i = 0; i < (w.moments || []).length; i++) {
+      var m = w.moments[i]
+      if (m.score >= REPLAY_MIN && (!best || m.score >= best.score)) best = m
+    }
+    return best
+  }
+
+  function startReplay(w) {
+    var best = bestMoment(w)
+    if (!best) return
+    var sim = generate(w.level, w.attempt || 0, w.colonySeed)
+    sim.res = w.res; sim.doneHold = w.doneHold; sim.milestone = w.milestone; sim.reducedMotion = w.reducedMotion
+    sim.replaying = true
+    replay = { src: w, sim: sim, best: best, from: Math.max(0, best.t - REPLAY_BEFORE), to: best.t + REPLAY_AFTER,
+      peps: (w.pepLog || []).slice(), terrain: -1 }
+  }
+
+  function replayStep() {
+    var sim = replay.sim
+    for (var i = 0; i < replay.peps.length; i++)
+      if (replay.peps[i].t === sim.ticks) pepTalk(sim, agentById(sim, replay.peps[i].id))
+    step(sim)
+  }
+
+  function stepReplay() {
+    var sim = replay.sim
+    if (sim.ticks < replay.from) {
+      // Rewinding: a chunk a tick, with the finished frame left up meanwhile.
+      for (var n = 0; n < REPLAY_CATCHUP && sim.ticks < replay.from && !sim.done; n++) replayStep()
+      if (sim.done) endReplay()
+      return
+    }
+    replayStep()
+    // The same run arrives at the same moment: the re-simulation must have
+    // noted it too, on the same tick. Otherwise this is not a replay.
+    if (sim.ticks === replay.best.t && !sim.moments.some(function (m) { return m.t === replay.best.t && m.kind === replay.best.kind })) { endReplay(); return }
+    if (sim.terrainVersion !== replay.terrain) { replay.terrain = sim.terrainVersion; drawTerrain(terrainCtx, sim, palette) }
+    drawActors(actorCtx, sim, palette, { labels: showLabels })
+    if (sim.ticks >= replay.to || sim.done) endReplay()
+  }
+
+  function endReplay() {
+    replay = null
+    lastTerrainVersion = -1
+    paintTerrain()
+    paintActors()
+    render()
   }
 
   // -------------------------------------------------------------------------
@@ -939,9 +1010,10 @@
     // while paused, it is pause as it always was.
     el.boardWrap.addEventListener("click", function (ev) {
       if (standup) { endStandup(); return }
+      if (replay) { endReplay(); return }
       var ag = running && world ? agentUnder(ev) : null
       if (!ag) { togglePause(); return }
-      pepTalk(world, ag)
+      if (pepTalk(world, ag)) (world.pepLog = world.pepLog || []).push({ t: world.ticks, id: ag.id })
       paintActors()
     })
 

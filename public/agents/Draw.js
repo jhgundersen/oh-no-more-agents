@@ -2637,9 +2637,29 @@ function drawActors(ctx, w, pal, opts) {
   // Last, over everybody: whoever is standing in a fireball is behind it.
   if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
   drawOutage(ctx, w, pal)
+  if (w.replaying) drawReplayTag(ctx, w, pal)
   // Above the outage, so an event's or a boss's warning is never in the dark.
   drawEventBanner(ctx, w, pal)
   drawLevelTransition(ctx, w, pal)
+}
+
+// The instant replay (the page re-simulates the level's best moment; see
+// web.js): letterbox bars, and a tag with a recording dot in the corner below
+// the sky band, so the hero's card and event warnings stay readable.
+function drawReplayTag(ctx, w, pal) {
+  var C = w.k.CELL, W = w.k.COLS * C, H = w.k.ROWS * C, top = w.k.SKY * C + 2
+  ctx.save()
+  ctx.globalAlpha = 0.55
+  ctx.fillStyle = "#000000"
+  ctx.fillRect(0, H - 6, W, 6)
+  ctx.globalAlpha = 1
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(4, top, 70, 11)
+  ctx.fillStyle = (w.ticks >> 3) % 2 ? "#ff3b3b" : "#7a1c1c"
+  ctx.fillRect(7, top + 4, 3, 3)
+  ctx.fillStyle = "#f4f4ec"
+  drawTransitionText(ctx, "INSTANT REPLAY", 43, top + 3, 1)
+  ctx.restore()
 }
 
 // ---------------------------------------------------------------------------
