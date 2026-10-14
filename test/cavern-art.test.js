@@ -86,21 +86,37 @@ test("Cavern rock, back wall and formations use the terrain cache without a cloc
   }
 })
 
-test("Cavern stone detail stays in surviving cells, across natural materials", () => {
+test("Cavern wet detail is sparse, palette coloured and leaves ore untouched", () => {
   const { w, pal } = sample()
   for (const m of [w.k.DIRT, w.k.ROCK, w.k.ORE]) {
     w.terrain.fill(w.k.EMPTY)
-    for (const [x, y] of [[20, 20], [21, 20], [22, 20], [20, 21]]) w.terrain[y * w.k.COLS + x] = m
+    for (let y = 20; y < 25; y++) for (let x = 20; x < 40; x++)
+      w.terrain[y * w.k.COLS + x] = m
+    const base = picture(ctx => {
+      D.drawTerrainMaterials(ctx, w, pal); D.drawTerrainFine(ctx, w, pal)
+    })
+    const detailed = picture(ctx => {
+      D.drawTerrainMaterials(ctx, w, pal); D.drawTerrainFine(ctx, w, pal)
+      D.drawCavernMaterials(ctx, w, pal)
+    })
+    if (m === w.k.ORE) { assert.deepEqual(detailed.buf, base.buf); continue }
     const img = picture(ctx => D.drawCavernMaterials(ctx, w, pal))
     assert.ok(img.calls.length > 0)
-    for (const c of img.calls) for (let y = c[1]; y < c[1] + c[3]; y += 0.5)
-      for (let x = c[0]; x < c[0] + c[2]; x += 0.5)
-        assert.equal(w.terrain[Math.floor(y / 4) * w.k.COLS + Math.floor(x / 4)], m)
+    let area = 0
+    for (const c of img.calls) {
+      assert.equal(c[4], D.materialEdge(w.k, pal, m))
+      assert.ok(c[5] <= 0.6)
+      area += c[2] * c[3]
+      for (let y = c[1]; y < c[1] + c[3]; y += 0.5)
+        for (let x = c[0]; x < c[0] + c[2]; x += 0.5)
+          assert.equal(w.terrain[Math.floor(y / 4) * w.k.COLS + Math.floor(x / 4)], m)
+    }
+    assert.ok(area < 100 * 16 * 0.02, "over 98% of terrain surface untouched")
   }
 })
 
 test("fungi breathe with time and disappear when their support or air is removed", () => {
-  const { w, pal } = sample(), d = w.decor.find(d => d.kind === "tuft" && d.seed % 3 === 0 && D.lightDecorAlive(w, d))
+  const { w, pal } = sample(), d = w.decor.find(d => D.cavernFungiAlive(w, d) && D.lightDecorAlive(w, d))
   assert.ok(d)
   const first = picture(ctx => D.drawCavernLife(ctx, w, pal))
   w.ticks += 61
@@ -110,7 +126,11 @@ test("fungi breathe with time and disappear when their support or air is removed
   w.terrain[(d.y + 1) * w.k.COLS + d.x] = w.k.EMPTY
   assert.equal(picture(ctx => D.drawCavernLife(ctx, w, pal)).calls.length, 0)
   w.terrain[(d.y + 1) * w.k.COLS + d.x] = w.k.ROCK
-  w.terrain[d.y * w.k.COLS + d.x] = w.k.ROCK
+  w.terrain[d.y * w.k.COLS + d.x - 2] = w.k.ROCK
+  assert.equal(picture(ctx => D.drawCavernLife(ctx, w, pal)).calls.length, 0)
+  assert.equal(picture(ctx => D.drawCavernDecor(ctx, w, pal, d, d.x * 4, d.y * 4)).calls.length, 0)
+  w.terrain[d.y * w.k.COLS + d.x - 2] = w.k.EMPTY
+  w.terrain[(d.y + 1) * w.k.COLS + d.x - 1] = w.k.EMPTY
   assert.equal(picture(ctx => D.drawCavernLife(ctx, w, pal)).calls.length, 0)
 })
 
@@ -147,6 +167,20 @@ test("Cavern light draws behind the colony, umbrellas, guards and exit", () => {
   assert.ok(glow >= 0)
   for (const colour of [pal.skin, pal.umbrellaStem, "#ff5268", pal.exitLight])
     assert.ok(calls.findLastIndex(c => c === colour) > glow, colour)
+})
+
+test("Cavern page keeps every original decor drawing command", () => {
+  // Original main renderer, res 2: remove only the added fungi's four colours.
+  const hash = createHash("sha256")
+  const fungalColours = new Set([D.CAVERN_MOSS, D.CAVERN_SHADOW, D.CAVERN_GLOW, D.CAVERN_CORE])
+  for (const name of Object.keys(THEMES)) for (const level of levels) {
+    const { w, pal } = sample(level, name), img = canvas(800, 496), calls = []
+    img.ctx.fillRect = (...args) => {
+      if (!fungalColours.has(img.ctx.fillStyle)) calls.push([...args, img.ctx.fillStyle, img.ctx.globalAlpha])
+    }
+    D.drawDecor(img.ctx, w, pal); hash.update(JSON.stringify(calls))
+  }
+  assert.equal(hash.digest("hex"), "492edf57b256676a2d58e87026459184471f27f023571c1119a1fe64ad57732d")
 })
 
 test("Cavern panel backdrop, earth, decor, motes, exit and booth keep their bytes", () => {

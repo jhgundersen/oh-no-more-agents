@@ -1005,11 +1005,11 @@ function drawDecor(ctx, w, pal) {
     var jungle = w.biome === "Jungle"
     var desert = w.biome === "Desert"
     if (w.biome === "Harbour") { drawHarbourDecor(ctx, w, pal, d, px, py); continue }
-    if (cavernPage(w)) { drawCavernDecor(ctx, w, pal, d, px, py); continue }
     if (w.biome === "Subway") { drawSubwayDecor(ctx, w, pal, d, px, py); continue }
     drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert)
     if ((w.res || 1) >= 2) drawDecorFine(ctx, pal, d, px, py, py + C,
       w.biome === "Rooftops" ? "roof" : w.biome === "Clock Tower" ? "clock" : w.biome === "Building Site" ? "site" : w.biome === "Mail Room" ? "mail" : w.biome === "Library" ? "library" : foundry ? "pipe" : ruins ? "ruins" : desert ? "desert" : jungle ? "jungle" : frost ? "frost" : "cave")
+    if (cavernPage(w)) drawCavernDecor(ctx, w, pal, d, px, py)
   }
 }
 
@@ -13929,12 +13929,13 @@ function drawDrip(ctx, w, d, C) {
   if (t < 3) ctx.fillRect(px, at - 2 - t * 1.5, 1, 1)
 }
 
-// Cavern, page only: old limestone, wet calcite and living pinpricks in the
-// dark. Geometry belongs to the cached terrain; only the breath of the fungi
-// and a little grit use the actor pass. No scenery state is stored on the world.
-var CAVERN_STONE = ["#35464d", "#3b4c52", "#405157", "#46575b"]
-var CAVERN_SHADOW = "#25353d", CAVERN_WET = "#78928f", CAVERN_MOSS = "#526e5e"
-var CAVERN_GLOW = "#79bcaa", CAVERN_CORE = "#b4dfc9", CAVERN_CALCITE = "#7e8980"
+// Cavern, page only: mineral curtains behind the original palette's mottled
+// terrain, sparse wet glints and fungi beside (never replacing) its decor.
+// Only fungal light and grit use the actor pass; no scenery state or RNG.
+var CAVERN_MOSS = "#526e5e"
+var CAVERN_SHADOW = "#25353d"
+var CAVERN_GLOW = "#79bcaa"
+var CAVERN_CORE = "#b4dfc9"
 
 function cavernPage(w) { return w.biome === "Cavern" && (w.res || 1) >= 2 }
 function cavernHash(x, y, level) { return ((x * 73856093) ^ (y * 19349663) ^ (level * 83492791)) >>> 0 }
@@ -14000,91 +14001,50 @@ function drawCavernFormation(ctx, x, base, height, width, dir, body, shade) {
     var left = x - Math.round(taper * 0.65 * 2) / 2
     ctx.fillStyle = body; ctx.fillRect(left, y, taper, 1)
     ctx.fillStyle = shade; ctx.fillRect(left + taper - 0.5, y, 0.5, 1)
-    if (shade === CAVERN_SHADOW && row > 1 && taper > 2) {
-      ctx.fillStyle = CAVERN_CALCITE; ctx.globalAlpha *= 0.3
-      ctx.fillRect(left + 0.5, y, 0.5, 1); ctx.globalAlpha /= 0.3
-    }
   }
 }
 
 function drawCavernMaterials(ctx, w, pal) {
   if (!cavernPage(w)) return
   ctx.save()
-  var k = w.k, C = k.CELL
+  var k = w.k
   for (var y = 0; y < k.ROWS; y++) for (var x = 0; x < k.COLS; x++) {
     var m = w.terrain[y * k.COLS + x]
-    if (m !== k.DIRT && m !== k.ROCK && m !== k.ORE) continue
-    drawCavernStone(ctx, w, x, y)
+    // Ore keeps every pixel of its checker. No cell is ever filled over.
+    if (m !== k.DIRT && m !== k.ROCK) continue
+    drawCavernStone(ctx, w, pal, x, y, m)
   }
   ctx.restore()
 }
 
-function drawCavernStone(ctx, w, x, y) {
+function drawCavernStone(ctx, w, pal, x, y, m) {
   var k = w.k, C = k.CELL, px = x * C, py = y * C
-  var h = cavernHash(x, y, w.level), fold = Math.round(2 * Math.sin(x / 9 + w.level))
-  var bed = (y + fold + k.ROWS) % 9
-  ctx.fillStyle = CAVERN_STONE[Math.floor(bed / 3) + (bed === 8 ? 1 : 0)]
-  ctx.fillRect(px, py, C, C)
-  // Bedding runs across material boundaries: ore is mineral, not a checker.
-  ctx.fillStyle = CAVERN_SHADOW
-  if (bed === 0 || bed === 4) ctx.fillRect(px, py + 1 + (h % 2) * 0.5, C, 0.5)
-  if (h % 19 === 0) drawCavernCrack(ctx, px, py, h)
-  if (y > 0 && !w.terrain[(y - 1) * k.COLS + x]) drawCavernLedge(ctx, px, py, h)
-  if (y + 1 < k.ROWS && !w.terrain[(y + 1) * k.COLS + x]) {
-    ctx.fillStyle = CAVERN_SHADOW; ctx.fillRect(px, py + C - 1, C, 1)
-    ctx.fillStyle = CAVERN_CALCITE
-    ctx.globalAlpha = 0.25; ctx.fillRect(px + 0.5, py + C - 1.5, 2, 0.5); ctx.globalAlpha = 1
+  var h = cavernHash(x, y, w.level)
+  ctx.fillStyle = materialEdge(k, pal, m)
+  // Short, occasional strata glints leave the original grain and shades clear.
+  if (h % 23 === 0) {
+    ctx.globalAlpha = 0.28
+    ctx.fillRect(px + 0.5, py + 2.5, 2, 0.5)
   }
-  if (x > 0 && !w.terrain[y * k.COLS + x - 1]) {
-    ctx.fillStyle = CAVERN_WET; ctx.globalAlpha = 0.3
-    ctx.fillRect(px, py + 0.5, 0.5, C - 0.5); ctx.globalAlpha = 1
-  }
-  if (x + 1 < k.COLS && !w.terrain[y * k.COLS + x + 1]) {
-    ctx.fillStyle = CAVERN_SHADOW; ctx.fillRect(px + C - 0.5, py, 0.5, C)
+  if (y > 0 && !w.terrain[(y - 1) * k.COLS + x] && h % 5 === 0) {
+    ctx.globalAlpha = 0.6
+    ctx.fillRect(px + 1, py + 0.5, 1.5, 0.5)
   }
 }
 
-function drawCavernCrack(ctx, x, y, h) {
-  ctx.fillStyle = CAVERN_SHADOW
-  var start = 0.5 + (h >>> 8) % 3 * 0.5
-  ctx.fillRect(x + start, y, 0.5, 1.5)
-  ctx.fillRect(x + start + 0.5, y + 1.5, 0.5, 1)
-  ctx.fillRect(x + start, y + 2.5, 1, 0.5)
-  ctx.fillStyle = CAVERN_CALCITE; ctx.globalAlpha = 0.18
-  ctx.fillRect(x + start + 1, y + 1.5, 0.5, 1); ctx.globalAlpha = 1
-}
-
-function drawCavernLedge(ctx, x, y, h) {
-  ctx.fillStyle = CAVERN_SHADOW; ctx.fillRect(x, y + 1, 4, 0.5)
-  ctx.fillStyle = CAVERN_WET; ctx.globalAlpha = 0.65
-  ctx.fillRect(x, y, 4, 0.5); ctx.globalAlpha = 1
-  if (h % 5 < 2) {
-    ctx.fillStyle = CAVERN_MOSS; ctx.fillRect(x + 0.5, y + 0.5, 2.5, 1)
-    ctx.fillRect(x + 1, y + 1.5, 1, 0.5)
-  }
-  if (h % 3 === 0) {
-    ctx.fillStyle = CAVERN_CORE; ctx.globalAlpha = 0.45
-    ctx.fillRect(x + 1, y, 1.5, 0.5); ctx.globalAlpha = 1
-  }
+// Two open, supported cells beside a tuft; fungi never take its place, float
+// after excavation, or grow through a wall. This same anchor gates their light.
+function cavernFungiAlive(w, d) {
+  if (d.kind !== "tuft" || d.seed % 3 !== 0 || d.x < 3) return false
+  var k = w.k, at = d.y * k.COLS + d.x - 2
+  return !w.terrain[at] && !w.terrain[at + 1] &&
+    !!w.terrain[at + k.COLS] && !!w.terrain[at + k.COLS + 1]
 }
 
 function drawCavernDecor(ctx, w, pal, d, x, y) {
-  if (!cavernPage(w)) return
+  if (!cavernPage(w) || !cavernFungiAlive(w, d)) return
   ctx.save()
-  var base = y + w.k.CELL
-  if (d.kind === "hang") {
-    drawCavernFormation(ctx, x + 2, y, 2 + d.size * 3, 5 + d.size, 1, CAVERN_STONE[2], CAVERN_SHADOW)
-    drawCavernFormation(ctx, x + 5, y, 2 + d.size, 2, 1, CAVERN_STONE[1], CAVERN_SHADOW)
-    ctx.fillStyle = CAVERN_WET; ctx.fillRect(x + 1.5, y, 0.5, 2)
-    // Preserve the familiar bead and leave the existing live drips alone.
-    ctx.fillStyle = pal.poolGlint; ctx.globalAlpha = 0.55
-    ctx.fillRect(x + 2, y + 2 + d.size * 3, 0.5, 0.5)
-  } else if (d.kind === "spire") {
-    drawCavernFormation(ctx, x + 2, base, 3 + d.size * 3, 5 + d.size, -1, CAVERN_STONE[3], CAVERN_SHADOW)
-    ctx.fillStyle = CAVERN_CALCITE; ctx.globalAlpha = 0.5
-    ctx.fillRect(x + 1.5, base - 2 - d.size * 3, 0.5, 2 + d.size * 2)
-  } else if (d.kind === "tuft") drawCavernFungi(ctx, x, base, d.seed)
-  else drawCavernRubble(ctx, x, base, d.seed)
+  drawCavernFungi(ctx, x - 7.5, y + w.k.CELL, d.seed)
   ctx.restore()
 }
 
@@ -14099,29 +14059,20 @@ function drawCavernFungi(ctx, x, base, seed) {
   }
 }
 
-function drawCavernRubble(ctx, x, base, seed) {
-  for (var i = 0; i < 4; i++) {
-    var rise = 1 + (seed >>> i) % 3
-    ctx.fillStyle = CAVERN_STONE[3]; ctx.fillRect(x + i * 1.5, base - rise, 1.5, rise)
-    ctx.fillStyle = CAVERN_CALCITE; ctx.globalAlpha = 0.4
-    ctx.fillRect(x + i * 1.5, base - rise, 1, 0.5); ctx.globalAlpha = 1
-  }
-}
-
 function drawCavernLife(ctx, w, pal) {
   if (!cavernPage(w)) return
   ctx.save()
   for (var i = 0; i < w.decor.length; i++) {
     var d = w.decor[i]
     if (!lightDecorAlive(w, d)) continue
-    if (d.kind === "tuft" && d.seed % 3 === 0) drawCavernFungalLight(ctx, w, d)
+    if (cavernFungiAlive(w, d)) drawCavernFungalLight(ctx, w, d)
     if (d.kind === "hang") drawCavernGrit(ctx, w, pal, d)
   }
   ctx.restore()
 }
 
 function drawCavernFungalLight(ctx, w, d) {
-  var x = d.x * w.k.CELL, base = (d.y + 1) * w.k.CELL
+  var x = d.x * w.k.CELL - 7.5, base = (d.y + 1) * w.k.CELL
   var pulse = 0.12 + 0.035 * Math.sin(w.ticks / 43 + d.seed)
   drawLightPool(ctx, w, CAVERN_GLOW, x + 2, base - 3, 10, 6, pulse)
   ctx.fillStyle = CAVERN_CORE; ctx.globalAlpha = 0.32 + pulse

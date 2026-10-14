@@ -4544,3 +4544,26 @@ these are Node raster times, not browser FPS.
 
 **Next:** review the opening cave in longer page play. Committed on
 `codex/cavern` only; no push or deployment.
+
+**Revision after review — 2026-10-14:** the first pass above was rejected for
+flattening the original blue terrain. Removed the green stone repaint and all
+foreground decor replacements. The original palette, mottling, lit edges,
+checkered ore, grass tufts, spires, hanging formations and rubble now render
+through their original paths. Added terrain detail is limited to occasional
+half-pixel glints in each material's existing edge colour; ore gets no overlay.
+The dark background curtains and strata remain, with fungi growing beside
+selected tufts rather than replacing them. Their small breathing light pools
+and the falling grit remain read-only and RNG-free; fungi and light both stop
+when their adjacent floor or air is removed.
+
+Compared ORIGINAL (current `main`) against this revision at tick 400 on levels
+1, 20 and 39, inspecting matched 2× and 4× crops before finishing. The foreground
+keeps its texture and gains contrast against the darker recesses; no green wash
+remains. Contact sheet: `/tmp/codex-cavern/sheet2.png`. Nine component tests
+include a new original-decor command hash and sparse, palette-only terrain
+checks with byte-identical ore. `npm run stamp`, `npm run check` and
+`npm run crap -- --threshold 30` pass; maximum CRAP **28.5**, Cavern helpers
+at most **7.0**. Comparison with main: **1,140 byte-identical protected frames**
+(all other biomes at res 1/2, Cavern at res 1/unspecified; two layouts, three
+ticks, five themes), with all **30** Cavern res-2 frames changed. New commit
+on `codex/cavern`; no history rewrite, push or deployment.
