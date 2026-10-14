@@ -2819,7 +2819,27 @@ function drawLevelClosing(ctx, w, pal) {
   drawLevelIris(ctx, w, pal, w.k.COLS * w.k.CELL / 2, w.k.ROWS * w.k.CELL / 2, remaining / LEVEL_CLOSE_TICKS)
 }
 
+// The ticker (Sim's feedNote): the newest notable moment, spelled out along
+// the bedrock at the foot of the board for five seconds, fading at the end.
+// Page resolution only; the panel has no room for prose.
+var FEED_SHOW = 150, FEED_FADE = 30
+function drawFeed(ctx, w, pal) {
+  var f = w.feed && w.feed[w.feed.length - 1]
+  if ((w.res || 1) < 2 || !f) return
+  var age = w.ticks - f.t
+  if (age < 0 || age >= FEED_SHOW) return
+  var y = (w.k.ROWS - 2) * w.k.CELL + 1, width = f.text.length * 4 - 1
+  ctx.save()
+  ctx.globalAlpha = Math.min(1, (FEED_SHOW - age) / FEED_FADE)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(4, y - 1, width + 6, 7)
+  ctx.fillStyle = age < 6 ? "#ffffff" : pal.label
+  drawTransitionText(ctx, f.text, 7 + width / 2, y, 1)
+  ctx.restore()
+}
+
 function drawLevelTransition(ctx, w, pal) {
+  if (!w.done) drawFeed(ctx, w, pal)
   if (w.done) {
     ctx.save()
     drawLevelResults(ctx, w, pal)

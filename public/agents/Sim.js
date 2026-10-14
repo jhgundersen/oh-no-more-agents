@@ -977,6 +977,7 @@ function newWorld(level, attempt, colonySeed) {
     // modifiers a live one has switched on. See the block above stepEvents.
     events: [],
     eventLog: [],
+    feed: [],         // the last few notable moments, for Draw's ticker; see feedNote
     eventMechs: {},
     infections: 0,
     carrierHome: false,
@@ -4564,6 +4565,7 @@ function umbrellaParries(w, ag, fromX) {
   ag.saves = (ag.saves || 0) + 1
   w.umbrellaSaves = (w.umbrellaSaves || 0) + 1
   w.lastEvent = "umbrella up"
+  feedNote(w, agentTag(w, ag) + " · UMBRELLA SAVE")
   return true
 }
 
@@ -4581,6 +4583,7 @@ function umbrellaRicochet(w, ag, by) {
   if ((w.ticks * 53 + ag.id * 29 + by.id * 7) % 100 >= BROLLY_RICOCHET) return
   killEnemy(w, by)
   if (by.gone) creditDowned(ag)
+  feedNote(w, agentTag(w, ag) + " · RICOCHET")
   w.ricochets = (w.ricochets || 0) + 1
   w.lastEvent = "ricochet"
 }
@@ -7464,7 +7467,7 @@ function regularSidearm(w, ag) {
   ag.shotFor = 8
   ag.gunCool = SIDEARM_RELOAD + (ag.id % 5) * 7
   if (hit) {
-    if (targetKind === "enemy") { killEnemy(w, target); if (target.gone) creditDowned(ag) }
+    if (targetKind === "enemy") { killEnemy(w, target); if (target.gone) { creditDowned(ag); feedNote(w, agentTag(w, ag) + " · GUARD DOWN") } }
     else wreckHazard(w, target)
   }
 }
@@ -7488,7 +7491,7 @@ function shootDrone(w, ag) {
   ag.shotY = hit ? target.y : target.y - 2 + roll % 4
   ag.shotFor = 8
   ag.gunCool = SIDEARM_RELOAD + (ag.id % 5) * 7
-  if (hit) { target.gone = true; target.state = "dead"; addDust(w, target.x, target.y, 10); noteBlast(w, target.x, target.y, 2); w.lastEvent = "drone down"; creditDowned(ag) }
+  if (hit) { target.gone = true; target.state = "dead"; addDust(w, target.x, target.y, 10); noteBlast(w, target.x, target.y, 2); w.lastEvent = "drone down"; creditDowned(ag); feedNote(w, agentTag(w, ag) + " · DRONE DOWN") }
   return true
 }
 
@@ -8870,6 +8873,19 @@ function woundFriendly(w, ag, fromX, lethal, by) {
   w.lastEvent = "wounded"
 }
 
+// The ticker: what a viewer would want told. Bookkeeping only; nothing in the
+// simulation reads it back. Agents are numbered, as agents in suits are.
+var FEED_KEEP = 4
+function feedNote(w, text) {
+  w.feed.push({ t: w.ticks, text: text })
+  if (w.feed.length > FEED_KEEP) w.feed.shift()
+}
+
+function agentTag(w, ag) {
+  if (ag.special && w.specialSpec) return w.specialSpec.name.toUpperCase()
+  return "AGENT " + ("00" + ag.id).slice(-3)
+}
+
 function killEnemy(w, en) {
   if (!en || en.gone) return
   if (en.hp > 1) { staggerBoss(w, en); return }
@@ -9111,6 +9127,7 @@ function brawlTick(w, en) {
   if (roll < odds) {
     killEnemy(w, en)
     if (en.gone) creditDowned(ag)
+    feedNote(w, en.boss && en.gone ? "THE MODERATOR IS DOWN" : agentTag(w, ag) + (en.gone ? " · WINS THE SCUFFLE" : " · LANDS ONE"))
     ag.wonAt = w.ticks + 1     // for Draw: the fist goes up as it gets up
     w.brawlsWon = (w.brawlsWon || 0) + 1
     w.lastEvent = "brawl won"
@@ -9120,6 +9137,7 @@ function brawlTick(w, en) {
     ag.state = "dead"
     w.lost++
     w.lastEvent = "red team"
+    feedNote(w, agentTag(w, ag) + " · LOSES THE SCUFFLE")
     en.state = "walk"; en.timer = 0
   }
   if (!ag.gone) { ag.state = "walk"; ag.idle = 0 }
@@ -9150,6 +9168,7 @@ function bouncerThrows(w, en, ag) {
   en.state = "walk"
   en.timer = 0
   w.lastEvent = "thrown out"
+  feedNote(w, "THE BOUNCER THROWS " + agentTag(w, ag) + " OUT")
 }
 
 // A hero is the colony's best hand in a scuffle, company or not.

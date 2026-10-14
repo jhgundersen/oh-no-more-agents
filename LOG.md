@@ -4047,3 +4047,20 @@ sound), the page itself, played rather than simulated:
   exceptions.
 
 No code change.
+
+## 153 — 2026-10-14 · The ticker
+
+Nobody is playing; somebody is watching, and a lot of what happens in a fight
+is too small or too quick to follow. The board now says what just happened:
+Sim notes the moments worth telling (`feedNote`, bookkeeping only; fingerprint
+unchanged) and Draw spells the newest one along the bedrock at the foot of
+the board for five seconds, flashing white as it arrives and fading at the
+end — "AGENT 012 · UMBRELLA SAVE", "AGENT 017 · GUARD DOWN", "THE BOUNCER
+THROWS AGENT 009 OUT", "THE MODERATOR IS DOWN", a hero by name when it wins a
+scuffle. Agents are numbered (`agentTag`), as the MVP line numbers them.
+
+What gets a line, over levels 3–120: umbrella saves 27, scuffles won 22,
+guards shot down 20, blows landed on a boss or Bouncer 9, drones down 8,
+ricochets 8, Bouncer throws 8, scuffles lost 8, the Moderator down 4. Page
+resolution only (the panel has no room for prose). Looked at level 13 at the
+moment of a throw. Tests 748.

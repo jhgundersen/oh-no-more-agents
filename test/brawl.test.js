@@ -124,3 +124,19 @@ test("a thrown agent is drawn flying back along an arc, flipped mid-flight, land
   w.ticks = 108; assert.deepEqual(D.throwArc(w, ag, 4), { dx: 0, lift: 0, over: false })
   w.ticks = 102; ag.state = "walk"; assert.equal(D.throwArc(w, ag, 4).dx, 0)
 })
+
+test("the ticker keeps the last few moments and shows the newest for a while, at res 2 only", () => {
+  const { w, ag, en } = face()
+  for (let i = 0; i < 6; i++) { w.ticks = i; S.feedNote(w, "NOTE " + i) }
+  assert.equal(w.feed.length, 4)
+  assert.equal(w.feed[3].text, "NOTE 5")
+  assert.equal(S.agentTag(w, { id: 7 }), "AGENT 007")
+  const pal = P.build(themeOf("tokyo-night").theme, 5)
+  const calls = []
+  const ctx = { globalAlpha: 1, fillStyle: "", save() {}, restore() {}, fillRect(...a) { calls.push(a) } }
+  for (const [res, t, want] of [[2, 10, true], [2, 5 + 149, true], [2, 5 + 150, false], [1, 10, false]]) {
+    w.res = res; w.ticks = t; calls.length = 0
+    D.drawFeed(ctx, w, pal)
+    assert.equal(calls.length > 0, want, `res ${res} tick ${t}`)
+  }
+})
