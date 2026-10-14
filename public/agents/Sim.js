@@ -6515,6 +6515,11 @@ function walkHazardAhead(w, ag, nx, cx, footY) {
 }
 
 function stepWalk(w, ag) {
+  // The floor blown out from under a walker. advanceWalk only ever looks at
+  // the cell ahead, so without this the agent read a cliff edge both ways and
+  // turned on the spot in mid-air until the still rule bombed it: three at
+  // once on level 284, on a ledge somebody else's charge had just removed.
+  if (unsupported(w, ag)) { beginUncontrolledFall(w, ag); return }
   notePrint(w, ag)
   var footY = Math.floor(ag.y)
   var nx = walkHeading(w, ag, ag.x + ag.dir * walkStep(ag, w))
@@ -8441,64 +8446,6 @@ function specialEscape(w, ag) {
   }
 }
 
-// Can it hop onto something from here? Only worth trying if there is a floor
-// to land on within the hop's reach and headroom over it.
-function canJump(w, ag) {
-  var fx = Math.floor(ag.x)
-  var fy = Math.floor(ag.y)
-  var d = ag.dir
-  var perceptive = hazardPerceptive(ag)
-  for (var up = 1; up <= JUMP_UP; up++) {
-    var ly = fy - up
-    if (solid(w, fx + d, ly) || solid(w, fx + d * 2, ly)) continue
-    if (!solid(w, fx + d * 2, ly + 1)) continue      // nothing to land on
-    if (!headroom(w, fx + d * 2, ly)) continue
-    // A hop is an escape from a terrain pocket, not permission to override a
-    // danger the colony has already learned. Level 254's agents turned away
-    // from the scarab correctly, stood at its lip until JUMP_STILL, then hopped
-    // straight into the same known kill zone because this terrain-only test
-    // never asked what occupied the landing.
-    if (hazardZoneAt(w, fx + d, ly, perceptive)
-        || hazardZoneAt(w, fx + d * 2, ly, perceptive)) continue
-    return true
-  }
-  return false
-}
-
-function startJump(w, ag) {
-  ag.state = "jump"
-  ag.jvy = JUMP_RISE
-  ag.timer = 0
-  ag.still = 0
-}
-
-function stepJump(w, ag) {
-  ag.timer++
-  ag.jvy += JUMP_GRAV
-  var ny = ag.y + ag.jvy
-  var nx = ag.x + ag.dir * WALK_SPEED * 0.9
-  var cx = Math.floor(nx)
-
-  // Head into a ceiling: stop rising, but keep going forward.
-  if (ag.jvy < 0 && solid(w, cx, Math.floor(ny) - AGENT_H)) { ag.jvy = 0; ny = ag.y }
-
-  if (!solid(w, cx, Math.floor(ny))) ag.x = nx
-
-  if (ag.jvy > 0) {
-    var fy2 = Math.floor(ny)
-    if (solid(w, Math.floor(ag.x), fy2 + 1)) {
-      ag.y = fy2
-      ag.state = "walk"
-      ag.fall = 0
-      ag.anim++
-      return
-    }
-    if (ag.timer > 10) { ag.y = ny; beginUncontrolledFall(w, ag); return }
-  }
-  ag.y = ny
-  ag.anim++
-}
-
 function stepSlide(w, ag) {
   ag.timer++
   var footY = Math.floor(ag.y)
@@ -9759,12 +9706,7 @@ var LOOP_PASSES = 8
 
 var STUCK_LIMIT = PATIENCE + 240
 
-var JUMP_UP = 3          // cells of lift
-var JUMP_STILL = 40      // ticks stuck in one cell before it tries
-var JUMP_RISE = -0.42    // starting vertical speed
-var JUMP_GRAV = 0.055
-
-// Stuck in one cell for this long and the hop did not answer it: dig instead.
+// Stuck in one cell for this long: dig instead.
 var STILL_ESCAPE = 130
 
 // The other half of the director, and the more important one. The global stall
@@ -10052,7 +9994,7 @@ var AGENT_STEPS = {
   walk: stepWalk, fall: stepFall, climb: stepClimb, build: stepBuild, bash: stepBash,
   dig: stepDig, block: stepBlock, bomb: stepBomb, trick: stepTrick, ceil: stepCeiling,
   rappel: stepRappel, height: stepSpecialHeight, webup: stepWebEscape, stunned: stepStunned,
-  jump: stepJump, swim: stepSwim, slide: stepSlide, camp: stepCamp, wait: stepLiftWait,
+  swim: stepSwim, slide: stepSlide, camp: stepCamp, wait: stepLiftWait,
   ride: stepLiftRide, brawl: stepBrawlAgent
   // "hooked" and "zip": the crane and the line move them (stepCrane, stepZiplines).
 }
@@ -10205,7 +10147,6 @@ function watchStill(w, ag) {
   if (ag.state !== "walk") { ag.cell = cell; ag.still = 0 }
   else if (cell === ag.cell) ag.still++
   else { ag.cell = cell; ag.still = 0 }
-  if (ag.still > JUMP_STILL && ag.state === "walk" && canJump(w, ag)) startJump(w, ag)
 
   if (ag.still > STILL_ESCAPE && ag.state === "walk") {
     ag.still = 0

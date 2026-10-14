@@ -7716,7 +7716,7 @@ var FINE_POSES = {
   climb: drawFineClimb, webup: drawFineWebUp, rappel: drawFineRappel,
   build: drawFineBuild, dig: drawFineDig, fall: drawFineFall, height: drawFineHeight,
   slide: drawFineSlide, stunned: drawFineStunned,
-  bomb: drawFineBomb, jump: drawFineStride, ceil: drawFineStride
+  bomb: drawFineBomb, ceil: drawFineStride
 }
 function drawAgentFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w) {
   if (w && libraryShelfPose(w, ag)) {
@@ -8272,7 +8272,7 @@ function drawFineStunned(ctx, pal, ag, ox, oy, dir) {
   drawFineShoes(ctx, pal, ox, oy, dir, 1, 14.5, 5, 14.5, 3)
 }
 
-// Bomb, jump and ceiling-walk all use the ordinary stride without a bob.
+// Bomb and ceiling-walk both use the ordinary stride without a bob.
 // The coat stays in its flashing colour on a bomber; only its tailoring is
 // picked out. Ceiling detail goes through blitFine's existing vertical flip.
 function drawFineStride(ctx, pal, ag, ox, oy, dir, drop, lead) {
@@ -11000,7 +11000,6 @@ function actionLabel(st) {
   if (st === "dig") return "dig"
   if (st === "block") return "block"
   if (st === "bomb") return "bomb"
-  if (st === "jump") return "hop"
   if (st === "ceil") return "ceiling"
   if (st === "rappel") return "rappel"
   if (st === "height") return "height move"

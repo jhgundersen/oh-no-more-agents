@@ -4359,3 +4359,32 @@ alone, up for part of the cycle and only under the crack, read-only, no RNG,
 half-pixel grid). Nothing over CRAP 30.
 
 **Deployed** after 167 (name="build" content="1e9adfad"), gated on a passing check (785 tests): no second step on the exit floor (166) and drips (167). Browser check clean.
+
+## 168 — 2026-10-14 · Walking on air
+
+**Hunted:** the levels still under half home (47, 113, 169, 267, 284, 331).
+On 284, three agents were bombed at once at tick ~520, idle only 130–196:
+not the patience rule but the still-in-one-cell one. They were in `walk`
+over open air, turning every tick on the spot. A charge had taken the ledge
+out from under them, and `advanceWalk` only ever looks at the cell ahead —
+open both ways, so a cliff edge both ways, so turn. Blockers, campers, the
+stunned and lit bombs all check their footing; walkers never did.
+
+**Measured, old code:** walkers in mid-air on 128 of 300 levels (1,699
+agent-ticks; mostly brief, floors dug or blown from under them).
+
+**Change:** `stepWalk` starts with the footing check the other states have,
+falling with `beginUncontrolledFall`, which opens an umbrella if the drop
+would kill and the colony has one.
+
+**Consequence:** the hop (`canJump` / `stepJump`, a jump after 40 ticks in one
+cell) never fired again: 0 jumps in 200 levels. Its only trigger in practice
+had been this bug. Removed it, its constants, its Draw pose and its label.
+The panel-pixel pin in `test/agents.test.js` was recomputed for the poses
+that remain under both the old and the new Draw, and the two hashes matched
+before the pin was updated.
+
+**Result** (400 levels × 2 colonies): home 92.92% → 93.03%, ticks per level
+1250 → 1238. 169 back above half, 79 and one 284 colony below; 284 itself is
+not fixed (the colony falls now, but there are no umbrellas left).
+Tests 787 (`test/footing.test.js`); nothing over CRAP 30.

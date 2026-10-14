@@ -10,7 +10,7 @@ import { canvas, themeOf } from "../tools/render.js"
 // as each special. Nothing may throw and every pose must put something down.
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
 const STATES = ["walk", "fall", "climb", "height", "rappel", "webup", "slide", "stunned", "block", "build",
-  "bash", "dig", "swim", "saved", "bomb", "camp", "ride", "trick", "ceil", "wait", "jump"]
+  "bash", "dig", "swim", "saved", "bomb", "camp", "ride", "trick", "ceil", "wait"]
 
 for (const submerged of [false, true]) {
   test(`every agent pose draws${submerged ? " under water" : ""}`, () => {
@@ -72,7 +72,7 @@ test("a block with the floor a step higher behind it is a block, not a wall to t
 // w.res used by QML. Varied limbs, umbrella, countdown and height transforms
 // keep this a byte check of the actual coarse output, not just the res guard.
 const FINE_STATES = ["climb", "webup", "build", "dig", "fall", "bomb", "rappel", "height",
-  "slide", "stunned", "jump", "ceil", "swim"]
+  "slide", "stunned", "ceil", "swim"]
 const FINE_PHASES = [0, 3, 8, 15]
 const HEIGHT_MODES = ["jetpack", "cushion", "helicopter"]
 
@@ -96,7 +96,7 @@ test("new fine poses leave res 1 and unspecified res byte-identical", () => {
       D.drawAgent(img.ctx, w, pal, fineSample(state, dir, phase, mode), {})
       hash.update(img.buf)
     }
-  assert.equal(hash.digest("hex"), "d8cb2f2e05d2d55f873ca9b1c67d400b19e45eb28db3e072e2c81bf1e2c569cf")
+  assert.equal(hash.digest("hex"), "3a7f5b4793a2b2c030da0d28417789877a11c421c9b8eb5d90cd71060f9fd3a6")
 })
 
 for (const state of FINE_STATES) {
