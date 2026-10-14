@@ -5200,3 +5200,5 @@ list. `npm run check` 888/888 in 15 s, run under `systemd-run -p MemoryMax=6G`.
 
 **Tooling:** AGENTS.md gains the fast-and-bounded tools convention and the
 `node-test-guard` note (from the supervisor).
+
+**Deployed** after 193 (name="build" content="b6092665"), gated on a passing check (888 tests): the dreamer. Levels 1, 8 and 13 in headless Chromium, no console errors.
