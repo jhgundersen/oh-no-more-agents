@@ -5253,3 +5253,5 @@ sign's pop/blink/linger/sink on whole pixels via the actor pass, outcome lines.
 `xeno.test.js` (4): `xenoCloses` lost its incidental coverage when the casts
 reshuffled (CRAP 58.3); now reached directly. `idle.test.js` learns the queue
 pose. `npm run check` 903/903; CRAP worst 29.0.
+
+**Deployed** after 194 (name="build" content="4e3f11ac"), gated on a passing check (903 tests): the faster tooling and 429 Too Many Requests. Levels 3, 9 and 21 in headless Chromium, no console errors.
