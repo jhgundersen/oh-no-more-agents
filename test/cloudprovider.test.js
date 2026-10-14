@@ -54,3 +54,13 @@ test("the thrown umbrella flies for a moment, read-only, then is gone", () => {
   assert.notDeepEqual(shots[1], shots[2])
   assert.deepEqual(shots[3], canvas(400, 248).buf, "gone after the flight")
 })
+
+test("the ticker hears about the first two hand-outs only", () => {
+  const { w, hero } = board()
+  const notes = () => w.feed.filter(f => f.text.endsWith("GETS AN UMBRELLA")).length
+  for (let i = 0; i < 4; i++) {
+    const a = S.spawn(w); Object.assign(a, { state: "walk", x: 42, y: 16, ownBrolly: false }); w.agents.push(a)
+    hero.cool = 0; S.provisionBrolly(w, hero)
+  }
+  assert.equal(notes(), 2)
+})

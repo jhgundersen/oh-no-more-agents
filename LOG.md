@@ -4624,3 +4624,14 @@ is now hand height to hand height and in the hero's colour.
 re-picks the hero on 155 of 400 levels, and the one new level under half
 (106) is Fallback where Rate Limiter used to be. Tests 814
 (`test/cloudprovider.test.js`). Nothing over CRAP 30.
+
+## 176 — 2026-10-14 · Cloud Provider, seen in the browser
+
+**Looked:** level 61 in headless Chromium: the card ("it is not raining. It
+is a regional outage."), the blue hero on the top floor, colleagues getting
+umbrellas, no console errors. But the ticker said "GETS AN UMBRELLA" in all
+four frames sixteen seconds apart: a hand-out every four seconds is routine,
+and it drowned out the news.
+
+**Change:** the ticker hears about the first two hand-outs a level; the rest
+happen quietly. Tests 815.

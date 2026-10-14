@@ -7735,7 +7735,10 @@ function provisionBrolly(w, ag) {
   ag.provisionFor = 24
   w.provisionFx = { fromX: ag.x, fromY: ag.y, toX: best.x, toY: best.y, t: w.ticks }
   w.lastEvent = "umbrella provisioned"
-  feedNote(w, agentTag(w, best) + " · GETS AN UMBRELLA")
+  // The ticker hears about the first two; after that it is routine, and the
+  // ticker is for news.
+  w.provisioned = (w.provisioned || 0) + 1
+  if (w.provisioned <= 2) feedNote(w, agentTag(w, best) + " · GETS AN UMBRELLA")
   return true
 }
 
