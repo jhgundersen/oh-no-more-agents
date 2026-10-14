@@ -6397,6 +6397,7 @@ function drawPoseSwim(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
 // The umbrella, drawn behind nothing and above everything.
 function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   if (ag.brollyFor > 0 && st !== "fall") { drawUmbrellaShield(ctx, w, pal, ag, ox, oy); return }
+  if (st === "walk" && drawUmbrellaFolding(ctx, w, pal, ag, ox, oy)) return
   if (!(ag.floater && st === "fall" && ag.fall > 2)) return
   // It breathes. A canopy that holds one shape all the way down reads as a
   // prop being carried; one that flexes against the air reads as the thing
@@ -6431,6 +6432,21 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   blit(ctx, ox, oy, 1, -2, -8, 2, 1)
   blit(ctx, ox, oy, 1, 9, -8, 2, 1)
   }
+}
+
+// Down: the umbrella folds over the first few ticks on the ground instead of
+// vanishing — canopy narrowing to a furled point, then gone (it goes back in
+// the pocket). Page resolution only.
+var BROLLY_FOLD = 8
+function drawUmbrellaFolding(ctx, w, pal, ag, ox, oy) {
+  if ((w.res || 1) < 2 || ag.brollyClosedAt === undefined) return false
+  var age = w.ticks - ag.brollyClosedAt
+  if (age < 0 || age >= BROLLY_FOLD) return false
+  var spread = Math.max(0.25, 1 - age / (BROLLY_FOLD - 2))
+  drawUmbrellaFine(ctx, pal, ox, oy + age * 0.5, 0, brollyColour(w, pal, ag), spread)
+  ctx.fillStyle = pal.umbrellaStem
+  blitFine(ctx, ox, oy, 1, 4, -7 + age * 0.5, 0.5, 9 - age * 0.5)
+  return true
 }
 
 function brollyColour(w, pal, ag) {

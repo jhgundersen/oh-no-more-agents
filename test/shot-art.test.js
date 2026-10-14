@@ -69,3 +69,16 @@ test("the MVP is the agent who did most in the fight, and only if somebody did",
   assert.equal(D.mvpLine({ agents: [{ id: 12, saves: 2, downed: 1 }] }), "MVP AGENT 012 · 1 DOWN · 2 SAVES")
   assert.equal(D.mvpLine({ agents: [{ id: 1, special: true, downed: 5 }, { id: 2, saves: 1 }] }), "MVP AGENT 002 · 1 SAVE")
 })
+
+test("a landed floater's umbrella folds over BROLLY_FOLD ticks at res 2, then is gone", () => {
+  const { w, ag, pal } = shooter(2, 0)
+  ag.brollyClosedAt = 100
+  for (const [t, want] of [[99, false], [100, true], [100 + D.BROLLY_FOLD - 1, true], [100 + D.BROLLY_FOLD, false]]) {
+    w.ticks = t
+    const ctx = recorder()
+    assert.equal(D.drawUmbrellaFolding(ctx, w, pal, ag, 80, 140), want, `tick ${t}`)
+    for (const c of ctx.calls) for (const n of [c.x, c.y, c.w, c.h]) assert.equal(n * 2, Math.round(n * 2))
+  }
+  w.res = 1; w.ticks = 101
+  assert.equal(D.drawUmbrellaFolding(recorder(), w, pal, ag, 80, 140), false)
+})

@@ -4183,3 +4183,20 @@ guard-post levels 93.1 → 93.4%, all 480 plays 94.23 → 94.61%. `npm run sim`
 99% / 94%, hangs 0. Tests 753.
 
 **Deployed** after 160 (name="build" content="d97d0b09"), gated on a passing check: the bridge fix. Browser check clean.
+
+## 161 — 2026-10-14 · Death causes, and the umbrella folds
+
+**Checked, no change:** death causes over 300 levels — 179 lost of 4,521:
+red team 101, bombs 31 (all bombers themselves, 15 of them condemned; 8
+bystanders over 300 levels), drone strikes 20, hazards 12, falls 8, out of
+the world 6. Nothing like 160's bridge left in it.
+
+**Considered, not built:** a nineteenth biome, the Airport, with moving
+walkways — but a walkway is the Factory's belt pointed the right way, and a
+biome should bring something of its own.
+
+**Change:** a floater that touched down had its open umbrella simply
+vanish. Now it folds: over eight ticks the canopy narrows to a furled point
+on its shaft and is gone (`drawUmbrellaFolding`, page resolution; Sim stamps
+`brollyClosedAt` at the landing — bookkeeping, fingerprint unchanged).
+Looked at level 2's landing at ticks 248–258. Tests 754.
