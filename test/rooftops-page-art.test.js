@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [17, 36, 55, 74], layers = [D.drawNightCity, D.drawNightSheen, D.drawNightWisps]
+const levels = [17, 36, 55, 74], layers = [D.drawNightCity, D.drawNightFixtures, D.drawNightSigns, D.drawNightSheen, D.drawNightWisps]
 const MAX_CALLS = 20000
 function sample(level = 17, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -94,6 +94,54 @@ test("city and varied fixtures are cached at fixed anchors with different neighb
     assert.ok(before.calls.some(c => c[4] === D.NIGHT_WINDOW))
   }
 })
+test("solid service fittings are fully supported, separate and disappear when their roofs go", () => {
+  let seen = 0
+  for (const level of levels) {
+    const { w } = sample(level), fixtures = D.nightFixtures(w), boxes = D.nightReserved(w)
+    seen += fixtures.length
+    for (const b of fixtures) {
+      const box = D.nightFixtureBox(b)
+      assert.ok(D.nightSupported(w, box, boxes))
+      boxes.push(box)
+      const calls = picture(ctx => D.drawNightFixture(ctx, b)).calls
+      assert.ok(calls.some(c => c[5] === 1), "filled bodies, not translucent outlines")
+      assert.ok(calls.every(c => c[0] >= box.x && c[1] >= box.y && c[0] + c[2] <= box.x + box.width && c[1] + c[3] <= box.y + box.height))
+    }
+    w.terrain.fill(w.k.EMPTY)
+    assert.equal(D.nightFixtures(w).length, 0)
+    assert.equal(picture(ctx => D.drawNightFixtures(ctx, w)).calls.length, 0)
+  }
+  assert.ok(seen >= 12)
+})
+test("reported frame has readable pink/cyan neon, colour spill and reflections on solid roof", () => {
+  const w = S.generate(17, 0, 3); w.res = 2; w.ticks = 400
+  const signs = D.nightSigns(w)
+  assert.equal(signs.length, 2)
+  assert.deepEqual(new Set(signs.map(b => b.colour)), new Set([D.NIGHT_NEON, D.NIGHT_CYAN]))
+  const calls = picture(ctx => D.drawNightSigns(ctx, w)).calls
+  assert.ok(calls.some(c => c[5] >= 0.9 && c[2] === 1 && c[3] === 1), "full art-pixel letters")
+  assert.ok(calls.some(c => c[5] < 0.2 && signs.some(b => c[0] < b.x)), "soft spill beyond sign")
+  const reflection = picture(ctx => D.drawNightSheen(ctx, w)).calls.filter(c => c[4] !== D.NIGHT_EDGE)
+  assert.ok(reflection.length >= 12)
+  for (const c of reflection) {
+    assert.ok(c[3] === 0.5 && c[5] < 0.5)
+    for (let x = c[0]; x < c[0] + c[2]; x += 0.5)
+      assert.notEqual(w.terrain[Math.floor(c[1] / 4) * 100 + Math.floor(x / 4)], w.k.EMPTY)
+  }
+})
+test("live wisps reuse terrain-cache fittings and reject removed supports after invalidation", () => {
+  const w = S.generate(17, 0, 3); w.res = 2; w.ticks = 400
+  const ctx = canvas(800, 496).ctx
+  D.drawNightFixtures(ctx, w)
+  const cached = D.NIGHT_FITTINGS.get(w)
+  assert.equal(cached.version, w.terrainVersion)
+  assert.deepEqual(cached.fixtures, D.nightFixtures(w))
+  assert.ok(picture(ctx => D.drawNightWisps(ctx, w)).calls.length > 0)
+  w.terrain.fill(w.k.EMPTY)
+  assert.equal(picture(ctx => D.drawNightWisps(ctx, w)).calls.length, 0, "fresh support checks even without a version bump")
+  w.terrainVersion++
+  assert.equal(picture(ctx => D.drawNightWisps(ctx, w)).calls.length, 0, "invalidated geometry is rebuilt")
+})
 test("night skyline remains darker than playable brick in every theme", () => {
   const mean = img => {
     let sum = 0
@@ -101,22 +149,22 @@ test("night skyline remains darker than playable brick in every theme", () => {
     return sum / (img.W * img.H)
   }
   for (const name of Object.keys(THEMES)) {
-    const { w, pal } = sample(17, name), far = canvas(64, 16, D.NIGHT_BACK), near = canvas(64, 16, D.NIGHT_BACK)
-    const b = { x: 0, y: 12, width: 64, height: 12, kind: 0, seed: 3 }
-    D.drawNightWindows(far.ctx, b)
-    near.ctx.fillStyle = pal.dirt; near.ctx.fillRect(0, 0, 64, 16)
+    const { w, pal } = sample(17, name), far = canvas(400, 248, D.NIGHT_BACK), near = canvas(400, 248, D.NIGHT_BACK)
+    D.drawNightCity(far.ctx, w)
+    near.ctx.fillStyle = pal.dirt; near.ctx.fillRect(0, 0, 400, 248)
     w.terrain.fill(w.k.DIRT); D.drawRoofMaterials(near.ctx, w, pal)
     assert.ok(mean(far) < mean(near) * 0.8, `${name}: brick is the stronger plane`)
   }
 })
 test("complete neon signs reject terrain and original fixtures instead of clipping their text", () => {
-  const { w } = sample(); w.terrain.fill(w.k.EMPTY); w.decor = []; w.hazards = []; w.pits = []; w.ziplines = []
-  const roofs = D.nightRoofs(w), signCalls = () => picture(ctx => D.drawNightSigns(ctx, w, roofs)).calls
+  const { w } = sample(); w.decor = []; w.hazards = []; w.pits = []; w.ziplines = []
+  const signCalls = () => picture(ctx => D.drawNightSigns(ctx, w)).calls
   assert.ok(signCalls().length > 20, "two visible OPEN signs")
   for (const c of signCalls()) assert.ok(D.abyssClear(w, ...c.slice(0, 4), D.nightReserved(w)))
   w.terrain.fill(w.k.STEEL)
   assert.equal(signCalls().length, 0)
   w.terrain.fill(w.k.EMPTY)
+  for (const c of w.corridors) for (let x = 0; x < 100; x++) w.terrain[c.floorY * 100 + x] = w.k.DIRT
   w.hazards = [{ zx0: 0, zx1: 99, zy0: 0, zy1: 61 }]
   assert.equal(signCalls().length, 0)
 })
@@ -127,7 +175,7 @@ test("wet glints occur only on surviving exposed non-steel ledges", () => {
     for (let x = 0; x < w.k.COLS; x++) w.terrain[30 * w.k.COLS + x] = material
     const calls = picture(ctx => D.drawNightSheen(ctx, w)).calls
     assert.ok(calls.length > 0)
-    for (const c of calls) footprint(c, (x, y) => {
+    for (const c of calls.filter(c => c[4] === D.NIGHT_EDGE)) footprint(c, (x, y) => {
       assert.equal(w.terrain[Math.floor(y / 4) * 100 + Math.floor(x / 4)], material)
       assert.equal(w.terrain[(Math.floor(y / 4) - 1) * 100 + Math.floor(x / 4)], w.k.EMPTY)
     })
@@ -155,6 +203,7 @@ test("chimney wisps are bounded, slow and clipped to terrain and reserved silhou
       }
     }
     w.terrain.fill(w.k.EMPTY); w.decor = []; w.hazards = []; w.pits = []; w.ziplines = []
+    for (const c of w.corridors) for (let x = 0; x < 100; x++) w.terrain[c.floorY * 100 + x] = w.k.DIRT
     const old = picture(ctx => D.drawNightWisps(ctx, w)).buf
     w.ticks += 15
     assert.notEqual(picture(ctx => D.drawNightWisps(ctx, w)).buf, old)
@@ -188,6 +237,22 @@ test("original props, full washing and entire zipline/rider lanes remain reserve
     }
   }
 })
+test("neon and fittings avoid complete guard booths and captive containers", () => {
+  const { w, pal } = sample(74); w.terrain.fill(w.k.EMPTY); w.decor = []; w.hazards = []; w.pits = []
+  w.enemyHatch = { x: 45, y: 30, biome: "Rooftops" }; w.backupAt = 10; w.reinforcements = 1; w.ticks = 24
+  const booth = picture(ctx => D.drawEnemyHatch(ctx, w, pal, {}))
+  let boxes = D.nightReserved(w)
+  for (const c of booth.calls) assert.equal(D.assemblyUnreserved(boxes, ...c.slice(0, 4)), false)
+  w.mission = { targets: [{ x: 70, y: 30, freed: false, dead: false }, { x: 80, y: 30, freed: true }] }
+  boxes = D.nightReserved(w)
+  const captive = picture(ctx => D.drawMissionContainer(ctx, "civilian", 280, 120, pal))
+  for (const c of captive.calls) assert.equal(D.assemblyUnreserved(boxes, ...c.slice(0, 4)), false)
+  assert.equal(D.assemblyUnreserved(boxes, 320, 110, 1, 1), true)
+  for (const level of levels) {
+    const { w } = sample(level)
+    for (const b of D.nightSigns(w)) assert.ok(D.postalBoxClear(w, b, D.nightReserved(w)))
+  }
+})
 test("city precedes ground and chimney wisps precede umbrellas and the exit", () => {
   const { w, pal } = sample(), ctx = canvas(800, 496).ctx
   let serial = 0, marks = {}
@@ -201,7 +266,7 @@ test("city precedes ground and chimney wisps precede umbrellas and the exit", ()
   }
   D.drawTerrain(ctx, w, pal)
   assert.ok(marks.city > 0 && marks.ground > marks.city)
-  w.terrain.fill(w.k.EMPTY); w.decor = []; w.pits = []; w.hazards = []
+  w.decor = []; w.pits = []; w.hazards = []
   const ag = S.spawn(w)
   Object.assign(ag, { x: 70, y: w.corridors[0].floorY - 3, state: "fall", floater: true, ownBrolly: true, fall: 9, special: false })
   w.agents = [ag]; w.ticks = 400; serial = 0; marks = {}

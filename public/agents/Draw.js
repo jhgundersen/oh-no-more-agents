@@ -246,6 +246,8 @@ function drawTerrain(ctx, w, pal) {
   drawOfficeSurfaces(ctx, w, pal)
   drawDataFaces(ctx, w)
   drawAssemblyEdges(ctx, w)
+  drawNightFixtures(ctx, w)
+  drawNightSigns(ctx, w)
   drawNightSheen(ctx, w)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
@@ -17096,26 +17098,27 @@ function drawDialDust(ink, w) {
   }
 }
 
-// Page-only rainy city. Buildings and wet ledges share the terrain cache;
-// sixteen small chimney wisps are the only added work in the live pass.
+// Page-only city silhouettes, grounded service fittings and cached neon.
+// Only four small flecks per visible chimney move in the live pass.
 function rooftopsPage(w) { return w.biome === "Rooftops" && (w.res || 1) >= 2 }
-var NIGHT_BACK = "#1b2230"
-var NIGHT_BRICK = "#303340"
-var NIGHT_EDGE = "#627482"
-var NIGHT_WINDOW = "#b29a72"
-var NIGHT_METAL = "#4a5a68"
-var NIGHT_NEON = "#dc859e"
+var NIGHT_BACK = "#191e2a"
+var NIGHT_BRICK = "#292e3b"
+var NIGHT_EDGE = "#969da9"
+var NIGHT_WINDOW = "#d3b581"
+var NIGHT_METAL = "#63636f"
+var NIGHT_NEON = "#ff80c4"
+var NIGHT_CYAN = "#79eaff"
 var NIGHT_SMOKE = "#85939e"
+var NIGHT_FITTINGS = new WeakMap()
 
 function nightRoofs(w) {
   var roofs = [], C = w.k.CELL
   for (var row = 0; row < w.corridors.length; row++) {
-    var c = w.corridors[row]
-    for (var i = 0; i < 5; i++) {
-      var seed = w.level * 19 + row * 31 + i * 17
-      roofs.push({ x: 22 + i * 76, y: c.floorY * C - 3,
-        width: 57 + seed % 12, height: 7 + seed % 5,
-        kind: (i + row * 2 + w.level) % 5, seed: seed, row: row })
+    var c = w.corridors[row], i = 0
+    for (var x = c.x0 + 6; x < c.x1 - 6; x += 4) {
+      roofs.push({ x: x * C, y: c.floorY * C, row: row,
+        kind: (i + row * 2 + w.level) % 5, seed: w.level * 19 + row * 31 + i * 17 })
+      i++
     }
   }
   return roofs
@@ -17123,35 +17126,75 @@ function nightRoofs(w) {
 function drawNightCity(ctx, w) {
   if (!rooftopsPage(w)) return
   ctx.save()
-  var roofs = nightRoofs(w)
-  for (var i = 0; i < roofs.length; i++) {
-    var b = roofs[i], top = b.y - b.height
-    ctx.globalAlpha = 0.92; ctx.fillStyle = NIGHT_BACK
-    ctx.fillRect(b.x, top, b.width, b.height + 3)
-    ctx.fillRect(b.x + b.width - 8, top - 3, 8, 3)
-    ctx.fillStyle = NIGHT_BRICK; ctx.globalAlpha = 0.6
-    ctx.fillRect(b.x + b.width - 5, top + 1, 5, b.height - 1)
-    ctx.fillStyle = NIGHT_EDGE; ctx.globalAlpha = 0.25
-    ctx.fillRect(b.x, top, b.width, 0.5)
-    drawNightWindows(ctx, b)
-    drawNightFixture(ctx, b)
+  // A single distant city, not a repeated terrace on each playable storey.
+  for (var i = 0; i < 11; i++) {
+    var seed = w.level * 7 + i * 19
+    drawNightTower(ctx, { x: i * 37 - 4, y: 248, width: 29 + seed % 7,
+      height: 116 + seed % 69, seed: seed, colour: NIGHT_BACK })
   }
-  drawNightSigns(ctx, w, roofs)
+  for (var j = 0; j < 12; j++) {
+    var tall = j === 2 || j === 10
+    drawNightTower(ctx, { x: j * 34 - 4, y: 78, width: tall ? 19 : 25 + j % 3 * 3,
+      height: tall ? 65 : 26 + (j * 13 + w.level) % 27,
+      seed: w.level + j * 23, colour: NIGHT_BRICK })
+  }
   ctx.restore()
 }
-function drawNightWindows(ctx, b) {
-  ctx.fillStyle = NIGHT_WINDOW
-  for (var row = 0; row < 2; row++) for (var col = 0; col < 6; col++) {
-    if ((b.seed + col * 7 + row * 3) % 5 > 1) continue
-    ctx.globalAlpha = row ? 0.24 : 0.31
-    ctx.fillRect(b.x + 6 + col * 8, b.y - b.height + 3 + row * 4, 1.5, 2)
-    ctx.fillRect(b.x + 8 + col * 8, b.y - b.height + 3 + row * 4, 1, 2)
+function drawNightTower(ctx, b) {
+  var top = b.y - b.height
+  ctx.fillStyle = b.colour; ctx.globalAlpha = 1
+  ctx.fillRect(b.x, top + 5, b.width, b.height - 5)
+  ctx.fillRect(b.x + 3, top + 2, b.width - 6, 3)
+  ctx.fillRect(b.x + 6, top, b.width - 12, 2)
+  ctx.fillStyle = NIGHT_WINDOW; ctx.globalAlpha = 0.4
+  for (var i = 0; i < 5; i++) {
+    var x = b.x + 5 + (b.seed + i * 7) % (b.width - 10)
+    var y = top + 9 + (b.seed * 3 + i * 17) % (b.height - 16)
+    ctx.fillRect(x, y, 2, 3)
   }
+  // The two skyline landmarks have narrow radio masts and lit crown slots.
+  if (b.height === 65) {
+    ctx.fillStyle = NIGHT_BRICK; ctx.globalAlpha = 1
+    ctx.fillRect(b.x + 9, top - 8, 1, 8)
+    ctx.fillStyle = NIGHT_WINDOW; ctx.globalAlpha = 0.45
+    ctx.fillRect(b.x + 7, top + 4, 5, 1)
+  }
+}
+function nightFixtureBox(b) {
+  var sizes = [[-2, -15, 18, 15], [-1, -13, 16, 13], [0, -17, 16, 17], [-5, -7, 30, 7], [0, -13, 16, 13]]
+  var s = sizes[b.kind]
+  return { x: b.x + s[0], y: b.y + s[1], width: s[2], height: s[3] }
+}
+function nightSupported(w, b, boxes) {
+  if (!postalBoxClear(w, b, boxes)) return false
+  var C = w.k.CELL, y = Math.floor((b.y + b.height) / C)
+  for (var x = Math.floor(b.x / C); x <= Math.floor((b.x + b.width - 0.5) / C); x++)
+    if (w.terrain[y * w.k.COLS + x] === w.k.EMPTY) return false
+  return true
+}
+function nightFixtures(w) {
+  var plan = nightRoofs(w), boxes = nightReserved(w), fixtures = [], counts = [], kinds = []
+  var signs = nightSigns(w)
+  for (var n = 0; n < signs.length; n++) boxes.push(signs[n])
+  for (var i = 0; i < plan.length; i++) {
+    var b = plan[i]
+    if ((counts[b.row] || 0) >= 3 || (kinds[b.row] || 0) & (1 << b.kind)) continue
+    if (!nightSupported(w, nightFixtureBox(b), boxes)) continue
+    fixtures.push(b); boxes.push(nightFixtureBox(b)); counts[b.row] = (counts[b.row] || 0) + 1
+    kinds[b.row] = (kinds[b.row] || 0) | (1 << b.kind)
+  }
+  return fixtures
+}
+function drawNightFixtures(ctx, w) {
+  if (!rooftopsPage(w)) return
+  var fixtures = nightFixtures(w)
+  NIGHT_FITTINGS.set(w, { version: w.terrainVersion, fixtures: fixtures })
+  for (var i = 0; i < fixtures.length; i++) drawNightFixture(ctx, fixtures[i])
 }
 function drawNightFixture(ctx, b) {
   ctx.save()
-  var x = b.x + 24, y = b.y - b.height
-  ctx.fillStyle = NIGHT_METAL; ctx.globalAlpha = 0.72
+  var x = b.x, y = b.y
+  ctx.fillStyle = NIGHT_METAL; ctx.globalAlpha = 1
   if (b.kind === 0) drawNightTank(ctx, x, y)
   else if (b.kind === 1) drawNightChimney(ctx, x, y)
   else if (b.kind === 2) drawNightAerial(ctx, x, y)
@@ -17160,55 +17203,51 @@ function drawNightFixture(ctx, b) {
   ctx.restore()
 }
 function drawNightTank(ctx, x, y) {
-  ctx.fillRect(x, y - 4, 1, 4); ctx.fillRect(x + 13, y - 4, 1, 4)
-  ctx.fillRect(x - 2, y - 13, 18, 9)
-  ctx.fillRect(x, y - 15, 14, 2)
-  ctx.fillStyle = NIGHT_EDGE; ctx.globalAlpha = 0.36
-  ctx.fillRect(x, y - 14.5, 14, 0.5)
-  ctx.fillRect(x - 1.5, y - 12.5, 0.5, 8)
+  ctx.fillRect(x, y - 4, 2, 4); ctx.fillRect(x + 12, y - 4, 2, 4)
+  ctx.fillRect(x - 2, y - 13, 18, 9); ctx.fillRect(x, y - 15, 14, 2)
+  ctx.fillStyle = NIGHT_BACK
+  ctx.fillRect(x + 12, y - 12, 3, 7)
+  ctx.fillStyle = NIGHT_EDGE; ctx.globalAlpha = 0.65
+  ctx.fillRect(x, y - 14.5, 14, 0.5); ctx.fillRect(x - 1.5, y - 12.5, 0.5, 8)
   ctx.fillRect(x - 2, y - 10, 18, 0.5); ctx.fillRect(x - 2, y - 6, 18, 0.5)
-  ctx.fillStyle = NIGHT_BACK; ctx.globalAlpha = 0.7
-  ctx.fillRect(x + 13, y - 12, 2.5, 7)
-  ctx.fillRect(x + 7, y - 4, 1, 4)
 }
 function drawNightChimney(ctx, x, y) {
+  ctx.fillStyle = "#66555b"
   ctx.fillRect(x, y - 7, 14, 7)
-  ctx.fillStyle = NIGHT_BRICK; ctx.globalAlpha = 1
+  ctx.fillStyle = "#a17e68"
   ctx.fillRect(x - 1, y - 8, 16, 1)
-  ctx.fillStyle = NIGHT_METAL; ctx.globalAlpha = 0.8
   ctx.fillRect(x + 1, y - 13, 3, 5); ctx.fillRect(x + 8, y - 11, 3, 3)
-  ctx.fillStyle = NIGHT_EDGE; ctx.globalAlpha = 0.35
-  ctx.fillRect(x, y - 13, 5, 0.5); ctx.fillRect(x + 7, y - 11, 5, 0.5)
+  ctx.fillStyle = NIGHT_EDGE; ctx.globalAlpha = 0.5
   ctx.fillRect(x, y - 5, 14, 0.5); ctx.fillRect(x, y - 2, 14, 0.5)
 }
 function drawNightAerial(ctx, x, y) {
-  ctx.fillRect(x + 7, y - 17, 0.5, 17)
-  ctx.fillRect(x, y - 12, 16, 0.5); ctx.fillRect(x + 3, y - 15, 9, 0.5)
-  for (var t = 0; t < 4; t++) ctx.fillRect(x + 1 + t * 4, y - 14, 0.5, 4)
-  ctx.fillStyle = NIGHT_EDGE; ctx.globalAlpha = 0.3
-  ctx.fillRect(x + 7.5, y - 10, 0.5, 10)
-  for (var d = 0; d < 6; d++) ctx.fillRect(x + 7 + d, y - 6 + d, 0.5, 0.5)
+  ctx.fillRect(x + 7, y - 17, 1, 17)
+  ctx.fillRect(x, y - 12, 16, 1); ctx.fillRect(x + 3, y - 15, 9, 1)
+  for (var t = 0; t < 4; t++) ctx.fillRect(x + 1 + t * 4, y - 14, 1, 4)
+  ctx.fillStyle = NIGHT_EDGE; ctx.globalAlpha = 0.65
+  ctx.fillRect(x + 7, y - 10, 0.5, 10)
+  for (var d = 0; d < 6; d++) ctx.fillRect(x + 7 + d, y - 6 + d, 1, 1)
 }
 function drawNightPigeons(ctx, x, y) {
   ctx.fillRect(x - 5, y - 1, 30, 1)
   for (var i = 0; i < 3; i++) {
     var px = x + i * 7, rise = i === 1 ? 1 : 0
-    ctx.fillStyle = NIGHT_METAL; ctx.globalAlpha = 0.8
-    ctx.fillRect(px, y - 4 - rise, 4, 2)
-    ctx.fillRect(px + 3, y - 6 - rise, 2, 3)
+    ctx.fillStyle = NIGHT_METAL; ctx.globalAlpha = 1
+    ctx.fillRect(px, y - 4 - rise, 4, 2); ctx.fillRect(px + 3, y - 6 - rise, 2, 3)
     ctx.fillRect(px - 2, y - 3 - rise, 2, 1)
-    ctx.fillStyle = NIGHT_EDGE; ctx.globalAlpha = 0.4
-    ctx.fillRect(px + 4.5, y - 5 - rise, 1, 0.5)
-    ctx.fillRect(px + 1, y - 2, 0.5, 1)
+    ctx.fillStyle = NIGHT_EDGE; ctx.globalAlpha = 0.7
+    ctx.fillRect(px + 4.5, y - 5 - rise, 1, 0.5); ctx.fillRect(px + 1, y - 2, 0.5, 1)
   }
 }
 function drawNightDish(ctx, x, y) {
-  ctx.fillRect(x + 8, y - 4, 1, 4); ctx.fillRect(x + 3, y - 1, 13, 1)
+  ctx.fillRect(x + 8, y - 4, 2, 4); ctx.fillRect(x + 3, y - 1, 13, 1)
   for (var row = 0; row < 8; row++) {
     var width = [5, 9, 12, 14, 14, 12, 9, 5][row]
     ctx.fillRect(x + (14 - width) / 2, y - 12 + row, width, 1)
   }
-  ctx.fillStyle = NIGHT_EDGE; ctx.globalAlpha = 0.35
+  ctx.fillStyle = NIGHT_BACK
+  ctx.fillRect(x + 4, y - 5, 6, 1)
+  ctx.fillStyle = NIGHT_EDGE; ctx.globalAlpha = 0.7
   ctx.fillRect(x + 3, y - 11.5, 8, 0.5)
   ctx.fillRect(x + 11, y - 10, 4, 0.5); ctx.fillRect(x + 14.5, y - 13, 0.5, 3)
 }
@@ -17217,6 +17256,15 @@ function nightReserved(w) {
   for (var d = 0; d < w.decor.length; d++) {
     var p = w.decor[d]
     boxes.push({ x: p.x * C - 5, y: p.y * C - 14, width: 17, height: 23 })
+  }
+  if (w.enemyHatch) {
+    var h = w.enemyHatch
+    boxes.push({ x: h.x * C - 18, y: (h.y + 1) * C - 24, width: 36, height: 26 })
+  }
+  if (w.mission) for (var t = 0; t < w.mission.targets.length; t++) {
+    var target = w.mission.targets[t]
+    if (!target.freed && !target.dead)
+      boxes.push({ x: target.x * C - 14, y: target.y * C - 23, width: 28, height: 25 })
   }
   // Posts, hanging washing, closed umbrellas and riders reserve the whole
   // cable lane at every pose, rather than only today's occupied pixels.
@@ -17227,48 +17275,93 @@ function nightReserved(w) {
   }
   return boxes
 }
-function drawNightSigns(ctx, w, roofs) {
-  var boxes = nightReserved(w)
-  for (var row = 1; row < w.corridors.length; row += 2) {
+function nightSigns(w) {
+  var roofs = nightRoofs(w), boxes = nightReserved(w), signs = []
+  for (var row = 1; row < Math.min(5, w.corridors.length); row += 2) {
     for (var i = 0; i < roofs.length; i++) {
       var r = roofs[i]
       if (r.row !== row) continue
-      var b = { x: r.x + 3, y: r.y - 9, width: 17, height: 7 }
-      if (!postalBoxClear(w, b, boxes)) continue
-      ctx.fillStyle = NIGHT_NEON; ctx.globalAlpha = 0.08
-      ctx.fillRect(b.x, b.y, b.width, b.height)
-      ctx.globalAlpha = 0.62
-      ctx.fillRect(b.x + 0.5, b.y + 0.5, 16, 0.5)
-      ctx.fillRect(b.x + 0.5, b.y + 6, 16, 0.5)
-      drawTransitionText(ctx, "OPEN", b.x + 8.5, b.y + 2, 0.5)
-      break
+      var b = { x: r.x, y: r.y - 12, width: 19, height: 12, colour: row === 1 ? NIGHT_NEON : NIGHT_CYAN }
+      if (!nightSupported(w, b, boxes)) continue
+      signs.push(b); break
     }
   }
+  return signs
+}
+function drawNightSigns(ctx, w) {
+  if (!rooftopsPage(w)) return
+  ctx.save()
+  var signs = nightSigns(w), boxes = nightReserved(w), fittings = nightFixtures(w)
+  for (var f = 0; f < fittings.length; f++) boxes.push(nightFixtureBox(fittings[f]))
+  for (var i = 0; i < signs.length; i++) {
+    var b = signs[i]
+    ctx.fillStyle = b.colour
+    for (var band = 3; band > 0; band--) {
+      var halo = { x: b.x - band, y: b.y - band, width: b.width + band * 2, height: 9 + band }
+      ctx.globalAlpha = 0.045 + (3 - band) * 0.035
+      drawNightSpill(ctx, w, halo, boxes)
+    }
+    ctx.fillStyle = NIGHT_BACK; ctx.globalAlpha = 1
+    ctx.fillRect(b.x, b.y, b.width, 8)
+    ctx.fillStyle = NIGHT_METAL
+    ctx.fillRect(b.x + 3, b.y + 8, 1, 4); ctx.fillRect(b.x + 15, b.y + 8, 1, 4)
+    ctx.fillStyle = b.colour; ctx.globalAlpha = 0.95
+    ctx.fillRect(b.x, b.y, b.width, 0.5); ctx.fillRect(b.x, b.y + 7.5, b.width, 0.5)
+    drawTransitionText(ctx, "OPEN", b.x + 9.5, b.y + 1.5, 1)
+  }
+  ctx.restore()
+}
+function drawNightSpill(ctx, w, b, boxes) {
+  // Clip the soft halo in small pieces; a nearby original pigeon must not
+  // suppress every strip of the glow around a complete readable sign.
+  for (var y = b.y; y < b.y + b.height; y++) for (var x = b.x; x < b.x + b.width; x += 2) {
+    var width = Math.min(2, b.x + b.width - x)
+    if (abyssClear(w, x, y, width, 1, boxes)) ctx.fillRect(x, y, width, 1)
+  }
+}
+function nightWetRect(ctx, w, x, y, width, height) {
+  var K = w.k, row = Math.floor(y / K.CELL)
+  for (var col = Math.floor(x / K.CELL); col <= Math.floor((x + width - 0.5) / K.CELL); col++) {
+    var m = w.terrain[row * K.COLS + col]
+    if (m === K.EMPTY || m === K.STEEL || w.terrain[(row - 1) * K.COLS + col] !== K.EMPTY) return
+  }
+  ctx.fillRect(x, y, width, height)
 }
 function drawNightSheen(ctx, w) {
   if (!rooftopsPage(w)) return
-  ctx.save(); ctx.fillStyle = NIGHT_EDGE; ctx.globalAlpha = 0.46
+  ctx.save(); ctx.fillStyle = NIGHT_EDGE
   var K = w.k
   for (var y = K.SKY; y < K.ROWS; y++) for (var x = 2; x < K.COLS - 2; x++) {
-    var material = w.terrain[y * K.COLS + x]
-    if (material === K.EMPTY || material === K.STEEL || w.terrain[(y - 1) * K.COLS + x] !== K.EMPTY) continue
+    ctx.globalAlpha = 0.28
+    nightWetRect(ctx, w, x * K.CELL, y * K.CELL, K.CELL, 0.5)
     if ((x * 7 + y * 11 + w.level) % 5 > 1) continue
-    ctx.fillRect(x * K.CELL + 0.5, y * K.CELL, 3, 0.5)
-    ctx.fillRect(x * K.CELL + 1, y * K.CELL + 0.5, 1.5, 0.5)
+    ctx.globalAlpha = 0.42
+    nightWetRect(ctx, w, x * K.CELL + 0.5, y * K.CELL + 0.5, 3, 0.5)
+  }
+  var signs = nightSigns(w)
+  for (var i = 0; i < signs.length; i++) {
+    var b = signs[i]
+    ctx.fillStyle = b.colour
+    for (var streak = 0; streak < 6; streak++) {
+      ctx.globalAlpha = 0.42 - streak * 0.055
+      nightWetRect(ctx, w, b.x + 1.5 + streak, b.y + b.height + streak * 0.5, 16 - streak * 2, 0.5)
+    }
   }
   ctx.restore()
 }
 function drawNightWisps(ctx, w) {
   if (!rooftopsPage(w)) return
   ctx.save(); ctx.fillStyle = NIGHT_SMOKE
-  var roofs = nightRoofs(w), boxes = nightReserved(w)
+  var cached = NIGHT_FITTINGS.get(w)
+  var roofs = cached && cached.version === w.terrainVersion ? cached.fixtures : nightFixtures(w)
+  var boxes = nightReserved(w)
   for (var i = 0; i < roofs.length; i++) {
     var b = roofs[i]
-    if (b.kind !== 1) continue
+    if (b.kind !== 1 || !nightSupported(w, nightFixtureBox(b), boxes)) continue
     for (var j = 0; j < 4; j++) {
       var age = (w.ticks * 0.08 + b.seed + j * 5) % 20
-      var x = b.x + 25 + Math.round(age * 0.3 * 2) / 2
-      var y = b.y - b.height - 14 - Math.round(age * 0.4 * 2) / 2
+      var x = b.x + 2 + Math.round(age * 0.3 * 2) / 2
+      var y = b.y - 14 - Math.round(age * 0.4 * 2) / 2
       ctx.globalAlpha = 0.13 - Math.floor(age / 5) * 0.025
       if (abyssClear(w, x, y, 1.5, 0.5, boxes)) ctx.fillRect(x, y, 1.5, 0.5)
     }
