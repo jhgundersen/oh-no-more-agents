@@ -5604,3 +5604,136 @@ and one end-to-end Chromium capture (skipped where there is no chromium).
 **Still on the list:** level 54 clock-outs 5/24; level 36 stall 7/24; level 32
 stall 8/24; level 10 stall 7/24; level 18 stall; level 2 stall 8/24; one
 level-27 clock-out.
+
+## 201 — 2026-10-14 · Servers in the cold aisle (on a branch)
+
+**Change:** Draw-only, page-resolution Data Center art, based on approved
+`codex/trench` (`78d03c5`). Staggered distant cabinet rows have six server
+faceplates, vents, rails and dim status dots each. Nested blue bands light the
+cold aisles; overhead cable trays carry paired cables and regular ties. One
+small half-pixel `UP 99` display sits in the first cabinet. Fine slots, handles
+and lower rims detail the surviving foreground rack cells. Original materials,
+backdrop columns/dots, rack lights, updraft streaks, decor, pits, hazards, guards,
+missions, agents, gear and exit keep their recipes. Sim, Palette and Outcome
+are unchanged.
+
+The cabinets, glow, trays, display and faceplates are cached in the terrain
+pass, beneath original props and exit. Only two half-pixel status dots per
+cabinet animate, at most **108** fills in the tested layouts, with no raster
+scan. Live dots reject solid terrain, original decor/exit bounds and hazard
+zones with a margin. All additions require Data Center and `(w.res || 1) >= 2`,
+use the half-pixel grid, and read existing ticks without RNG or world writes.
+Cabinet anchors use original corridor metadata, so carving does not move them.
+Foreground rack columns use the original `updraft` pitch markers rather than
+assuming every ROCK cell is a server; steel and built dirt stay untouched.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-datacenter/coverage-safe.sh` pass: **904** tests. Nine new tests cover
+resolution/biome gates, read-only proxies and forbidden RNG, deterministic
+pixel digests, half-pixel placement and balanced canvas state, static anchors,
+solid rack footprints, live budgets/fixture clearance, foreground ordering,
+unchanged original component digests, Hot Swap/Capacity Planning terrain edits,
+and four 600-tick updraft playthroughs with complete world digests. CRAP:
+**0** functions at or above 30, maximum **29.3**; new helpers at most
+**8.0**, all with 100% coverage.
+
+Node heap **2048 MB**, `ulimit -v 6000000`, one check worker/two coverage workers,
+and waiting for other Node test runs before every phase remain in effect.
+Factory's art test stays explicitly excluded per the standing instruction.
+Assertions compare small digests, recording is capped at 20k fills, and accent
+footprint loops are bounded to one cell. The full check took **80.7 s**, coverage **109.7 s**.
+
+**Looked:** baseline/branch pairs on levels 12, 31 and 50, ticks 77/476, full
+800×496 frames at 1×, matching 2× crops and 4× details in
+`/tmp/codex-datacenter/sheet.png`; level 69 in all five themes. Open/furled
+umbrellas and Hot Aisle/geyser/brazier/tesla/fence/crusher/turret in
+idle/charge/fire/rest are paired in `readability-sheet.png`. Pale faces,
+umbrella grips/canopies, hostile colours, hazard tells and the bright exit
+remain clear against restrained cabinet faces and blue light.
+
+Seeded comparison: **1,080 identical frames** across the other eighteen biomes
+(two layouts, ticks 77/240/600, five themes, res 1/2). Data Center's **60**
+res-1/unspecified-res frames are identical; all **30** res-2 frames changed.
+Baseline, harnesses, isolation results and logs live in `/tmp/codex-datacenter/`.
+
+**Pipeline:** reused the approved faster shot rasterizer and queued validation
+with coverage progress reporting. Removed the comparison harness's unused raw
+sheet and its duplicate crop scaling/pixel-copy loops; the labeled sheet builder
+now owns composition. One timed pair: **0.590 → 0.346 s**, peak RSS
+**175,820 → 103,028 KB**. No package/tool source changes.
+
+**Measured:** warmed res-2 software rasterizer at tick 476, median of nine
+batches of forty frames, interleaved parent/branch, after tests and coverage.
+Level 12: actors **1.100 → 1.140 ms**, full terrain + actors
+**6.800 → 7.918 ms**.
+Level 50: actors **1.073 → 1.088 ms**, full terrain + actors
+**7.119 → 8.316 ms**.
+Subway control, level 18: actors **1.084 → 1.080 ms**, full terrain + actors
+**15.081 → 15.092 ms**.
+Terrain is cached in ordinary play; these are Node raster times, not browser FPS.
+
+**Next:** ready for Data Center art review. Committed on `codex/datacenter`
+only; no push or deployment.
+
+## 202 — 2026-10-15 · Turn the rack lights up (on a branch)
+
+**Change:** One Data Center revision on `codex/datacenter`, following review
+of `5423f3e`. The original single canvas-pixel dots at 65% opacity did not read
+at 1×. Each distant rack now has three fixed **3×2 canvas-pixel** lamp clusters
+at full opacity: two green and one amber, with a rare red cycle. Lamps blink
+at independent **17/41/73-tick** rates with cabinet-specific offsets; they
+change colour at their mount, rather than moving between faceplates. Dark
+indicator housings keep the off phase visible. Brighter top/left bevels,
+faceplate lips and a shaded right side give the cabinet depth while the broad
+faces remain subdued behind dark suits. Three nested low-alpha blue bands
+meet the floor in each cold aisle. Glow, bevels and housings remain cached;
+only the three tiny lamps per cabinet run per frame (at most **162** fills
+in the tested layouts). Live lamps check both crossed terrain rows and retain
+exit/decor/hazard clearance. Original recipes, Sim, Palette and Outcome stay
+unchanged; all additions remain res-2 only, pure and RNG-free.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-datacenter-revision/coverage-safe.sh` pass: **906** tests. Eleven
+Data Center tests now check lamp colours, opaque multi-pixel footprints,
+independent cadence, fixed lamp coordinates and the cached floor pools,
+alongside the existing gates, purity/state, clearance, original component
+digests, events and four simulation replays. CRAP: **0** functions at or above
+30, maximum **29.3**; Data Center helpers at most **8.0**, all with
+100% coverage. Same **2048 MB** heap, `ulimit -v 6000000`, one check worker/two
+coverage workers and queue before each phase. Factory's art test remains
+excluded under the standing instruction. Digests, 20k draw-call recording
+caps and bounded accent footprint loops remain in place.
+
+**Looked:** matching initial/revised pairs on levels 12, 31 and 50 at ticks
+77/476 in `/tmp/codex-datacenter-revision/sheet.png`, with 1× full frames,
+2× crops and 4× details. The exact `shoot.js crop 12 --res 2 --ticks 476`
+region is paired in `shoot-crop-pair.png`; LEDs read plainly there and in the
+1× board. Level 69 in all five themes, plus staged open/furled umbrellas and
+seven hazards in idle/charge/fire/rest, retain clear suits, faces, canopies,
+hazard tells and exit. `blink.gif` shows five status phases; the colour tests
+exercise the occasional red as well. The seeded comparison still gives
+**1,080 identical frames** across the other eighteen biomes and **60 identical**
+Data Center res-1/unspecified-res frames; all **30** Data Center res-2 frames
+changed. Baseline, harnesses and results are in the revision review folder.
+
+**Pipeline:** retained the fast rasterizer, single composition pass, progress
+reporting and validation queue. Added matching shoot-style crops and blink
+shots from one seeded 476-tick world, avoiding repeated process starts and
+simulation advances for each comparison phase. No package/tool source edits.
+
+**Measured:** warmed res-2 software rasterizer at tick 476, median of nine
+batches of forty frames, interleaved initial/revised, after tests and coverage.
+Level 12: actors **1.136 → 1.152 ms**, full terrain + actors
+**7.938 → 8.172 ms**.
+Level 50: actors **1.094 → 1.110 ms**, full terrain + actors
+**8.371 → 8.516 ms**.
+Subway control, level 18: actors **1.074 → 1.089 ms**, full terrain + actors
+**15.280 → 15.158 ms**.
+Terrain is cached in ordinary play; these are Node raster times, not browser FPS.
+
+**Next:** ready for Data Center revision review. Commit on `codex/datacenter`
+only; no push or deployment.
+
+Reviewed and merged by the loop. Level 12: racks with clear green and amber LEDs and cabinet depth; agents readable.

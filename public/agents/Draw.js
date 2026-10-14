@@ -205,6 +205,7 @@ function drawTerrain(ctx, w, pal) {
   drawOfficeBackdrop(ctx, w)
   drawAbyssBackdrop(ctx, w)
   drawBackdrop(ctx, w, pal)
+  drawDataHall(ctx, w)
   if (desertPage(w)) drawDesertRelics(ctx, w)
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
 
@@ -238,6 +239,7 @@ function drawTerrain(ctx, w, pal) {
   if (junglePage(w)) drawJungleSurfaces(ctx, w)
   if (iceCavePage(w)) drawGlacierSurfaces(ctx, w)
   drawOfficeSurfaces(ctx, w, pal)
+  drawDataFaces(ctx, w)
   drawAssemblyEdges(ctx, w)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
@@ -2606,6 +2608,7 @@ function drawActors(ctx, w, pal, opts) {
   drawAssemblyLife(ctx, w)
   drawOfficeLife(ctx, w)
   drawAbyssLife(ctx, w)
+  drawDataStatus(ctx, w)
   drawDrips(ctx, w, pal)
   drawMachines(ctx, w, pal)
   drawActiveEventAir(ctx, w, pal)
@@ -16125,4 +16128,171 @@ function drawAbyssLife(ctx, w) {
 function drawAbyssBubble(ctx, x, y) {
   ctx.fillRect(x + 0.5, y, 1, 0.5); ctx.fillRect(x + 0.5, y + 1.5, 1, 0.5)
   ctx.fillRect(x, y + 0.5, 0.5, 1); ctx.fillRect(x + 1.5, y + 0.5, 0.5, 1)
+}
+
+// Page-only rack hall. Cabinet rows and cold-aisle light are cached below
+// terrain; faceplate accents stay inside surviving rack cells. Three small
+// status clusters per distant cabinet blink, before all original fixtures/actors.
+function dataCenterPage(w) { return w.biome === "Data Center" && (w.res || 1) >= 2 }
+
+var DATA_CASE = "#152a35"
+var DATA_EDGE = "#4b6978"
+var DATA_FACE = "#263e49"
+var DATA_SLOT = "#11232c"
+var DATA_COLD = "#548bb3"
+var DATA_LED = "#86f5a2"
+var DATA_AMBER = "#ffcc67"
+var DATA_RED = "#f07e86"
+var DATA_IDLE = "#386458"
+var DATA_CABLE = "#54666c"
+
+function dataCabinets(w, row) {
+  var c = w.corridors[row], cabinets = [], C = w.k.CELL
+  for (var x = (c.x0 + 5) * C + row % 2 * 8; x + 24 <= (c.x1 - 4) * C; x += 40)
+    cabinets.push({ x: x, y: c.floorY * C - 29, seed: w.level * 17 + row * 31 + x })
+  return cabinets
+}
+
+function drawDataHall(ctx, w) {
+  if (!dataCenterPage(w)) return
+  ctx.save()
+  for (var row = 0; row < w.corridors.length; row++) {
+    var cabinets = dataCabinets(w, row)
+    for (var i = 0; i < cabinets.length; i++) drawDataCabinet(ctx, cabinets[i])
+    drawDataTray(ctx, w.corridors[row], w.k.CELL)
+  }
+  var first = dataCabinets(w, 0)[0]
+  drawDataUptime(ctx, first)
+  ctx.restore()
+}
+
+function drawDataCabinet(ctx, b) {
+  // Nested flat colour bands are a cold aisle, not a wash over the colony.
+  ctx.fillStyle = DATA_COLD
+  ctx.globalAlpha = 0.05
+  ctx.fillRect(b.x + 17, b.y, 9, 25)
+  ctx.globalAlpha = 0.1
+  ctx.fillRect(b.x + 17, b.y, 5, 25)
+  // Light pools meet the floor beside each cabinet, below the dark suits.
+  ctx.globalAlpha = 0.14
+  ctx.fillRect(b.x + 17, b.y + 26, 22, 3)
+  ctx.globalAlpha = 0.2
+  ctx.fillRect(b.x + 19, b.y + 27.5, 16, 1.5)
+  ctx.globalAlpha = 0.3
+  ctx.fillRect(b.x + 23, b.y + 28.5, 8, 0.5)
+  ctx.globalAlpha = 1
+  ctx.fillStyle = DATA_CASE
+  ctx.fillRect(b.x, b.y, 17, 25)
+  ctx.fillStyle = DATA_EDGE
+  ctx.fillRect(b.x, b.y, 17, 0.5)
+  ctx.fillRect(b.x + 16, b.y, 0.5, 25)
+  ctx.fillStyle = DATA_FACE
+  ctx.fillRect(b.x + 14.5, b.y + 0.5, 1.5, 23.5)
+  ctx.fillStyle = DATA_EDGE
+  ctx.fillRect(b.x + 1, b.y + 1, 0.5, 23)
+  for (var unit = 0; unit < 6; unit++) {
+    var y = b.y + 2 + unit * 3.5
+    ctx.fillStyle = DATA_FACE
+    ctx.fillRect(b.x + 2.5, y, 12, 2.5)
+    ctx.fillStyle = DATA_EDGE
+    ctx.globalAlpha = 0.5
+    ctx.fillRect(b.x + 2.5, y, 11.5, 0.5)
+    ctx.globalAlpha = 1
+    ctx.fillStyle = DATA_SLOT
+    ctx.fillRect(b.x + 4, y + 1, 6, 0.5)
+    ctx.fillRect(b.x + 3, y + 0.5, 0.5, 1.5)
+    ctx.fillStyle = DATA_IDLE
+    ctx.fillRect(b.x + 11.5, y + 0.5, 2, 1.5)
+  }
+  ctx.fillStyle = DATA_SLOT
+  ctx.fillRect(b.x + 1, b.y + 24, 15, 1)
+}
+
+function drawDataTray(ctx, c, C) {
+  var x0 = (c.x0 + 3) * C, x1 = (c.x1 - 3) * C, y = c.floorY * C - 32
+  ctx.fillStyle = DATA_CASE
+  ctx.fillRect(x0, y, x1 - x0, 2.5)
+  ctx.fillStyle = DATA_EDGE
+  ctx.fillRect(x0, y + 2, x1 - x0, 0.5)
+  ctx.fillStyle = DATA_CABLE
+  ctx.globalAlpha = 0.45
+  ctx.fillRect(x0 + 1, y + 0.5, x1 - x0 - 2, 0.5)
+  ctx.fillRect(x0 + 1, y + 1.5, x1 - x0 - 2, 0.5)
+  for (var x = x0 + 12; x < x1; x += 24) ctx.fillRect(x, y, 0.5, 2)
+  ctx.globalAlpha = 1
+}
+
+function drawDataUptime(ctx, b) {
+  // A tiny retro UP 99 display; fixed scenery, not a fabricated live metric.
+  var glyphs = ["101101101101111", "110101110100100", "000000000000000", "111101111001111", "111101111001111"]
+  ctx.fillStyle = DATA_SLOT
+  ctx.fillRect(b.x + 2, b.y + 2, 12, 4)
+  ctx.fillStyle = DATA_LED
+  ctx.globalAlpha = 0.65
+  for (var g = 0; g < glyphs.length; g++) for (var p = 0; p < 15; p++)
+    if (glyphs[g][p] === "1") ctx.fillRect(b.x + 3 + g * 2 + p % 3 * 0.5, b.y + 2.5 + Math.floor(p / 3) * 0.5, 0.5, 0.5)
+  ctx.globalAlpha = 1
+}
+
+function drawDataFaces(ctx, w) {
+  if (!dataCenterPage(w)) return
+  ctx.save()
+  var C = w.k.CELL, cols = w.k.COLS
+  // updraft is the original skin's pitch marker: the two columns immediately
+  // left are cabinets. Do not guess from ROCK alone (which also means trays).
+  for (var x = 3; x < cols - 3; x++) {
+    if (!w.updraft[x + 1] && !w.updraft[x + 2]) continue
+    for (var y = w.k.SKY; y < w.k.ROWS - 2; y++) {
+      var material = w.terrain[y * cols + x]
+      if (material !== w.k.ORE && material !== w.k.ROCK) continue
+      ctx.fillStyle = DATA_SLOT
+      ctx.globalAlpha = 0.45
+      ctx.fillRect(x * C + 1, y * C + 1.5, 2, 0.5)
+      ctx.fillStyle = DATA_CABLE
+      ctx.globalAlpha = 0.35
+      ctx.fillRect(x * C + 0.5, y * C + 0.5, 0.5, 2.5)
+      ctx.fillRect(x * C + 1, y * C + 3, 2, 0.5)
+    }
+  }
+  ctx.restore()
+}
+
+function dataReserved(w) {
+  var boxes = assemblyReserved(w), C = w.k.CELL
+  for (var i = 0; i < w.hazards.length; i++) {
+    var h = w.hazards[i]
+    boxes.push({ x: h.zx0 * C - 16, y: h.zy0 * C - 8,
+      width: (h.zx1 - h.zx0 + 1) * C + 32, height: (h.zy1 - h.zy0 + 1) * C + 16 })
+  }
+  return boxes
+}
+
+function dataLamp(b, lamp, ticks) {
+  var seed = b.seed + lamp * 17, rate = [17, 41, 73][lamp]
+  var phase = Math.floor((ticks + seed) / rate)
+  if (phase % 4 === 0) return DATA_IDLE
+  if (lamp === 2 && phase % 19 === 1) return DATA_RED
+  return lamp === 2 ? DATA_AMBER : DATA_LED
+}
+
+function drawDataStatus(ctx, w) {
+  if (!dataCenterPage(w)) return
+  ctx.save()
+  var boxes = dataReserved(w)
+  ctx.globalAlpha = 1
+  for (var row = 0; row < w.corridors.length; row++) {
+    var cabinets = dataCabinets(w, row)
+    for (var i = 0; i < cabinets.length; i++) {
+      var b = cabinets[i]
+      for (var j = 0; j < 3; j++) {
+        var x = b.x + 12, y = b.y + [10, 17, 20.5][j]
+        // Bright fixed lamps blink at separate rates; the rare red is a dot,
+        // never the wide red flash used by a hazard. Check both crossed rows.
+        if (!abyssClear(w, x, y, 1.5, 1, boxes)) continue
+        ctx.fillStyle = dataLamp(b, j, w.ticks)
+        ctx.fillRect(x, y, 1.5, 1)
+      }
+    }
+  }
+  ctx.restore()
 }
