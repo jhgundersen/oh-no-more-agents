@@ -6747,3 +6747,14 @@ work it out, or they don't." Checked the rest: Outcome.js and Draw.js make no
 such claim; the Omarchy plugin's README says "no cursor and no way to help",
 which is still true of the panel (pep talks are page-only), so it stays. `npm
 run phone`: all three views still fine with the longer line.
+
+**List pass after 228** (`npm run playtest -- 1-150 --seeds 24`, 3600 runs,
+95.5% home, hangs 0, nothing worse than 5/24): level 138 (Jungle) is the top
+entry, 2 clock-outs and 5 stall endings of 24. Its stragglers come down a shaft
+seven cells west of the exit facing west and wander off; at the moment they
+land, a three-high block stands between them and the door (someone bashes it
+later). A rule to face a visible door on landing (`seeTheDoor`, within 12
+cells along a clear floor) was tried and measured neutral (+3 agents over 3600
+runs) because the door was not visible when it mattered — not kept. The rest:
+clock-outs on 78 (2/24), 61, 92, 101, 118 (1 each); stall endings on 84, 118
+(3/24), 5, 32 (2/24). The Ice Cave is in line with the other biomes since 222.
