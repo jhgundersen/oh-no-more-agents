@@ -88,7 +88,7 @@ test("Foundry back wall and floor lighting belong to the cached layer", () => {
 })
 
 test("molten pours and sparks animate behind terrain and stop between pours", () => {
-  const { w } = sample(), b = D.foundryBay(w, 0)
+  const { w } = sample(), b = { ...D.foundryBay(w, 0), kind: 0 }
   w.terrain.fill(w.k.EMPTY)
   const frames = []
   for (const age of [0, 14, 40, 104, 105, 160, 210]) {
@@ -163,4 +163,32 @@ test("Foundry backdrop, motes, blast door and chain retain their panel component
       hash.update(img.buf)
     }
   assert.equal(hash.digest("hex"), "1ee1514c29dbbb39e14f93245588abba4af0b3437c0f26c56d5332405e4beb16")
+})
+
+test("Foundry bays come in three kinds, so no level is one furnace repeated", () => {
+  const kinds = new Set()
+  for (let lv = 4; lv < 200; lv += 19) {
+    const w = S.generate(lv, 0, 1)
+    for (let i = 0; i < w.corridors.length; i++) kinds.add(D.foundryBay(w, i).kind)
+  }
+  assert.deepEqual([...kinds].sort(), [0, 1, 2])
+  assert.equal(D.FOUNDRY_BAYS.length, 3)
+})
+
+test("a converter blows a flame for part of its cycle, behind terrain, mirrored bays pour on their own side", () => {
+  const { w } = sample(), b = { ...D.foundryBay(w, 0), kind: 2 }
+  w.terrain.fill(w.k.EMPTY)
+  const at = t => { w.ticks = t; return picture(ctx => D.drawFoundryPour(ctx, w, b)) }
+  const start = (240 - b.phase % 240) % 240
+  const blowing = at(start + 20), quiet = at(start + 200)
+  assert.ok(blowing.calls.length > quiet.calls.length, "sparks and a taller flame while blowing")
+  assert.notDeepEqual(at(start + 20).buf, at(start + 24).buf, "it flickers")
+  for (const c of blowing.calls) assert.ok(D.mechanismAir(w, c[0], c[1]))
+  w.terrain.fill(w.k.ROCK)
+  assert.equal(at(start + 20).calls.length, 0, "hidden by rock")
+  w.terrain.fill(w.k.EMPTY)
+  const left = { ...b, kind: 0 }, right = { ...b, kind: 1 }
+  w.ticks = (210 - b.phase % 210) % 210 + 20
+  const xs = bay => picture(ctx => D.drawFoundryPour(ctx, w, bay)).calls.slice(1).map(c => c[0])
+  assert.ok(Math.max(...xs(left)) < b.x && Math.min(...xs(right)) > b.x - 2)
 })

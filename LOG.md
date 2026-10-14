@@ -4637,3 +4637,25 @@ and it drowned out the news.
 happen quietly. Tests 815.
 
 **Deployed** after 176 (name="build" content="f63e0d9b"), gated on a passing check (815 tests): Cloud Provider.
+
+## 177 — 2026-10-14 · Three kinds of Foundry bay
+
+The 172 review's open point: every floor of a Foundry level had the same
+furnace with the same ladle to its left, so a long level repeated itself.
+
+**Change (Draw, res 2 only):** a bay kind per floor, from the level and the
+floor index — the furnace with its ladle left, the same mirrored (ladle and
+pour on the right), or a Bessemer converter: a banded vessel tipped on two
+stands, its mouth up and right, blowing a flame and sparks for part of a
+240-tick cycle. Levels 4, 23, 42, 61, 80 get kinds 2012, 12012, 012, 20120,
+1201.
+
+**Looked:** level 4 at tick 300, enlarged. The first converter was 43 px
+tall; a corridor shows about 24 px of back wall, so its mouth and flame were
+behind rock — redrawn to fit one corridor. Then its iron body vanished into
+the heat haze; lifted a shade above the wall with darker bands and a lit
+flank. The mirrored bay pours on its own side.
+
+Tests 817 (`foundry-art.test.js`: all three kinds occur; the converter flame
+blows and rests, clips to air, hides behind rock; mirrored pours fall right
+of the furnace). Nothing over CRAP 30.

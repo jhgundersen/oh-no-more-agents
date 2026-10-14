@@ -7601,10 +7601,24 @@ var FOUNDRY_RUST = "#754332"
 
 // The same fixed bays on the cached back wall and the live layer. No world
 // caches: demolition reveals the machinery behind it, never moves it.
+// Three kinds of bay, so a long level is not one furnace stamped four times:
+// furnace with its ladle to the left, the same mirrored, and a converter.
 function foundryBay(w, i) {
   return { x: (26 + (w.level * 7 + i * 29) % 53) * w.k.CELL,
-    y: w.corridors[i].floorY * w.k.CELL, phase: w.level * 11 + i * 73 }
+    y: w.corridors[i].floorY * w.k.CELL, phase: w.level * 11 + i * 73,
+    kind: (w.level * 5 + i * 7) % 3 }
 }
+
+var FOUNDRY_BAYS = [
+  function (ctx, pal, b) { drawFoundryFurnace(ctx, pal, b.x, b.y); drawFoundryLadle(ctx, pal, b.x - 25, b.y) },
+  function (ctx, pal, b) {
+    drawFoundryFurnace(ctx, pal, b.x, b.y)
+    ctx.save(); ctx.translate(b.x + 25, 0); ctx.scale(-1, 1)
+    drawFoundryLadle(ctx, pal, 0, b.y)
+    ctx.restore()
+  },
+  function (ctx, pal, b) { drawFoundryConverter(ctx, pal, b.x, b.y) }
+]
 
 function drawFoundryBackdrop(ctx, w, pal) {
   if ((w.res || 1) < 2) return
@@ -7621,8 +7635,7 @@ function drawFoundryBackdrop(ctx, w, pal) {
   for (var i = 0; i < w.corridors.length; i++) {
     var b = foundryBay(w, i)
     ctx.globalAlpha = 1
-    drawFoundryFurnace(ctx, pal, b.x, b.y)
-    drawFoundryLadle(ctx, pal, b.x - 25, b.y)
+    FOUNDRY_BAYS[b.kind](ctx, pal, b)
     drawLightPool(ctx, w, FOUNDRY_HEAT, b.x, b.y - 6, 29, 16, 0.13)
   }
   ctx.restore()
@@ -7663,6 +7676,33 @@ function drawFoundryFurnace(ctx, pal, x, base) {
   ctx.globalAlpha = 1
   ctx.fillStyle = "#463338"
   for (var bar = -3; bar <= 3; bar += 3) ctx.fillRect(x + bar, base - 8, 1, 6)
+}
+
+// A Bessemer converter: an egg-shaped vessel tipped on its trunnions between
+// two iron stands, mouth up and to the right. Low enough that the whole of it,
+// mouth and flame included, shows in one six-row corridor
+// (drawConverterFlame gives it the flame).
+function drawFoundryConverter(ctx, pal, x, base) {
+  ctx.fillStyle = FOUNDRY_IRON
+  ctx.fillRect(x - 12, base - 12, 2, 12)               // stands
+  ctx.fillRect(x + 10, base - 12, 2, 12)
+  ctx.fillRect(x - 15, base - 2, 30, 2)
+  ctx.fillStyle = "#4d3a3c"                            // the vessel a shade above the wall
+  ctx.fillRect(x - 6, base - 17, 11, 2)                // vessel, tipped right
+  ctx.fillRect(x - 8, base - 15, 15, 8)
+  ctx.fillRect(x - 6, base - 7, 11, 2)
+  ctx.fillRect(x + 3, base - 19, 5, 2)                 // neck
+  ctx.fillRect(x + 5, base - 21, 5, 2)                 // mouth
+  ctx.fillStyle = FOUNDRY_IRON
+  ctx.fillRect(x - 8, base - 12, 15, 1)                // bands
+  ctx.fillRect(x - 8, base - 9, 15, 1)
+  ctx.fillStyle = "#6a4c48"
+  ctx.fillRect(x - 7.5, base - 15, 0.5, 8)             // its lit flank
+  ctx.fillStyle = FOUNDRY_RUST
+  ctx.fillRect(x - 10.5, base - 12, 2, 2)              // trunnion bosses
+  ctx.fillRect(x + 8.5, base - 12, 2, 2)
+  ctx.fillStyle = "#b45c29"
+  ctx.fillRect(x + 6, base - 20.5, 3, 0.5)             // the lip, lit from inside
 }
 
 function drawFoundryLadle(ctx, pal, x, base) {
@@ -7763,9 +7803,10 @@ function drawFoundryHeat(ctx, w, pal) {
 }
 
 function drawFoundryPour(ctx, w, b) {
+  if (b.kind === 2) { drawConverterFlame(ctx, w, b); return }
   // The distant metal is deliberately dimmer than an agent's face. All live
   // marks clip against current terrain; sparks never travel through a wall.
-  var cycle = (w.ticks + b.phase) % 210, x = b.x - 14, bottom = b.y - 4
+  var cycle = (w.ticks + b.phase) % 210, x = b.x + (b.kind === 1 ? 13.5 : -14), bottom = b.y - 4
   ctx.fillStyle = FOUNDRY_HEAT
   ctx.globalAlpha = 0.22 + 0.04 * Math.sin(w.ticks / 21 + b.phase)
   moteFineRect(ctx, w, b.x - 4, b.y - 4, 8, 1)
@@ -7784,6 +7825,29 @@ function drawFoundryPour(ctx, w, b) {
     var sx = Math.round((x + dx) * 2) / 2, sy = Math.round((bottom + dy) * 2) / 2
     ctx.globalAlpha = 0.55 * (1 - age / 36)
     ctx.fillStyle = age < 12 ? FOUNDRY_HOT : FOUNDRY_HEAT
+    moteFineRect(ctx, w, sx, sy, 0.5, 0.5)
+  }
+}
+
+// The converter's blow: a tongue of flame from its mouth into the hood,
+// flickering, taller for half its cycle, with sparks thrown up and out.
+function drawConverterFlame(ctx, w, b) {
+  var t = w.ticks + b.phase, blow = (t % 240) < 150
+  var tall = blow ? 3 + (Math.floor(t / 4) % 2) : 1
+  var mx = b.x + 7, my = b.y - 21
+  for (var row = 0; row < tall; row++) {
+    var lean = Math.floor((t + row * 5) / 6) % 2 * 0.5
+    ctx.fillStyle = row < tall / 3 ? FOUNDRY_HOT : FOUNDRY_HEAT
+    ctx.globalAlpha = 0.7 - row * 0.05
+    moteFineRect(ctx, w, mx + lean - (row < 2 ? 1 : 0.5), my - 1 - row, row < 2 ? 3 : 2, 1)
+  }
+  if (!blow) return
+  for (var sp = 0; sp < 6; sp++) {
+    var age = (t + sp * 9) % 30
+    var sx = Math.round((mx + (sp % 2 ? 1 : -1) * age * 0.25) * 2) / 2
+    var sy = Math.round((my - 2 - age * 0.25 + age * age * 0.012) * 2) / 2
+    ctx.fillStyle = age < 10 ? FOUNDRY_HOT : FOUNDRY_HEAT
+    ctx.globalAlpha = 0.6 * (1 - age / 30)
     moteFineRect(ctx, w, sx, sy, 0.5, 0.5)
   }
 }
