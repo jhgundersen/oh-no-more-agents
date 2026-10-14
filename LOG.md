@@ -4427,3 +4427,5 @@ one, else one from the stock, which you keep.
 level 6.43 → 6.36, home and under-half levels identical over 400 × 2. Parries
 are rare and mostly come before an agent owns one, so this is a consistency
 fix, not a balance change. Tests 792.
+
+(The first commit of 170 went in with its new test failing: the test picked "another agent" when only one had been released. Fixed in the next commit; nothing was deployed in between. Commit only behind a passing check.)
