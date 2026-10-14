@@ -6,7 +6,7 @@ import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
 const levels = [8, 27, 46, 65]
-const layers = [D.drawAssemblyBackdrop, D.drawAssemblyLabels, D.drawAssemblyEdges, D.drawAssemblyLife]
+const layers = [D.drawAssemblyBackdrop, D.drawAssemblyEdges, D.drawAssemblyLife]
 function sample(level = 8, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
   w.res = 2; w.ticks = 77
@@ -90,7 +90,6 @@ test("cached rails, stencils and paint stay still; digging never relocates a pro
   const { w } = sample()
   const img = picture(ctx => D.drawAssemblyBackdrop(ctx, w))
   assert.ok(img.calls.some(c => c[2] > 300 && c[3] === 5), "large gantry silhouette at full-frame size")
-  assert.ok(picture(ctx => D.drawAssemblyLabels(ctx, w)).calls.some(c => c[2] === 34 && c[3] === 8), "readable sign housing")
 })
 
 test("packages travel both ways, robot elbows move, and welding flashes briefly", () => {

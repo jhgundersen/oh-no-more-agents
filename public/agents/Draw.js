@@ -203,7 +203,6 @@ function drawTerrain(ctx, w, pal) {
   if (ruinsPage(w)) drawRuinsTemple(ctx, w, pal)
   drawAssemblyBackdrop(ctx, w)
   drawBackdrop(ctx, w, pal)
-  drawAssemblyLabels(ctx, w)
   if (desertPage(w)) drawDesertRelics(ctx, w)
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
 
@@ -15479,23 +15478,6 @@ function drawAssemblyStation(ctx, b) {
   ctx.globalAlpha = 0.045
   for (var row = 0; row < 5; row++) ctx.fillRect(x + 41 - row, y - 17.5 + row * 2, 9 + row * 2, 2)
   ctx.globalAlpha = 1
-}
-
-function drawAssemblyLabels(ctx, w) {
-  if (!factoryPage(w)) return
-  ctx.save()
-  for (var i = 0; i < w.corridors.length; i++) {
-    var bays = assemblyBays(w, i)
-    for (var j = 0; j < bays.length; j++) {
-      var b = bays[j]
-      // Painted signs sit over the mortar courses, below terrain and decor.
-      ctx.fillStyle = ASSEMBLY_DARK
-      ctx.fillRect(b.x + 3, b.y - 25, 34, 8)
-      ctx.fillStyle = ASSEMBLY_SIGN
-      drawTransitionText(ctx, "BAY " + b.number, b.x + 20, b.y - 23, 1)
-    }
-  }
-  ctx.restore()
 }
 
 function drawAssemblyEdges(ctx, w) {
