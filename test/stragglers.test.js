@@ -250,3 +250,30 @@ test("a hero among the last out gets the rescue after 200 idle ticks, not 900 â€
   S.watchProgress(w, tower)
   assert.equal(tower.rescueCool, 0, "not on a tower")
 })
+
+test("a rescue that prefers a mine digs when the miners are gone", () => {
+  const w = box(90)
+  for (let y = 31; y <= 40; y++) for (let x = 0; x < w.k.COLS; x++) w.terrain[y * w.k.COLS + x] = w.k.EMPTY
+  for (let x = 0; x < w.k.COLS; x++) w.terrain[45 * w.k.COLS + x] = w.k.DIRT          // a floor below
+  w.exit = { x: 80, y: 40, w: 6, h: 5 }
+  w.corridors.push({ x0: 1, x1: 98, floorY: 45, dir: 1, startX: 2, handoffX: 90 })
+  w.skills.miner = 0; w.skills.digger = 3
+  const ag = Object.assign(S.spawn(w), { id: 2, x: 40.5, y: 29, dir: 1, state: "walk" })        // even id: prefers a mine
+  w.agents = [ag]
+  assert.ok(S.canDescendHere(w, ag, true), "the geometry allows a descent")
+  assert.equal(S.startDescent(w, ag, S.take, true, true, false, true), true)
+  assert.equal(ag.state, "dig"); assert.equal(w.skills.digger, 2)
+})
+
+test("a hero may dig through a last layer over a lethal drop; an ordinary agent without umbrellas may not", () => {
+  const w = box(90)
+  for (let y = 31; y <= 61; y++) for (let x = 0; x < w.k.COLS; x++) w.terrain[y * w.k.COLS + x] = w.k.EMPTY
+  for (let x = 0; x < w.k.COLS; x++) w.terrain[60 * w.k.COLS + x] = w.k.DIRT          // far below: lethal, not bottomless
+  w.skills.floater = 0
+  const hero = Object.assign(S.spawn(w), { x: 40.5, y: 29, special: "wraith" }), plain = Object.assign(S.spawn(w), { x: 40.5, y: 29 })
+  w.special = "wraith"; w.specialSpec = S.specialSpec("wraith")
+  assert.equal(S.digOpensDeath(w, plain, 40, 29), true)
+  assert.equal(S.digOpensDeath(w, hero, 40, 29), false)
+  for (let x = 0; x < w.k.COLS; x++) w.terrain[60 * w.k.COLS + x] = w.k.EMPTY          // bottomless
+  assert.equal(S.digOpensDeath(w, hero, 40, 29), true, "but not into nothing")
+})

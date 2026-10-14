@@ -5365,10 +5365,13 @@ function startDescent(w, ag, pay, allowMine, traitPreference, fallback, requireW
   if (!canDescendHere(w, ag, requireWorkable)) return false
   var preferMine = allowMine && ((traitPreference && traitOf(ag).mineFirst === true) || ag.id % 2 === 0)
   if (!fallback) {
-    var mine = preferMine && canPlantMine(w, ag)
-    if (!pay(w, mine ? "miner" : "digger")) return false
-    if (mine) plantMine(w, ag)
-    else { ag.state = "dig"; ag.timer = 0 }
+    // A preference, not a requirement: with the miners gone it digs. It used
+    // to give up instead — half of all agents prefer a mine (even ids), so on
+    // level 92 the hero sat in a pocket over a one-cell floor with six diggers
+    // in the toolbar until the clock ran out.
+    if (preferMine && canPlantMine(w, ag) && pay(w, "miner")) { plantMine(w, ag); return true }
+    if (!pay(w, "digger")) return false
+    ag.state = "dig"; ag.timer = 0
     return true
   }
   if (preferMine && canPlantMine(w, ag) && pay(w, "miner")) {
@@ -7850,7 +7853,16 @@ function stepDig(w, ag) {
 
   if (!exitBelow(w, ag)) { ag.state = "walk"; return }
 
-  if (!solid(w, cx, Math.floor(ag.y) + 1)) beginUncontrolledFall(w, ag)
+  if (!solid(w, cx, Math.floor(ag.y) + 1)) {
+    // A hero through the floor goes down on its own device, the way it would
+    // off any edge (see digOpensDeath). Anything else falls.
+    var drop = dropDepth(w, cx, Math.floor(ag.y))
+    if (ag.special && drop > killingFall(w) && drop !== Infinity) {
+      ag.state = "walk"
+      if (startSpecialHeight(w, ag, ag.x, drop, -1)) return
+    }
+    beginUncontrolledFall(w, ag)
+  }
 }
 
 // The last stroke before a floor gives way, over a drop nobody could survive,
@@ -7862,9 +7874,16 @@ function digOpensDeath(w, ag, cx, footY) {
   // A hero cannot take one from the toolbar (see take), so the colony's
   // umbrellas are no comfort to it: Guard Rails dug itself to its death in a
   // tenth of the levels it played, every time with umbrellas still in stock.
+  //
+  // But a hero has a device of its own for a lethal drop (stepDig hands it
+  // over when the floor goes), so only a drop with no floor at all stops it:
+  // on level 92 the hero was in a pocket over a one-cell floor, the rescue
+  // dug, and this stopped it on the last layer every time until the clock.
   var umbrellas = ag.special ? 0 : (w.skills.floater || 0)
   if (solid(w, cx, footY + 2) || ag.floater || umbrellas > 0) return false
-  return dropDepth(w, cx, footY + 1) > killingFall(w)
+  var depth = dropDepth(w, cx, footY + 1)
+  if (ag.special) return depth === Infinity
+  return depth > killingFall(w)
 }
 
 // Nothing under it. Anything that has planted itself — a blocker, a camped

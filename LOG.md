@@ -6261,3 +6261,22 @@ budget), 92 (the hero ends in a three-wide pocket over a one-cell floor with
 six diggers in the toolbar, and the rescue spends nothing — the descent rules
 refuse it; next to look at), 61, 101, 138 (one run each); stall endings on 70,
 81, 113 (3/12), 2, 55, 84 (2/12).
+
+## 216 — 2026-10-15 · Level 92: the rescue digs, and a hero digs through
+
+Level 92's hero sat in a three-wide pocket over a one-cell floor with six
+diggers in the toolbar. Two rules stood in the way, both now changed:
+- **`startDescent` gave up when it preferred a mine and the miners were
+  gone.** Half of all agents prefer a mine (even ids), and the non-fallback
+  path paid for the preferred tool or nothing. It now plants a mine if it can
+  and otherwise digs.
+- **`digOpensDeath` stopped a hero on the last layer over any lethal drop.**
+  The rule exists because a hero falling through a dug floor died (Guard Rails,
+  a tenth of its levels): it cannot take an umbrella from the toolbar. But
+  every hero has its own device for a lethal drop and uses it off any edge
+  (`startSpecialHeight`); when a hero's dig opens the floor over a drop it now
+  goes down on that device. Only a bottomless drop still stops it.
+Levels 1–150 × 12 against 215: home 95.41% → 95.42%, clock-outs 7 → 5 (level
+92: 2 → 0), stall 43 → 43, hangs 0. Heroes over 1–150 × 6: 612 → 615 home,
+48 → 46 lost. `simcheck heights`: 24/24 specials reach safe ground. Two tests.
+`npm run check` 1024/1024; CRAP under 30.
