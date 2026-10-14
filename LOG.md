@@ -4262,3 +4262,5 @@ White life rings hung on every net and every lamp — the Rooftops' white
 washing again — now on one net in three and no lamps. The ticker said "THE
 TRAIN LEAVES" for a boat; it says FERRY. 775 tests pass; nothing over CRAP 30.
 
+
+**Deployed** after 163 (name="build" content="7d8bd9e9"), gated on a passing check: the Harbour and its ferry, the folding umbrella. Browser check clean. (The first attempt never ran: the Harbour review commit had picked up the worktree's node_modules symlink, the merge turned main's node_modules into a link to itself, and npm died with exit 216. The link is untracked and ignored now.)
