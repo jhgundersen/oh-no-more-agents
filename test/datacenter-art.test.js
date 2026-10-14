@@ -113,9 +113,9 @@ test("status dots blink on fixed cabinets with a cheap budget and clear terrain,
     for (const ticks of [0, 77, 160, 476]) {
       w.ticks = ticks
       const img = picture(ctx => D.drawDataStatus(ctx, w)), boxes = D.dataReserved(w)
-      assert.ok(img.calls.length > 0 && img.calls.length <= count * 2 && img.calls.length <= 108)
+      assert.ok(img.calls.length > 0 && img.calls.length <= count * 3 && img.calls.length <= 162)
       for (const c of img.calls) {
-        assert.equal(c[2], 0.5); assert.equal(c[3], 0.5)
+        assert.equal(c[2], 1.5); assert.equal(c[3], 1); assert.equal(c[5], 1)
         assert.ok(D.assemblyUnreserved(boxes, ...c.slice(0, 4)))
         footprint(c, (x, y) => assert.ok(D.mechanismAir(w, x, y)))
       }
@@ -212,4 +212,43 @@ test("drawing the rack hall leaves real updraft playthroughs identical", () => {
       }
     }
   } finally { Math.random = random }
+})
+
+
+test("rack lamps have visible green/amber/red clusters and independent fixed-position blink rates", () => {
+  const { w } = sample(), b = { seed: 0 }, rates = [17, 41, 73], colours = new Set()
+  for (let lamp = 0; lamp < 3; lamp++) {
+    let last = D.dataLamp(b, lamp, 0), first = -1, transitions = 0
+    for (let tick = 1; tick < 6000; tick++) {
+      const colour = D.dataLamp(b, lamp, tick); colours.add(colour)
+      if (colour === last) continue
+      if (first >= 0) assert.equal((tick - first) % rates[lamp], 0, "blink has its own stable period")
+      first = tick; last = colour; transitions++
+    }
+    assert.ok(transitions > 10)
+  }
+  for (const colour of [D.DATA_LED, D.DATA_AMBER, D.DATA_RED, D.DATA_IDLE]) assert.ok(colours.has(colour))
+  w.terrain.fill(w.k.EMPTY); w.hazards = []; w.decor = []
+  const frames = [0, 77, 476, 2300].map(tick => {
+    w.ticks = tick
+    return picture(ctx => D.drawDataStatus(ctx, w))
+  })
+  const coordinates = frame => frame.calls.map(c => c.slice(0, 4))
+  for (const frame of frames) {
+    assert.deepEqual(coordinates(frame), coordinates(frames[0]), "blink never moves the lamp")
+    assert.ok(frame.calls.some(c => c[4] === D.DATA_LED && c[2] >= 1 && c[3] >= 1 && c[5] === 1))
+    assert.ok(frame.calls.some(c => c[4] === D.DATA_AMBER && c[5] === 1))
+  }
+  assert.ok(frames.some(frame => frame.calls.some(c => c[4] === D.DATA_RED)))
+})
+
+test("cabinet bevel and floor-level blue pools are cached below the original silhouettes", () => {
+  const { w } = sample(), img = picture(ctx => D.drawDataHall(ctx, w)), cabinets = w.corridors.flatMap((_, row) => D.dataCabinets(w, row))
+  const pools = img.calls.filter(c => c[4] === D.DATA_COLD && c[3] <= 3)
+  assert.equal(pools.length, cabinets.length * 3)
+  for (const c of pools) {
+    assert.ok(c[5] <= 0.3)
+    assert.ok(w.corridors.some(row => c[1] >= row.floorY * 4 - 3 && c[1] + c[3] <= row.floorY * 4))
+  }
+  assert.ok(img.calls.some(c => c[4] === D.DATA_EDGE && c[2] > 10 && c[3] === 0.5))
 })

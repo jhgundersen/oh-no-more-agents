@@ -16032,16 +16032,18 @@ function drawAbyssBubble(ctx, x, y) {
 }
 
 // Page-only rack hall. Cabinet rows and cold-aisle light are cached below
-// terrain; faceplate accents stay inside surviving rack cells. Only two small
-// status dots per distant cabinet blink, before all original fixtures/actors.
+// terrain; faceplate accents stay inside surviving rack cells. Three small
+// status clusters per distant cabinet blink, before all original fixtures/actors.
 function dataCenterPage(w) { return w.biome === "Data Center" && (w.res || 1) >= 2 }
 
 var DATA_CASE = "#152a35"
-var DATA_EDGE = "#344b58"
-var DATA_FACE = "#213946"
+var DATA_EDGE = "#4b6978"
+var DATA_FACE = "#263e49"
 var DATA_SLOT = "#11232c"
-var DATA_COLD = "#426d89"
-var DATA_LED = "#67ad99"
+var DATA_COLD = "#548bb3"
+var DATA_LED = "#86f5a2"
+var DATA_AMBER = "#ffcc67"
+var DATA_RED = "#f07e86"
 var DATA_IDLE = "#386458"
 var DATA_CABLE = "#54666c"
 
@@ -16072,22 +16074,36 @@ function drawDataCabinet(ctx, b) {
   ctx.fillRect(b.x + 17, b.y, 9, 25)
   ctx.globalAlpha = 0.1
   ctx.fillRect(b.x + 17, b.y, 5, 25)
+  // Light pools meet the floor beside each cabinet, below the dark suits.
+  ctx.globalAlpha = 0.14
+  ctx.fillRect(b.x + 17, b.y + 26, 22, 3)
+  ctx.globalAlpha = 0.2
+  ctx.fillRect(b.x + 19, b.y + 27.5, 16, 1.5)
+  ctx.globalAlpha = 0.3
+  ctx.fillRect(b.x + 23, b.y + 28.5, 8, 0.5)
   ctx.globalAlpha = 1
   ctx.fillStyle = DATA_CASE
   ctx.fillRect(b.x, b.y, 17, 25)
   ctx.fillStyle = DATA_EDGE
   ctx.fillRect(b.x, b.y, 17, 0.5)
   ctx.fillRect(b.x + 16, b.y, 0.5, 25)
+  ctx.fillStyle = DATA_FACE
+  ctx.fillRect(b.x + 14.5, b.y + 0.5, 1.5, 23.5)
+  ctx.fillStyle = DATA_EDGE
   ctx.fillRect(b.x + 1, b.y + 1, 0.5, 23)
   for (var unit = 0; unit < 6; unit++) {
     var y = b.y + 2 + unit * 3.5
     ctx.fillStyle = DATA_FACE
     ctx.fillRect(b.x + 2.5, y, 12, 2.5)
+    ctx.fillStyle = DATA_EDGE
+    ctx.globalAlpha = 0.5
+    ctx.fillRect(b.x + 2.5, y, 11.5, 0.5)
+    ctx.globalAlpha = 1
     ctx.fillStyle = DATA_SLOT
     ctx.fillRect(b.x + 4, y + 1, 6, 0.5)
     ctx.fillRect(b.x + 3, y + 0.5, 0.5, 1.5)
     ctx.fillStyle = DATA_IDLE
-    ctx.fillRect(b.x + 12, y + 1, 0.5, 0.5)
+    ctx.fillRect(b.x + 11.5, y + 0.5, 2, 1.5)
   }
   ctx.fillStyle = DATA_SLOT
   ctx.fillRect(b.x + 1, b.y + 24, 15, 1)
@@ -16152,21 +16168,30 @@ function dataReserved(w) {
   return boxes
 }
 
+function dataLamp(b, lamp, ticks) {
+  var seed = b.seed + lamp * 17, rate = [17, 41, 73][lamp]
+  var phase = Math.floor((ticks + seed) / rate)
+  if (phase % 4 === 0) return DATA_IDLE
+  if (lamp === 2 && phase % 19 === 1) return DATA_RED
+  return lamp === 2 ? DATA_AMBER : DATA_LED
+}
+
 function drawDataStatus(ctx, w) {
   if (!dataCenterPage(w)) return
   ctx.save()
   var boxes = dataReserved(w)
-  ctx.fillStyle = DATA_LED
-  ctx.globalAlpha = 0.65
+  ctx.globalAlpha = 1
   for (var row = 0; row < w.corridors.length; row++) {
     var cabinets = dataCabinets(w, row)
     for (var i = 0; i < cabinets.length; i++) {
-      var b = cabinets[i], phase = Math.floor((w.ticks + b.seed) / 32) % 6
-      for (var j = 0; j < 2; j++) {
-        var x = b.x + 12, y = b.y + 3 + ((phase + j * 3) % 6) * 3.5
-        // These half-pixel dots fit within one cell: no per-pixel raster scan.
-        if (!mechanismAir(w, x, y) || !assemblyUnreserved(boxes, x, y, 0.5, 0.5)) continue
-        ctx.fillRect(x, y, 0.5, 0.5)
+      var b = cabinets[i]
+      for (var j = 0; j < 3; j++) {
+        var x = b.x + 12, y = b.y + [10, 17, 20.5][j]
+        // Bright fixed lamps blink at separate rates; the rare red is a dot,
+        // never the wide red flash used by a hazard. Check both crossed rows.
+        if (!abyssClear(w, x, y, 1.5, 1, boxes)) continue
+        ctx.fillStyle = dataLamp(b, j, w.ticks)
+        ctx.fillRect(x, y, 1.5, 1)
       }
     }
   }
