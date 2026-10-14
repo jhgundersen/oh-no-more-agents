@@ -32,7 +32,9 @@ test("ferries draw all phases at both resolutions, read only and on the sea surf
       Object.assign(tr, { phase, riders: phase === "back" ? [] : [1, 2, 3], v: 0.35,
         x: phase === "wait" ? tr.ax : phase === "drop" ? tr.bx : (tr.ax + tr.bx) / 2 })
       const before = JSON.stringify(w), g = D.harbourFerryDrawing(w, tr)
-      assert.equal(g.x, Math.round((tr.x + 0.5) * 4 * (res || 1)) / (res || 1))
+      const p = w.pits[tr.pit], C = 4
+      const lo = p.x0 * C + 18, hi = (p.x1 + 1) * C - 18
+      assert.ok(lo > hi ? Math.abs(g.x - (lo + hi) / 2) <= 0.5 : g.x >= lo - 0.5 && g.x <= hi + 0.5, "moored within the dock's water")
       assert.ok(Math.abs(g.y - w.pits[tr.pit].surfaceY * 4) <= 1)
       assert.equal(g.open, ["wait", "drop"].includes(phase))
       const img = picture(w, ctx => D.drawHarbourFerry(ctx, w, pal, tr))

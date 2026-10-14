@@ -4253,3 +4253,11 @@ pass is cached during ordinary play; these are Node raster times, not browser FP
 
 **Next:** broader Harbour play before any ferry tuning. Committed on the
 Harbour branch only; no push or deployment.
+
+Reviewed and merged by the loop. Level 19 at ticks 440–480: the quay and
+dusk harbour read, and so does the ferry, with three fixes in review. Sim's
+ferry waits at platforms on the quay itself, so it was drawn beached on the
+stone: the hull is now kept within the dock's water (moored, not beached).
+White life rings hung on every net and every lamp — the Rooftops' white
+washing again — now on one net in three and no lamps. The ticker said "THE
+TRAIN LEAVES" for a boat; it says FERRY. 775 tests pass; nothing over CRAP 30.

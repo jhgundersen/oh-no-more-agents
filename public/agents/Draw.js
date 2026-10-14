@@ -13238,7 +13238,7 @@ function drawHarbourGraniteFine(ctx, w, pal, m, x, y, col, row) {
 function drawHarbourDecor(ctx, w, pal, d, x, y) {
   var base = y + w.k.CELL
   ctx.save()
-  if (d.kind === "hang") drawHarbourNet(ctx, pal, x, y)
+  if (d.kind === "hang") drawHarbourNet(ctx, pal, x, y, d.seed % 3 === 0)
   else if (d.kind === "spire") drawHarbourLamp(ctx, pal, x, base)
   else if (d.kind === "clump") {
     if (d.seed % 2) drawHarbourPot(ctx, pal, x, base)
@@ -13274,14 +13274,17 @@ function drawHarbourPot(ctx, pal, x, base) {
   ctx.fillRect(x - 4, base - 4, 15, 1)
   ctx.fillStyle = pal.rigDark; ctx.fillRect(x + 2, base - 6, 4, 3)
 }
-function drawHarbourNet(ctx, pal, x, y) {
+// A life ring on one net in three, and none on the lamps: a white ring on
+// every wall was the brightest thing on the board (the Rooftops' washing
+// again, 120).
+function drawHarbourNet(ctx, pal, x, y, ring) {
   ctx.fillStyle = pal.oreShade
   ctx.fillRect(x - 4, y, 16, 2)
   for (var i = 0; i < 5; i++) {
     ctx.fillRect(x - 4 + i * 3, y + 2, 1, 9 + i % 2 * 2)
     ctx.fillRect(x - 4, y + 3 + i * 2, 16, 1)
   }
-  drawHarbourRing(ctx, x + 10, y + 8, pal.urgent)
+  if (ring) drawHarbourRing(ctx, x + 10, y + 8, pal.urgent)
 }
 function drawHarbourLamp(ctx, pal, x, base) {
   ctx.fillStyle = pal.rigDark
@@ -13289,7 +13292,6 @@ function drawHarbourLamp(ctx, pal, x, base) {
   ctx.fillRect(x, base - 21, 6, 6)
   ctx.fillStyle = HARBOUR_GLASS
   ctx.fillRect(x + 1, base - 20, 4, 4)
-  drawHarbourRing(ctx, x + 4, base - 9, pal.urgent)
 }
 function drawHarbourRing(ctx, x, y, colour) {
   ctx.fillStyle = HARBOUR_CREAM
@@ -13412,8 +13414,12 @@ function drawHarbourFerries(ctx, w, pal) {
   }
 }
 function harbourFerryDrawing(w, tr) {
-  var p = w.pits[tr.pit], size = (w.res || 1) >= 2 ? 0.5 : 1
-  var x = Math.round((tr.x + 0.5) * w.k.CELL / size) * size
+  var p = w.pits[tr.pit], size = (w.res || 1) >= 2 ? 0.5 : 1, C = w.k.CELL
+  // Moored, not beached: Sim keeps the ferry at the quay platforms, which are
+  // on land; the hull is drawn kept within the dock's water.
+  var lo = p.x0 * C + 18, hi = (p.x1 + 1) * C - 18
+  var raw = (tr.x + 0.5) * C
+  var x = Math.round((lo > hi ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, raw))) / size) * size
   return { x: x, y: p.surfaceY * w.k.CELL + harbourSwell(w, p, x),
     dockY: (tr.y + 1) * w.k.CELL, open: tr.phase === "wait" || tr.phase === "drop" }
 }

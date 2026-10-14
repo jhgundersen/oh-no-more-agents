@@ -2360,7 +2360,7 @@ function trainWait(w, tr, index) {
   trainBoard(w, tr, index)
   if (tr.riders.length >= TRAIN_CAP || tr.t >= TRAIN_DWELL) {
     tr.phase = "run"; tr.t = 0
-    if (tr.riders.length) feedNote(w, "THE TRAIN LEAVES WITH " + tr.riders.length + (tr.riders.length === 1 ? " AGENT" : " AGENTS"))
+    if (tr.riders.length) feedNote(w, "THE " + (tr.boat ? "FERRY" : "TRAIN") + " LEAVES WITH " + tr.riders.length + (tr.riders.length === 1 ? " AGENT" : " AGENTS"))
   }
 }
 
