@@ -4415,3 +4415,15 @@ with its own, carried at res 2 only, panel unchanged). Nothing over CRAP 30.
 has an umbrella in its hand.
 
 **Deployed** after 169 (name="build" content="8127c564"), gated on a passing check (791 tests): walkers fall when the floor goes (168), one umbrella each (169). Browser check clean.
+
+## 170 — 2026-10-14 · The parry uses your own umbrella
+
+169 left the umbrella parry and the overhead guard taking from the stock even
+for an agent with its own umbrella in hand. Now every use — a fall, a parry,
+a guard — goes through one rule (`brollyInHand`): your own if you have had
+one, else one from the stock, which you keep.
+
+**Measured** (levels 3–300): 55 umbrella saves either way, umbrellas drawn per
+level 6.43 → 6.36, home and under-half levels identical over 400 × 2. Parries
+are rare and mostly come before an agent owns one, so this is a consistency
+fix, not a balance change. Tests 792.

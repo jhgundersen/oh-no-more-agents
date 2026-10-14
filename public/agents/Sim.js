@@ -4662,7 +4662,7 @@ function umbrellaParries(w, ag, fromX) {
   if (ag.brollyFor > 0) return brollyFacing(ag, fromX)
   if (ag.state !== "walk") return false
   if ((w.ticks * 37 + ag.id * 61 + 11) % 100 >= BROLLY_PARRY) return false
-  if (!take(w, "floater")) return false
+  if (!brollyInHand(w, ag)) return false
   ag.brollyFor = BROLLY_HOLD
   ag.brollyDir = fromX >= ag.x ? 1 : -1
   ag.saves = (ag.saves || 0) + 1
@@ -4691,6 +4691,14 @@ function umbrellaRicochet(w, ag, by) {
   w.lastEvent = "ricochet"
 }
 
+// One umbrella each (see ownBrolly): the agent's own if it has had one, else
+// one from the stock, which it then keeps — for a fall, a parry or a guard.
+function brollyInHand(w, ag) {
+  if (!ag.ownBrolly && !take(w, "floater")) return false
+  ag.ownBrolly = true
+  return true
+}
+
 function brollyFacing(ag, fromX) {
   return !ag.brollyDir || (fromX >= ag.x ? 1 : -1) === ag.brollyDir
 }
@@ -4698,7 +4706,7 @@ function brollyFacing(ag, fromX) {
 function umbrellaGuards(w, h, ag) {
   if (!BROLLY_STOPS[h.kind] || ag.special) return false
   if (ag.brollyFor > 0) return true
-  if (ag.state !== "walk" || !take(w, "floater")) return false
+  if (ag.state !== "walk" || !brollyInHand(w, ag)) return false
   ag.brollyFor = BROLLY_HOLD
   ag.brollyDir = 0
   h.known = true
@@ -5785,7 +5793,7 @@ function startFall(w, ag) {
 function beginUncontrolledFall(w, ag) {
   if (!ag.floater) {
     var d = dropDepth(w, Math.floor(ag.x), Math.floor(ag.y))
-    if (d > killingFall(w) && (ag.ownBrolly || take(w, "floater"))) ag.floater = ag.ownBrolly = true
+    if (d > killingFall(w) && brollyInHand(w, ag)) ag.floater = true
   }
   startFall(w, ag)
 }
@@ -6649,7 +6657,7 @@ function stepFall(w, ag) {
   if (fallInterrupted(w, ag, cx, ny)) return
   if (!ag.floater && !ag.drafted && ag.fall > killingFall(w) - 6) {
     var remaining = dropDepth(w, cx, Math.floor(ny))
-    if (ag.fall + remaining > killingFall(w) && (ag.ownBrolly || take(w, "floater"))) ag.floater = ag.ownBrolly = true
+    if (ag.fall + remaining > killingFall(w) && brollyInHand(w, ag)) ag.floater = true
   }
   if (fallLands(w, ag, cx, ny)) return
   ag.fall += speed
