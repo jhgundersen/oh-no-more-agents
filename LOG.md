@@ -5293,3 +5293,75 @@ these are Node raster times with the optimized tool, not browser FPS.
 
 **Next:** ready for Skyscraper art review. Committed on `codex/skyscraper` only;
 no push or deployment.
+
+## 195 — 2026-10-14 · Further under the sea (on a branch)
+
+**Change:** Draw-only, page-resolution Trench art. Twelve explicit dark-water
+bands deepen toward the bottom; four dim nested light curtains with broken
+edges descend from water overhead. One large distant whale silhouette has a
+blunt head, deep belly and flukes, with no eye, port or hazard colours. Curved
+kelp beds add green silhouettes at the lower storeys. The original sediment,
+grain, rock spires, kelp, sea filter, fish, marine snow, pits/downwell arrows,
+divers, gear, hazards, booth and exit retain their recipes. Sim, Palette and
+Outcome are unchanged. Based on approved `codex/skyscraper` (`860af5a`), as
+requested, rather than picking up unrelated main work.
+
+All large art is cached behind the original backdrop and terrain. Only eight
+faint caustic fragments, twelve small rising bubble rings and one kelp tip per
+bed animate: at most **68** rectangles per actor pass. Live pixels reject
+current terrain, exit/decor bounds, hazard zones with a margin, and the pit
+throats, preserving the current and downwell cues. Positions come from level
+and original corridor metadata, so carving cannot relocate the whale or kelp.
+Every addition requires Trench, `w.submerged` and `(w.res || 1) >= 2`, uses the
+half-pixel grid, and reads ticks without world writes, RNG or scenery state.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-trench/coverage-safe.sh` pass: **895** tests. Seven new component
+tests cover resolution/submerged gates, read-only proxies, forbidden renderer
+RNG, deterministic pixel digests, balanced canvas state, half-pixel placement,
+cached versus live art, fixed anchors after carving, both whale directions,
+live draw-call budget, all crossed terrain corners, fixture/decor/exit/pit
+clearance, and foreground ordering. Original component digests at res 1/2 are
+unchanged. Four 600-tick Trench replays compare complete world digests with
+and without drawing, pinning Sim's cosmetic animation/blood randomness per
+step; swimming, sinking and current play remain identical. CRAP: **0**
+functions at or above 30, maximum **29.3**; new helpers at most **8.0**, all
+with 100% coverage.
+
+The same resource caps apply: Node heap **2048 MB**, `ulimit -v 6000000`,
+check with one test worker, coverage with two bounded workers, and the driver
+waits for other Node test runs before each phase. Factory's art test remains
+explicitly excluded per the standing instruction. Pixel assertions use small
+digests, recording is capped at 20k fills, and accent footprint rectangles are
+bounded to one cell in width/height. Scripts and results are in `/tmp/codex-trench/`.
+
+**Looked:** baseline/branch comparisons on levels 10, 29 and 48, ticks 77/476,
+full 800×496 frames at 1×, matching 2× crops and 4× details in
+`/tmp/codex-trench/sheet.png`; level 67 in all five themes. Staged open/furled
+umbrellas, rising/descending swim poses, and vent/shark/current/geyser/brazier/
+tesla/fence in idle/charge/fire/rest in `readability-sheet.png`. Copper helmets,
+oxblood guards, umbrellas, original fish and hazard tells, chests and exit
+remain distinct. Review moved the whale clear of its bay's obstacle face and
+joined the moving tips to their cached kelp stems.
+
+Seeded parent/branch comparison: **1,080 identical frames** across the other
+eighteen biomes (two layouts, ticks 77/240/600, five themes, res 1/2).
+Trench's **60** res-1/unspecified-res frames are identical; all **30** res-2
+frames changed. Baseline, harness and isolation result are in the review folder.
+
+**Pipeline:** reused the approved faster shot rasterizer and the automatic
+validation queue. Coverage now writes a progress reporter alongside LCOV, so
+the slow phase exposes the running test and failures in `crap-final.log`
+instead of requiring repeated process inspection. No package/tool source changes.
+
+**Measured:** warmed res-2 software rasterizer at tick 476, median of nine
+batches of forty frames, interleaved parent/branch, after check and coverage.
+Level 10: actors **0.566 → 0.612 ms**, full terrain + actors
+**6.347 → 7.378 ms**. Level 48: actors **0.734 → 0.772 ms**, full terrain + actors
+**7.669 → 8.798 ms**. Subway control, level 18: actors **1.071 → 1.072 ms**, full terrain + actors
+**15.150 → 15.114 ms**. Terrain is cached in ordinary play;
+these are Node raster times, not browser FPS.
+
+**Next:** ready for Trench art review. Committed on `codex/trench` only;
+no push or deployment.
