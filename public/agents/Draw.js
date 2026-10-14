@@ -195,9 +195,11 @@ function drawTerrain(ctx, w, pal) {
 
   drawTerrainSky(ctx, w, pal)
   if (w.biome === "Harbour") drawHarbourSky(ctx, w, pal)
+  if (desertPage(w)) drawDesertSky(ctx, w)
 
   if (spaceshipPage(w)) drawSpaceshipBackdrop(ctx, w, pal)
   drawBackdrop(ctx, w, pal)
+  if (desertPage(w)) drawDesertRelics(ctx, w)
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
 
   drawTerrainMaterials(ctx, w, pal)
@@ -225,6 +227,7 @@ function drawTerrain(ctx, w, pal) {
   if (spaceshipPage(w)) drawSpaceshipMaterials(ctx, w, pal)
   drawTerrainLight(ctx, w, pal)
   if (frostPage(w)) drawFrostSurfaces(ctx, w)
+  if (desertPage(w)) drawDesertSurfaces(ctx, w)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
   drawSea(ctx, w, pal)
@@ -2051,6 +2054,7 @@ function drawMachines(ctx, w, pal) {
   if (w.biome === "Foundry") drawFoundryHeat(ctx, w, pal)
   if (spaceshipPage(w)) drawSpaceshipInstruments(ctx, w, pal)
   if (frostPage(w)) drawFrostWeather(ctx, w)
+  if (desertPage(w)) drawDesertHeat(ctx, w)
   if (w.biome === "Cavern") drawCavernLife(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
   if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
@@ -14558,4 +14562,190 @@ function drawFrostBreath(ctx, w) {
     ctx.globalAlpha *= 0.5
     moteFineRect(ctx, w, x, y - 0.5, 2, 0.5)
   }
+}
+
+// Desert page art is additive: the old dunes, sun, mottled material, cactus,
+// exit and SANDBOX ESCAPE booth keep their recipes. The panel stays untouched.
+var DESERT_SAND = "#e3b866"
+var DESERT_SEAM = "#b77740"
+var DESERT_RELIC = "#42352d"
+
+function desertPage(w) {
+  return w.biome === "Desert" && (w.res || 1) >= 2
+}
+
+function drawDesertSky(ctx, w) {
+  if (!desertPage(w)) return
+  ctx.save()
+  var top = w.k.SKY * w.k.CELL, wide = w.k.COLS * w.k.CELL
+  // Stepped hot-air gradient, behind the existing sun and dune silhouettes.
+  // Explicit bands also keep the software renderer faithful to the page.
+  for (var row = 0; row < 48; row += 4) {
+    ctx.fillStyle = row < 16 ? "#6e4630" : row < 32 ? "#9a6238" : "#bc8149"
+    ctx.globalAlpha = 0.22 + row / 240
+    ctx.fillRect(0, top + row, wide, 4)
+  }
+  ctx.restore()
+}
+
+function desertRelic(w, i) {
+  var C = w.k.CELL, c = w.corridors[i]
+  var x = 52 + (w.level * 29 + i * 103) % 280
+  // The sun keeps its full glow and rays. Its location is backDesert's first
+  // draw from the same local level stream, never the colony's random stream.
+  var sun = 40 + Math.floor(backRng(w)() * (w.k.COLS * C - 80))
+  if (Math.abs(x - sun) < 48) x = sun < 200 ? 292 : 72
+  return { x: x, y: c.floorY * C, high: 28 + (w.level + i) % 3 * 4 }
+}
+
+function drawDesertRelics(ctx, w) {
+  if (!desertPage(w)) return
+  ctx.save()
+  for (var i = 0; i < w.corridors.length; i++) {
+    var b = desertRelic(w, i)
+    drawDesertObelisk(ctx, b)
+  }
+  ctx.restore()
+}
+
+function drawDesertObelisk(ctx, b) {
+  var x = b.x, y = b.y - b.high
+  // A broad chipped plinth and a tapered, pointed shaft. Terrain subsequently
+  // hides the base: these are monuments in the far wall, never obstacles.
+  ctx.globalAlpha = 1
+  ctx.fillStyle = DESERT_RELIC
+  ctx.fillRect(x - 10, b.y - 4, 24, 4)
+  ctx.fillRect(x - 7, y + 7, 17, b.high - 7)
+  ctx.fillRect(x - 5, y + 4, 13, 3)
+  ctx.fillRect(x - 3, y + 2, 9, 2)
+  ctx.fillRect(x, y, 3, 2)
+  ctx.fillStyle = "#67503a"
+  ctx.fillRect(x - 7, y + 7, 1.5, b.high - 7)
+  ctx.fillRect(x - 5, y + 5, 12, 0.5)
+  ctx.fillRect(x - 9, b.y - 4, 20, 1)
+  ctx.fillStyle = "#2d2928"
+  ctx.fillRect(x + 6, y + 8, 4, b.high - 8)
+  ctx.fillRect(x - 3, y + 9, 7, b.high - 13)
+  // Incised sun, reeds and steps, a readable vertical cartouche rather than
+  // a text label. Lit lower edges give the cuts depth at half-pixel scale.
+  drawDesertGlyph(ctx, x - 2, y + 11, 0)
+  drawDesertGlyph(ctx, x - 2, y + 17, 1)
+  drawDesertGlyph(ctx, x - 2, y + 23, 2)
+  ctx.fillStyle = "#282627"
+  ctx.fillRect(x + 3, y + 6, 4, 0.5)
+  ctx.fillRect(x + 5, y + 6.5, 0.5, 3)
+}
+
+function drawDesertGlyph(ctx, x, y, kind) {
+  ctx.fillStyle = "#8b6945"
+  if (kind === 0) {
+    ctx.fillRect(x + 1, y, 3, 0.5)
+    ctx.fillRect(x, y + 0.5, 0.5, 2)
+    ctx.fillRect(x + 4.5, y + 0.5, 0.5, 2)
+    ctx.fillRect(x + 1, y + 2.5, 3, 0.5)
+    ctx.fillRect(x + 2, y + 1, 1, 1)
+  } else if (kind === 1) {
+    ctx.fillRect(x + 1, y, 0.5, 3)
+    ctx.fillRect(x + 3, y + 1, 0.5, 2)
+    ctx.fillRect(x, y + 3, 5, 0.5)
+  } else {
+    ctx.fillRect(x, y + 2.5, 5, 0.5)
+    ctx.fillRect(x + 1.5, y + 1.5, 3.5, 0.5)
+    ctx.fillRect(x + 3, y + 0.5, 2, 0.5)
+  }
+}
+
+function drawDesertSurfaces(ctx, w) {
+  if (!desertPage(w)) return
+  ctx.save()
+  var k = w.k
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 1; x < k.COLS - 1; x++) {
+    var m = w.terrain[y * k.COLS + x]
+    if (m !== k.DIRT && m !== k.ORE && m !== k.ROCK) continue
+    drawDesertStrata(ctx, w, x, y, m)
+    if (w.terrain[(y - 1) * k.COLS + x] === k.EMPTY) drawDesertSandCap(ctx, w, x, y)
+  }
+  ctx.restore()
+}
+
+function drawDesertStrata(ctx, w, x, y, m) {
+  var k = w.k, C = k.CELL, px = x * C, py = y * C
+  // Narrow seams ONLY: no cell wash and no replacement of original mottling,
+  // material bands or dark cap-rock. A broken, cross-bedded sediment line.
+  if (m === k.ROCK || (x + y * 3) % 11 === 0) return
+  var bend = Math.floor(x / 9 + w.level) % 3 * 0.5
+  if (y % 3 === 0) {
+    ctx.globalAlpha = 0.5
+    ctx.fillStyle = DESERT_SEAM
+    ctx.fillRect(px, py + 2 + bend, C, 0.5)
+    ctx.fillStyle = DESERT_SAND
+    ctx.globalAlpha = 0.3
+    ctx.fillRect(px, py + 2.5 + bend, C, 0.5)
+  }
+  // Wind-worn exposed faces: short sloping scoring, never a solid new fill.
+  if (w.terrain[y * k.COLS + x - 1] !== k.EMPTY && w.terrain[y * k.COLS + x + 1] !== k.EMPTY) return
+  ctx.globalAlpha = 0.55
+  ctx.fillStyle = DESERT_SAND
+  ctx.fillRect(px + 0.5, py + 1, 2, 0.5)
+  ctx.fillStyle = DESERT_SEAM
+  ctx.fillRect(px + 1.5, py + 2, 2, 0.5)
+}
+
+function drawDesertSandCap(ctx, w, x, y) {
+  var k = w.k, C = k.CELL, px = x * C, py = y * C
+  var drift = (x + y * 7 + w.level) % 23
+  var high = drift < 9 ? 0.5 + Math.min(drift, 8 - drift) * 0.5 : 0.5
+  ctx.globalAlpha = 0.85
+  ctx.fillStyle = DESERT_SEAM
+  ctx.fillRect(px, py + 0.5, C, 0.5)
+  ctx.globalAlpha = 1
+  ctx.fillStyle = DESERT_SAND
+  // Sand is above the ledge, so its original face and grain stay exposed.
+  moteFineRect(ctx, w, px, py - high, C, high)
+  ctx.globalAlpha = 0.75
+  ctx.fillRect(px, py, C, 0.5)
+  ctx.fillStyle = "#f3d28a"
+  ctx.globalAlpha = 0.7
+  moteFineRect(ctx, w, px + 0.5, py - high, 2.5, 0.5)
+  // Against an inner corner the lee bank piles up, not across the corridor.
+  for (var side = -1; side <= 1; side += 2) {
+    if (w.terrain[(y - 1) * k.COLS + x + side] === k.EMPTY) continue
+    ctx.fillStyle = DESERT_SAND
+    ctx.globalAlpha = 0.9
+    for (var step = 0; step < 3; step++)
+      moteFineRect(ctx, w, px + (side < 0 ? step : C - step - 1), py - 3 + step * 0.5, 1, 3 - step * 0.5)
+  }
+}
+
+function drawDesertHeat(ctx, w) {
+  if (!desertPage(w)) return
+  ctx.save()
+  var C = w.k.CELL, wide = w.k.COLS * C, t = w.ticks
+  // Low, broken mirage bands above long floors; a visual ripple, never a
+  // transform of the terrain or actors. Existing wind and Model Drift remain
+  // independent and draw afterwards. Every rectangle clips to current air.
+  for (var i = 0; i < w.corridors.length; i++) {
+    var floor = w.corridors[i].floorY * C
+    for (var x = 12; x < wide - 12; x += 12) {
+      if (!desertHeatFloor(w, x, floor)) continue
+      var phase = x / 28 + t / 21 + i * 2
+      var y = floor - 4 + Math.round(Math.sin(phase) * 2) * 0.5
+      ctx.fillStyle = DESERT_SAND
+      ctx.globalAlpha = 0.12 + (1 + Math.sin(phase)) * 0.065
+      moteFineRect(ctx, w, x, y, 8, 0.5)
+      ctx.fillStyle = "#a36b41"
+      ctx.globalAlpha *= 0.5
+      moteFineRect(ctx, w, x + 2, y - 1.5, 6, 0.5)
+    }
+  }
+  ctx.restore()
+}
+
+function desertHeatFloor(w, x, floor) {
+  var k = w.k, cx = Math.floor(x / k.CELL), cy = Math.floor(floor / k.CELL)
+  for (var dx = -1; dx <= 3; dx++) {
+    if (w.terrain[cy * k.COLS + cx + dx] === k.EMPTY) return false
+    if (w.terrain[(cy - 1) * k.COLS + cx + dx] !== k.EMPTY) return false
+  }
+  return true
 }

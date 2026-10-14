@@ -4841,3 +4841,58 @@ a walker; a short drop without one is still a clean shot. Draw shows the
 canopy swung toward the gun while it holds, then overhead again. Level 20
 clears (11/15). Looked at level 20, ticks 451 and 455, enlarged: the round
 stops on the canopy with a spark and a NOPE. Tests 838.
+
+## 184 — 2026-10-14 · Sand and old stone in the Desert (on a branch)
+
+**Change:** Draw-only, page-resolution Desert art, added over the original
+terrain. Golden sand caps follow exposed ledges, with stepped drifts and lee
+banks against inner corners. Narrow warm sediment seams and wind scoring
+leave the original material bands, mottling and dark cap-rock visible.
+Chipped obelisks with incised sun, reed and step glyphs stand in the far wall,
+partly buried behind the original terrain. A stepped hot-air sky warms the
+existing sun; broken mirage bands ripple just above intact long floors.
+The original dunes, mesas, cactus, clumps, motes, gusts, hazards, exit and
+SANDBOX ESCAPE booth keep their draw recipes. Palette, Sim and Outcome are
+unchanged, including Model Drift, Sandbox and Cache Miss and their mirrors.
+
+Static additions use the terrain cache; mirage bands run in drawMachines
+before events, fixtures and actors. Every addition is gated on Desert and
+`(w.res || 1) >= 2`, uses the half-pixel grid, and reads the world without
+writes or Math.random. Sand and heat footprints check current air, and heat
+requires a surviving floor. Monuments avoid the original sun's glow and rays.
+
+**Checked:** `npm run stamp` and `npm run check` pass. Eight component tests
+cover read-only proxies, forbidden RNG, deterministic pixels, canvas state,
+resolution/biome gates, the half-pixel grid, cached versus moving art,
+original component bytes at both resolutions, preserved texture, destroyed
+support, untouched steel/bridge bricks, corner banks, air-only heat, sun
+clearance, actor layering and the three event mirrors. `npm run crap` reports
+**0** functions at or above 30, maximum **28.5**; Desert helpers reach **8.0**
+with 100% coverage. The local coverage output directory was created and the
+existing ignored CRAP tool copied into this worktree for the report.
+Seeded main/new Draw comparison across all nineteen biomes: **1,080 identical
+frames** in the other eighteen (two layouts, ticks 77/240/600, five themes,
+res 1/2); Desert's **60** res-1/unspecified-res frames are also identical,
+and all **30** res-2 frames change. Baseline, harness and results are in
+`/tmp/codex-desert/`.
+
+**Looked:** original main versus this branch on levels 11, 30 and 49 at ticks
+77/476: full 800×496 frames at 1× viewing size, matching crops at 2×, and
+4× detail crops in `/tmp/codex-desert/sheet.png`. Inspected the sheet, each
+full-frame pair, enlarged texture/actor crops, all five themes and level 68.
+The golden ledges read immediately in full frames; enlarged crops retain
+the original grain and bands. Faces, guards, umbrellas, booths and exits
+remain distinct. The mirage is deliberately faint beneath their silhouettes.
+
+**Measured:** warmed res-2 software rasteriser, tick 476, median of nine batches
+of forty frames, interleaved old/new, with tests and coverage finished.
+Level 11: actors **2.094 → 2.187 ms**, full terrain + actors
+**16.692 → 19.758 ms**. Level 49: actors **2.339 → 2.490 ms**,
+full **18.535 → 21.864 ms**. Subway control, level 18: actors
+**2.660 → 2.658 ms**, full **32.246 → 32.248 ms**. Terrain is cached in
+ordinary play; these are Node raster times, not browser FPS.
+
+**Next:** review the Desert's mirage during longer page play. Committed on
+`codex/desert` only; no push or deployment.
+
+Reviewed and merged by the loop. Level 11, tick 400, full frame against main at 1x: golden drifts on every edge, warm strata, glyph panels on the back wall, a hotter sky; the original rock intact.
