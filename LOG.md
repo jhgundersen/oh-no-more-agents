@@ -4130,3 +4130,17 @@ Ruins is still lowest after the change (86% over 15 levels — its gun-pair
 posts, not its bosses; noted for later). `npm run sim`: 99% / 94%, hangs 0.
 The Moderator art test pinned level 8's timeline; it now finds a level where
 the Moderator falls and checks around that. Tests 751.
+
+## 159 — 2026-10-14 · Hats on the floor
+
+**Checked, no change:** two-gunner posts by biome. Ruins (2.2 deaths a play)
+and Rooftops (3.0) sit above the rest (~1.3), on samples of 9 and 4 levels;
+no mechanism found. Variance until a bigger sample says otherwise.
+
+**Change:** the death poses last a second; after that an agent was simply
+gone. Now its hat stays on the floor where it fell for ten seconds, fading
+out over the last two (`drawFallenHat`) — only on ground (nothing is left of
+a fall out of the world or a drowning), only at page resolution. A level
+remembers what it cost, where it cost it, without saying so in words. Looked
+at level 6 after a drone strike: dark and small, as a reminder should be.
+Tests 752.

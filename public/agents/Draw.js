@@ -2957,9 +2957,30 @@ var DEATH_DRAW = {
   "stand down": drawDeathStandDown
 }
 
+// After the death pose, the hat stays where it fell for ten seconds, fading
+// out over the last two — so a level remembers what it cost on the floor where
+// it cost it. Only on ground (nothing is left of a fall out of the world or a
+// drowning), and only at page resolution.
+var HAT_TICKS = 300, HAT_FADE = 60
+function drawFallenHat(ctx, w, ag, age) {
+  if ((w.res || 1) < 2 || age < DEATH_TICKS || age >= HAT_TICKS) return
+  var C = w.k.CELL, cx = Math.floor(ag.x), feet = Math.floor(ag.y)
+  if (feet < 0 || feet + 1 >= w.k.ROWS || !w.terrain[(feet + 1) * w.k.COLS + cx] || w.terrain[feet * w.k.COLS + cx]) return
+  var x = Math.round(ag.x * C), y = (feet + 1) * C
+  ctx.save()
+  ctx.globalAlpha = 0.9 * Math.min(1, (HAT_TICKS - age) / HAT_FADE)
+  ctx.fillStyle = "#16161c"
+  ctx.fillRect(x - 3, y - 1, 6, 1)              // brim, flat on the floor
+  ctx.fillRect(x - 2, y - 3, 4, 2)              // crown
+  ctx.fillStyle = "#3a3a46"
+  ctx.fillRect(x - 2, y - 3, 4, 0.5)            // light on it
+  ctx.restore()
+}
+
 function drawDeath(ctx, w, pal, ag) {
   if (!ag.gone || ag.state === "saved" || ag.diedAt === undefined) return
   var age = w.ticks - ag.diedAt
+  drawFallenHat(ctx, w, ag, age)
   if (age < 0 || age >= DEATH_TICKS) return
   var draw = Object.prototype.hasOwnProperty.call(DEATH_DRAW, ag.diedBy)
     ? DEATH_DRAW[ag.diedBy] : drawDeathGeneric
