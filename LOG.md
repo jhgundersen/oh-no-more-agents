@@ -5382,3 +5382,5 @@ neither, no hangs. `simcheck play 60` unchanged: 60/60, 881/929, 0 hangs.
 `test/agi.test.js` (8), quip tests in dreamer/ratelimit, two sfx tests (each new
 cue plays; the AGI's homecoming replaces the ordinary chirp: exactly six
 oscillators). `npm run check` 925/925 in 11 s; CRAP worst 29.2.
+
+**Deployed** after 196 (name="build" content="8c67a72a"), gated on a passing check (925 tests): the golden AGI, and sounds and quips for the dreamer and the 429 queue. Levels 3, 9 and 14 in headless Chromium, no console errors.
