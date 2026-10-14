@@ -6588,7 +6588,13 @@ function walkHazardAhead(w, ag, nx, cx, footY) {
   // (90% → 86% home). "Last out" was too late a test — the straggler meets the
   // current while one or two others are still somewhere, turns, and the
   // cutoff ends the level on its way back.
-  if (!ag.special && aloneHere(w, ag, 6) && currentAhead(w, ag, nx)) { ag.waitFor = 2; ag.still = 0; return }
+  //
+  // Any fixture, not just the current, and heroes too: alone is alone. On
+  // level 36 the colony's hero, out of its camp late, met a flame jet on a
+  // corridor fifty cells long, turned for it, walked to the far end and back,
+  // and met it firing again — until the stall cutoff.
+  if (aloneHere(w, ag, 6) && (currentAhead(w, ag, nx) || hazardAhead(w, ag, nx))
+      && !hazardZoneAt(w, Math.floor(ag.x), footY, hazardPerceptive(ag))) { ag.waitFor = 2; ag.still = 0; return }
   var mine = ag.special && specOf(ag).act === "shield"
   if (mine && ag.shieldHeld < SHIELD_MAX - SHIELD_MARGIN
       && (ag.shieldFor > 0 || raiseShield(w, ag))) return advanceWalk(w, ag, nx, cx, footY)
@@ -8361,6 +8367,15 @@ function stepCamp(w, ag) {
   ag.cool = Math.round(spec.cool / 2)
 }
 
+function borrowWallTools(w, ag) {
+  var footY = Math.floor(ag.y), ax = Math.floor(ag.x) + ag.dir
+  var acting = w.acting
+  w.acting = null
+  var ok = wallTools(w, ag, wallHeight(w, ax, footY), wallThickness(w, ax, footY, ag.dir))
+  w.acting = acting
+  return ok
+}
+
 var HERO_WAIT = 130   // ticks of cooldown a hero will stand out at a wall toward home
 function specialAtWall(w, ag) {
   var spec = specOf(ag)
@@ -8368,7 +8383,16 @@ function specialAtWall(w, ag) {
   // Digs in where it stands and stays there — until the colony has stood
   // down. Digging in at the next wall after that was the other half of how
   // Beam Search was bombed at the end of most levels it played.
-  if (spec.act === "camp" && w.stoodDown) { turnAround(w, ag); return }
+  //
+  // Stood down, a camper is a colleague going home, and a hero is barred from
+  // the toolbar — so it turned at every wall after that. On level 36 Beam
+  // Search came out of its camp onto a corridor walled off from the way down
+  // and paced it until the stall cutoff, in 6 of 24 colonies. At a wall toward
+  // home it borrows the colony's tools, the way forceEscape lends them.
+  if (spec.act === "camp" && w.stoodDown) {
+    if (!crossingHelps(w, ag) || !borrowWallTools(w, ag)) turnAround(w, ag)
+    return
+  }
   if (spec.act === "camp") {
     ag.state = "camp"
     ag.cool = 0

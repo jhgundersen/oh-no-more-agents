@@ -128,3 +128,38 @@ test("at a shut clockwork gate an agent waits at it, facing it, rather than walk
   w.gates[0].open = true
   assert.equal(S.gateShutAt(w, 45, 29), null)
 })
+
+// Ordinary agents meet a known fixture's reach in walkHazardZone first, which
+// may be lethal all the time and so still turns them; a hero goes straight to
+// walkHazardAhead, which only fires while the fixture charges or fires.
+test("alone at a fixture about to fire, a hero waits at the edge of its reach", () => {
+  const w = box(90)
+  w.hazards = [{ kind: "flame", phase: "charge", zx0: 56, zx1: 59, zy0: 25, zy1: 29, floorY: 30, dir: -1, known: true, throttled: 0, wrecked: false, name: "Flame" }]
+  // Stood down, as on level 36, or Beam Search would dig in at the sight of it.
+  w.special = "beamsearch"; w.specialSpec = S.specialSpec("beamsearch"); w.stoodDown = true
+  for (const special of ["beamsearch"]) {
+    const ag = Object.assign(S.spawn(w), { x: 40, y: 29, dir: 1, state: "walk", special, cool: 999 })
+    w.agents = [ag]
+    let x = ag.x
+    for (let t = 0; t < 400 && ag.waitFor === 0; t++) { x = ag.x; S.agentActs(w, ag) }
+    assert.ok(ag.waitFor > 0, "it stopped")
+    assert.equal(ag.dir, 1, "facing the fixture, not walking away")
+    assert.equal(S.hazardZoneAt(w, Math.floor(ag.x), 29, true), null, "outside the reach")
+  }
+})
+
+test("a stood-down camper at a wall toward home borrows the colony's tools; facing away, it turns", () => {
+  const w = box(90)
+  for (let y = 25; y <= 29; y++) w.terrain[y * w.k.COLS + 45] = w.k.DIRT
+  w.exit = { x: 80, y: 25, w: 6, h: 5 }
+  w.special = "beamsearch"; w.specialSpec = S.specialSpec("beamsearch"); w.stoodDown = true
+  const ag = Object.assign(S.spawn(w), { x: 44.4, y: 29, dir: 1, state: "walk", special: "beamsearch" })
+  w.agents = [ag]
+  const before = JSON.stringify(w.skills)
+  S.specialAtWall(w, ag)
+  assert.notEqual(JSON.stringify(w.skills), before, "a tool was spent")
+  assert.notEqual(ag.state, "camp")
+  const away = Object.assign(S.spawn(w), { x: 46.6, y: 29, dir: -1, state: "walk", special: "beamsearch" })
+  S.specialAtWall(w, away)
+  assert.equal(away.dir, 1, "facing away from home: turned")
+})

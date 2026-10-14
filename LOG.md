@@ -6034,3 +6034,24 @@ is ignored, copy shows the toast; five finished levels lead to a standup that
 holds the next level and a click skips). The pinned `generate(level, 0)` in
 the transitions test now allows the seed. `npm run check` 1004/1004; CRAP
 under 30; `npm run phone` fine on all three views with the new control.
+
+## 209 — 2026-10-15 · Level 36: the hero out of camp
+
+**Level 36 (Rooftops): stall-cutoff endings 6 → 2 of 24 colonies, home 92% →
+93%.** Every one was the colony's hero, Beam Search, after the colony stood
+it down from its camp:
+- **Stood down, a camper turned at every wall** — a hero is barred from the
+  toolbar, and the camp branch of `specialAtWall` just turned it. At a wall
+  toward home it now borrows the colony's tools the way `forceEscape` already
+  does for a stuck hero (`borrowWallTools`); facing away, it still turns.
+  6 → 4.
+- **Alone at a fixture about to fire, it turned and walked fifty cells back.**
+  The edge-wait from 204 (a lone diver at a running current) now covers any
+  fixture that is charging or firing, heroes included, as long as nobody else
+  is within six cells and it is not already inside a reach. It stays out of
+  `walkHazardZone`, which handles reaches that can be lethal all the time —
+  waiting at one of those could hold an agent for good; `walkHazardAhead`
+  only fires while the fixture is charging or firing, which passes. 4 → 2.
+Levels 1–57 × 24 colonies against 208: home 95.51% → 95.51%, stall endings 46
+→ 42, clock-outs 5 → 5, hangs 0; no level worse by 2 points. Two tests in
+`stragglers.test.js`. `npm run check` 1006/1006; CRAP under 30.
