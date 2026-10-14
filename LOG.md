@@ -4413,3 +4413,5 @@ with its own, carried at res 2 only, panel unchanged). Nothing over CRAP 30.
 
 **Next:** the umbrella parry still takes from the stock even when the agent
 has an umbrella in its hand.
+
+**Deployed** after 169 (name="build" content="8127c564"), gated on a passing check (791 tests): walkers fall when the floor goes (168), one umbrella each (169). Browser check clean.
