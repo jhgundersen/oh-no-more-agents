@@ -4429,3 +4429,49 @@ are rare and mostly come before an agent owns one, so this is a consistency
 fix, not a balance change. Tests 792.
 
 (The first commit of 170 went in with its new test failing: the test picked "another agent" when only one had been released. Fixed in the next commit; nothing was deployed in between. Commit only behind a passing check.)
+
+## 171 — 2026-10-14 · Iron and fire in the Foundry (on a branch)
+
+**Why:** level 4 was grey stone with pinpricks of ember and a lava pool in
+the corner. The Foundry needed to read as an ironworks even without a pool.
+
+**Change:** Draw-only, res 2 and above: refractory brick courses, riveted iron
+jackets, warm floor lips and lava-lit pit faces. The back wall has tapered
+furnaces with tapping arches, overhead ladles and rows of ingot moulds, against
+a stepped heat wash that strengthens below. Ladles pour intermittently, sparks
+fall and fade, sparse molten seams pulse through surviving earth, and rising
+embers have orange tails and pale cores. Heat colours are fixed in Draw rather
+than borrowing the theme's hostile red. The exit and hoist chains retain their
+existing art. No Palette, Sim or Outcome changes.
+
+Static machinery and floor light use the terrain cache. Only pours, sparks,
+seams and embers animate; their clocks and positions come from ticks, level
+and coordinates, with no RNG or world writes. Pours clip against current
+terrain, seams refuse air and steel, and every effect precedes the actors.
+
+**Checked:** `npm run stamp`, `npm run check` and `npm run crap`. Seven new
+component tests cover read-only proxies, forbidden Math.random, deterministic
+pixels, context restoration, half-pixel geometry, cache independence from time,
+pour phases and occlusion, seam pulses, actor layering and panel component
+bytes. CRAP at or above 30: **0**; maximum **28.5**, new functions at most
+**9.0**. Seeded old/new comparison over all nineteen biomes: **1,080 identical
+frames** in the other eighteen (two layouts, ticks 77/240/600, five themes,
+res 1/2); Foundry's **60** res-1/unspecified-res frames also identical, and all
+**30** res-2 frames changed. Saved baseline and comparison harness in
+`/tmp/codex-foundry/`.
+
+**Looked:** before/after levels 4, 23 and 42 at ticks 77 and 476, plus enlarged
+machinery/actor crops: `/tmp/codex-foundry/sheet.png`. The first furnace mouths
+were too dim; raised their contrast and added light spilling onto the near
+floors. Also inspected level 4 in all five themes. Faces, umbrellas, the
+Moderator and the exit remain distinct from the orange machinery.
+
+**Measured:** warmed res-2 software rasteriser, tick 476, median of nine batches
+of forty frames, old → new. Level 4: actors **1.640 → 1.723 ms**, full terrain
++ actors **11.953 → 19.754 ms**. Level 42: actors **2.144 → 2.293 ms**, full
+**15.571 → 26.447 ms**. Subway control, level 18: actors **2.645 → 2.651 ms**,
+full **31.520 → 31.483 ms**. Terrain is cached in ordinary play; these are
+Node raster times, not browser FPS.
+
+**Next:** review the Foundry's heat in longer play. Committed on
+`codex/foundry` only; no push or deployment.
