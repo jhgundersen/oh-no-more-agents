@@ -3883,3 +3883,5 @@ palm out, scuffle, throw, stagger, defeat) it reads as the door heavy at a
 glance: shaved head, shades, oxblood jacket with a lanyard badge, a palm out
 at whoever comes close, a white flash when it loses a scuffle, and it goes
 down full length. 718 tests pass; nothing over CRAP 30.
+
+**Deployed** after 145 (name="build" content="6304905e"): the Bouncer's art, its throw, the tagline. Browser check clean.
