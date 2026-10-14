@@ -3908,3 +3908,26 @@ scuffle at ticks 316–319. Tests 718.
 (The cloud test now draws 40 ticks so it reaches the umbrella frames: `drawBrawlBrolly` 90 → 11; nothing over 30.)
 
 **Deployed** after 147 (name="build" content="0d4ef0d5"): heroes in scuffles, the umbrella in the cloud. Browser check clean.
+
+## 148 — 2026-10-14 · The Subway (on a branch)
+
+Deployed 146–147 first (build in the note above). Then an eighteenth biome:
+the Subway, where the colony catches a train.
+
+**Placement took five tries.** A train on the last corridor between its
+start and the door: 51 boardings in 40 levels, because the colony comes into
+that floor all over it. At the arrival of the corridor above: worse. The
+first corridor from the hatch to its first hole: the first real way down is
+usually a few cells from the hatch, so a line fitted on a third of levels.
+What works: trace the route (hatch → each floor's first way down → door) and
+put the line on the floor with the longest walk (55 of 60 levels, average 52
+cells), and let it pick up anybody walking its way beside it as it passes as
+well as at the platform. Also: a roughened floor puts walkers a row or two
+off the line's height; counted.
+
+**Measured** (240 Subway plays vs no train): 93.10% vs 92.85% home, 0.4 s
+faster a level, no hangs; about five trips and three riders a level. `npm run
+sim` 100% / 94%; materials inert. Tests: `test/trains.test.js`. Biome wiring
+as for the Rooftops: mission "GET THE COMMUTERS ON THE TRAIN", events Signal
+Failure / Engineering Works / Rush Hour, Palette `% 18` with TILE. The six
+art tests fail until Codex has drawn it.

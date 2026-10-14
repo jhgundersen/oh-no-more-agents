@@ -534,6 +534,28 @@ toolbar cost; specials do not ride.
 - Measured neutral (94.7% vs 94.9% home over 240 Rooftops plays; 188 rides on
   60 levels). Like the crane, it is there for the ride.
 
+## The Subway
+
+The eighteenth biome: station walls in section (`skinSubway`: DIRT glazed
+tiles on a ROCK grout grid, an ORE line-colour band every few rows). Palette
+`% 18`, tile green. Its mechanism is a train (`placeTrains` … `stepTrains`,
+`w.trains`, one at most): on the floor of the colony's route with the longest
+walk (`trainLeg` traces hatch → each floor's first way down → the door), from
+a platform just past where the colony comes in to one a few strides short of
+where it leaves. It waits 45 ticks at the first, then runs; anybody walking
+the line's way beside it gets on (state `"train"`, hidden), at the platform
+or as it passes them; at the far platform they get off one at a time,
+walking the same way, and it goes back empty at twice the speed.
+
+- **Never past the way down.** The line ends before the floor's first hole to
+  another corridor (`firstHoleAfter`): carrying riders over it would carry
+  them off their route. Obstacle pits that are not a way down, the rails cross.
+- **Where agents arrive is not where the plan says.** Platforms at the
+  corridor start, the handoff, or the first hole each missed most of the
+  colony; tracing the route and boarding on the move is what works (about
+  45% of agents walking the stretch ride).
+- Measured +0.25 (93.10% vs 92.85% home, 240 Subway plays), 0.4 s faster.
+
 ## Staying current
 
 A tab is left open for days, so a deploy has to reach it without anyone pressing

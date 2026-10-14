@@ -10421,6 +10421,7 @@ function drawDiverBubbles(ctx, w, pal, ag, ox, oy, drop) {
 function drawAgent(ctx, w, pal, ag, opts) {
   if (ag.state === "zip") return drawZipAgent(ctx, w, pal, ag, opts)
   if (ag.state === "brawl") return   // inside the guard's fight cloud
+  if (ag.state === "train") return   // aboard; drawn as the train
   if (ag.state === "hooked") return drawHookedAgent(ctx, w, pal, ag, opts)
   var k = w.k
   var C = k.CELL

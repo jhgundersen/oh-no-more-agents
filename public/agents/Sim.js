@@ -130,7 +130,7 @@ var SKILL_LABELS = {
 // putting a new one anywhere but the end would re-skin every level above it.
 // Palette.js derives the same index with the same rule and must be kept in
 // step — see the note over poolTint there.
-var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room", "Building Site", "Clock Tower", "Rooftops"]
+var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room", "Building Site", "Clock Tower", "Rooftops", "Subway"]
 
 // A small job on the route gives each biome a premise beyond merely reaching
 // the door. These are deliberately one mechanism with different casts: an
@@ -168,6 +168,7 @@ var MISSION_SPECS = {
   // Nobody told the night shift the site was closing. Hard hats on, out.
   "Building Site": { id: "crew",  verb: "SEND THE CREW HOME",    kind: "civilian", count: 3 },
   "Rooftops":      { id: "neighbours", verb: "WALK THE NEIGHBOURS HOME", kind: "civilian", count: 3 },
+  "Subway":        { id: "commuters", verb: "GET THE COMMUTERS ON THE TRAIN", kind: "civilian", count: 3 },
   // Up in the works since the last time it was wound. Nobody noticed.
   "Clock Tower": { id: "keepers", verb: "FREE THE CLOCKMAKERS",  kind: "civilian", count: 2 }
 }
@@ -889,6 +890,7 @@ function newWorld(level, attempt, colonySeed) {
     pads: [],
     cranes: [],       // the Building Site's gantry cranes; see placeCranes
     ziplines: [],     // the Rooftops' washing-line cables; see placeZiplines
+    trains: [],       // the Subway's shuttle on the last corridor; see placeTrains
     gates: [],        // the Clock Tower's clockwork gates; see placeGates         // the Spaceship's transporter pairs; see placePads
     sinkholes: [],    // the Cavern's thin floors; see placeSinkholes
     k: K,
@@ -1436,6 +1438,7 @@ var BIOME_MECHANISMS = {
   "Mail Room": placeTubes,
   "Building Site": placeCranes,
   "Rooftops": placeZiplines,
+  "Subway": placeTrains,
   "Clock Tower": placeGates
 }
 
@@ -2237,6 +2240,140 @@ function zipLetGo(ag) {
   ag.zip = -1
 }
 
+// The Subway's own mechanism: the train. A shuttle runs along one floor of the
+// colony's route — the one with the longest walk on it, from a platform just
+// past where the colony comes in to one a few strides short of where it
+// leaves (its first way down, or the door). It
+// waits with its doors open, anybody walking the line's way steps aboard,
+// and it runs them down the line, past whatever is on the floor in between,
+// and lets them off walking the same way. Then it goes back empty for more.
+// It never runs past the first hole: that is the colony's way down, and a
+// train that carried them over it would carry them off their route.
+// The rails are behind the corridor, so nobody walking it is in the way.
+var TRAIN_CAP = 12
+var TRAIN_DWELL = 45       // ticks waiting with the doors open at the first platform
+var TRAIN_SPEED = 0.45     // cells a tick at full speed
+var TRAIN_ACCEL = 0.02
+var TRAIN_ALIGHT = 4       // ticks between riders getting off
+
+function placeTrains(w, corridors) {
+  if (w.ascending) return
+  var best = null, arrive = w.hatch.x
+  for (var k = 0; k < corridors.length; k++) {
+    var leg = trainLeg(w, corridors, k, arrive)
+    if (!leg) break
+    if (!best || leg.span > best.span) best = leg
+    arrive = leg.end
+  }
+  if (!best || !best.span) return
+  w.trains.push({ ax: best.a, bx: best.b, y: best.c.floorY - 1, dir: best.c.dir, x: best.a, v: 0,
+                  phase: "wait", t: 0, riders: [], trips: 0 })
+}
+
+// One floor of the colony's route: where it comes in, and where it leaves —
+// its first way down, or for the last floor the door. A line can run from just
+// past the one to a few strides short of the other.
+function trainLeg(w, corridors, k, arrive) {
+  var c = corridors[k], last = k === corridors.length - 1
+  var a = padSpot(w, c, arrive + c.dir * 5)
+  if (a < 0) return null
+  var end = last ? (c.dir > 0 ? w.exit.x : w.exit.x + w.exit.w) : firstHoleAfter(w, c, a, corridors)
+  var b = padSpot(w, c, end - c.dir * 5)
+  if (b < 0 || (b - a) * c.dir < 12 || (end - b) * c.dir < 2) return { c: c, span: 0, end: end }
+  return { c: c, a: a, b: b, span: (b - a) * c.dir, end: end }
+}
+
+// The first way down from this floor past x, walking its way, which the line
+// must stop short of (a train that carried them over it would carry them off
+// their route).
+function firstHoleAfter(w, c, x, corridors) {
+  var end = c.dir > 0 ? c.x1 : c.x0
+  for (var hx = x; hx !== end; hx += c.dir) {
+    // A pit in this floor that is only an obstacle, the rails cross; a hole
+    // down to another corridor's floor is the way down, and the line ends.
+    var land = c.floorY - 1 + dropDepth(w, hx, c.floorY - 1)
+    if (land > c.floorY && corridorWithFeet(corridors, land)) return hx
+  }
+  return end
+}
+
+function stepTrains(w) {
+  for (var i = 0; i < w.trains.length; i++) stepTrain(w, w.trains[i], i)
+}
+
+var TRAIN_PHASES = { wait: trainWait, run: trainRun, drop: trainDrop, back: trainBack }
+
+function stepTrain(w, tr, index) {
+  tr.t++
+  TRAIN_PHASES[tr.phase](w, tr, index)
+  for (var r = 0; r < tr.riders.length; r++) {
+    var ag = agentById(w, tr.riders[r])
+    if (ag) { ag.x = tr.x + 0.5; ag.y = tr.y }
+  }
+}
+
+// Doors open: anybody on the platform going the line's way gets on. It leaves
+// when full, or when it has waited its time with somebody aboard.
+function trainWait(w, tr, index) {
+  trainBoard(w, tr, index)
+  if (tr.riders.length >= TRAIN_CAP || tr.t >= TRAIN_DWELL) { tr.phase = "run"; tr.t = 0 }
+}
+
+// Anybody beside the train going the line's way gets on — at the platform, or
+// as it passes them on the way down the line (it is a slow train).
+function trainBoard(w, tr, index) {
+  for (var j = 0; j < w.agents.length && tr.riders.length < TRAIN_CAP; j++) {
+    var ag = w.agents[j]
+    if (ag.gone || ag.special || ag.state !== "walk" || ag.dir !== tr.dir) continue
+    // Within two rows: the floor is roughened, and a walker on a bump is
+    // still on the platform.
+    if (Math.abs(ag.x - (tr.x + 0.5)) > 1.5 || Math.abs(Math.floor(ag.y) - tr.y) > 2) continue
+    if ((tr.bx - ag.x) * tr.dir < 4) continue          // nearly there anyway
+    ag.state = "train"
+    ag.trainI = index
+    ag.idle = 0
+    tr.riders.push(ag.id)
+    w.lastEvent = "all aboard"
+  }
+}
+
+function trainRun(w, tr, index) {
+  trainBoard(w, tr, index)
+  if (!trainMove(tr, tr.bx)) return
+  tr.trips++
+  tr.phase = tr.riders.length ? "drop" : "back"
+  tr.t = 0
+}
+
+// Empty, it goes back at twice the speed.
+function trainBack(w, tr) {
+  if (trainMove(tr, tr.ax, 2)) { tr.phase = "wait"; tr.t = 0 }
+}
+
+// Speeds up out of a station and slows into the next. True on arrival.
+function trainMove(tr, to, pace) {
+  var top = TRAIN_SPEED * (pace || 1), acc = TRAIN_ACCEL * (pace || 1)
+  var left = Math.abs(to - tr.x)
+  var brake = Math.sqrt(2 * acc * left)
+  tr.v = Math.min(top, tr.v + acc, Math.max(acc, brake))
+  if (left <= tr.v) { tr.x = to; tr.v = 0; return true }
+  tr.x += tr.v * (to > tr.x ? 1 : -1)
+  return false
+}
+
+// One rider off every few ticks, walking on the line's way.
+function trainDrop(w, tr) {
+  if (tr.t % TRAIN_ALIGHT) return
+  var id = tr.riders.shift()
+  var ag = id === undefined ? null : agentById(w, id)
+  if (ag && ag.state === "train") {
+    ag.state = "walk"; ag.dir = tr.dir; ag.idle = 0; ag.still = 0; ag.fall = 0
+    ag.x = tr.bx + 0.5; ag.y = tr.y
+    ag.trainI = -1
+  }
+  if (!tr.riders.length) { tr.phase = "back"; tr.t = 0 }
+}
+
 function placeMission(w, corridors) {
   // Optional, and rolled from its own stream so adding missions does not
   // reshuffle terrain, hazards, specials or events on established levels.
@@ -2470,7 +2607,8 @@ var BIOME_SKINS = {
   "Mail Room": skinMailRoom,
   "Building Site": skinBuildingSite,
   "Clock Tower": skinClockTower,
-  "Rooftops": skinRooftops
+  "Rooftops": skinRooftops,
+  "Subway": skinSubway
 }
 
 function skinSpaceship(w, rng) {
@@ -2776,6 +2914,23 @@ function skinRooftops(w, rng) {
       if (hy < 3 && hy >= Math.floor(ridge / 2) - 1) mat = ORE
       else if (hy % 3 === 0 || (hx + (Math.floor(hy / 3) % 2) * 2) % 4 === 0) mat = ROCK
       if (hx === 2 && hy < 4 && hy > 0) mat = ROCK
+      setCell(w, x, y, mat)
+    }
+}
+
+// Station walls in section: glazed tiles (DIRT) on a grout grid (ROCK) with
+// a coloured line band (ORE) running through every few rows, the way a line's
+// colour runs along its platforms.
+function skinSubway(w, rng) {
+  var x, y
+  var band = irand(rng, 7, 9), oy = irand(rng, 0, band - 1)
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++) {
+      if (at(w, x, y) === STEEL) continue
+      var row = (y + oy) % band
+      var mat = DIRT
+      if (row === 0 || row === 1) mat = ORE
+      else if (row % 2 === 0 || (x + (row >> 1) % 2) % 3 === 0) mat = ROCK
       setCell(w, x, y, mat)
     }
 }
@@ -5877,6 +6032,11 @@ var EVENTS = [
   { id: "downpour", name: "Downpour",         biome: "Rooftops", mech: "collapse", at: "floor", span: 6, deep: 2 },
   { id: "extension",name: "Loft Conversion",  biome: "Rooftops", mech: "growth",   span: 12, high: 2 },
   { id: "powercut", name: "Power Cut",        biome: "Rooftops", mech: "blackout", mult: 0, ticks: 300 },
+
+  // --- Subway ---
+  { id: "signalfail", name: "Signal Failure",   biome: "Subway", mech: "blackout", mult: 0, ticks: 300 },
+  { id: "engineering", name: "Engineering Works", biome: "Subway", mech: "collapse", at: "floor", span: 6, deep: 2 },
+  { id: "rushhour", name: "Rush Hour",         biome: "Subway", mech: "blackout", mult: 2, ticks: 360 },
 
   // --- Clock Tower ---
   { id: "deadlock", name: "Deadlock",         biome: "Clock Tower", mech: "blackout", mult: 0, ticks: 280 },
@@ -10210,6 +10370,7 @@ function step(w) {
   stepPads(w)
   stepCranes(w)
   stepZiplines(w)
+  stepTrains(w)
   stepGates(w)
   stepSinkholes(w)
   var counts = stepAgents(w)
