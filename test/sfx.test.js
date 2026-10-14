@@ -109,3 +109,12 @@ test("the AGI's homecoming replaces the ordinary home chirp rather than adding t
   assert.equal(golden, 6, "six notes of arpeggio and nothing else")
   assert.equal(ordinary, 2)
 })
+
+test("a pep talk has a cue", () => {
+  const { sfx, played } = load()
+  sfx.setOn(true)
+  const w = { ...world(), ticks: 50 }
+  sfx.observe(w); sfx.observe(w)
+  w.peps = 1; sfx.observe(w)
+  assert.equal(played.length, 2)
+})

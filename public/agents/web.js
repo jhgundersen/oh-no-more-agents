@@ -627,6 +627,27 @@
 
   function cycleSpeed() { speedIndex = (speedIndex + 1) % SPEED_INTERVALS.length; restartClock(); saveState(); render() }
   function toggleLabels() { showLabels = !showLabels; paintActors(); saveState(); render() }
+  // The agent drawn under a click, in art pixels: the sprite stands on its
+  // cell's floor and is about two cells tall, so the target is the body, with
+  // a little slack for a thumb.
+  function agentUnder(ev) {
+    var r = el.boardWrap.getBoundingClientRect(), k = world.k
+    var ax = (ev.clientX - r.left) / r.width * k.COLS * k.CELL
+    var ay = (ev.clientY - r.top) / r.height * k.ROWS * k.CELL
+    var best = null, bestD = 9
+    for (var i = 0; i < world.agents.length; i++) {
+      var ag = world.agents[i]
+      if (ag.gone || ag.state === "saved") continue
+      var d = Math.max(Math.abs(ag.x * k.CELL - ax), Math.abs((ag.y + 1) * k.CELL - 7 - ay))
+      if (d < bestD) { best = ag; bestD = d }
+    }
+    return best
+  }
+
+  // The live world, read-only, for tools and tests driving the page
+  // (tools/phone.js, tools/fps.js, test/pep.test.js). Nothing on the page uses it.
+  window.AgentWorld = function () { return world }
+
   function togglePause() {
     running = !running
     render()
@@ -796,7 +817,14 @@
     window.addEventListener("orientationchange", fitBoard)
     document.addEventListener("fullscreenchange", afterFullscreen)
     document.addEventListener("webkitfullscreenchange", afterFullscreen)
-    el.boardWrap.addEventListener("click", togglePause)
+    // A tap on an agent is a pep talk (Sim's pepTalk); anywhere else, or
+    // while paused, it is pause as it always was.
+    el.boardWrap.addEventListener("click", function (ev) {
+      var ag = running && world ? agentUnder(ev) : null
+      if (!ag) { togglePause(); return }
+      pepTalk(world, ag)
+      paintActors()
+    })
 
     // Keyboard hints double as touch controls.
     var buttons = {

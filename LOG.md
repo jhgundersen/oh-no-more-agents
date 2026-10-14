@@ -5776,3 +5776,42 @@ files.
 **Tests:** `duck.test.js` (8), `fps.test.js` (3, one a 1-second real Chromium
 measurement). `npm run check` 974/974; CRAP worst 30.0 (`drawHeldDuck` keeps
 `drawAgent` under the gate).
+
+## 204 — 2026-10-15 · Level 10 under four, and a pep talk for whoever is watching
+
+**Level 10 (Trench): stall-cutoff endings 9 → 3 of 24 colonies, home 90% →
+92%.** With the bottom crossing bridged (199–200), the straggler now reached
+the current between it and the door and lost there:
+- **After a sweep a diver kept walking the way the water carried it.**
+  `stepSweep` turns a diver to face the way it is carried — right while it is
+  carried — and nothing ever turned it back, so after every sweep it walked
+  the length of the corridor away from home and the stall cutoff ended the
+  level on the way. The heading it had when the current took it (`sweptFrom`)
+  is given back when the sweep ends. This is the fix that moved the number.
+- **Alone at a current that is charging or running, a diver waits at its edge**
+  (`currentAhead`, `aloneHere`) instead of turning and walking the corridor
+  back. Only alone: with the whole colony queueing at the edge more of them
+  were in reach when it came on, and level 10 lost more than it gained (90% →
+  86%); "last out" was too late a test — the straggler meets the current while
+  one or two others are still somewhere.
+Levels 1–57 × 24 colonies against 203: home 95.38% → 95.41%, stall endings 51
+→ 45, clock-outs 10 → 10, hangs 0; no level worse by 2 points.
+
+**Pep talks — one light way for the watcher to take part.** Tap or click an
+agent and it hears it: YOU'RE ABSOLUTELY RIGHT! · GREAT QUESTION! · BRILLIANT
+INSIGHT! · SHARP OBSERVATION! · PERFECT. SHIP IT! · LOVE THIS APPROACH! — a
+bubble, the AGI's glitter for a moment, a two-note chirp, and a small nudge: a
+walker that has been stuck for 120 ticks turns and tries the other way, any
+other walker steps out 20% faster for three seconds (`pepTalk`). Each agent at
+most once every 15 seconds and the board at most once every two-thirds of a
+second, so tapping cannot play the level; the stall rules still see how long a
+stuck agent has been stuck. A tap anywhere else on the board, or while paused,
+still pauses. Nothing in the simulation runs without a tap, so the play-test
+and the global counter are untouched — the counter only ever sees ordinary
+rescues. The page exposes the live world read-only as `window.AgentWorld()`
+for tools and tests. The font gains an apostrophe.
+
+**Tests:** `pep.test.js` (6, one a real touch tap in headless Chromium at
+844×390: an agent tapped gets a pep talk and the game keeps running, empty
+board tapped pauses), two more in `stragglers.test.js`, a pep cue in
+`sfx.test.js`. `npm run check` 983/983; CRAP worst 30.0.

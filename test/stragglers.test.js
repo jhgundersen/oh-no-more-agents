@@ -89,3 +89,30 @@ test("a hero on a nearly-done cooldown waits at a wall toward home; far off, or 
   S.specialAtWall(w, long)
   assert.equal(long.dir, -1, "too long a wait: walk it off")
 })
+
+test("out of a current, a diver faces where it was going again", () => {
+  const w = box(90)
+  const ag = Object.assign(S.spawn(w), { x: 50.5, y: 29, dir: 1, state: "walk", sweptFor: 1, sweptDir: -1, sweptFrom: 1, sweptX0: 45, sweptX1: 55 })
+  S.tickAgentTimers(w, ag)
+  assert.equal(ag.sweptFor, 0)
+  assert.equal(ag.dir, 1, "home was east")
+  assert.equal(ag.sweptFrom, 0)
+})
+
+test("alone at a current that is running, a diver waits at its edge; in company, or once inside, it does not", () => {
+  const w = box(90)
+  w.hazards = [{ kind: "current", phase: "fire", zx0: 45, zx1: 52, zy0: 25, zy1: 29, dir: -1, known: true, throttled: 0, wrecked: false }]
+  // Its reach runs two cells past the zone either side, so the edge is x43.
+  const ag = Object.assign(S.spawn(w), { x: 42.2, y: 29, dir: 1, state: "walk" })
+  w.agents = [ag]
+  assert.ok(S.currentAhead(w, ag, 43.1))
+  assert.equal(S.aloneHere(w, ag, 6), true)
+  S.walkHazardAhead(w, ag, 43.1, 43, 29)
+  assert.equal(ag.dir, 1); assert.equal(ag.x, 42.2); assert.ok(ag.waitFor > 0)
+  const friend = Object.assign(S.spawn(w), { x: 39, y: 29, state: "walk" }); w.agents.push(friend)
+  assert.equal(S.aloneHere(w, ag, 6), false)
+  w.hazards[0].phase = "rest"
+  assert.equal(S.currentAhead(w, ag, 43.1), null, "resting: walk on")
+  w.hazards[0].phase = "fire"; ag.x = 46.5
+  assert.equal(S.currentAhead(w, ag, 47.1), null, "already in it")
+})

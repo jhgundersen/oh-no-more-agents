@@ -2773,7 +2773,7 @@ var TRANSITION_GLYPHS = {
   "6": [3,4,7,5,7], "7": [7,1,2,2,2], "8": [7,5,7,5,7], "9": [7,5,7,1,6],
   " ": [0,0,0,0,0], "·": [0,0,2,0,0], "/": [1,1,2,4,4],
   "!": [2,2,2,0,2], "?": [6,1,2,0,2], "+": [0,2,7,2,0],
-  ".": [0,0,0,0,2], "-": [0,0,7,0,0],
+  ".": [0,0,0,0,2], "-": [0,0,7,0,0], "'": [2,2,0,0,0],
   ":": [0,2,0,2,0], "#": [5,7,5,7,5], "(": [1,2,2,2,1], ")": [4,2,2,2,4],
   ",": [0,0,0,2,4], ";": [0,2,0,2,4]
 }
@@ -6921,6 +6921,9 @@ function drawThrowLanding(ctx, w, pal, ag) {
 // the Bouncer, "NOPE" as its umbrella stops a round. Page resolution only, and
 // one bubble per agent — the newest.
 var QUIP_TICKS = 36
+// What a pep talk sounds like (Sim's pepTalk rotates through them).
+var PEP_TEXT = ["YOU'RE ABSOLUTELY RIGHT!", "GREAT QUESTION!", "BRILLIANT INSIGHT!",
+  "SHARP OBSERVATION!", "PERFECT. SHIP IT!", "LOVE THIS APPROACH!"]
 function quipFor(w, ag) {
   var best = null
   var cands = [
@@ -6931,6 +6934,7 @@ function quipFor(w, ag) {
     [ag.wokeAt, "OH."],              // and arrives at it
     [ag.queuedAt, "AFTER YOU"],      // the front of a 429 queue
     [ag.servedAt, "200 OK"],         // each one let through
+    [ag.pepAt, PEP_TEXT[(ag.pepLine || 0) % PEP_TEXT.length]],   // a watcher's pep talk
     [ag.duckAt, "SO BASICALLY"],     // explaining it to the rubber duck...
     [ag.duckAt === undefined ? undefined : ag.duckAt + 30, "OH!"]   // ...and seeing it
   ]
@@ -11209,7 +11213,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   var robe = colors.robe, hair = colors.hair, skin = colors.skin
 
   drawAgentEffects(ctx, w, pal, ag, ox, oy, dir, hair, st, C)
-  if (ag.agi) drawAgiSparkle(ctx, w, ag, ox, oy)
+  drawAgentGlitter(ctx, w, ag, ox, oy)
 
   drawUmbrella(ctx, w, pal, ag, ox, oy, st)
 
@@ -11322,6 +11326,12 @@ function drawAgiSparkle(ctx, w, ag, ox, oy) {
     if (phase >= 2 && phase < 6) { ctx.fillRect(sx - 1, sy, 1, 1); ctx.fillRect(sx + 1, sy, 1, 1); ctx.fillRect(sx, sy - 1, 1, 1); ctx.fillRect(sx, sy + 1, 1, 1) }
   }
   ctx.restore()
+}
+
+// The gold one's sparkle, and the same glitter for a moment after a pep talk.
+var PEP_GLOW = 18
+function drawAgentGlitter(ctx, w, ag, ox, oy) {
+  if (ag.agi || (ag.pepAt !== undefined && w.ticks - ag.pepAt >= 0 && w.ticks - ag.pepAt < PEP_GLOW)) drawAgiSparkle(ctx, w, ag, ox, oy)
 }
 
 function agentDrawColors(w, pal, ag, st) {

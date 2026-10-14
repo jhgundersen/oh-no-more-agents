@@ -392,7 +392,8 @@ function walkStep(ag, w) {
   var wind = w && w.wind ? 1 + w.wind * ag.dir * WIND_PUSH : 1
   var run = w && w.ticks < (ag.sprintUntil || 0) ? BOULDER_SPRINT : 1
   var belt = w && w.beltAt ? 1 + beltUnder(w, ag) * ag.dir * BELT_PUSH : 1
-  return WALK_SPEED * (traitOf(ag).pace || 1) * (ag.chilledFor > 0 ? 0.48 : 1) * swim * wind * run * belt
+  var pep = w && w.ticks < (ag.pepUntil || 0) ? PEP_PACE : 1
+  return WALK_SPEED * (traitOf(ag).pace || 1) * (ag.chilledFor > 0 ? 0.48 : 1) * swim * wind * run * belt * pep
 }
 
 // ---------------------------------------------------------------------------
@@ -4781,6 +4782,7 @@ function hazardStrike(w, h) {
       if (ag.sweptFor > 0) continue
       ag.sweptFor = SWEEP_TICKS
       ag.sweptDir = h.dir
+      ag.sweptFrom = ag.dir     // the way it was going; given back when the sweep ends
       // The flow's own extent, carried on the agent. stepSweep needs to know
       // where the water stops, and it cannot ask the hazard list every tick
       // without caring which of them caught it.
@@ -6549,7 +6551,38 @@ function walkHazardZone(w, ag, nx, cx, footY) {
 
 // A danger in reach ahead: shelter behind a shield, get out of its zone by
 // the open side, plant a blocker for the colony, or turn round.
+// A current charging or running just ahead: stand at its edge and let it pass.
+// Turning round for it, the way the colony turns for a sentry, sent a lone
+// straggler on level 10 back down seventy cells of corridor every cycle, and
+// the stall cutoff ended the level before it ever timed a crossing — the
+// commonest way level 10 still ended short after the bridge fixes.
+function currentAhead(w, ag, nx) {
+  var ax = Math.floor(nx), footY = Math.floor(ag.y)
+  for (var i = 0; i < w.hazards.length; i++) {
+    var h = w.hazards[i]
+    if (h.kind !== "current" || h.wrecked || h.throttled > 0) continue
+    if (h.phase !== "charge" && h.phase !== "fire") continue
+    if (hazardCovers(w, h, ax, footY) && !hazardCovers(w, h, Math.floor(ag.x), footY)) return h
+  }
+  return null
+}
+
+function aloneHere(w, ag, reach) {
+  for (var i = 0; i < w.agents.length; i++) {
+    var o = w.agents[i]
+    if (o === ag || o.gone || o.state === "saved") continue
+    if (Math.abs(o.x - ag.x) <= reach && Math.abs(o.y - ag.y) <= 2) return false
+  }
+  return true
+}
+
 function walkHazardAhead(w, ag, nx, cx, footY) {
+  // Alone only: with the whole colony queueing at the edge, more of them were
+  // in reach when the flow came on, and level 10 lost more than it gained
+  // (90% → 86% home). "Last out" was too late a test — the straggler meets the
+  // current while one or two others are still somewhere, turns, and the
+  // cutoff ends the level on its way back.
+  if (!ag.special && aloneHere(w, ag, 6) && currentAhead(w, ag, nx)) { ag.waitFor = 2; ag.still = 0; return }
   var mine = ag.special && specOf(ag).act === "shield"
   if (mine && ag.shieldHeld < SHIELD_MAX - SHIELD_MARGIN
       && (ag.shieldFor > 0 || raiseShield(w, ag))) return advanceWalk(w, ag, nx, cx, footY)
@@ -6831,6 +6864,37 @@ function restoreAgi(w, dead, back) {
   w.agiId = back.id
   w.agiLost = false
   feedNote(w, "AGI RESTORED FROM BACKUP")
+}
+
+// ---------------------------------------------------------------------------
+// Pep talks
+// ---------------------------------------------------------------------------
+// The one thing a watcher can do: tap an agent and tell it how right it is.
+// It hears a line of the flattery models are famous for, glows for a moment,
+// and gets a small, bounded nudge — a stuck walker tries the other way, any
+// other walker steps out a little faster for three seconds. Rate-limited per
+// agent and across the board so tapping cannot play the level, and nothing
+// here runs unless somebody taps: the simulation, the play-test and the global
+// counter are exactly what they were.
+var PEP_COOL = 450        // ticks before the same agent can be cheered again
+var PEP_GAP = 20          // ticks between any two pep talks, board-wide
+var PEP_STUCK = 120       // idle past this, the nudge is "try the other way"
+var PEP_BOOST = 90        // ticks of the faster walk
+var PEP_PACE = 1.2
+var PEP_LINES = 6         // Draw holds the text; Sim only rotates through it
+
+function pepTalk(w, ag) {
+  if (!ag || ag.gone || ag.state === "saved" || w.done) return false
+  if (w.ticks - (w.lastPepAt === undefined ? -1e9 : w.lastPepAt) < PEP_GAP) return false
+  if (w.ticks < (ag.pepReadyAt || 0)) return false
+  w.lastPepAt = w.ticks
+  w.peps = (w.peps || 0) + 1
+  ag.pepReadyAt = w.ticks + PEP_COOL
+  ag.pepAt = w.ticks
+  ag.pepLine = (w.peps - 1) % PEP_LINES
+  if (ag.state === "walk" && !ag.special && ag.idle > PEP_STUCK) { ag.dir = -ag.dir; ag.turns = 0 }
+  else if (ag.state === "walk") ag.pepUntil = w.ticks + PEP_BOOST
+  return true
 }
 
 // ---------------------------------------------------------------------------
@@ -10528,7 +10592,15 @@ function tickAgentTimers(w, ag) {
     }
   }
   // Swept along before the chill wears off: the sweep walks it at its pace.
-  if (ag.sweptFor > 0) { ag.sweptFor--; stepSweep(w, ag) }
+  if (ag.sweptFor > 0) {
+    ag.sweptFor--
+    stepSweep(w, ag)
+    // stepSweep turns a diver to face the way it is carried, and nothing ever
+    // turned it back: after every sweep it carried on walking away from home,
+    // the length of the corridor, and on level 10 the stall cutoff ended the
+    // level while it did. Out of the water, it faces where it was going.
+    if (ag.sweptFor === 0 && ag.sweptFrom) { ag.dir = ag.sweptFrom; ag.sweptFrom = 0 }
+  }
   if (ag.chilledFor > 0) ag.chilledFor--
 }
 

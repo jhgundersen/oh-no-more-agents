@@ -17,7 +17,7 @@
   var last = {}            // sound name -> time it last played (ms)
   var seen = null          // what the previous tick looked like
 
-  var GAPS = { chime: 600, zing: 120, whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0, clang: 200, radio: 800, jingle: 600, dream: 400, wake: 300, busy: 1500, served: 90, agi: 600, agiHome: 0, agiLost: 0, quack: 300, plop: 300 }
+  var GAPS = { chime: 600, zing: 120, whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0, clang: 200, radio: 800, jingle: 600, dream: 400, wake: 300, busy: 1500, served: 90, agi: 600, agiHome: 0, agiLost: 0, quack: 300, plop: 300, pep: 120 }
 
   function ensure() {
     if (ctx) return ctx
@@ -99,6 +99,7 @@
     // The rubber duck: a plop as it lands, a squeaky quack when it is picked up.
     plop: function () { tone("sine", 900, 300, 0.09, 0.4) },
     quack: function () { tone("square", 760, 520, 0.08, 0.3); tone("square", 700, 480, 0.09, 0.3, 0.1) },
+    pep: function () { tone("square", 1047, 1047, 0.05, 0.25); tone("square", 1568, 1568, 0.08, 0.25, 0.06) },   // you're absolutely right
     fanfare: function (good) {
       var notes = good ? [523, 659, 784, 1047] : [392, 330, 262, 196]
       for (var i = 0; i < notes.length; i++) tone("square", notes[i], notes[i], 0.11, 0.35, i * 0.1)
@@ -141,7 +142,7 @@
       saved: w.saved, lost: w.lost, parries: w.umbrellaSaves || 0, done: w.done,
       dreams: w.hallucinations || 0, wakes: count(w, "wokeAt"), served: count(w, "servedAt"),
       limited: w.rateLimited || 0, agi: w.agiId >= 0, agiHome: !!w.agiHome, agiLost: !!w.agiLost,
-      duck: !!w.duck, ducked: w.ducked || 0
+      duck: !!w.duck, ducked: w.ducked || 0, peps: w.peps || 0
     }
   }
 
@@ -169,6 +170,7 @@
     if (now.agi && !was.agi) play("agi")
     if (now.duck && !was.duck && !now.ducked) play("plop")
     if (now.ducked > was.ducked) play("quack")
+    if (now.peps > was.peps) play("pep")
     // The AGI's own cue takes the place of the ordinary one for that agent.
     if (now.agiHome && !was.agiHome) play("agiHome")
     else if (now.saved > was.saved) play("home")
