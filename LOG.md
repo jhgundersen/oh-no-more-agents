@@ -3990,3 +3990,5 @@ behind the walkers, lit windows with riders' silhouettes, doors open at the
 platforms, yellow edge markings at both stops. Its full repaint costs about
 twice the Factory's in the software rasteriser (31.7 vs 15.1 ms), but terrain
 is cached and the actor pass is 2.5 ms. 745 tests pass; nothing over CRAP 30.
+
+**Deployed** after 149 (name="build" content="bf7e9f4d"): the Subway and its train. Browser check clean.
