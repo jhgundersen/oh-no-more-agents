@@ -10271,6 +10271,7 @@ var LOOP_BUCKET = 5
 var LOOP_PASSES = 8
 
 var STUCK_LIMIT = PATIENCE + 240
+var HERO_LAST_PATIENCE = 200   // see watchProgress
 
 // Stuck in one cell for this long: dig instead.
 var STILL_ESCAPE = 130
@@ -10759,7 +10760,17 @@ function watchProgress(w, ag) {
   // Getting nowhere for long enough: stop waiting for the budget to allow it
   // (see forceEscape). Only from a walk, so it never interrupts work already
   // under way.
-  if (ag.state === "walk" && ag.idle > PATIENCE - traitOf(ag).digBias) forceEscape(w, ag)
+  //
+  // Sooner for a hero that is one of the last out. The stall cutoff ends a
+  // nearly finished level once nobody has got closer to home for 300 ticks,
+  // well inside PATIENCE, so a hero lost on the wrong floor never reached the
+  // rescue that would have lent it the colony's tools — level 83's Chain of
+  // Thought, in 9 of 12 colonies. Everyone, not just heroes, measured worse:
+  // stragglers rescued early ran levels into the clock instead. Not on a tower:
+  // its way home is a lift, and a rescue there built and slid the hero into
+  // corners (level 104 lost six points).
+  var patience = ag.special && lastOut(w) && !w.lifts.length ? HERO_LAST_PATIENCE : PATIENCE - traitOf(ag).digBias
+  if (ag.state === "walk" && ag.idle > patience) forceEscape(w, ag)
 
   // Recovery gets first refusal. On a long corridor the fifth pass and the
   // patience limit can land on the same tick; counting first condemned the

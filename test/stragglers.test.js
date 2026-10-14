@@ -232,3 +232,21 @@ test("with home below, a hero waits out its cooldown only at the wall on the way
   S.specialAtWall(w, east)
   assert.equal(east.dir, -1, "turns at the other")
 })
+
+test("a hero among the last out gets the rescue after 200 idle ticks, not 900 — except on a tower", () => {
+  const w = box(90)
+  w.special = "wraith"; w.specialSpec = S.specialSpec("wraith")
+  w.released = w.toRelease; w.saved = w.toRelease - 1
+  const hero = Object.assign(S.spawn(w), { x: 40.5, y: 29, dir: 1, state: "walk", special: "wraith", idle: S.HERO_LAST_PATIENCE + 1, markD: 0, goalMark: S.goalX(w, { x: 40, y: 29 }), rescueCool: 0 })
+  w.agents = [hero]
+  S.watchProgress(w, hero)
+  assert.equal(hero.rescueCool, 90, "the rescue ran (specialEscape sets its throttle)")
+  const plain = Object.assign(S.spawn(w), { x: 40.5, y: 29, dir: 1, state: "walk", idle: S.HERO_LAST_PATIENCE + 1, markD: 0, rescueCool: 0 })
+  plain.goalMark = S.goalX(w, plain); w.agents = [plain]
+  S.watchProgress(w, plain)
+  assert.equal(plain.idle, S.HERO_LAST_PATIENCE + 2, "an ordinary straggler keeps the long patience")
+  const tower = Object.assign(S.spawn(w), { x: 40.5, y: 29, dir: 1, state: "walk", special: "wraith", idle: S.HERO_LAST_PATIENCE + 1, markD: 0, rescueCool: 0 })
+  tower.goalMark = S.goalX(w, tower); w.agents = [tower]; w.lifts = [{}]
+  S.watchProgress(w, tower)
+  assert.equal(tower.rescueCool, 0, "not on a tower")
+})

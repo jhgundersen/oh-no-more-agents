@@ -6235,3 +6235,22 @@ left and a wall fourteen cells thick; ordinary agents dig out. One test.
 **List after 214:** 92 stall (hero, Model Collapse); 83 stall 9/12 (hero, Chain
 of Thought); level 6 clock-outs (Ice Cave tool budget); 32 stall 6/24; 2 stall
 5/24; 70, 81, 84 stall 3/12; single runs elsewhere.
+
+## 215 — 2026-10-15 · A hero among the last out gets the rescue sooner
+
+The narrow version of what 214 took back out. The stall cutoff ends a nearly
+finished level once nobody has got closer to home for 300 ticks — inside
+`PATIENCE` (900) — so a hero lost on the wrong floor never reached the rescue
+that would have lent it the colony's tools (`forceEscape` → `specialEscape`,
+then the toolbar). Now a hero that is one of the last out gets it after 200
+idle ticks (`HERO_LAST_PATIENCE`). Ordinary stragglers keep the long patience
+— rescuing them early ran levels into the clock (214) — and so does a hero on
+a tower, where the way home is a lift and an early rescue built and slid it
+into corners (level 104 lost six points before that exclusion).
+
+Levels 1–150 × 12 against 214: home 95.30% → 95.41% (+30 agents), stall
+endings 72 → 43, clock-outs 5 → 7 (level 92's two, which used to end on the
+cutoff), hangs 0. Level 83: 95% → 100%, stall 10 → 0; level 92: 88% → 91%,
+stall 10 → 2; level 23: stall 2 → 0. Levels 1–57 × 24 against 213: home
+95.56% → 95.72% (+31), stall 28 → 21, clock-outs 5 → 4. One test.
+`npm run check` 1022/1022; CRAP under 30.
