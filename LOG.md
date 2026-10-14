@@ -4898,3 +4898,14 @@ ordinary play; these are Node raster times, not browser FPS.
 Reviewed and merged by the loop. Level 11, tick 400, full frame against main at 1x: golden drifts on every edge, warm strata, glyph panels on the back wall, a hotter sky; the original rock intact.
 
 **Deployed** after 184 (name="build" content="12ca3918"), gated on a passing check (846 tests): floaters parry in mid-air (183), the Desert art (184). Level 20 in headless Chromium, no console errors.
+
+## 185 — 2026-10-14 · Ruins art on a branch
+
+**Looked, no change:** the Jungle, lowest in 183's survey (86% home). One
+level carries it: 176, where a colony out of bashers, climbers, miners and
+diggers is stranded on the bottom floor (2/13). Its retries get 10/13 and
+12/13 — a lost first run that comes good is part of the game.
+
+**Started:** Ruins art on `codex/ruins` (level 2, the second thing every
+visitor sees): cut stone with mortar, broken columns, vines, torchlight,
+the same two brief lessons.
