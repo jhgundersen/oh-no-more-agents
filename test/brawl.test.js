@@ -46,9 +46,10 @@ test("odds: a coin toss alone, better with each colleague, capped at three", () 
   }
 })
 
-test("no scuffle with a special, a drone, or across floors", () => {
+test("a hero scuffles at its own odds; no scuffle with a drone or across floors", () => {
   let { w, ag, en } = face(); ag.special = true
-  assert.equal(S.stepBrawl(w, en), false)
+  assert.equal(S.brawlOdds(w, ag), S.BRAWL_HERO)
+  assert.equal(S.stepBrawl(w, en), true)
   ;({ w, ag, en } = face()); en.kind = "drone"
   assert.equal(S.stepBrawl(w, en), false)
   ;({ w, ag, en } = face()); ag.y -= 3

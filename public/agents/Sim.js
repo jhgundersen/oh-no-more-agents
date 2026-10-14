@@ -8925,7 +8925,7 @@ function stepBrawl(w, en) {
   if (en.kind === "drone" || !BRAWL_GROUND[en.state]) return false
   for (var i = 0; i < w.agents.length; i++) {
     var ag = w.agents[i]
-    if (ag.gone || ag.special || ag.state !== "walk") continue
+    if (ag.gone || ag.state !== "walk") continue
     if (Math.abs(ag.x - en.x) >= 1 || Math.abs(ag.y - en.y) >= 1.5) continue
     en.state = "brawl"; en.brawlFor = BRAWL_TICKS; en.brawlWith = ag.id
     ag.state = "brawl"; ag.idle = 0
@@ -8986,7 +8986,11 @@ function bouncerThrows(w, en, ag) {
   w.lastEvent = "thrown out"
 }
 
+// A hero is the colony's best hand in a scuffle, company or not.
+var BRAWL_HERO = 85
+
 function brawlOdds(w, ag) {
+  if (ag.special) return BRAWL_HERO
   var help = 0
   for (var i = 0; i < w.agents.length && help < 3; i++) {
     var o = w.agents[i]

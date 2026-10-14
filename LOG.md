@@ -3885,3 +3885,13 @@ at whoever comes close, a white flash when it loses a scuffle, and it goes
 down full length. 718 tests pass; nothing over CRAP 30.
 
 **Deployed** after 145 (name="build" content="6304905e"): the Bouncer's art, its throw, the tagline. Browser check clean.
+
+## 146 — 2026-10-14 · Heroes in the scrum
+
+Specials were left out of brawls (122): a hero walked through a guard as if
+it were not there, the one agent in the colony that should be best at it.
+Now a special scuffles like anybody else, at its own odds — 85%, company or
+not (`BRAWL_HERO`). Measured over 140 plays with both a special and a guard
+post: 92.42 → 92.47% home, 12 scuffles by heroes, hero deaths unchanged
+(13). Small, and consistent: Vector Van Damme now goes into the cloud.
+Tests 718.
