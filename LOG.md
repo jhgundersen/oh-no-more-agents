@@ -5496,3 +5496,82 @@ Terrain is cached in ordinary play; these are Node raster times, not browser FPS
 
 **Next:** ready for Data Center revision review. Commit on `codex/datacenter`
 only; no push or deployment.
+
+## 198 — 2026-10-15 · A reading room after hours (on a branch)
+
+**Change:** Draw-only, page-resolution Library art, based on approved
+`codex/datacenter` (`b5a02d9`). Tall timber cases span the building behind its
+playable shelves. Six muted cloth-binding colours, varied spine widths/heights,
+recessed edges and sparse title bands make the books readable at 1×. Two green
+banker lamps per storey have brass mounts and warm undersides; six explicit
+light bands below each fade from **0.11 to 0.05** opacity. Two tall wall-side
+ladders and a raster-font `SILENCE` plaque finish the room. Original book cells,
+free shelf climbing, materials, props, lamps/dust, hazards, pits, hostiles,
+missions, agents, umbrellas and exit keep their recipes. Sim, Palette and
+Outcome are unchanged.
+
+All large art and light are cached beneath the terrain and original props.
+Only six small motes per lamp animate (budget **≤72** fills in the tested
+layouts), confined to the actual light bands and rejecting current terrain,
+exit/decor bounds, hazard zones and pit throats. Movement is arithmetic from
+level metadata and ticks, without RNG, scenery state or world writes. Anchors
+stay fixed after carving. Every addition requires Library and
+`(w.res || 1) >= 2` and uses the half-pixel grid. The warm pool runs before the
+agents; their opaque skin, shirt, eye and umbrella pixels retain their colours.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-library/coverage-safe.sh` pass: **915** tests. Nine new page-art tests
+cover biome/resolution gates, read-only proxies and forbidden RNG, deterministic
+pixel digests, half-pixel placement/state restoration, fixed cached anchors,
+varied bindings, pool opacity, dust budgets/cone bounds/terrain clearance,
+foreground ordering, opaque actor colours beneath lamps in all five themes,
+unchanged original component digests, Deprecation Notice/Reindexing terrain
+edits, and four 600-tick shelf-climb replays with complete world digests.
+CRAP: **0** functions at or above 30, maximum **29.3**; new helpers at most
+**5.0**, all with 100% coverage.
+
+Same **2048 MB** Node heap, `ulimit -v 6000000`, one check worker/two coverage
+workers and waiting for other Node test runs before every phase. Factory's art
+test remains excluded under the standing instruction. Component image assertions
+use digests, recording stays capped at 20k fills, and accent footprint loops
+stay bounded to one cell.
+
+**Looked:** original/branch pairs on levels 13, 32 and 51 at ticks 77/476 in
+`/tmp/codex-library/sheet.png`, with full 800×496 frames viewed at 1×, 2× crops
+and 4× details. The exact `shoot.js crop 13 --res 2 --ticks 476` region is
+paired in `shoot-crop-pair.png`; books, lamps, ladders and plaque read at 1×
+and in the crop. Level 70 in all five themes; open/furled umbrellas and
+rockfall/geyser/brazier/tesla/fence/crusher/turret in idle/charge/fire/rest in
+`readability-sheet.png`. Warm light leaves pale faces, dark suits, canopy/grip
+shapes, hostile colours, hazard tells, mission objects and the exit clear.
+`dust.gif` shows the small live pass across five staged ticks.
+
+Seeded parent/branch comparison: **1,080 identical frames** across the other
+eighteen biomes and **60 identical** Library res-1/unspecified-res frames
+(two layouts, ticks 77/240/600, five themes). All **30** Library res-2 frames
+changed. Baseline, harnesses, isolation results and logs are in the review folder.
+
+**Pipeline:** the Library's dense original shelf/terrain strokes exceeded the
+full-scene recorder's 20k limit. The ordering check now streams four paint
+markers and a serial number, stores no fill array, and caps the complete pass
+at 100k calls. Component recording retains its smaller cap. Reused the fast
+rasterizer, single sheet composition pass, validation queue and coverage progress
+reporter. The helper now marks every phase log pending before queueing and
+writes a completion marker only after all three phases pass, preventing stale
+results from an earlier run being mistaken for current ones. Matching shoot-style
+crops and dust phases reuse one seeded world.
+No package/tool source edits.
+
+**Measured:** warmed res-2 software rasterizer at tick 476, median of nine
+batches of forty frames, interleaved parent/branch, after tests and coverage.
+Level 13: actors **1.074 → 1.105 ms**, full terrain + actors
+**29.179 → 32.566 ms**.
+Level 51: actors **1.605 → 1.615 ms**, full terrain + actors
+**28.257 → 33.792 ms**.
+Subway control, level 18: actors **1.151 → 1.147 ms**, full terrain + actors
+**15.420 → 15.227 ms**.
+Terrain is cached in ordinary play; these are Node raster times, not browser FPS.
+
+**Next:** ready for Library art review. Commit on `codex/library` only;
+no push or deployment.

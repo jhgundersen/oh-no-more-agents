@@ -206,6 +206,7 @@ function drawTerrain(ctx, w, pal) {
   drawAbyssBackdrop(ctx, w)
   drawBackdrop(ctx, w, pal)
   drawDataHall(ctx, w)
+  drawReadingHall(ctx, w)
   if (desertPage(w)) drawDesertRelics(ctx, w)
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
 
@@ -2609,6 +2610,7 @@ function drawActors(ctx, w, pal, opts) {
   drawOfficeLife(ctx, w)
   drawAbyssLife(ctx, w)
   drawDataStatus(ctx, w)
+  drawReadingDust(ctx, w)
   drawDrips(ctx, w, pal)
   drawMachines(ctx, w, pal)
   drawActiveEventAir(ctx, w, pal)
@@ -16193,6 +16195,150 @@ function drawDataStatus(ctx, w) {
         ctx.fillStyle = dataLamp(b, j, w.ticks)
         ctx.fillRect(x, y, 1.5, 1)
       }
+    }
+  }
+  ctx.restore()
+}
+
+// Page-only reading room. Tall distant stacks, banker lamps, warm pools and
+// rolling ladders are cached behind all playable shelves and original props.
+// Only six small dust flecks per lamp move, before the original actor pass.
+function libraryPage(w) { return w.biome === "Library" && (w.res || 1) >= 2 }
+
+var READING_BACK = "#26262b"
+var READING_WOOD = "#53453b"
+var READING_EDGE = "#82735d"
+var READING_BINDINGS = ["#78594f", "#587263", "#556b81", "#8c7850", "#75617d", "#94836a"]
+var READING_GREEN = "#456b56"
+var READING_BRASS = "#a18b5b"
+var READING_LIGHT = "#d2ad6b"
+var READING_DUST = "#c8b18b"
+
+function readingCases(w) {
+  var cases = [], C = w.k.CELL
+  for (var x = 32; x + 42 <= (w.k.COLS - 6) * C; x += 48)
+    cases.push({ x: x, y: w.k.SKY * C, height: (w.k.ROWS - w.k.SKY) * C - 8, seed: w.level * 17 + x })
+  return cases
+}
+
+function drawReadingHall(ctx, w) {
+  if (!libraryPage(w)) return
+  ctx.save()
+  var cases = readingCases(w)
+  for (var i = 0; i < cases.length; i++) drawReadingCase(ctx, cases[i])
+  var lamps = readingLamps(w)
+  for (var j = 0; j < lamps.length; j++) drawReadingLamp(ctx, lamps[j])
+  // Two wall-side ladders, on fixed storeys. Terrain hides their unused ends.
+  drawReadingLadder(ctx, 96, w.corridors[1].floorY * w.k.CELL)
+  drawReadingLadder(ctx, 288, w.corridors[w.corridors.length - 2].floorY * w.k.CELL)
+  var sx = (w.corridors[0].x0 + 35) * w.k.CELL, sy = w.corridors[0].floorY * w.k.CELL - 22
+  ctx.fillStyle = READING_WOOD
+  ctx.fillRect(sx - 18, sy, 36, 8)
+  ctx.fillStyle = READING_EDGE
+  ctx.fillRect(sx - 18, sy, 36, 0.5)
+  ctx.fillStyle = READING_DUST
+  drawTransitionText(ctx, "SILENCE", sx, sy + 1.5, 1)
+  ctx.restore()
+}
+
+function drawReadingCase(ctx, b) {
+  ctx.fillStyle = READING_BACK
+  ctx.fillRect(b.x, b.y, 42, b.height)
+  ctx.fillStyle = READING_WOOD
+  ctx.fillRect(b.x, b.y, 1.5, b.height)
+  ctx.fillRect(b.x + 40.5, b.y, 1.5, b.height)
+  ctx.fillStyle = READING_EDGE
+  ctx.globalAlpha = 0.45
+  ctx.fillRect(b.x + 0.5, b.y, 0.5, b.height)
+  ctx.fillRect(b.x + 40.5, b.y, 0.5, b.height)
+  for (var row = 0; b.y + 12 + row * 10 <= b.y + b.height; row++) {
+    var y = b.y + 4 + row * 10
+    for (var book = 0; book < 11; book++) drawReadingSpine(ctx, b.x + 2.5 + book * 3.5, y + 7, b.seed + row * 13 + book * 7)
+    ctx.fillStyle = READING_WOOD
+    ctx.globalAlpha = 1
+    ctx.fillRect(b.x + 1.5, y + 7, 39, 1.5)
+    ctx.fillStyle = READING_EDGE
+    ctx.globalAlpha = 0.45
+    ctx.fillRect(b.x + 1.5, y + 7, 39, 0.5)
+  }
+  ctx.globalAlpha = 1
+}
+
+function drawReadingSpine(ctx, x, bottom, seed) {
+  var width = 1.5 + seed % 3 * 0.5, height = 4 + seed % 6 * 0.5
+  ctx.fillStyle = READING_BINDINGS[seed % READING_BINDINGS.length]
+  ctx.globalAlpha = 0.72
+  ctx.fillRect(x, bottom - height, width, height)
+  ctx.fillStyle = READING_BACK
+  ctx.globalAlpha = 0.6
+  ctx.fillRect(x + width - 0.5, bottom - height, 0.5, height)
+  if (seed % 3 !== 0) return
+  ctx.fillStyle = READING_DUST
+  ctx.globalAlpha = 0.45
+  ctx.fillRect(x, bottom - 2, width - 0.5, 0.5)
+}
+
+function readingLamps(w) {
+  var lamps = [], C = w.k.CELL
+  for (var row = 0; row < w.corridors.length; row++) {
+    var c = w.corridors[row]
+    for (var side = 0; side < 2; side++) lamps.push({ x: (side ? c.x1 - 15 : c.x0 + 15) * C,
+      y: c.floorY * C - 22, seed: w.level * 29 + row * 37 + side * 71 })
+  }
+  return lamps
+}
+
+function drawReadingLamp(ctx, b) {
+  // Explicit low-alpha planes show the pool without a software-gradient guess.
+  ctx.fillStyle = READING_LIGHT
+  for (var band = 0; band < 6; band++) {
+    ctx.globalAlpha = 0.11 - band * 0.012
+    ctx.fillRect(b.x - 3 - band * 1.5, b.y + 5 + band * 2.5, 6 + band * 3, 2.5)
+  }
+  ctx.globalAlpha = 1
+  ctx.fillStyle = READING_WOOD
+  ctx.fillRect(b.x - 2, b.y - 3, 4, 3)
+  ctx.fillStyle = READING_BRASS
+  ctx.fillRect(b.x - 0.5, b.y - 2, 1, 3)
+  ctx.fillStyle = READING_GREEN
+  ctx.fillRect(b.x - 4, b.y, 8, 2)
+  ctx.fillRect(b.x - 6, b.y + 2, 12, 1.5)
+  ctx.fillStyle = READING_EDGE
+  ctx.fillRect(b.x - 3, b.y + 0.5, 6, 0.5)
+  ctx.fillStyle = READING_LIGHT
+  ctx.fillRect(b.x - 4, b.y + 3.5, 8, 0.5)
+}
+
+function drawReadingLadder(ctx, x, floor) {
+  ctx.fillStyle = READING_BACK
+  ctx.fillRect(x + 1, floor - 28, 7, 27)
+  ctx.fillStyle = READING_WOOD
+  ctx.fillRect(x, floor - 28, 1, 26)
+  ctx.fillRect(x + 6, floor - 28, 1, 26)
+  ctx.fillStyle = READING_EDGE
+  ctx.fillRect(x, floor - 28, 0.5, 26)
+  for (var rung = 0; rung < 8; rung++) ctx.fillRect(x + 1, floor - 25 + rung * 3, 5, 0.5)
+  ctx.fillStyle = READING_BRASS
+  ctx.fillRect(x - 0.5, floor - 2, 2, 1)
+  ctx.fillRect(x + 5.5, floor - 2, 2, 1)
+}
+
+function drawReadingDust(ctx, w) {
+  if (!libraryPage(w)) return
+  ctx.save()
+  var lamps = readingLamps(w), boxes = abyssReserved(w)
+  ctx.fillStyle = READING_DUST
+  ctx.globalAlpha = 0.45
+  for (var i = 0; i < lamps.length; i++) {
+    var b = lamps[i]
+    for (var mote = 0; mote < 6; mote++) {
+      var y = Math.floor((b.y + 6 + (w.ticks * (0.025 + mote * 0.005) + b.seed + mote * 3) % 14) * 2) / 2
+      var width = 2 + Math.floor((y - b.y - 5) / 2.5) * 1.5
+      var sway = ((Math.floor(w.ticks / 24) + b.seed + mote * 7) % 13 - 6) / 6
+      var x = Math.floor((b.x + sway * width) * 2) / 2
+      // Shared bounded accent clearance keeps terrain, exit, props, pits and
+      // all original hazard zones clear, including a crossed cell corner.
+      if (abyssClear(w, x, y, 1, 0.5, boxes)) ctx.fillRect(x, y, 1, 0.5)
     }
   }
   ctx.restore()
