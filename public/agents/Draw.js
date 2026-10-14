@@ -198,6 +198,7 @@ function drawTerrain(ctx, w, pal) {
   if (desertPage(w)) drawDesertSky(ctx, w)
 
   if (spaceshipPage(w)) drawSpaceshipBackdrop(ctx, w, pal)
+  if (ruinsPage(w)) drawRuinsTemple(ctx, w, pal)
   drawBackdrop(ctx, w, pal)
   if (desertPage(w)) drawDesertRelics(ctx, w)
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
@@ -228,6 +229,7 @@ function drawTerrain(ctx, w, pal) {
   drawTerrainLight(ctx, w, pal)
   if (frostPage(w)) drawFrostSurfaces(ctx, w)
   if (desertPage(w)) drawDesertSurfaces(ctx, w)
+  if (ruinsPage(w)) drawRuinsMasonry(ctx, w, pal)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
   drawSea(ctx, w, pal)
@@ -2055,6 +2057,7 @@ function drawMachines(ctx, w, pal) {
   if (spaceshipPage(w)) drawSpaceshipInstruments(ctx, w, pal)
   if (frostPage(w)) drawFrostWeather(ctx, w)
   if (desertPage(w)) drawDesertHeat(ctx, w)
+  if (ruinsPage(w)) drawRuinsTorches(ctx, w, pal)
   if (w.biome === "Cavern") drawCavernLife(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
   if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
@@ -14748,4 +14751,213 @@ function desertHeatFloor(w, x, floor) {
     if (w.terrain[(cy - 1) * k.COLS + cx + dx] !== k.EMPTY) return false
   }
   return true
+}
+
+// The temple is behind the original columns; the masonry is a narrow overlay
+// on the original mottled cells. Both are cached with terrain. Only the flames
+// and their small pools run per frame, before actors, events and the boulder.
+function ruinsPage(w) {
+  return w.biome === "Ruins" && (w.res || 1) >= 2
+}
+var RUINS_STONE = "#654c46"
+var RUINS_EDGE = "#87685a"
+var RUINS_SHADOW = "#3b3034"
+var RUINS_MOSS = "#526044"
+var RUINS_ROOT = "#374935"
+var RUINS_FLAME = "#ffae42"
+var RUINS_EMBER = "#ffe0a0"
+
+function ruinsBay(w, i, slot) {
+  return { x: 28 + (w.level * 7 + i * 11) % 17 + slot * 86,
+    y: w.corridors[i].floorY * w.k.CELL, seed: w.level * 13 + i * 7 + slot * 11 }
+}
+
+function drawRuinsTemple(ctx, w, pal) {
+  if (!ruinsPage(w)) return
+  ctx.save()
+  for (var i = 0; i < w.corridors.length; i++) {
+    for (var slot = 0; slot < 4; slot++) {
+      var b = ruinsBay(w, i, slot)
+      drawRuinsColonnade(ctx, b)
+      if (slot === (w.level + i) % 4) drawRuinsNiche(ctx, b)
+    }
+  }
+  ctx.restore()
+}
+
+function drawRuinsColonnade(ctx, b) {
+  var x = b.x, y = b.y, broken = b.seed % 3 === 0
+  drawRuinsColumn(ctx, x, y, broken ? 12 : 28, broken)
+  drawRuinsColumn(ctx, x + 48, y, b.seed % 4 === 0 ? 17 : 28, b.seed % 4 === 0)
+  // An entablature with a Greek-key relief. Gaps in the cornice are fallen
+  // blocks, not holes cut into the playable ground.
+  ctx.fillStyle = RUINS_STONE
+  ctx.fillRect(x - 4, y - 32, 62, 5)
+  ctx.fillStyle = RUINS_EDGE
+  ctx.fillRect(x - 5, y - 33, 24, 1)
+  ctx.fillRect(x + 23, y - 33, 35, 1)
+  ctx.fillStyle = RUINS_SHADOW
+  for (var g = 0; g < 7; g++) {
+    ctx.fillRect(x + g * 8, y - 31, 5, 0.5)
+    ctx.fillRect(x + g * 8 + 4.5, y - 31, 0.5, 3)
+    ctx.fillRect(x + g * 8 + 2, y - 28.5, 3, 0.5)
+    ctx.fillRect(x + g * 8 + 2, y - 30, 0.5, 1.5)
+  }
+  if (b.seed % 2 === 0) drawRuinsPediment(ctx, x, y)
+  else drawRuinsArch(ctx, x + 10, y - 26)
+  if (broken) drawRuinsDrum(ctx, x + 17, y - 2)
+}
+
+function drawRuinsColumn(ctx, x, base, height, broken) {
+  ctx.fillStyle = RUINS_STONE
+  ctx.fillRect(x, base - height, 7, height)
+  ctx.fillRect(x - 3, base - 3, 13, 3)
+  ctx.fillStyle = RUINS_EDGE
+  ctx.fillRect(x, base - height, 1, height - 3)
+  ctx.fillRect(x - 2, base - 3, 11, 0.5)
+  ctx.fillRect(x - 2, base - height, broken ? 6 : 11, 1)
+  if (!broken) {
+    ctx.fillRect(x - 3, base - height - 2, 13, 2)
+    ctx.fillRect(x - 1, base - height + 1, 9, 2)
+  }
+  ctx.fillStyle = RUINS_SHADOW
+  ctx.fillRect(x + 2, base - height + 4, 0.5, height - 7)
+  ctx.fillRect(x + 4, base - height + 3, 0.5, height - 6)
+  for (var c = 7; c < height - 2; c += 7) ctx.fillRect(x + 1, base - c, 6, 0.5)
+  if (broken) {
+    ctx.fillRect(x + 4, base - height, 3, 2)
+    ctx.fillRect(x + 2.5, base - height + 2, 0.5, 3)
+  }
+}
+
+function drawRuinsPediment(ctx, x, y) {
+  // A low triangular pediment, with a missing corner and a sun relief.
+  ctx.fillStyle = RUINS_STONE
+  for (var r = 0; r < 6; r++) ctx.fillRect(x + 2 + r * 4, y - 34 - r, 50 - r * 8, 1)
+  ctx.fillStyle = RUINS_EDGE
+  for (var s = 0; s < 5; s++) {
+    ctx.fillRect(x + 2 + s * 4, y - 34 - s, 4, 0.5)
+    ctx.fillRect(x + 48 - s * 4, y - 34 - s, 4, 0.5)
+  }
+  ctx.fillStyle = RUINS_SHADOW
+  ctx.fillRect(x + 25, y - 36, 4, 2)
+  ctx.fillRect(x + 26, y - 37, 2, 4)
+}
+
+function drawRuinsArch(ctx, x, y) {
+  ctx.fillStyle = RUINS_STONE
+  for (var s = 0; s < 5; s++) {
+    ctx.fillRect(x + s * 2, y + 6 - s, 2, 4)
+    ctx.fillRect(x + 34 - s * 2, y + 6 - s, 2, 4)
+  }
+  ctx.fillRect(x + 10, y + 1, 16, 4)
+  ctx.fillStyle = RUINS_EDGE
+  ctx.fillRect(x + 16, y, 4, 6) // proud keystone
+  ctx.fillStyle = RUINS_SHADOW
+  for (var j = 0; j < 4; j++) ctx.fillRect(x + 10 + j * 5, y + 1, 0.5, 3)
+}
+
+function drawRuinsDrum(ctx, x, y) {
+  ctx.fillStyle = RUINS_STONE
+  ctx.fillRect(x, y - 4, 15, 4)
+  ctx.fillRect(x + 2, y - 5, 11, 1)
+  ctx.fillStyle = RUINS_EDGE
+  ctx.fillRect(x + 2, y - 4, 11, 0.5)
+  ctx.fillStyle = RUINS_SHADOW
+  ctx.fillRect(x + 2, y - 2, 11, 0.5)
+  ctx.fillRect(x + 12, y - 4, 1, 4)
+}
+
+function drawRuinsNiche(ctx, b) {
+  var x = b.x + 26, y = b.y - 18
+  ctx.fillStyle = RUINS_STONE
+  ctx.fillRect(x - 6, y - 6, 12, 14)
+  ctx.fillRect(x - 4, y - 8, 8, 2)
+  ctx.fillStyle = RUINS_SHADOW
+  ctx.fillRect(x - 4, y - 5, 8, 11)
+  ctx.fillRect(x - 2, y - 7, 4, 2)
+  ctx.fillStyle = RUINS_EDGE
+  ctx.fillRect(x - 7, y + 6, 14, 2)
+  ctx.fillRect(x - 4, y + 4, 8, 1)
+}
+
+function drawRuinsMasonry(ctx, w, pal) {
+  if (!ruinsPage(w)) return
+  ctx.save()
+  var k = w.k, C = k.CELL
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 1; x < k.COLS - 1; x++) {
+    var m = w.terrain[y * k.COLS + x]
+    if (m !== k.DIRT && m !== k.ROCK && m !== k.ORE) continue
+    drawRuinsJoint(ctx, w, pal, x, y)
+    if (w.terrain[(y + 1) * k.COLS + x] === k.EMPTY && (x + w.level) % 17 === 0)
+      drawRuinsRoots(ctx, w, x * C + 1, (y + 1) * C, 6 + (x + y) % 8)
+  }
+  ctx.restore()
+}
+
+function drawRuinsJoint(ctx, w, pal, x, y) {
+  var C = w.k.CELL, px = x * C, py = y * C, hash = (x * 19 + y * 31 + w.level * 7) % 43
+  ctx.globalAlpha = 0.65
+  ctx.fillStyle = pal.dirtShade
+  if (y % 2 === 1) ctx.fillRect(px, py + C - 0.5, C, 0.5)
+  if ((x + Math.floor(y / 2) % 2) % 3 === 0) ctx.fillRect(px + 0.5, py + 0.5, 0.5, C - 1)
+  if (hash < 2) {
+    ctx.fillRect(px + 2, py + 1, 0.5, 1)
+    ctx.fillRect(px + 1.5, py + 2, 0.5, 1.5)
+  }
+  ctx.globalAlpha = 0.5
+  ctx.fillStyle = pal.dirtEdge
+  if (y % 2 === 1 && hash % 3 === 0) ctx.fillRect(px + 1, py + C - 1, 2, 0.5)
+  if (hash > 5) return
+  ctx.globalAlpha = 0.85
+  ctx.fillStyle = RUINS_MOSS
+  ctx.fillRect(px + 1, py + C - 1, 2, 0.5)
+  if (hash % 2 === 0) ctx.fillRect(px + 2, py + C - 2, 1, 1)
+}
+
+function drawRuinsRoots(ctx, w, x, y, length) {
+  ctx.globalAlpha = 0.9
+  for (var v = 0; v < length; v++) {
+    var dx = Math.floor(v / 4) % 2, xx = x + dx
+    ctx.fillStyle = RUINS_ROOT
+    moteFineRect(ctx, w, xx, y + v, 1, 1)
+    if (v % 3 !== 1) continue
+    ctx.fillStyle = RUINS_MOSS
+    moteFineRect(ctx, w, xx - 2, y + v, 2, 1)
+    moteFineRect(ctx, w, xx + 1, y + v + 1, 2, 1)
+  }
+}
+
+function drawRuinsTorches(ctx, w, pal) {
+  if (!ruinsPage(w)) return
+  ctx.save()
+  for (var i = 0; i < w.corridors.length; i++) {
+    var b = ruinsBay(w, i, (w.level + i) % 4)
+    var x = b.x + 26, y = b.y - 18
+    // The niche stays on the back wall when terrain is removed, but a new
+    // Backfill slab hides it. Never slide fittings to a newly convenient spot.
+    if (!mechanismAir(w, x, y) || !mechanismAir(w, x, y - 4)) continue
+    drawRuinsFlame(ctx, w, x, y, b.seed)
+  }
+  ctx.restore()
+}
+
+function drawRuinsFlame(ctx, w, x, y, seed) {
+  var flick = (Math.floor(w.ticks / 5) + seed) % 4
+  ctx.fillStyle = RUINS_FLAME
+  ctx.globalAlpha = 0.035 + flick * 0.008
+  for (var row = -9; row < 8; row++) {
+    var width = 13 - Math.floor(Math.abs(row) / 2)
+    moteFineRect(ctx, w, x - width, y + row, width * 2, 1)
+  }
+  ctx.globalAlpha = 1
+  ctx.fillStyle = RUINS_EDGE
+  moteFineRect(ctx, w, x - 3, y + 1, 6, 1)
+  ctx.fillStyle = RUINS_FLAME
+  moteFineRect(ctx, w, x - 2, y - 2, 4, 3)
+  moteFineRect(ctx, w, x - 1 + (flick % 2) * 0.5, y - 4 - flick * 0.5, 1.5, 3)
+  ctx.fillStyle = RUINS_EMBER
+  moteFineRect(ctx, w, x - 0.5, y - 1, 1, 2)
+  ctx.globalAlpha = 0.6
+  moteFineRect(ctx, w, x + (seed % 3) - 1, y - 6 - flick, 0.5, 1)
 }

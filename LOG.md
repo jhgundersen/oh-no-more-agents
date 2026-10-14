@@ -4898,3 +4898,54 @@ ordinary play; these are Node raster times, not browser FPS.
 Reviewed and merged by the loop. Level 11, tick 400, full frame against main at 1x: golden drifts on every edge, warm strata, glyph panels on the back wall, a hotter sky; the original rock intact.
 
 **Deployed** after 184 (name="build" content="12ca3918"), gated on a passing check (846 tests): floaters parry in mid-air (183), the Desert art (184). Level 20 in headless Chromium, no console errors.
+
+## 185 — 2026-10-14 · An ancient temple in the Ruins (on a branch)
+
+**Change:** Draw-only, page-resolution temple art behind and over the original
+Ruins. Broad fluted columns have capitals, snapped shafts and fallen drums;
+stepped arches alternate with low pediments, with Greek-key relief on their
+lintels. Sparse wall niches hold amber flames. Narrow mortar courses, chipped
+joints and moss sit over the original maroon and grey mottling, with short
+roots hanging from surviving ceilings. The original terrain colours, shapes,
+pink column stubs, drips, weeds, dust, hazards, boulder, exit and LEGACY SUPPORT
+booth keep their existing recipes. Palette, Sim and Outcome are unchanged.
+
+Architecture and masonry use the terrain cache. Flames, embers and small
+flickering light pools run before actors, fixtures and event mirrors; terrain
+occludes them, including new Backfill. Placement stays fixed through excavation.
+Every addition is gated on Ruins and `(w.res || 1) >= 2`, uses the half-pixel
+grid, and reads coordinates, level and ticks without world writes or RNG.
+
+**Checked:** `npm run stamp`, `npm run check` and `npm run crap` pass. Nine
+component tests cover read-only proxies, forbidden Math.random, deterministic
+pixels, canvas state, the half-pixel grid, cached versus animated art, surviving
+ceiling support, Backfill occlusion, untouched bridge/steel cells, visible
+architecture, actor layering, original component bytes at both resolutions,
+and Legacy Collapse / Backfill / Daemon Restart mirrors. CRAP: **0** functions
+at or above 30, maximum **28.5**; Ruins helpers at most **9.0**, all with 100%
+coverage. Used a local copy of the already installed CRAP tool after its GitHub
+download failed in the restricted network; no tracked tooling changes.
+
+Seeded main/new Draw comparison across all nineteen biomes: **1,080 identical
+frames** in the other eighteen (two layouts, ticks 77/240/600, five themes,
+res 1/2). Ruins' **60** res-1/unspecified-res frames are also identical; all
+**30** res-2 frames changed. Baseline, harness and results: `/tmp/codex-ruins/`.
+
+**Looked:** main versus this branch on levels 2, 21 and 40 at ticks 77/476:
+full 800×496 frames at 1× viewing size, matching 2× crops and 4× detail crops
+in `/tmp/codex-ruins/sheet.png`. Also inspected all five themes and level 59.
+The colonnades, arches, relief and warm torch niches change the full-frame
+silhouette at a glance. The enlarged pairs retain the old speckled stone,
+pink stubs and drips; faces, guards, umbrellas, the blue exit and boulder
+remain distinct from the darker architecture.
+
+**Measured:** warmed res-2 software rasteriser at tick 476, median of nine
+batches of forty frames, interleaved old/new, after tests and coverage finished.
+Level 2: actors **1.559 → 1.622 ms**, full terrain + actors
+**12.308 → 16.741 ms**. Level 40: actors **1.795 → 1.897 ms**, full
+**13.851 → 18.392 ms**. Subway control, level 18: actors
+**2.657 → 2.659 ms**, full **31.900 → 31.842 ms**. Terrain is cached in
+ordinary play; these are Node raster times, not browser FPS.
+
+**Next:** review the temple during longer page play. Committed on
+`codex/ruins` only; no push or deployment.
