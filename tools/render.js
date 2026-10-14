@@ -71,6 +71,30 @@ function parseColor(c) {
   return [136, 136, 136, 1]
 }
 
+// Page shots are mostly grid-aligned rectangles at 2x, not rotated sprites.
+// Only exact integer edges take this path; fractional edges and stunts retain
+// the existing pixel-centre inverse mapping below.
+function scaledBounds(m, x, y, w, h) {
+  if (m[1] || m[2] || m[0] <= 0 || m[3] <= 0) return null
+  const b = [x * m[0] + m[4], y * m[3] + m[5],
+    (x + w) * m[0] + m[4], (y + h) * m[3] + m[5]]
+  return b.every(Number.isInteger) ? b : null
+}
+
+// Rasterize a clipped rectangle as one span per row. Keeping the blend in
+// this loop avoids creating/calling a closure for every pixel in every shot.
+function paintRect(buf, W, x0, y0, x1, y1, col, alpha) {
+  const keep = 1 - alpha, red = col[0] * alpha, green = col[1] * alpha, blue = col[2] * alpha
+  for (let y = y0; y < y1; y++) {
+    const end = (y * W + x1) * 3
+    for (let i = (y * W + x0) * 3; i < end; i += 3) {
+      buf[i] = buf[i] * keep + red
+      buf[i + 1] = buf[i + 1] * keep + green
+      buf[i + 2] = buf[i + 2] * keep + blue
+    }
+  }
+}
+
 export function canvas(W, H, background) {
   const buf = new Uint8Array(W * H * 3)
   const base = parseColor(background || "#1a1b26")
@@ -105,21 +129,29 @@ export function canvas(W, H, background) {
       if (a <= 0) return
       if (w < 0) { x += w; w = -w }
       if (h < 0) { y += h; h = -h }
+
+
+      const m = state.m
+      if (isIdentity(m)) {
+        const rx = Math.round(x), ry = Math.round(y)
+        const x1 = Math.min(W, rx + Math.round(w)), y1 = Math.min(H, ry + Math.round(h))
+        paintRect(buf, W, Math.max(0, rx), Math.max(0, ry), x1, y1, col, a)
+        return
+      }
+
+      const bounds = scaledBounds(m, x, y, w, h)
+      if (bounds) {
+        const xe = Math.min(W, bounds[2]), ye = Math.min(H, bounds[3])
+        paintRect(buf, W, Math.max(0, bounds[0]), Math.max(0, bounds[1]), xe, ye, col, a)
+        return
+      }
+
       const blend = (xx, yy) => {
         if (xx < 0 || yy < 0 || xx >= W || yy >= H) return
         const i = (yy * W + xx) * 3
         buf[i] = buf[i] * (1 - a) + col[0] * a
         buf[i + 1] = buf[i + 1] * (1 - a) + col[1] * a
         buf[i + 2] = buf[i + 2] * (1 - a) + col[2] * a
-      }
-
-      const m = state.m
-      if (isIdentity(m)) {
-        const rx = Math.round(x), ry = Math.round(y)
-        const x1 = Math.min(W, rx + Math.round(w)), y1 = Math.min(H, ry + Math.round(h))
-        for (let yy = Math.max(0, ry); yy < y1; yy++)
-          for (let xx = Math.max(0, rx); xx < x1; xx++) blend(xx, yy)
-        return
       }
 
       // Transformed: walk the destination bounding box and inverse-map each

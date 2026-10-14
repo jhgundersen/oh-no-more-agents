@@ -5202,3 +5202,94 @@ list. `npm run check` 888/888 in 15 s, run under `systemd-run -p MemoryMax=6G`.
 `node-test-guard` note (from the supervisor).
 
 **Deployed** after 193 (name="build" content="b6092665"), gated on a passing check (888 tests): the dreamer. Levels 1, 8 and 13 in headless Chromium, no console errors.
+
+## 194 — 2026-10-14 · After hours in the tower (on a branch)
+
+**Change:** Draw-only, page-resolution Skyscraper art. Large curtain-wall bays
+look across a second, distant skyline: staggered rooflines, narrow aerials and
+small warm office lights behind cool blue glazing. Slim mullions, deep sills,
+broken diagonal reflections and recessed ceiling fittings give each storey depth.
+Sparse half-pixel glints pick out the original tinted glass cells without
+covering their texture. Distant offices slowly light up on the actor layer;
+the city itself stays still. Original skyline, frame, slabs, grain, desks,
+strip lights, pipes, rubble, lift cars, hoistways, fire escape, motes, hazards,
+booth and exit keep their recipes. Sim, Palette and Outcome are unchanged.
+
+Window positions come from the original corridor metadata, so carving cannot
+relocate the glazing. Cached architecture precedes original terrain/decor.
+Animated light pixels reject live terrain, mullions, original desk/prop bounds
+and the exit frame; they precede lifts, event mirrors, hazards and the colony.
+Every addition is gated on Skyscraper and `(w.res || 1) >= 2`, uses the
+half-pixel grid, and reads level/ticks without world writes, RNG or scenery state.
+Rebased onto current main (`3ba3403`, including Factory and Dreamer) before
+final validation.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-skyscraper/coverage-safe.sh` pass. Eight Skyscraper component tests cover
+resolution/biome gates, read-only proxies, forbidden Math.random, deterministic
+pixels, canvas-state restoration, half-pixel placement, fixed bays after digging,
+cached versus live art, the light cycle, sparse glass coverage, untouched
+rock/ore/steel/bridge cells, terrain/decor/exit/mullion clearance, foreground
+ordering, original component bytes at both resolutions, and Open Plan/Refactor
+with their visual mirrors. CRAP: **0** functions at or above 30, maximum **29.3**; new art
+helpers at most **9.0**, all with 100% coverage; new raster helpers also 100%.
+
+Following the supervisor's memory instruction, final check and coverage ran
+as separate runs, with Node's heap capped at **2048 MB** and
+`ulimit -v 6000000`. Check uses one test worker; coverage uses two bounded
+workers after observed worker RSS stayed below 250 MB. The driver gates each phase
+on other active Node test runs. `test/factory-art.test.js` was explicitly excluded;
+**888** tests pass.
+Validation commands and outputs are in
+`/tmp/codex-skyscraper/validate-safe.sh`, `check-final.log`,
+`coverage-safe.sh` and `crap-final.log`.
+Final coverage initially reported `xenoCloses` at 7.7% (CRAP 58.3); a focused
+Xeno contact test now checks no prey, horizontal/vertical reach, facing,
+cooldown expiry, the infection cap and already infected colleagues. The helper
+is unchanged and now 100% covered (8.0). No package or simulation changes.
+The Node shot renderer optimization is described below.
+
+Seeded merged-main/new Draw comparison across all nineteen biomes:
+**1,080 identical frames** in the other eighteen (two layouts, ticks
+77/240/600, five themes, res 1/2). Skyscraper's **60** res-1/unspecified-res
+frames are also identical; all **30** res-2 frames changed. Baseline, harness
+and results: `/tmp/codex-skyscraper/`.
+
+**Looked:** level 9 at res 2; main versus this branch on levels 9, 28 and 47
+at ticks 77/476, full 800×496 frames at 1× viewing size, matching 2× crops and
+4× details in `/tmp/codex-skyscraper/sheet.png`. Level 66 in all five themes,
+and ascending level 85. Also staged open/furled umbrellas and the steam vent,
+sprinkler, polisher and shredder in idle/charge/fire/rest, before/after at 1×,
+in `/tmp/codex-skyscraper/readability-sheet.png`. The window wall changes the
+full-frame read; pale faces, warm umbrellas, red guards, desks, hazards, lifts,
+fire escape, booth and exit remain distinct. Cool glass and distant offices
+keep it separate from the Factory's assembly floor and the Rooftops' brick
+terraces. Live lights were cleared off the glazing mullions during review.
+
+**Pipeline:** ordinary scaled rectangles in `tools/render.js` were using the
+rotation rasterizer and inverse-mapping every pixel. A fast path now fills
+axis-aligned rectangles with exact integer edges directly. Clipped row spans
+blend inline, creating the pixel callback only for the fallback; fractional
+edges,
+rotated sprites and the existing res-1 identity recipe retain their paths.
+A pixel-centre test covers translation, clipping, negative sizes, alpha and
+fallback transforms. All **1,140** full-frame comparisons across nineteen biomes,
+two layouts,
+three ticks, five themes and res 1/2 are byte-identical between the old and
+optimized rasterizers. Interleaved total render work fell **15.429 →
+7.555 s** (**51.0% less**, 2.04× faster);
+`renderer-verify.json` records the comparison. Skyscraper tests now compare SHA-256
+pixel digests, limit recording to 20k fills and bound footprint loops, following
+the Factory memory fix; failed assertions cannot build giant buffer diffs.
+
+**Measured:** warmed res-2 software rasterizer at tick 476, median of nine
+batches of forty frames, interleaved old/new, after tests and coverage finished.
+Level 9: actors **0.745 → 0.779 ms**, full terrain + actors
+**4.224 → 5.001 ms**. Level 47: actors **0.710 → 0.759 ms**, full terrain + actors
+**9.886 → 11.422 ms**. Subway control, level 18: actors **2.452 → 2.443 ms**, full terrain + actors
+**16.424 → 15.913 ms**. Terrain is cached in ordinary play;
+these are Node raster times with the optimized tool, not browser FPS.
+
+**Next:** ready for Skyscraper art review. Committed on `codex/skyscraper` only;
+no push or deployment.
