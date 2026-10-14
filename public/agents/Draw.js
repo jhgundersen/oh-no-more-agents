@@ -4611,6 +4611,32 @@ function drawEnemyHatch(ctx, w, pal, opts) {
   else if (biome === "Rooftops") { wall = pal.dirt; roof = pal.oreShade; edge = pal.oreEdge; sign = "LOCAL HOST" }
 
   drawBoothFrame(ctx, pal, opts, biome, x, y, wall, roof, edge, sign)
+  drawBackupLamp(ctx, w, pal, x, y)
+}
+
+// A guard is down and the post has radioed for backup: until it walks out of
+// the door, a lamp on the booth wall flashes red, and at page resolution the
+// call goes out as rings of signal over the roof.
+function drawBackupLamp(ctx, w, pal, x, y) {
+  if (!w.backupAt || !w.reinforcements || w.done) return
+  var lit = Math.floor(w.ticks / 6) % 2 === 0
+  ctx.fillStyle = lit ? pal.urgent : pal.hatchMouth
+  ctx.fillRect(x + 5, y - 12, 3, 2)
+  if (!lit) return
+  ctx.globalAlpha = 0.3
+  ctx.fillRect(x + 4, y - 13, 5, 4)
+  ctx.globalAlpha = 1
+  if ((w.res || 1) < 2) return
+  // ")))" off both walls, each ring further out, taller and fainter.
+  var ring = Math.floor(w.ticks / 3) % 4
+  ctx.globalAlpha = 0.7 - ring * 0.15
+  for (var side = -1; side <= 1; side += 2) {
+    var rx = side > 0 ? x + 10.5 + ring * 2 : x - 11 - ring * 2
+    ctx.fillRect(rx, y - 12 - ring * 0.5, 0.5, 2 + ring)
+    ctx.fillRect(rx - side * 0.5, y - 12.5 - ring * 0.5, 0.5, 0.5)
+    ctx.fillRect(rx - side * 0.5, y - 10 + ring * 0.5, 0.5, 0.5)
+  }
+  ctx.globalAlpha = 1
 }
 
 function drawBoothFrame(ctx, pal, opts, biome, x, y, wall, roof, edge, sign) {

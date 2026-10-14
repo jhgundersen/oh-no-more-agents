@@ -915,6 +915,8 @@ function newWorld(level, attempt, colonySeed) {
     enemyRoster: [],
     enemyReleased: 0,
     enemyReleaseTimer: 0,
+    reinforcements: 0,
+    backupAt: 0,
     enemiesKilled: 0,
     nextEnemyId: 1,
     mines: [],
@@ -1294,7 +1296,39 @@ function planGuard(w, level, corridors, hazardCorridors) {
     w.bossPost = true
     w.bossName = bouncer ? "THE HEAD BOUNCER" : "THE MODERATOR"
   }
+  else w.reinforcements = reinforcementsFor(level)
   return guardPlan
+}
+
+// Deeper down, a post that loses a guard radios for backup: sidearm guards
+// out of the same booth a few seconds later. If nobody falls, they come
+// anyway once the level is well under way. None before level 15; then a
+// rising chance of one, and from level 75 a chance of a second, until by
+// level 135 every ordinary post has backup — two guards half the time. A
+// stream of its own, so every level before the ramp plays exactly as it did.
+var BACKUP_FROM = 15
+var BACKUP_RAMP = 120
+var BACKUP_DELAY = 90
+var BACKUP_DEADLINE = 420
+
+function reinforcementsFor(level) {
+  var rise = Math.max(0, Math.min(1, (level - BACKUP_FROM) / BACKUP_RAMP))
+  var backupRng = makeRng(level * 48611 + 2671)
+  return (backupRng() < rise ? 1 : 0) + (backupRng() < rise * 0.5 ? 1 : 0)
+}
+
+function callBackup(w) {
+  if (!w.reinforcements || !w.enemyHatch || w.done) return
+  if (!w.backupAt) {
+    if (w.enemiesKilled > 0) w.backupAt = w.ticks + BACKUP_DELAY
+    else if (w.ticks >= BACKUP_DEADLINE) w.backupAt = w.ticks + BACKUP_DELAY
+    return
+  }
+  if (w.ticks < w.backupAt) return
+  for (var b = 0; b < w.reinforcements; b++) w.enemyRoster.push("gun")
+  w.reinforcements = 0
+  w.lastEvent = "backup"
+  feedNote(w, "BACKUP ARRIVES AT THE GUARD POST")
 }
 
 // The red team gets more interested the further the colony gets: two levels
@@ -10434,6 +10468,7 @@ function step(w) {
 
   // Four or five friendlies are already on the board when the guard-house
   // door opens, but the leading group has not yet left the top corridor.
+  callBackup(w)
   if (w.enemyHatch && w.ticks >= 75 && w.enemyReleased < w.enemyRoster.length) {
     w.enemyReleaseTimer++
     if (w.enemyReleaseTimer >= 55) {

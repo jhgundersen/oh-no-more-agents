@@ -4264,3 +4264,31 @@ TRAIN LEAVES" for a boat; it says FERRY. 775 tests pass; nothing over CRAP 30.
 
 
 **Deployed** after 163 (name="build" content="7d8bd9e9"), gated on a passing check: the Harbour and its ferry, the folding umbrella. Browser check clean. (The first attempt never ran: the Harbour review commit had picked up the worktree's node_modules symlink, the merge turned main's node_modules into a link to itself, and npm died with exit 216. The link is untracked and ignored now.)
+
+## 164 — 2026-10-14 · Backup
+
+**Problem:** no difficulty curve. Over 400 levels home ran 93–97% in every
+band of fifty; level 400 was as easy as level 1. For a game about fighting
+your way home, nothing got harder the further they got.
+
+**Measured first:** the red team does most of the killing (101 of 179 deaths
+in 161's survey). On guard levels, adding sidearm guards at the start gave
+94.8% → 90.4% (+1), 88.6% (+2), 86.5% (+3) home.
+
+**Change:** backup. From level 15 an ordinary post (never a boss) may hold
+one or two guards in reserve; the chance rises until by level 135 every post
+has one and half have two. The first guard down radios for them and they
+walk out of the booth 90 ticks later; if nobody falls they are called at
+tick 420 anyway. First try (delay 120, deadline 900) barely moved anything:
+the colony was home before backup came. The ticker says "BACKUP ARRIVES AT
+THE GUARD POST"; while backup is on its way a red lamp flashes on the booth
+wall, with ")))" signal rings off both walls at res 2 (looked at level 125,
+ticks 253–330: lamp, rings, then two guards jetting straight at the fight).
+
+**Result** (levels 120–320, three colonies, guard levels only, 345 plays):
+home 95.0% → 90.3%, guards downed per level 0.70 → 1.59, failed levels 2 → 4.
+More fighting on screen, still rarely a lost level. Own RNG stream; levels
+1–60 compared old against new: 58 identical, the two that differ are past
+level 15 with backup. Tests 780 (`test/backup.test.js`); nothing over CRAP 30.
+
+**Next:** watch a deep level in the browser for how backup feels at speed.

@@ -515,6 +515,14 @@ from stable state (ticks, ids) so none draws on a random stream:
   Every other boss level (14, 28 …) it is the **Head Bouncer** instead: a
   Bouncer with `HEAD_BOUNCER_HP` 5, crowned; it kills nobody and holds the
   door (95% home). `w.bossName` names whichever it is.
+- **Backup** (`reinforcementsFor`, `callBackup`): the difficulty ramp. From
+  level `BACKUP_FROM` 15 an ordinary post (never a boss) may have one or two
+  sidearm guards in reserve, certain by level 135. The first guard down
+  calls them, arriving `BACKUP_DELAY` 90 ticks later; if nobody falls they
+  are called at `BACKUP_DEADLINE` 420. A red lamp flashes on the booth while
+  they are on the way (`drawBackupLamp`). Deep guard levels went from 95.0%
+  to 90.3% home, with twice the guards downed. It has its own RNG stream:
+  keep it that way so levels before the ramp play exactly as they did.
 
 The report card's battle line counts guards down and umbrella saves, and
 names the boss when it falls; the MVP line names the agent who did most.
