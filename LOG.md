@@ -5575,3 +5575,70 @@ Terrain is cached in ordinary play; these are Node raster times, not browser FPS
 
 **Next:** ready for Library art review. Commit on `codex/library` only;
 no push or deployment.
+
+## 199 — 2026-10-15 · Put the shelves in the back (on a branch)
+
+**Change:** Library revision on `codex/library`, following review of
+`f1c0b4d`. Distant bindings drop from **0.72** opacity to **0.38 → 0.28** down
+the case; title bands, timber boards and edge highlights also fade with depth.
+A darker recess separates those stacks from the original opaque book floors.
+The tall cases and ladders remain readable, with the walkable shelves now the
+stronger plane. Removed the extra clipped `SILENCE` sign; the original exit
+plaque keeps its recipe. Green reading lamps now cast warm centres at
+**0.18 → 0.11** opacity, feathered with wider bands at **0.065 → 0.04**.
+The soft cones light the distant shelf face and stop before the floor.
+They are cached beneath terrain and actors; no new per-frame work. Original
+materials, book walls, props, hazards, missions, agents, umbrellas and exit are
+unchanged. Sim, Palette and Outcome are unchanged; all additions remain res-2
+only, deterministic and free of RNG/world writes.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-library-revision/coverage-safe.sh` pass: **916** tests. Ten Library
+page-art tests now verify depth fading and compare distant binding luminance
+with the original walkable shelves across all five themes. They also check
+feathered pool geometry/strength and removal of the extra plaque. The existing
+purity, resolution, cache anchors, dust clearance/budget, ordering, opaque
+actor colours under lamps, original component digests, terrain events and
+four shelf-climb replays still pass. CRAP: **0** functions at or above 30,
+maximum **29.3**; revised helpers at most **4.0**, all at 100% coverage.
+Same **2048 MB** heap, `ulimit -v 6000000`, one check worker/two coverage
+workers, and queue before each phase. Factory's art test remains excluded.
+Digest assertions, capped recording, streamed ordering markers and bounded
+footprint loops remain in place.
+
+**Looked:** the reported **level 13, seed 3, tick 400**, full 800×496 board
+viewed at **1×** and exact `shoot.js crop` pair in
+`/tmp/codex-library-revision/shoot-crop-pair.png`. Walkable floors read as ground,
+background books sit back, the clipped sign is gone, and warm cones are visible
+beneath green shades without bleaching dark suits or pale faces. Matching
+initial/revised levels 13, 32 and 51 at ticks 77/476 are in `sheet.png`; level
+70 in all five themes, plus seven hazards and open/furled umbrellas in
+idle/charge/fire/rest, are in the review folder. Hazard tells, hostile colours,
+mission objects and exit remain clear.
+
+The full comparison preserves **1,080 frames** across the other eighteen
+biomes and **60** Library res-1/unspecified-res frames; all **30** Library
+res-2 frames changed. A separate actor-only comparison gives **120 identical
+res-2 frames** (four Library layouts, two colony seeds including 3, ticks
+77/400/600, five themes), confirming the live pass is unchanged.
+
+**Pipeline:** reused the bounded rasterizer, seeded single-world crop/phase
+shots, streamed paint-order check and validation queue. This run uses pending
+phase logs and a completion marker, so earlier results cannot look current.
+The focused luminance check catches bright backdrop books without requiring
+another screenshot review; actor-only digest comparisons separate cached
+lighting changes from live rendering. No package/tool source changes.
+
+**Measured:** warmed res-2 software rasterizer at tick 476, median of nine
+batches of forty frames, interleaved initial/revised, after tests and coverage.
+Level 13: actors **1.107 → 1.108 ms**, full terrain + actors
+**16.028 → 16.114 ms**.
+Level 51: actors **0.778 → 0.780 ms**, full terrain + actors
+**16.899 → 16.925 ms**.
+Subway control, level 18: actors **1.092 → 1.088 ms**, full terrain + actors
+**15.017 → 15.057 ms**.
+Terrain is cached in ordinary play; these are Node raster times, not browser FPS.
+
+**Next:** ready for Library revision review. Commit on `codex/library` only;
+no push or deployment.

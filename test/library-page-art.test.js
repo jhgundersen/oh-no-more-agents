@@ -75,7 +75,7 @@ test("reading art is deterministic, read-only, RNG-free, half-pixel and canvas-s
   }
 })
 
-test("tall stacks, lamps, ladders and SILENCE sign are cached and keep their original anchors", () => {
+test("tall stacks, lamps and ladders are cached and keep their original anchors", () => {
   for (const level of levels) {
     const { w } = sample(level), back = picture(ctx => D.drawReadingHall(ctx, w))
     const anchors = [D.readingCases(w), D.readingLamps(w)]
@@ -86,10 +86,10 @@ test("tall stacks, lamps, ladders and SILENCE sign are cached and keep their ori
     assert.equal(picture(ctx => D.drawReadingHall(ctx, w)).buf, back.buf)
     assert.ok(back.calls.some(c => c[2] === 42 && c[3] > 200 && c[4] === D.READING_BACK))
     assert.ok(back.calls.some(c => c[2] === 0.5 && c[3] === 26 && c[4] === D.READING_EDGE), "ladder rails")
-    assert.ok(back.calls.some(c => c[2] === 36 && c[3] === 8), "sign plate")
+    assert.ok(!back.calls.some(c => c[2] === 36 && c[3] === 8), "clipped extra sign removed")
     const pool = back.calls.filter(c => c[4] === D.READING_LIGHT && c[3] === 2.5)
-    assert.equal(pool.length, D.readingLamps(w).length * 6)
-    assert.ok(pool.every(c => c[5] <= 0.11 && c[5] > 0))
+    assert.equal(pool.length, D.readingLamps(w).length * 12)
+    assert.ok(pool.every(c => c[5] <= 0.18 && c[5] >= 0.04))
   }
   const spines = Array.from({ length: 24 }, (_, seed) => picture(ctx => D.drawReadingSpine(ctx, 40, 60, seed)))
   assert.equal(new Set(spines.map(img => img.calls[0][4])).size, 6)
@@ -232,3 +232,31 @@ test("drawing the reading room leaves real shelf-climb playthroughs identical", 
   } finally { Math.random = random }
 })
 
+
+
+test("distant bindings fade with depth and stay darker than the original walkable shelves", () => {
+  const luminance = image => {
+    let total = 0
+    for (let i = 0; i < image.buf.length; i += 3) total += image.buf[i] * 0.2126 + image.buf[i + 1] * 0.7152 + image.buf[i + 2] * 0.0722
+    return total / (image.W * image.H)
+  }
+  for (const name of Object.keys(THEMES)) for (let seed = 0; seed < 12; seed++) {
+    const { pal } = sample(13, name), front = canvas(4, 4, D.READING_BACK)
+    D.drawLibraryBooks(front.ctx, pal, 0, 0, 4, seed, true)
+    const backs = [0, 1].map(depth => {
+      const img = canvas(4, 4, D.READING_BACK)
+      D.drawReadingSpine(img.ctx, 1, 4, seed, depth)
+      return luminance(img)
+    })
+    assert.ok(backs[1] < backs[0], "depth dims the same binding")
+    assert.ok(backs[0] < luminance(front) * 0.8, `${name}: original terrain binding pops`)
+  }
+  const { w } = sample(), lamps = D.readingLamps(w)
+  const calls = picture(ctx => D.drawReadingHall(ctx, w)).calls
+  for (const b of lamps) {
+    const centre = calls.filter(c => c[4] === D.READING_LIGHT && c[0] === b.x - 3 && c[1] === b.y + 5 && c[3] === 2.5)
+    const edge = calls.filter(c => c[4] === D.READING_LIGHT && c[0] === b.x - 5 && c[1] === b.y + 5 && c[3] === 2.5)
+    assert.equal(centre.length, 1); assert.equal(edge.length, 1)
+    assert.ok(centre[0][5] >= 0.18 && edge[0][5] < centre[0][5], "visible centre with feathered edge")
+  }
+})

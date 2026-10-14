@@ -16205,7 +16205,7 @@ function drawDataStatus(ctx, w) {
 // Only six small dust flecks per lamp move, before the original actor pass.
 function libraryPage(w) { return w.biome === "Library" && (w.res || 1) >= 2 }
 
-var READING_BACK = "#26262b"
+var READING_BACK = "#202127"
 var READING_WOOD = "#53453b"
 var READING_EDGE = "#82735d"
 var READING_BINDINGS = ["#78594f", "#587263", "#556b81", "#8c7850", "#75617d", "#94836a"]
@@ -16231,13 +16231,7 @@ function drawReadingHall(ctx, w) {
   // Two wall-side ladders, on fixed storeys. Terrain hides their unused ends.
   drawReadingLadder(ctx, 96, w.corridors[1].floorY * w.k.CELL)
   drawReadingLadder(ctx, 288, w.corridors[w.corridors.length - 2].floorY * w.k.CELL)
-  var sx = (w.corridors[0].x0 + 35) * w.k.CELL, sy = w.corridors[0].floorY * w.k.CELL - 22
-  ctx.fillStyle = READING_WOOD
-  ctx.fillRect(sx - 18, sy, 36, 8)
-  ctx.fillStyle = READING_EDGE
-  ctx.fillRect(sx - 18, sy, 36, 0.5)
-  ctx.fillStyle = READING_DUST
-  drawTransitionText(ctx, "SILENCE", sx, sy + 1.5, 1)
+  // The exit keeps its original plaque; no extra sign competes with terrain.
   ctx.restore()
 }
 
@@ -16245,36 +16239,38 @@ function drawReadingCase(ctx, b) {
   ctx.fillStyle = READING_BACK
   ctx.fillRect(b.x, b.y, 42, b.height)
   ctx.fillStyle = READING_WOOD
+  ctx.globalAlpha = 0.6
   ctx.fillRect(b.x, b.y, 1.5, b.height)
   ctx.fillRect(b.x + 40.5, b.y, 1.5, b.height)
   ctx.fillStyle = READING_EDGE
-  ctx.globalAlpha = 0.45
+  ctx.globalAlpha = 0.22
   ctx.fillRect(b.x + 0.5, b.y, 0.5, b.height)
   ctx.fillRect(b.x + 40.5, b.y, 0.5, b.height)
   for (var row = 0; b.y + 12 + row * 10 <= b.y + b.height; row++) {
-    var y = b.y + 4 + row * 10
-    for (var book = 0; book < 11; book++) drawReadingSpine(ctx, b.x + 2.5 + book * 3.5, y + 7, b.seed + row * 13 + book * 7)
+    var y = b.y + 4 + row * 10, depth = row / 20
+    for (var book = 0; book < 11; book++) drawReadingSpine(ctx, b.x + 2.5 + book * 3.5, y + 7, b.seed + row * 13 + book * 7, depth)
     ctx.fillStyle = READING_WOOD
-    ctx.globalAlpha = 1
+    ctx.globalAlpha = 0.6 - depth * 0.18
     ctx.fillRect(b.x + 1.5, y + 7, 39, 1.5)
     ctx.fillStyle = READING_EDGE
-    ctx.globalAlpha = 0.45
+    ctx.globalAlpha = 0.22 - depth * 0.07
     ctx.fillRect(b.x + 1.5, y + 7, 39, 0.5)
   }
   ctx.globalAlpha = 1
 }
 
-function drawReadingSpine(ctx, x, bottom, seed) {
+function drawReadingSpine(ctx, x, bottom, seed, depth) {
+  depth = depth || 0
   var width = 1.5 + seed % 3 * 0.5, height = 4 + seed % 6 * 0.5
   ctx.fillStyle = READING_BINDINGS[seed % READING_BINDINGS.length]
-  ctx.globalAlpha = 0.72
+  ctx.globalAlpha = 0.38 - depth * 0.1
   ctx.fillRect(x, bottom - height, width, height)
   ctx.fillStyle = READING_BACK
   ctx.globalAlpha = 0.6
   ctx.fillRect(x + width - 0.5, bottom - height, 0.5, height)
   if (seed % 3 !== 0) return
   ctx.fillStyle = READING_DUST
-  ctx.globalAlpha = 0.45
+  ctx.globalAlpha = 0.2 - depth * 0.06
   ctx.fillRect(x, bottom - 2, width - 0.5, 0.5)
 }
 
@@ -16289,10 +16285,12 @@ function readingLamps(w) {
 }
 
 function drawReadingLamp(ctx, b) {
-  // Explicit low-alpha planes show the pool without a software-gradient guess.
+  // A faint wider edge feathers each warm band onto the distant shelf face.
   ctx.fillStyle = READING_LIGHT
   for (var band = 0; band < 6; band++) {
-    ctx.globalAlpha = 0.11 - band * 0.012
+    ctx.globalAlpha = 0.065 - band * 0.005
+    ctx.fillRect(b.x - 5 - band * 1.5, b.y + 5 + band * 2.5, 10 + band * 3, 2.5)
+    ctx.globalAlpha = 0.18 - band * 0.014
     ctx.fillRect(b.x - 3 - band * 1.5, b.y + 5 + band * 2.5, 6 + band * 3, 2.5)
   }
   ctx.globalAlpha = 1
