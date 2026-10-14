@@ -4964,3 +4964,60 @@ ordinary play; these are Node raster times, not browser FPS.
 Reviewed and merged by the loop. Level 2, tick 400, full frame against main at 1x: columns with capitals, arches, torches in niches and vines on the back wall; the original maroon blocks, pillar stubs and boulder unchanged in front. Busier behind the play, but the dark suits still stand out against the tan stone.
 
 **Deployed** after 186 (name="build" content="b5d568de"), gated on a passing check (855 tests): the Ruins art. Level 2 in headless Chromium, no console errors.
+
+## 187 — 2026-10-14 · Under a living Jungle canopy (on a branch)
+
+**Change:** Draw-only, page-resolution Jungle art added behind and over the
+original forest. Overhead boughs carry drooping banana and split philodendron
+leaves; broad trunks have bark grooves, forks and buttress roots. Irregular
+groves mix tall fronds and broad leaves along the corridors, with slack lianas
+behind the original vines. Small lime-tipped ferns, fallen ochre leaves and
+narrow branching roots follow surviving terrain edges. Slowly shifting sunlight
+shafts, thin humid mist and amber/teal butterflies bring the open air to life.
+The original terrain colours, grain, bands, leafy tops, decor, motes, drips,
+pool, hazards, exit and BRANCH OFFICE booth keep their existing recipes.
+Palette, Sim and Outcome are unchanged.
+
+Canopy and surface plants use the terrain cache. Light, humidity and butterflies
+run on the actor pass, before the original drips, event mirrors, fixtures and
+colony. Live air is clipped to current empty cells, including after Dependency
+Hell grows new ground. Every addition is gated on Jungle and `(w.res || 1) >= 2`,
+uses the half-pixel grid, and reads coordinates, level and ticks without world
+writes or RNG. No new scenery state or terrain repaint replaces the old art.
+
+**Checked:** `npm run stamp`, `npm run check` and `npm run crap -- --threshold 30`
+pass. Nine component tests cover read-only proxies, forbidden Math.random,
+deterministic pixels, canvas state, the half-pixel grid, cached versus animated
+art, surviving plant support, root bounds, untouched bridge/steel cells,
+terrain occlusion, broad leaf silhouettes, actor layering, original component
+bytes at both resolutions, and Dependency Hell / Cloud Burst / Fork Bomb.
+CRAP: **0** functions at or above 30, maximum **28.5**; Jungle helpers at most
+**13.0**, all with 100% coverage. Used a local copy of the installed CRAP tool
+and created the ignored coverage output directory; no tooling changes.
+
+Seeded main/new Draw comparison across all nineteen biomes: **1,080 identical
+frames** in the other eighteen (two layouts, ticks 77/240/600, five themes,
+res 1/2). Jungle's **60** res-1/unspecified-res frames are also identical;
+all **30** res-2 frames changed. Baseline, harness and results:
+`/tmp/codex-jungle/`.
+
+**Looked:** `node tools/shoot.js level 5 --res 2`; main versus this branch on
+levels 5, 24 and 43 at ticks 77/476, full 800×496 frames at 1× viewing size,
+matching 2× crops and enlarged 4× details in `/tmp/codex-jungle/sheet.png`.
+Also inspected all five themes and level 62. The broad leaves and trunks
+change the full-frame silhouette at a glance. Crops retain the original
+mottled soil, vine shapes, mushrooms and leafy tops; faces, guards, umbrellas,
+booths, hazards and exits remain distinct. Review removed scattered root noise
+in favour of longer supported branches, and varied the grove spacing and
+leaf silhouettes so the forest does not read as planted rows.
+
+**Measured:** warmed res-2 software rasteriser at tick 476, median of nine
+batches of forty frames, interleaved old/new, after tests and coverage finished.
+Level 5: actors **0.606 → 0.900 ms**, full terrain + actors
+**14.646 → 20.137 ms**. Level 43: actors **0.818 → 1.070 ms**, full
+**16.044 → 20.814 ms**. Subway control, level 18: actors
+**2.673 → 2.680 ms**, full **31.833 → 31.825 ms**. Terrain is cached in
+ordinary play; these are Node raster times, not browser FPS.
+
+**Next:** ready for Jungle art review. Committed on `codex/jungle` only;
+no push or deployment.
