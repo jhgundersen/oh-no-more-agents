@@ -2778,6 +2778,7 @@ var TRANSITION_GLYPHS = {
   " ": [0,0,0,0,0], "·": [0,0,2,0,0], "/": [1,1,2,4,4],
   "!": [2,2,2,0,2], "?": [6,1,2,0,2], "+": [0,2,7,2,0],
   ".": [0,0,0,0,2], "-": [0,0,7,0,0], "'": [2,2,0,0,0],
+  "<": [1,2,4,2,1], ">": [4,2,1,2,4], "=": [0,7,0,7,0],
   ":": [0,2,0,2,0], "#": [5,7,5,7,5], "(": [1,2,2,2,1], ")": [4,2,2,2,4],
   ",": [0,0,0,2,4], ";": [0,2,0,2,4]
 }
@@ -2927,6 +2928,7 @@ function commitLine(w) {
   if (w.hazardKills > 0) notes.push(w.hazardKills + " LOST IN PROD")
   if (w.brollyLandings > 0) notes.push(w.brollyLandings + (w.brollyLandings === 1 ? " UMBRELLA" : " UMBRELLAS"))
   if (w.ducked > 0) notes.push("RUBBER-DUCKED")
+  if (w.conflicts > 0) notes.push(w.conflicts === 1 ? "1 MERGE CONFLICT" : w.conflicts + " MERGE CONFLICTS")
   if (w.eventLog && w.eventLog.length) notes.push("SCOPE CHANGED MID-SPRINT")
   var line = type + ": " + subject
   for (var i = 0; i < notes.length && i < 2; i++) {
@@ -7019,6 +7021,8 @@ function quipFor(w, ag) {
     [ag.queuedAt, "AFTER YOU"],      // the front of a 429 queue
     [ag.servedAt, "200 OK"],         // each one let through
     [ag.pepAt, PEP_TEXT[(ag.pepLine || 0) % PEP_TEXT.length]],   // a watcher's pep talk
+    [ag.conflictAt, ag.conflictSide > 0 ? "<<<<<<<" : ">>>>>>>"],  // nose to nose in a merge conflict
+    [ag.rebasedAt, "REBASED"],                                     // and the one that gave way
     [ag.duckAt, "SO BASICALLY"],     // explaining it to the rubber duck...
     [ag.duckAt === undefined ? undefined : ag.duckAt + 30, "OH!"]   // ...and seeing it
   ]
@@ -7027,6 +7031,8 @@ function quipFor(w, ag) {
     if (at === undefined || w.ticks - at < 0 || w.ticks - at >= QUIP_TICKS) continue
     if (!best || at > best.at) best = { at: at, text: cands[i][1] }
   }
+  // Nose to nose the two bubbles would land on each other; one goes a line up.
+  if (best && best.at === ag.conflictAt && ag.conflictSide > 0) best.lift = 9
   return best
 }
 
@@ -7053,7 +7059,7 @@ function drawQuip(ctx, w, pal, ag, ox, oy) {
 }
 
 function drawBubble(ctx, w, pal, q, ox, oy) {
-  var width = q.text.length * 4 + 3, cx = ox + SPRITE_W / 2, top = oy - 13
+  var width = q.text.length * 4 + 3, cx = ox + SPRITE_W / 2, top = oy - 13 - (q.lift || 0)
   var left = Math.round(cx - width / 2)
   ctx.save()
   ctx.globalAlpha = Math.min(1, (QUIP_TICKS - (w.ticks - q.at)) / 8)

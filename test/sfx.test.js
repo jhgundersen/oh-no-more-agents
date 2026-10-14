@@ -118,3 +118,12 @@ test("a pep talk has a cue", () => {
   w.peps = 1; sfx.observe(w)
   assert.equal(played.length, 2)
 })
+
+test("a merge conflict has a cue", () => {
+  const { sfx, played } = load()
+  sfx.setOn(true)
+  const w = { ...world(), ticks: 50 }
+  sfx.observe(w); sfx.observe(w)
+  w.conflicts = 1; sfx.observe(w)
+  assert.equal(played.length, 3)
+})

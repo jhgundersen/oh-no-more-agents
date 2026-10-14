@@ -6280,3 +6280,29 @@ Levels 1–150 × 12 against 215: home 95.41% → 95.42%, clock-outs 7 → 5 (le
 92: 2 → 0), stall 43 → 43, hangs 0. Heroes over 1–150 × 6: 612 → 615 home,
 48 → 46 lost. `simcheck heights`: 24/24 specials reach safe ground. Two tests.
 `npm run check` 1024/1024; CRAP under 30.
+
+## 217 — 2026-10-15 · Merge conflicts
+
+Two ordinary walkers meeting head-on in a tunnel exactly their own height
+(ceiling right over both heads) stop nose to nose for a beat: one bubble says
+`<<<<<<<` and, a line above it, the other `>>>>>>>`. Then the one walking away
+from home rebases — holds a moment longer, REBASED, and lets the other through
+— and both carry on. The ticker says MERGE CONFLICT · AGENT 012 REBASED, sfx.js
+plays two notes a semitone apart and a falling third, the commit line on the
+report card gets "N MERGE CONFLICTS", and Outcome four lines. The font gains
+`<`, `>` and `=`. It fires on a coin (its own `conflictRng`) and then not again
+for 600 ticks: about one run in sixteen.
+
+Measured honestly, because the first two versions were not neutral. Having the
+rebaser turn round cost −13 agents over 1–150 × 12 — in a tunnel "away from
+home" is often the route. Waiting instead, at 30+18 ticks, cost −30 over
+1–150 × 24 (3600 runs). The noise floor for any timing change at all, measured
+with a one-tick hold, is −16; the shipped 20+10 beat is −10 with four fewer
+stall endings — inside the noise. Switched off (chance 0) it reproduces main
+exactly. Nothing can hold anybody: the beat is a countdown, a fall or anything
+that is not walking ends it, and no level ends with anyone still in one.
+
+**Tests:** `conflict.test.js` (5: the beat and the yield, only in a tunnel and
+for ordinary walkers facing each other and on the coin, a fall ends it, played
+levels end clean, bubbles stacked and the commit line), a cue in `sfx.test.js`.
+`npm run check` 1030/1030; CRAP under 30.

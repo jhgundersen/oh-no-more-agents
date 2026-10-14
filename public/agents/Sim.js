@@ -996,6 +996,8 @@ function newWorld(level, attempt, colonySeed) {
     limitRng: makeRng(colonySeed + 2750159),
     agiRng: makeRng(colonySeed + 433494437),
     duckRng: makeRng(colonySeed + 179424673),
+    conflictRng: makeRng(colonySeed + 2038074743),
+    conflicts: 0,      // merge conflicts resolved, for the report card and sfx
     duck: null,        // the rubber duck, while there is one; see stepDuck
     ducked: 0,         // problems explained to it, for the report card
     agiAt: -2,         // which release is the AGI: -2 undecided, -1 none; see crownAgi
@@ -6116,6 +6118,7 @@ function spawn(w) {
     waitFor: 0,       // holding at a danger for its reload, rather than pacing
     queueFor: 0,      // standing in a 429 queue; see stepRateLimit
     explainFor: 0,    // explaining the problem to a rubber duck; see stepDuck
+    conflictFor: 0,   // nose to nose in a merge conflict; see stepConflicts
     mineCool: 0,      // one charge at a time, and not again until it has gone off
     shieldFor: 0,     // ticks left on the plate; renewed while a threat is in front
     throttleFor: 0,   // Rate Limiter's pose and signal, after it throttles something
@@ -6915,6 +6918,68 @@ function pepTalk(w, ag) {
   ag.pepLine = (w.peps - 1) % PEP_LINES
   if (ag.state === "walk" && !ag.special && ag.idle > PEP_STUCK) { ag.dir = -ag.dir; ag.turns = 0 }
   else if (ag.state === "walk") ag.pepUntil = w.ticks + PEP_BOOST
+  return true
+}
+
+// ---------------------------------------------------------------------------
+// Merge conflicts
+// ---------------------------------------------------------------------------
+// Two walkers meet head-on in a tunnel exactly their own height, nose to nose.
+// Nobody can pass, so for a beat neither moves — one says <<<<<<< and the
+// other >>>>>>> — and then one rebases: it holds a moment longer and lets the
+// other through first, then carries on. It is the one walking away from home.
+// The first version had it turn round, and that cost the colony a little
+// (−13 agents over 1–150 × 12): in a tunnel, "away from home" is often the
+// route. Waiting costs only the wait, and kept short it is inside the noise:
+// over 1–150 × 24, a one-tick hold (pure timing chaos) is −16 agents, 20+10
+// is −10, 30+18 was −30. Rare (a coin, and then not again for
+// CONFLICT_GAP ticks), and nothing here can hold anybody for good: the hold is
+// a countdown, and a fall or anything else that isn't walking ends it.
+var CONFLICT_HOLD = 20
+var CONFLICT_YIELD = 10   // the rebaser's extra beat
+var CONFLICT_GAP = 600
+var CONFLICT_CHANCE = 0.5
+
+function stepConflicts(w) {
+  if (w.done || w.ticks < (w.nextConflictAt || 0)) return
+  for (var i = 0; i < w.agents.length; i++) {
+    var A = w.agents[i]
+    if (!mergeable(w, A)) continue
+    for (var j = i + 1; j < w.agents.length; j++) {
+      var B = w.agents[j]
+      if (!mergeable(w, B) || A.dir === B.dir || Math.floor(A.y) !== Math.floor(B.y)) continue
+      if (Math.abs(A.x - B.x) > 1.2 || (B.x - A.x) * A.dir <= 0) continue
+      w.nextConflictAt = w.ticks + CONFLICT_GAP
+      if (w.conflictRng() >= CONFLICT_CHANCE) return
+      var rebaser = facingHome(w, A) ? B : A
+      A.conflictFor = B.conflictFor = CONFLICT_HOLD
+      A.conflictAt = B.conflictAt = w.ticks
+      A.conflictSide = 1; B.conflictSide = -1            // for Draw: <<<<<<< and >>>>>>>
+      rebaser.rebases = true
+      rebaser.conflictFor += CONFLICT_YIELD
+      return
+    }
+  }
+}
+
+// An ordinary walker in a tunnel its own height: ceiling right over its head.
+function mergeable(w, ag) {
+  if (ag.gone || ag.special || ag.state !== "walk" || ag.queueFor > 0 || ag.explainFor > 0 || ag.conflictFor > 0) return false
+  var x = Math.floor(ag.x), y = Math.floor(ag.y)
+  return solid(w, x, y - AGENT_H) && !solid(w, x, y - AGENT_H + 1) && !unsupported(w, ag)
+}
+
+function conflicted(w, ag) {
+  if (!(ag.conflictFor > 0)) return false
+  if (ag.state !== "walk" || unsupported(w, ag)) { ag.conflictFor = 0; ag.rebases = false; return false }
+  ag.still = 0
+  if (--ag.conflictFor > 0) return true
+  if (ag.rebases) {
+    ag.rebases = false
+    ag.rebasedAt = w.ticks
+    w.conflicts++
+    feedNote(w, "MERGE CONFLICT · " + agentTag(w, ag) + " REBASED")
+  }
   return true
 }
 
@@ -10587,7 +10652,7 @@ var AGENT_STEPS = {
 
 function agentActs(w, ag) {
   tickAgentTimers(w, ag)
-  if (queued(w, ag) || explaining(w, ag)) { w.acting = null; return }
+  if (queued(w, ag) || explaining(w, ag) || conflicted(w, ag)) { w.acting = null; return }
   if (ag.special && ag.state === "walk") specialReacts(w, ag)
   if (ag.rescueCool > 0) ag.rescueCool--
   watchStill(w, ag)
@@ -10979,6 +11044,7 @@ function finishWorldStep(w, active, blockers, moving) {
   stepMirages(w)
   stepRateLimit(w)
   stepDuck(w)
+  stepConflicts(w)
   stepAgi(w)
   stepMission(w)
   stepHazard(w)

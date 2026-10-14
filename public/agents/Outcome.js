@@ -132,6 +132,14 @@ var EVENT_LINES = {
     "Rubber duck debugging: still undefeated."
   ],
 
+  // Only when two of them met nose to nose in a tunnel and one rebased.
+  conflict: [
+    "Two agents met head-on in a tunnel. One rebased. Nobody force-pushed.",
+    "Merge conflict resolved by the oldest method: one of them went back.",
+    "<<<<<<< HEAD: forward. >>>>>>> theirs: also forward. Resolved: backward.",
+    "A merge conflict, resolved without a meeting. Remarkable."
+  ],
+
   // Only when a carrier actually reached the door still carrying it.
   carrier: [
     "One of them took it home with it. Nobody noticed.",
@@ -167,6 +175,7 @@ function outcomeLine(w) {
   add("agiHome", w.agiHome === true)
   add("agiLost", w.agiLost === true)
   add("duck", w.ducked > 0)
+  add("conflict", w.conflicts > 0)
   var pool = facts.length && Math.random() < 0.78 ? facts : outcome
   return pool[Math.floor(Math.random() * pool.length)]
 }
