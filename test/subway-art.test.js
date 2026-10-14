@@ -3,6 +3,8 @@ import assert from "node:assert/strict"
 import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
+import { levelWith } from "./levels.js"
+
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
 function sample(level = 18, res = 1, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -23,7 +25,7 @@ function picture(w, draw) {
 // Component properties, never whole-frame pins. Both directions and all
 // phases are exercised on generated geometry, including a two-car line.
 test("metro trains draw every phase at both resolutions without changing the world or context", () => {
-  for (const level of [18, 36, 54, 72]) for (const res of [undefined, 1, 2]) for (const name of Object.keys(THEMES)) {
+  for (const level of [0, 1, 2, 3].map(k => S.BIOMES.indexOf("Subway") + 1 + k * S.BIOMES.length)) for (const res of [undefined, 1, 2]) for (const name of Object.keys(THEMES)) {
     const { w, tr, pal } = sample(level, res, name)
     for (const phase of ["wait", "run", "drop", "back"]) {
       Object.assign(tr, { phase, t: 2, riders: phase === "back" ? [] : [1, 2, 3], v: phase === "run" ? 0.45 : 0.1 })
@@ -106,7 +108,7 @@ test("carriage fine detail is gated and foreground terrain occludes it", () => {
     for (let yy = y; yy < y + hh; yy += 0.5) for (let xx = x; xx < x + ww; xx += 0.5)
       assert.equal(w.terrain[Math.floor(yy / 4) * w.k.COLS + Math.floor(xx / 4)], w.k.EMPTY)
   }
-  const one = sample(126).w
+  const one = sample(levelWith(S, "Subway", w => w.trains.length && D.subwayTrainDrawing(w, w.trains[0]).cars === 1)).w
   assert.equal(D.subwayTrainDrawing(w, tr).cars, 2)
   assert.equal(D.subwayTrainDrawing(one, one.trains[0]).cars, 1, "cramped platform fits a single car")
 })

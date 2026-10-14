@@ -13,7 +13,7 @@ test("trains are the Subway's, one per level at most, on a corridor floor, point
   let found = 0
   for (let lv = 1; lv <= 360; lv++) {
     const w = S.generate(lv, 0, 5)
-    if (w.biome !== "Subway") { assert.equal(w.trains.length, 0, `level ${lv}`); continue }
+    if (w.biome !== "Subway") { assert.equal(w.trains.filter(t => !t.boat).length, 0, `level ${lv}`); continue }
     assert.ok(w.trains.length <= 1)
     for (const tr of w.trains) {
       found++

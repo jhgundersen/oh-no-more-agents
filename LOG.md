@@ -4215,3 +4215,41 @@ level (the rest bridge it, as before). 19 biomes: `BOSS_EVERY` 7 is still
 coprime. Biome wiring as before (mission "SEE THE PASSENGERS ASHORE", events
 Sea Fog / High Water / Dock Strike, Palette `% 19` with BRINE, pool tint
 water). Tests `test/ferries.test.js`; the art tests fail until Codex draws it.
+
+## 163 — 2026-10-14 · The Harbour comes into view
+
+**Change:** Draw-only Harbour art: dusk cranes, containers and masts, a
+lighthouse with a turning beam, wheeling gulls, drifting fog and spray.
+Dressed stone follows the existing courses; timber has continuous grain and
+iron bands. Quay furniture is bollards and rope coils, crates, lobster pots,
+lamps, life rings and nets. The harbour-master's exit and PORT AUTHORITY booth
+finish the port; Sea Fog, High Water and Dock Strike have their visual mirrors.
+Crossings catch the light, swell gently and occasionally show a fish.
+
+The ferry is a cream-and-green launch, with a stepped hull, wheelhouse,
+funnel smoke, life ring and lit portholes showing its passengers. Its gangway
+comes down at either quay, its hull bobs on the actual sea surface, and moving
+boats leave foam and a wake. Water draws first, then the boat, then walkers;
+quay stone occludes the hull. Neither Sim.js nor Palette.js changed.
+
+**Checked:** `npm run check` and `npm run crap` pass. Six new component tests
+cover both resolutions and every ferry phase, passengers, gangways, wake
+bounds, foreground occlusion and read-only drawing; the Subway tests now find
+its layouts under the nineteen-biome catalogue. Metro component bytes are
+unchanged. Seeded old/new Draw comparison: **1,080 identical frames** across
+the other eighteen biomes, Subway included (two layouts, three tick checkpoints,
+five themes, res 1 and 2). No whole-frame test pins. CRAP at or above 30:
+**0 → 0**, maximum **29.0 → 28.5**; the shared waterline was extracted to keep
+the pool function below 30.
+
+**Looked:** actual play on levels 19, 38 and 57, res 1 and 2 enlarged; the
+ferry waiting, crossing with one/three passengers and putting them ashore.
+Contact sheet `/tmp/codex-harbour/sheet.png`, with enlarged ferry crops beside it.
+
+**Measured:** res-2 software rasteriser, levels 19 (Harbour) and 18 (Subway) at
+476 ticks, warmed, median of nine batches of forty frames: actor pass
+**2.47 vs 2.64 ms**, full terrain + actors **21.23 vs 31.82 ms**. The terrain
+pass is cached during ordinary play; these are Node raster times, not browser FPS.
+
+**Next:** broader Harbour play before any ferry tuning. Committed on the
+Harbour branch only; no push or deployment.

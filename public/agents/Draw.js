@@ -194,6 +194,7 @@ function drawTerrain(ctx, w, pal) {
   ctx.fillRect(0, 0, cols * C, rows * C)
 
   drawTerrainSky(ctx, w, pal)
+  if (w.biome === "Harbour") drawHarbourSky(ctx, w, pal)
 
   drawBackdrop(ctx, w, pal)
 
@@ -205,6 +206,7 @@ function drawTerrain(ctx, w, pal) {
   if (w.biome === "Clock Tower") drawClockMaterials(ctx, w, pal)
   if (w.biome === "Rooftops") drawRoofMaterials(ctx, w, pal)
   if (w.biome === "Subway") drawSubwayMaterials(ctx, w, pal)
+  if (w.biome === "Harbour") drawHarbourMaterials(ctx, w, pal)
   if ((w.res || 1) >= 2) drawTerrainFine(ctx, w, pal)
 
   drawFactoryPlates(ctx, w, pal)
@@ -348,7 +350,7 @@ function drawFactoryPlates(ctx, w, pal) {
 // while the colony digs around it.
 // Built places get no grain: on hull plate, office wall and machine housing it
 // read as dirt, and those biomes carry their own pattern (panels, bays, rivets).
-var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true, "Library": true, "Mail Room": true, "Building Site": true, "Clock Tower": true, "Rooftops": true, "Subway": true }
+var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true, "Library": true, "Mail Room": true, "Building Site": true, "Clock Tower": true, "Rooftops": true, "Subway": true, "Harbour": true }
 
 // One cell's grain: a dark fleck in a quarter of cells, a pale one in an
 // eighth, placed inside the cell by the hash.
@@ -472,7 +474,7 @@ var BACKDROPS = {
   "Foundry": backFoundry, "Jungle": backJungle, "Ice Cave": backIceCave,
   "Spaceship": backSpaceship, "Factory": backFactory, "Trench": backTrench,
   "Desert": backDesert, "Data Center": backDataCenter, "Library": backLibrary, "Mail Room": backMailRoom,
-  "Building Site": backBuildingSite, "Clock Tower": backClockTower, "Rooftops": backRooftops, "Subway": backSubway
+  "Building Site": backBuildingSite, "Clock Tower": backClockTower, "Rooftops": backRooftops, "Subway": backSubway, "Harbour": backHarbour
 }
 
 function drawBackdrop(ctx, w, pal) {
@@ -734,7 +736,7 @@ var BACKDROP_FINE = {
   "Spaceship": backSpaceshipFine, "Factory": backFactoryFine,
   "Skyscraper": backSkyscraperFine, "Trench": backTrenchFine,
   "Desert": backDesertFine, "Data Center": backDataCenterFine, "Library": backLibraryFine, "Mail Room": backMailRoomFine,
-  "Building Site": backBuildingSiteFine, "Clock Tower": backClockTowerFine, "Rooftops": backRooftopsFine, "Subway": backSubwayFine
+  "Building Site": backBuildingSiteFine, "Clock Tower": backClockTowerFine, "Rooftops": backRooftopsFine, "Subway": backSubwayFine, "Harbour": backHarbourFine
 }
 
 function drawBackdropFine(ctx, w, pal) {
@@ -994,6 +996,7 @@ function drawDecor(ctx, w, pal) {
                || w.biome === "Factory" || w.biome === "Skyscraper" || w.biome === "Data Center"
     var jungle = w.biome === "Jungle"
     var desert = w.biome === "Desert"
+    if (w.biome === "Harbour") { drawHarbourDecor(ctx, w, pal, d, px, py); continue }
     if (w.biome === "Subway") { drawSubwayDecor(ctx, w, pal, d, px, py); continue }
     drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert)
     if ((w.res || 1) >= 2) drawDecorFine(ctx, pal, d, px, py, py + C,
@@ -1250,7 +1253,7 @@ function drawExitBack(ctx, w, pal) {
   drawExitFrameFine(ctx, w, pal, x, y, ww, hh)
 }
 
-var EXIT_FRAMES = { "Library": drawExitLibrary, "Data Center": drawExitDataBack, "Mail Room": drawExitMail, "Building Site": drawExitSite, "Clock Tower": drawExitClock, "Rooftops": drawExitRoof, "Subway": drawExitSubway }
+var EXIT_FRAMES = { "Library": drawExitLibrary, "Data Center": drawExitDataBack, "Mail Room": drawExitMail, "Building Site": drawExitSite, "Clock Tower": drawExitClock, "Rooftops": drawExitRoof, "Subway": drawExitSubway, "Harbour": drawExitHarbour }
 function drawExitFrameBase(ctx, w, pal, x, y, ww, hh, cx3) {
   switch (w.biome) {
   case "Ruins":
@@ -1404,7 +1407,7 @@ var EXIT_FINE = {
   "Data Center": drawExitDataFine,
   "Library": drawExitLibraryFine,
   "Mail Room": drawExitMailFine,
-  "Building Site": drawExitSiteFine, "Clock Tower": drawExitClockFine, "Rooftops": drawExitRoofFine, "Subway": drawExitSubwayFine
+  "Building Site": drawExitSiteFine, "Clock Tower": drawExitClockFine, "Rooftops": drawExitRoofFine, "Subway": drawExitSubwayFine, "Harbour": drawExitHarbourFine
 }
 
 function drawExitFrameFine(ctx, w, pal, x, y, ww, hh) {
@@ -1711,6 +1714,7 @@ function drawWaterLife(ctx, w, pal) {
 //   blink  >0: lit only for that share of a cycle (fireflies, glints)
 
 var AMBIENCE = {
+  "Harbour": [{ n: 48, vx: -0.12, vy: -0.04, sway: 3, size: 1, col: "poolGlint", alpha: 0.35 }],
   "Subway": [{ n: 44, vx: 0.23, vy: -0.015, sway: 1, size: 1, col: "dust", alpha: 0.28 }],
   "Rooftops": [{ n: 200, vx: -0.35, vy: 1.4, sway: 0, size: 1, col: "dust", alpha: 0.48 }],
   "Clock Tower": [{ n: 52, vx: 0.018, vy: 0.04, sway: 2, size: 1, col: "dust", alpha: 0.38 },
@@ -1820,7 +1824,7 @@ var AMBIENCE_FINE = {
   "Spaceship": drawMoteSpaceshipFine, "Factory": drawMoteFactoryFine,
   "Skyscraper": drawMoteSkyscraperFine, "Trench": drawMoteTrenchFine,
   "Desert": drawMoteDesertFine, "Data Center": drawMoteDataFine, "Library": drawMoteLibraryFine, "Mail Room": drawMoteMailFine,
-  "Building Site": drawMoteSiteFine, "Clock Tower": drawMoteClockFine, "Rooftops": drawMoteRoofFine, "Subway": drawMoteSubwayFine
+  "Building Site": drawMoteSiteFine, "Clock Tower": drawMoteClockFine, "Rooftops": drawMoteRoofFine, "Subway": drawMoteSubwayFine, "Harbour": drawMoteHarbourFine
 }
 
 // Check the complete half-pixel footprint: the motion can put a corner into
@@ -2032,6 +2036,7 @@ function drawMachines(ctx, w, pal) {
   if (w.biome === "Clock Tower") drawClockMachines(ctx, w, pal)
   if (w.biome === "Rooftops") drawRoofMachines(ctx, w, pal)
   if (w.biome === "Subway") drawSubwayMachines(ctx, w, pal)
+  if (w.biome === "Harbour") drawHarbourMachines(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
   if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
   if (w.updraft) drawUpdrafts(ctx, w, pal)
@@ -2569,6 +2574,7 @@ function drawActors(ctx, w, pal, opts) {
   drawActiveEventAir(ctx, w, pal)
   drawLifts(ctx, w, pal)
   drawPits(ctx, w, pal)
+  if (w.biome === "Harbour") drawHarbourFerries(ctx, w, pal)
   drawSpecialCard(ctx, w, pal)
   drawHatch(ctx, w, pal)
   drawEnemyHatch(ctx, w, pal, opts)
@@ -3797,6 +3803,7 @@ function drawPits(ctx, w, pal) {
 
     if (!p.liquid) continue
     drawPool(ctx, w, pal, p, px, pw, bot)
+    if (w.biome === "Harbour") drawHarbourSea(ctx, w, pal, p)
   }
 }
 
@@ -3843,12 +3850,7 @@ function drawPool(ctx, w, pal, p, px, pw, bot) {
   // other, so the surface never repeats on a count anybody can follow. Drawn
   // two pixels at a time, which at this scale is what keeps it a drawn line
   // rather than an anti-aliased smear.
-  ctx.fillStyle = pal.poolLip
-  for (var c = 0; c < pw; c += 2) {
-    var wob = Math.sin(c * 0.11 + t * 0.045 + p.seed)
-            + Math.sin(c * 0.047 - t * 0.028)
-    ctx.fillRect(px + c, sy + Math.round(wob), 2, 2)
-  }
+  drawPoolWaterline(ctx, w, pal, p, px, pw)
   if (p.wet) {
     // New exposed surfaces in side chambers get their own waterline. The
     // original pit line above remains wavy; these smaller spills stay crisp.
@@ -3911,6 +3913,17 @@ function drawPool(ctx, w, pal, p, px, pw, bot) {
       ctx.fillRect(px + pw / 2 + rad, sy + r, 2, 1)
     }
     ctx.globalAlpha = 1
+  }
+}
+
+function drawPoolWaterline(ctx, w, pal, p, px, pw) {
+  var sy = p.surfaceY * w.k.CELL, t = w.ticks
+  ctx.fillStyle = pal.poolLip
+  for (var c = 0; c < pw; c += 2) {
+    var wob = Math.sin(c * 0.11 + t * 0.045 + p.seed)
+            + Math.sin(c * 0.047 - t * 0.028)
+    var swell = w.biome === "Harbour" ? harbourSwell(w, p, px + c) : Math.round(wob)
+    ctx.fillRect(px + c, sy + swell, 2, 2)
   }
 }
 
@@ -4593,6 +4606,7 @@ function drawEnemyHatch(ctx, w, pal, opts) {
   else if (biome === "Library") { wall = pal.dirt; roof = pal.dirtShade; edge = pal.oreEdge; sign = "STACK OVERFLOW" }
   else if (biome === "Clock Tower") { wall = pal.dirt; roof = pal.oreShade; edge = pal.oreEdge; sign = "WATCHDOG TIMER" }
   else if (biome === "Building Site") { wall = pal.rock; roof = pal.ore; edge = pal.oreEdge; sign = "BUILD FAILED" }
+  else if (biome === "Harbour") { wall = pal.dirt; roof = pal.oreShade; edge = pal.oreEdge; sign = "PORT AUTHORITY" }
   else if (biome === "Subway") { wall = pal.dirt; roof = pal.rigDark; edge = pal.oreEdge; sign = "TOKEN INSPECTOR" }
   else if (biome === "Rooftops") { wall = pal.dirt; roof = pal.oreShade; edge = pal.oreEdge; sign = "LOCAL HOST" }
 
@@ -4609,6 +4623,8 @@ function drawBoothFrame(ctx, pal, opts, biome, x, y, wall, roof, edge, sign) {
     ctx.fillRect(x - 6, y - 19, 12, 2); ctx.fillRect(x - 9, y - 17, 18, 2)
   } else if (biome === "Jungle") {
     ctx.fillRect(x - 11, y - 19, 22, 3); ctx.fillRect(x - 7, y - 22, 14, 3)
+  } else if (biome === "Harbour") {
+    drawHarbourBoothTop(ctx, pal, x, y)
   } else if (biome === "Subway") {
     drawSubwayRoundel(ctx, pal.ore, pal.rigDark, x, y - 20)
   } else if (biome === "Rooftops") {
@@ -6891,8 +6907,8 @@ function drawReloadSign(ctx, ag, ox, oy, hair) {
 // These are visual durations only (guarded against EVENTS by the tests), so a
 // direct fireEvent and a scheduled one fade alike without a renderer clock.
 var EVENT_VISUAL_SPANS = {
-  boost: { Ruins: 420, Foundry: 360, Factory: 380, Skyscraper: 400, "Data Center": 300, "Mail Room": 360, "Building Site": 380, "Clock Tower": { 0: 280, 2: 360 }, Rooftops: 300, Subway: { 0: 300, 2: 360 } },
-  sight: { Cavern: 420, Frost: 480, "Ice Cave": 450, Desert: 460, Library: 420 },
+  boost: { Ruins: 420, Foundry: 360, Factory: 380, Skyscraper: 400, "Data Center": 300, "Mail Room": 360, "Building Site": 380, "Clock Tower": { 0: 280, 2: 360 }, Rooftops: 300, Harbour: 300, Subway: { 0: 300, 2: 360 } },
+  sight: { Cavern: 420, Frost: 480, "Ice Cave": 450, Desert: 460, Library: 420, Harbour: 420 },
   fall: { Spaceship: 400 }
 }
 
@@ -6951,7 +6967,10 @@ function drawEventHaze(ctx, w, pal, fade) {
 }
 
 function drawEventHazeGlyph(ctx, w, pal, x, y, i) {
-  if (w.biome === "Cavern") {
+  if (w.biome === "Harbour") {
+    moteFineRect(ctx, w, x, y, 9, 1)
+    moteFineRect(ctx, w, x + 3, y + 2, 7, 1)
+  } else if (w.biome === "Cavern") {
     // A body and two staggered wing rows, rather than black flecks of fog.
     var flap = Math.floor(w.ticks / 6 + i) % 2
     ctx.fillStyle = pal.rig
@@ -7029,6 +7048,7 @@ function eventDimColour(colour, shade, fade) {
 function drawEventHazardStatus(ctx, w, pal, h, fade) {
   if (!(w.eventBoost > 0) || h.wrecked || h.throttled > 0) return
   if (w.biome === "Clock Tower") return drawClockHazardStatus(ctx, w, pal, h, fade)
+  if (w.biome === "Harbour") return drawHarbourStrike(ctx, w, pal, h, fade)
   if (w.biome === "Subway") return drawSubwaySignal(ctx, w, pal, h, fade)
   if (w.biome === "Rooftops") return drawRoofPowerStatus(ctx, w, pal, h, fade)
   var C = w.k.CELL, x = Math.round((h.zx0 + h.zx1 + 1) * C / 2)
@@ -7072,6 +7092,7 @@ function drawEventSite(ctx, w, pal, fx) {
   if (w.biome === "Building Site") drawSiteEventMarker(ctx, w, pal, fx)
   if (w.biome === "Clock Tower") drawClockEventMarker(ctx, w, pal, fx)
   if (w.biome === "Rooftops") drawRoofEventMarker(ctx, w, pal, fx)
+  if (w.biome === "Harbour") drawHarbourHighWater(ctx, w, pal, fx)
   if (w.biome === "Subway") drawSubwayWorks(ctx, w, pal, fx)
   if (w.ticks < fx.fireAt) {
     var p = (w.ticks - fx.warnAt) / Math.max(1, fx.fireAt - fx.warnAt)
@@ -13098,4 +13119,426 @@ function subwayTrainBoarding(w, tr) {
     if (Math.abs(ag.x - tr.x - 0.5) < 3 && Math.abs(ag.y - tr.y) <= 2) return true
   }
   return false
+}
+
+// Harbour: dressed quay stone, tarred piles and the last light over the port.
+// Scenery is a function of ticks; boats read the Subway's shared trip state.
+var HARBOUR_CREAM = "#d2c8ab", HARBOUR_HULL = "#446367", HARBOUR_RED = "#a45c48"
+var HARBOUR_INK = "#24383c", HARBOUR_GLASS = "#ddc58b"
+function backHarbour(ctx, r, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x, b.y, b.w, b.h)
+  drawHarbourLighthouse(ctx, pal, b.w - 31, b.world.corridors[0].floorY * b.world.k.CELL)
+  for (var i = 0; i < b.world.corridors.length; i++) {
+    var c = b.world.corridors[i], floor = c.floorY * b.world.k.CELL
+    backHarbourContainers(ctx, pal, 24 + Math.floor(r() * 40), floor, i)
+    backHarbourCrane(ctx, pal, b.w - 96 - Math.floor(r() * 35), floor, 24)
+    backHarbourMast(ctx, pal, b.w / 2 + Math.floor(r() * 40), floor, 22)
+    ctx.fillStyle = pal.back
+    ctx.fillRect(0, floor - 3, b.w, 3)
+  }
+}
+function backHarbourCrane(ctx, pal, x, base, h) {
+  ctx.fillStyle = pal.back
+  ctx.fillRect(x, base - h, 3, h)
+  ctx.fillRect(x - 9, base - h, 40, 3)
+  ctx.fillRect(x + 27, base - h + 3, 1, h - 8)
+  ctx.fillRect(x + 25, base - 5, 4, 2)
+  for (var j = 0; j < 8; j++) ctx.fillRect(x + 3 + j * 2, base - h + 4 + j, 2, 1)
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(x - 2, base - h + 4, 7, 5)
+}
+function backHarbourContainers(ctx, pal, x, base, seed) {
+  for (var i = 0; i < 3; i++) {
+    var y = base - 8 - (i === 2 ? 8 : 0), xx = x + (i % 2) * 24
+    ctx.fillStyle = i % 2 ? pal.backLit : pal.back
+    ctx.fillRect(xx, y, 23, 8)
+    ctx.fillStyle = pal.backDim
+    for (var rib = 0; rib < 6; rib++) ctx.fillRect(xx + 2 + rib * 3, y + 1, 1, 6)
+    ctx.fillRect(xx + 17, y + 3, 3 + seed % 2, 1)
+  }
+}
+function backHarbourMast(ctx, pal, x, base, h) {
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(x, base - h, 1, h)
+  ctx.fillRect(x - 8, base - h + 7, 17, 1)
+  ctx.fillStyle = pal.back
+  for (var i = 0; i < 10; i++) {
+    ctx.fillRect(x - i, base - h + 2 + i * 2, 1, 2)
+    ctx.fillRect(x + i, base - h + 2 + i * 2, 1, 2)
+  }
+}
+function backHarbourFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + b.w - 0.5, b.y, 0.5, b.h)
+  if (b.w < 3 || b.h < 3) return
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(b.x + 0.5, b.y + 0.5, b.w - 1, 0.5)
+  ctx.fillStyle = pal.backDim
+  for (var x = b.x + 3.5; x < b.x + b.w; x += 6) ctx.fillRect(x, b.y + 1, 0.5, b.h - 1)
+}
+function drawHarbourSky(ctx, w, pal) {
+  var wide = w.k.COLS * w.k.CELL, horizon = w.k.SKY * w.k.CELL
+  ctx.save()
+  var dusk = ctx.createLinearGradient(0, 0, 0, horizon)
+  dusk.addColorStop(0, pal.skyTop); dusk.addColorStop(1, "#735958")
+  ctx.fillStyle = dusk; ctx.fillRect(0, 0, wide, horizon)
+  backHarbourCrane(ctx, pal, 59, horizon, 22)
+  backHarbourContainers(ctx, pal, 109, horizon, w.level)
+  backHarbourMast(ctx, pal, 232, horizon, 26)
+  backHarbourMast(ctx, pal, 278, horizon, 19)
+  drawHarbourLighthouse(ctx, pal, wide - 31, horizon)
+  ctx.restore()
+}
+function drawHarbourLighthouse(ctx, pal, x, base) {
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(x - 3, base - 23, 6, 23)
+  ctx.fillRect(x - 4, base - 8, 8, 8)
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(x - 3, base - 15, 6, 4)
+  ctx.fillRect(x - 6, base - 27, 12, 2)
+  ctx.fillRect(x - 5, base - 25, 10, 2)
+  ctx.fillStyle = HARBOUR_GLASS
+  ctx.fillRect(x - 2, base - 25, 4, 2)
+}
+function drawHarbourMaterials(ctx, w, pal) {
+  var k = w.k, C = k.CELL
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 0; x < k.COLS; x++) {
+    var m = w.terrain[y * k.COLS + x]
+    if (m === k.EMPTY || m === k.STEEL) continue
+    drawHarbourStone(ctx, w, pal, m, x * C, y * C)
+  }
+}
+function drawHarbourStone(ctx, w, pal, m, x, y) {
+  var k = w.k, col = x / k.CELL, row = y / k.CELL
+  ctx.fillStyle = materialShade(k, pal, m)
+  if (m === k.ORE) {
+    ctx.fillRect(x + 1, y, 1, 4) // long timber grain
+    if (row % 4 === 0) ctx.fillRect(x, y + 3, 4, 1) // iron band
+  }
+  if ((w.res || 1) < 2) return
+  ctx.save(); ctx.globalAlpha = 0.5
+  if (m === k.ORE) drawHarbourTimberFine(ctx, pal, x, y)
+  else drawHarbourGraniteFine(ctx, w, pal, m, x, y, col, row)
+  ctx.restore()
+}
+function drawHarbourTimberFine(ctx, pal, x, y) {
+  ctx.fillStyle = pal.oreEdge; ctx.fillRect(x + 0.5, y, 0.5, 4)
+  ctx.fillStyle = pal.oreShade; ctx.fillRect(x + 2.5, y, 0.5, 4)
+  if ((x + y) % 12 === 0) ctx.fillRect(x + 1.5, y + 2, 1, 0.5)
+}
+function drawHarbourGraniteFine(ctx, w, pal, m, x, y, col, row) {
+  var k = w.k, above = w.terrain[(row - 1) * k.COLS + col]
+  ctx.fillStyle = materialEdge(k, pal, m)
+  if (above !== m) ctx.fillRect(x + 0.5, y + 0.5, 3, 0.5)
+  ctx.fillStyle = materialShade(k, pal, m)
+  if ((col * 7 + row * 11) % 5 === 0) ctx.fillRect(x + 1, y + 2.5, 1, 0.5)
+  if (w.terrain[row * k.COLS + col + 1] !== m) ctx.fillRect(x + 3.5, y + 1, 0.5, 3)
+}
+function drawHarbourDecor(ctx, w, pal, d, x, y) {
+  var base = y + w.k.CELL
+  ctx.save()
+  if (d.kind === "hang") drawHarbourNet(ctx, pal, x, y)
+  else if (d.kind === "spire") drawHarbourLamp(ctx, pal, x, base)
+  else if (d.kind === "clump") {
+    if (d.seed % 2) drawHarbourPot(ctx, pal, x, base)
+    else drawHarbourCrate(ctx, pal, x, base)
+  } else drawHarbourBollard(ctx, pal, x, base)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = pal.decorLit
+    ctx.fillRect(x + 0.5, d.kind === "hang" ? y + 1.5 : base - 3.5, 2, 0.5)
+  }
+  ctx.restore()
+}
+function drawHarbourBollard(ctx, pal, x, base) {
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x, base - 6, 5, 6); ctx.fillRect(x - 2, base - 7, 9, 2)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x - 2, base - 3, 9, 1)
+  ctx.fillRect(x + 7, base - 2, 7, 1); ctx.fillRect(x + 6, base - 1, 9, 1)
+  ctx.fillStyle = pal.oreShade
+  ctx.fillRect(x + 8, base - 2, 4, 1) // hollow coil beside the bollard
+}
+function drawHarbourCrate(ctx, pal, x, base) {
+  ctx.fillStyle = pal.oreShade; ctx.fillRect(x - 3, base - 10, 13, 10)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x - 3, base - 10, 13, 1); ctx.fillRect(x - 3, base - 1, 13, 1)
+  ctx.fillRect(x - 2, base - 9, 1, 8); ctx.fillRect(x + 8, base - 9, 1, 8)
+  for (var i = 0; i < 8; i++) ctx.fillRect(x - 1 + i, base - 9 + i, 2, 1)
+}
+function drawHarbourPot(ctx, pal, x, base) {
+  ctx.fillStyle = pal.oreShade
+  ctx.fillRect(x - 4, base - 6, 15, 6); ctx.fillRect(x - 2, base - 8, 11, 2)
+  ctx.fillStyle = pal.oreEdge
+  for (var i = 0; i < 5; i++) ctx.fillRect(x - 3 + i * 3, base - 6, 1, 6)
+  ctx.fillRect(x - 4, base - 4, 15, 1)
+  ctx.fillStyle = pal.rigDark; ctx.fillRect(x + 2, base - 6, 4, 3)
+}
+function drawHarbourNet(ctx, pal, x, y) {
+  ctx.fillStyle = pal.oreShade
+  ctx.fillRect(x - 4, y, 16, 2)
+  for (var i = 0; i < 5; i++) {
+    ctx.fillRect(x - 4 + i * 3, y + 2, 1, 9 + i % 2 * 2)
+    ctx.fillRect(x - 4, y + 3 + i * 2, 16, 1)
+  }
+  drawHarbourRing(ctx, x + 10, y + 8, pal.urgent)
+}
+function drawHarbourLamp(ctx, pal, x, base) {
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 2, base - 21, 2, 21); ctx.fillRect(x - 1, base - 23, 8, 2)
+  ctx.fillRect(x, base - 21, 6, 6)
+  ctx.fillStyle = HARBOUR_GLASS
+  ctx.fillRect(x + 1, base - 20, 4, 4)
+  drawHarbourRing(ctx, x + 4, base - 9, pal.urgent)
+}
+function drawHarbourRing(ctx, x, y, colour) {
+  ctx.fillStyle = HARBOUR_CREAM
+  ctx.fillRect(x - 2, y - 3, 4, 1); ctx.fillRect(x - 2, y + 2, 4, 1)
+  ctx.fillRect(x - 3, y - 2, 1, 4); ctx.fillRect(x + 2, y - 2, 1, 4)
+  ctx.fillStyle = colour
+  ctx.fillRect(x - 2, y - 2, 1, 1); ctx.fillRect(x + 1, y + 1, 1, 1)
+}
+function drawExitHarbour(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.oreShade
+  ctx.fillRect(x - 3, y - 3, 3, hh + 3); ctx.fillRect(x + ww, y - 3, 3, hh + 3)
+  ctx.fillRect(x - 4, y - 5, ww + 8, 3)
+  ctx.fillStyle = pal.exitFrame
+  ctx.fillRect(x - 2, y - 2, 1, hh + 2); ctx.fillRect(x + ww + 1, y - 2, 1, hh + 2)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 2, y - 11, ww + 4, 5)
+  ctx.fillStyle = pal.exitLight
+  ctx.font = "4px monospace"; ctx.textAlign = "center"
+  ctx.fillText("HARBOUR MASTER", x + ww / 2, y - 7)
+  drawHarbourRing(ctx, x + ww + 6, y + hh / 2, HARBOUR_RED)
+}
+function drawExitHarbourFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x - 2.5, y - 2, 0.5, hh + 2); ctx.fillRect(x + ww + 0.5, y - 2, 0.5, hh + 2)
+  ctx.fillRect(x - 3.5, y - 4.5, ww + 7, 0.5)
+  ctx.fillStyle = pal.rigDark
+  for (var i = 0; i < hh; i += 4) ctx.fillRect(x - 2, y + i, 1, 0.5)
+  ctx.fillStyle = pal.exitLight
+  ctx.fillRect(x - 1.5, y - 10.5, ww + 3, 0.5)
+}
+function drawMoteHarbourFine(ctx, w, pal, x, y) {
+  moteFineRect(ctx, w, x, y, 0.5, 1)
+  moteFineRect(ctx, w, x + 1, y - 0.5, 0.5, 0.5) // wind-torn spray
+}
+function drawHarbourMachines(ctx, w, pal) {
+  ctx.save()
+  drawHarbourBeacon(ctx, w, pal)
+  drawHarbourGulls(ctx, w, pal)
+  drawHarbourFog(ctx, w, pal)
+  ctx.restore()
+}
+function drawHarbourBeacon(ctx, w, pal) {
+  var x = w.k.COLS * w.k.CELL - 31, y = w.corridors[0].floorY * w.k.CELL - 24
+  var turn = Math.sin(w.ticks / 85), dir = turn < 0 ? -1 : 1
+  ctx.fillStyle = HARBOUR_GLASS
+  for (var i = 0; i < 18; i++) {
+    ctx.globalAlpha = (1 - i / 18) * 0.12 * Math.abs(turn)
+    var xx = x + dir * (4 + i * 4), yy = y - Math.floor(i / 5)
+    moteFineRect(ctx, w, xx, yy, 4, 2 + Math.floor(i / 3))
+  }
+  ctx.globalAlpha = 1
+  ctx.fillRect(x - 1, y, 2, 1)
+  if ((w.res || 1) >= 2) drawLightPool(ctx, w, HARBOUR_GLASS, x, y, 8, 5, 0.1)
+}
+function drawHarbourGulls(ctx, w, pal) {
+  var wide = w.k.COLS * w.k.CELL
+  ctx.fillStyle = HARBOUR_CREAM; ctx.globalAlpha = 0.65
+  for (var i = 0; i < 5; i++) {
+    var x = Math.round((i * 83 + w.ticks * 0.18 + Math.sin(w.ticks / 47 + i) * 19 + wide) % wide)
+    var y = Math.round(10 + i % 3 * 9 + Math.sin(w.ticks / 31 + i * 2) * 4)
+    if (i > 1) y += w.corridors[(i - 2) % w.corridors.length].floorY * w.k.CELL - 35
+    drawHarbourGull(ctx, w, x, y, i)
+  }
+}
+function drawHarbourGull(ctx, w, x, y, seed) {
+  var wing = Math.floor(w.ticks / 9 + seed) % 2
+  moteFineRect(ctx, w, x, y, 1, 1)
+  moteFineRect(ctx, w, x - 3, y - wing, 3, 1)
+  moteFineRect(ctx, w, x + 1, y - wing, 3, 1)
+  if ((w.res || 1) >= 2) moteFineRect(ctx, w, x - 2, y - 0.5 - wing, 1.5, 0.5)
+}
+function drawHarbourFog(ctx, w, pal) {
+  ctx.fillStyle = pal.dust; ctx.globalAlpha = 0.07
+  for (var i = 0; i < 24; i++) {
+    var c = w.corridors[i % w.corridors.length]
+    var x = (i * 71 + Math.floor(w.ticks / 6)) % (w.k.COLS * w.k.CELL - 16)
+    var y = c.floorY * w.k.CELL - 5 - i % 4 * 3
+    moteFineRect(ctx, w, x, y, 14, 1)
+    if ((w.res || 1) >= 2) moteFineRect(ctx, w, x + 2.5, y + 1.5, 9, 0.5)
+  }
+}
+function harbourSwell(w, p, x) {
+  var size = (w.res || 1) >= 2 ? 0.5 : 1
+  return Math.round((Math.sin((x - p.x0 * w.k.CELL) * 0.11 + w.ticks * 0.045 + p.seed)
+    + Math.sin((x - p.x0 * w.k.CELL) * 0.047 - w.ticks * 0.028)) * 0.5 / size) * size
+}
+function drawHarbourSea(ctx, w, pal, p) {
+  var C = w.k.CELL, left = p.x0 * C, width = (p.x1 - p.x0 + 1) * C, y = p.surfaceY * C
+  ctx.save()
+  ctx.fillStyle = pal.poolLip
+  for (var x = left; x < left + width; x += 2) ctx.fillRect(x, y + harbourSwell(w, p, x), 2, 1)
+  drawHarbourReflection(ctx, w, pal, p, left, width, y)
+  drawHarbourFish(ctx, w, pal, p, left, width, y)
+  ctx.restore()
+}
+function drawHarbourReflection(ctx, w, pal, p, left, width, y) {
+  var size = (w.res || 1) >= 2 ? 0.5 : 1, depth = w.k.ROWS * w.k.CELL - y
+  ctx.fillStyle = HARBOUR_GLASS
+  for (var i = 0; i < 7; i++) {
+    var yy = y + 2 + i * 2
+    if (yy >= y + depth - 1) continue
+    var span = Math.min(width - 2, 2 + i % 3 * 3)
+    var x = left + Math.round((width - span) / 2 + Math.sin(w.ticks / 19 + i) * 2)
+    ctx.globalAlpha = 0.24 * (1 - i / 8)
+    ctx.fillRect(x, yy, span, size)
+  }
+}
+function drawHarbourFish(ctx, w, pal, p, left, width, y) {
+  if (width < 12 || w.k.ROWS * w.k.CELL - y < 5) return
+  var phase = (w.ticks + p.seed * 13) % 390
+  if (phase > 130) return
+  var x = left + 3 + Math.round(phase / 130 * (width - 9))
+  var yy = y + 4 + Math.round(Math.sin(phase / 18))
+  ctx.globalAlpha = 0.45; ctx.fillStyle = pal.poolGlint
+  ctx.fillRect(x, yy, 3, 1); ctx.fillRect(x - 1, yy - 1, 1, 3)
+}
+function drawHarbourFerries(ctx, w, pal) {
+  for (var i = 0; i < w.trains.length; i++) {
+    if (w.trains[i].boat) drawHarbourFerry(ctx, w, pal, w.trains[i])
+  }
+}
+function harbourFerryDrawing(w, tr) {
+  var p = w.pits[tr.pit], size = (w.res || 1) >= 2 ? 0.5 : 1
+  var x = Math.round((tr.x + 0.5) * w.k.CELL / size) * size
+  return { x: x, y: p.surfaceY * w.k.CELL + harbourSwell(w, p, x),
+    dockY: (tr.y + 1) * w.k.CELL, open: tr.phase === "wait" || tr.phase === "drop" }
+}
+function drawHarbourFerry(ctx, w, pal, tr) {
+  var g = harbourFerryDrawing(w, tr)
+  ctx.save()
+  // Cell slicing keeps quay stone in front of the hull, just like the metro.
+  var ink = { fillStyle: HARBOUR_INK, fillRect: function(x, y, ww, hh) {
+    ctx.fillStyle = this.fillStyle; subwayTrainRect(ctx, w, x, y, ww, hh)
+  } }
+  drawHarbourFerryHull(ink, g.x, g.y)
+  drawHarbourFerryCabin(ink, g.x, g.y, tr.dir)
+  drawHarbourPassengers(ink, tr, g.x, g.y)
+  drawHarbourGangway(ink, g, g.open)
+  if ((w.res || 1) >= 2) drawHarbourFerryFine(ink, g.x, g.y)
+  drawHarbourFerrySmoke(ctx, w, pal, tr, g)
+  drawHarbourFerryWake(ctx, w, pal, tr, g)
+  ctx.restore()
+}
+function drawHarbourFerryHull(ctx, x, y) {
+  ctx.fillStyle = HARBOUR_INK
+  ctx.fillRect(x - 20, y - 5, 40, 3); ctx.fillRect(x - 18, y - 2, 36, 3)
+  ctx.fillRect(x - 15, y + 1, 30, 2)
+  ctx.fillStyle = HARBOUR_HULL
+  ctx.fillRect(x - 18, y - 4, 36, 2); ctx.fillRect(x - 16, y - 2, 32, 3)
+  ctx.fillStyle = HARBOUR_RED
+  ctx.fillRect(x - 14, y + 1, 28, 1)
+  ctx.fillStyle = HARBOUR_CREAM
+  ctx.fillRect(x - 19, y - 5, 38, 1)
+}
+function drawHarbourFerryCabin(ctx, x, y, dir) {
+  ctx.fillStyle = HARBOUR_CREAM
+  ctx.fillRect(x - 15, y - 14, 30, 9)
+  ctx.fillRect(x + dir * 8 - 4, y - 20, 8, 6) // raised wheelhouse
+  ctx.fillStyle = HARBOUR_INK
+  ctx.fillRect(x - 17, y - 15, 34, 1); ctx.fillRect(x + dir * 8 - 5, y - 21, 10, 1)
+  ctx.fillStyle = HARBOUR_GLASS
+  ctx.fillRect(x + dir * 8 - 3, y - 19, 6, 3)
+  for (var i = 0; i < 3; i++) {
+    ctx.fillStyle = HARBOUR_INK; ctx.fillRect(x - 13 + i * 9, y - 12, 8, 6)
+    ctx.fillStyle = HARBOUR_GLASS
+    ctx.fillRect(x - 11 + i * 9, y - 12, 4, 6)
+    ctx.fillRect(x - 12 + i * 9, y - 11, 6, 4)
+  }
+  ctx.fillStyle = HARBOUR_RED; ctx.fillRect(x - dir * 8 - 2, y - 22, 4, 7)
+  ctx.fillStyle = HARBOUR_INK; ctx.fillRect(x - dir * 8 - 3, y - 23, 6, 2)
+  drawHarbourRing(ctx, x + dir * 16, y - 10, HARBOUR_RED)
+}
+// Six places in each of three lit portholes: a separate head per rider id.
+function drawHarbourPassengers(ctx, tr, x, y) {
+  ctx.fillStyle = HARBOUR_INK
+  for (var i = 0; i < tr.riders.length; i++) {
+    var port = i % 3, seat = Math.floor(i / 3)
+    var xx = x - 12 + port * 9 + seat % 3 * 2, yy = y - 11 + Math.floor(seat / 3) * 3
+    ctx.fillRect(xx, yy, 1, 1); ctx.fillRect(xx, yy + 1, 2, 1)
+  }
+}
+function drawHarbourGangway(ctx, g, open) {
+  ctx.fillStyle = HARBOUR_CREAM
+  if (open) {
+    ctx.fillRect(g.x - 2, g.dockY - 1, 4, 1)
+    ctx.fillRect(g.x - 2, g.y - 6, 1, Math.max(1, g.dockY - g.y + 6))
+  } else {
+    ctx.fillStyle = HARBOUR_INK
+    ctx.fillRect(g.x - 2, g.y - 6, 4, 1) // gangway folded against the deck
+  }
+}
+function drawHarbourFerryFine(ctx, x, y) {
+  ctx.fillStyle = HARBOUR_CREAM
+  ctx.fillRect(x - 18, y - 3.5, 36, 0.5)
+  ctx.fillStyle = HARBOUR_INK
+  for (var i = 0; i < 3; i++) ctx.fillRect(x - 11 + i * 9, y - 11.5, 4, 0.5)
+  ctx.fillStyle = HARBOUR_GLASS
+  ctx.fillRect(x - 14.5, y - 14, 29, 0.5)
+}
+function drawHarbourFerrySmoke(ctx, w, pal, tr, g) {
+  ctx.fillStyle = pal.dust
+  for (var i = 0; i < 3; i++) {
+    var age = (w.ticks + i * 13) % 40
+    ctx.globalAlpha = (1 - age / 40) * 0.3
+    var x = Math.round(g.x - tr.dir * (8 + age / 5)), y = Math.round(g.y - 25 - age / 5)
+    moteFineRect(ctx, w, x, y, 2 + Math.floor(age / 15), 2)
+  }
+}
+function drawHarbourFerryWake(ctx, w, pal, tr, g) {
+  if (tr.phase !== "run" && tr.phase !== "back") return
+  if (!(tr.v > 0)) return
+  var dir = tr.phase === "back" ? -tr.dir : tr.dir, p = w.pits[tr.pit]
+  var left = p.x0 * w.k.CELL, right = (p.x1 + 1) * w.k.CELL
+  ctx.fillStyle = pal.poolGlint; ctx.globalAlpha = 0.6
+  for (var i = 0; i < 7; i++) {
+    var x = Math.round(g.x - dir * (21 + i * 3 + w.ticks % 3))
+    if (i === 0) x = Math.round(g.x + dir * 20) // bow foam
+    if (g.x + 20 < left || g.x - 20 > right) continue
+    x = Math.max(left, Math.min(right - 3, x))
+    ctx.fillRect(x, p.surfaceY * w.k.CELL + 3 + i % 3, 3, (w.res || 1) >= 2 ? 0.5 : 1)
+  }
+}
+function drawHarbourStrike(ctx, w, pal, h, fade) {
+  var x = Math.round((h.zx0 + h.zx1 + 1) * w.k.CELL / 2), y = h.zy0 * w.k.CELL + 2
+  ctx.save(); ctx.globalAlpha = fade
+  ctx.fillStyle = pal.oreShade
+  ctx.fillRect(x, y + 4, 1, 9)
+  ctx.fillStyle = HARBOUR_CREAM
+  ctx.fillRect(x - 7, y, 15, 5)
+  ctx.fillStyle = HARBOUR_RED
+  ctx.fillRect(x - 5, y + 2, 11, 1)
+  ctx.font = "4px monospace"; ctx.textAlign = "center"
+  ctx.fillText("PORT BLOCKED", x, y - 2)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = pal.rigDark; ctx.fillRect(x - 6.5, y + 4.5, 14, 0.5)
+  }
+  ctx.restore()
+}
+function drawHarbourHighWater(ctx, w, pal, fx) {
+  if (w.ticks >= fx.fireAt) return
+  var x = fx.x * w.k.CELL, y = fx.floorY * w.k.CELL - 7
+  ctx.save(); ctx.fillStyle = pal.poolGlint
+  for (var i = 0; i < fx.span * w.k.CELL; i += 3) ctx.fillRect(x + i, y + Math.round(Math.sin(w.ticks / 7 + i)), 3, 1)
+  ctx.fillStyle = pal.warn; ctx.font = "4px monospace"; ctx.textAlign = "center"
+  ctx.fillText("STACK OVERFLOW", x + fx.span * w.k.CELL / 2, y - 3)
+  ctx.restore()
+}
+function drawHarbourBoothTop(ctx, pal, x, y) {
+  ctx.fillStyle = pal.oreShade; ctx.fillRect(x - 11, y - 18, 22, 3)
+  ctx.fillStyle = pal.oreEdge; ctx.fillRect(x - 10, y - 18, 20, 1)
+  drawHarbourRing(ctx, x + 9, y - 9, HARBOUR_RED)
 }
