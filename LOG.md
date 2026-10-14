@@ -6519,3 +6519,30 @@ limit — 600 ticks with nobody getting home — still bounds the level. Levels
 1–150 × 24 (3600 runs) against main: home 95.373% → 95.441% (+37 agents), stall
 endings 86 → 53, clock-outs 12 → 12, average level 1197 → 1199 ticks, hangs
 0; level 2: 95% → 97%, stall 6 → 1. One test. `npm run check` 1046/1046.
+
+## 222 — 2026-10-15 · The Ice Cave gets two more bashers and two more climbers
+
+The supervisor's call, made from the play-test: the Ice Cave's colonies run
+out of bashers and climbers long before they run out of ice. Per biome over
+levels 1–152 × 24, the Ice Cave ran out the clock in **2.60%** of runs; the
+next-worst biomes (Ruins, Foundry, Jungle) in 1.04% and most in none; its home
+rate was 93.3%. Swept on the eight Ice Cave levels in 1–152, 48 colonies each
+(384 runs):
+
+| extra bashers / climbers | clock-outs | home | average level |
+|---|---|---|---|
+| +0 / +0 | 2.60% | 93.39% | 1432 ticks |
+| +2 / +0 | 1.30% | 94.57% | 1380 |
+| **+2 / +2** | **0.78%** | **94.80%** | **1369** |
+| +3 / +2 | 1.04% | 94.56% | 1352 |
+| +4 / +3 | 0.26% | 94.85% | 1323 |
+
++2/+2 is the smallest step that brings the clock-outs under the other
+biomes' worst, and its home rate (94.8%) sits in the middle of the field
+(Building Site 91.5%, Data Center 98.8%) — harder than most, nowhere near
+trivial. The bonus is added after the toolbar is rolled from the level's own
+stream (`ICE_BASHERS`, `ICE_CLIMBERS`), so every Ice Cave level keeps its
+layout, hazards and events. On the way: a constant declared inside `generate`
+at column 0 is read by the test loader as a top-level name and fails it; the
+constants live at the top of the file. One test. `npm run check` 1047/1047;
+CRAP under 30.

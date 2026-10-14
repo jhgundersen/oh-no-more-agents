@@ -92,6 +92,8 @@ var ENEMY_JET_SINK = 0.10
 
 // Longer limits delayed stuck runs without rescuing additional agents in sweeps.
 var LEVEL_LIMIT = 30 * 110
+var ICE_BASHERS = 2       // the Ice Cave's extra toolbar; see where w.skills is rolled
+var ICE_CLIMBERS = 2
 var NUKE_STAGGER = 5     // ticks between arming one agent and the next
 var ROCKET_RANGE = 26    // how far Force Push's rocket will travel
 var ROCKET_BLAST = 4     // and the radius of the hole it leaves
@@ -1425,6 +1427,16 @@ if (tower) {
   w.skills.basher += Math.round(spare * 0.55)
   w.skills.climber += Math.round(spare * 0.30)
   w.skills.builder += Math.round(spare * 0.15)
+}
+
+// The Ice Cave's ice is thick and its colony ran out of bashers and climbers
+// long before it ran out of ice: 2.6% of its runs ran out the clock against
+// about 1% for the next-worst biomes (1–152 × 24). The smallest bonus that
+// brings it into line, measured; see LOG 222. Fixed numbers after the roll, so
+// the level's own random stream — and so its layout — is untouched.
+if (w.biome === "Ice Cave") {
+  w.skills.basher += ICE_BASHERS
+  w.skills.climber += ICE_CLIMBERS
 }
 
 // At most one special, on a bit over half of levels, and a fixed place in the

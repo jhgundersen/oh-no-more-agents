@@ -291,3 +291,14 @@ test("a walker on the exit's floor heading for the door counts as moving, howeve
   ag.dir = -1; ag.y = 20
   assert.equal(S.homeStretch(w, ag), false, "another floor")
 })
+
+test("the Ice Cave gets a slightly bigger toolbar, and nothing else about the level changes", () => {
+  const ice = S.BIOMES.indexOf("Ice Cave") + 1, other = ice + 1
+  const a = S.generate(ice, 0, 7), b = S.generate(other, 0, 7)
+  assert.equal(a.biome, "Ice Cave")
+  assert.ok(S.ICE_BASHERS > 0 && S.ICE_CLIMBERS > 0)
+  // The bonus is added after the roll: take it off and the toolbar is the roll.
+  assert.ok(a.skills.basher - S.ICE_BASHERS >= 9 && a.skills.basher - S.ICE_BASHERS <= 15)
+  assert.ok(a.skills.climber - S.ICE_CLIMBERS >= 12 && a.skills.climber - S.ICE_CLIMBERS <= 18)
+  assert.ok(b.skills.basher <= 15 || b.ascending, "other biomes are untouched")
+})
