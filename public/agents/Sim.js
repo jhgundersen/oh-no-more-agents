@@ -8441,7 +8441,13 @@ function specialAtWall(w, ag) {
   // Ask first. A block too big to shift, a column too short to topple, a wall
   // with nothing but steel behind it — it turns and tries somewhere else
   // rather than winding up and whiffing.
+  //
+  // Toward home, though, a wall its own move cannot answer is a wall like any
+  // other, and the colony's tools are lent for it. On level 32 Hal Lucination
+  // waited out its cooldown at a pillar it could not phase through, turned,
+  // and came back to do it again, in 8 of 24 colonies.
   if (!specialCut(w, ag, spec.act, true)) {
+    if (crossingHelps(w, ag) && lastOut(w) && borrowWallTools(w, ag)) return
     ag.cool = Math.round(spec.cool / 3)
     turnAround(w, ag)
     return

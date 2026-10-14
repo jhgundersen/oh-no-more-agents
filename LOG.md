@@ -6075,3 +6075,24 @@ A few dozen at most; not repeated, and the next check of this kind will run
 against a local server.
 The skip hint was barely visible on the floor colour; it now uses the label
 colour (committed after the deploy).
+
+## 210 — 2026-10-15 · Level 32: a hero whose move cannot pass
+
+**Level 32 (Library): stall-cutoff endings 9 → 6 of 24, home 97% → 98%.**
+Hal Lucination phases through walls — but only onto floor within ten cells,
+never through steel. On level 32 it waited out its cooldown at a pillar it
+could not phase past (my 200 rule doing its job), asked, was refused, took a
+third of its cooldown and turned, and came back to do it again. When its own
+move cannot answer a wall toward home and the rest of the colony is settled,
+a hero now borrows the colony's tools (`borrowWallTools`, as for the
+stood-down camper in 209). Without the "rest settled" condition it also
+helped level 27 but cost level 16 two points — a hero spending tools the
+colony still needed mid-level — so it waits for `lastOut`. Levels 1–57 × 24:
+home 95.51% → 95.53%, stall endings 42 → 39, clock-outs 5 → 5, hangs 0; no
+other level moves. One test in `stragglers.test.js`. `npm run check` 1007/1007.
+
+**List after 210, by severity:** level 6 clock-outs 3/24 (Ice Cave; the colony
+runs out of climbers and bashers — balance, not a soft-lock); level 18 stall
+8/24; level 2 stall 6/24; level 32 stall 6/24 (Hal Lucination wandering in
+three different ways); levels 10, 23, 36, 55 stall 2/24; single runs on 4, 5,
+9, 12, 24, 27, 38.

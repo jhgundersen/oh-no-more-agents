@@ -163,3 +163,24 @@ test("a stood-down camper at a wall toward home borrows the colony's tools; faci
   S.specialAtWall(w, away)
   assert.equal(away.dir, 1, "facing away from home: turned")
 })
+
+test("a hero whose own move cannot pass a wall toward home borrows the colony's tools — once the rest are settled", () => {
+  const w = box(90)
+  // A thin wall with no floor beyond it for ten cells: nothing to phase onto,
+  // but a climber or a basher can still take it.
+  for (let y = 26; y <= 29; y++) w.terrain[y * w.k.COLS + 45] = w.k.DIRT
+  for (let x = 46; x <= 56; x++) w.terrain[30 * w.k.COLS + x] = w.k.EMPTY
+  w.exit = { x: 80, y: 25, w: 6, h: 5 }
+  w.special = "wraith"; w.specialSpec = S.specialSpec("wraith")
+  const hero = () => Object.assign(S.spawn(w), { x: 44.4, y: 29, dir: 1, state: "walk", special: "wraith", cool: 0 })
+  w.released = w.toRelease; w.saved = 0
+  const busy = hero(); w.agents = [busy]
+  const before = JSON.stringify(w.skills)
+  S.specialAtWall(w, busy)
+  assert.equal(JSON.stringify(w.skills), before, "mid-level: the colony keeps its tools")
+  assert.equal(busy.dir, -1)
+  w.saved = w.toRelease - 1
+  const last = hero(); w.agents = [last]
+  S.specialAtWall(w, last)
+  assert.notEqual(JSON.stringify(w.skills), before, "last out: it borrows")
+})
