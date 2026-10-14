@@ -4292,3 +4292,14 @@ More fighting on screen, still rarely a lost level. Own RNG stream; levels
 level 15 with backup. Tests 780 (`test/backup.test.js`); nothing over CRAP 30.
 
 **Next:** watch a deep level in the browser for how backup feels at speed.
+
+## 165 — 2026-10-14 · Backup, seen in the browser
+
+**Looked:** level 125 in headless Chromium at the page's own speed, a frame
+every four seconds. The ticker reads "BACKUP ARRIVES AT THE GUARD POST", two
+red guards drop out of the booth and jet into the colony, and the last fight
+happens at the exit door (LGTM, a scuffle won). No console errors. No change
+needed.
+
+**Deployed** after 165 (name="build" content="903ae7e8"), gated on a passing
+check (780 tests): backup at deeper guard posts.
