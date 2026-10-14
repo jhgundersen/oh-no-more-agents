@@ -4964,3 +4964,13 @@ ordinary play; these are Node raster times, not browser FPS.
 Reviewed and merged by the loop. Level 2, tick 400, full frame against main at 1x: columns with capitals, arches, torches in niches and vines on the back wall; the original maroon blocks, pillar stubs and boulder unchanged in front. Busier behind the play, but the dark suits still stand out against the tan stone.
 
 **Deployed** after 186 (name="build" content="b5d568de"), gated on a passing check (855 tests): the Ruins art. Level 2 in headless Chromium, no console errors.
+
+## 187 — 2026-10-14 · Jungle art on a branch
+
+**Started:** Jungle art on `codex/jungle` (level 5): foliage depth, god-rays,
+fireflies, mossy root-bound earth; same brief lessons.
+
+**Measured, no change:** page weight. Draw.js is 630 KB raw / 164 KB gzipped
+(556 KB raw at the Harbour, 162), Sim.js 441 / 139; all six scripts about
+330 KB gzipped, cached by their stamps and compressed in transit. Not worth
+a build step yet; worth watching as the art passes continue.
