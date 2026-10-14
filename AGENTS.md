@@ -52,6 +52,15 @@ Production is `https://oh-no-more-agents.com`.
 - Never commit secrets or Wrangler credentials. `RATE_LIMIT_SALT` is a Worker
   secret.
 - Do not edit generated Wrangler state under `.wrangler/` or `node_modules/`.
+- Keep the development tools fast and safe. When a step is slow, flaky or
+  repeated by hand — a test file that takes minutes, a screenshot or comparison
+  done the long way, a check that has to be rerun to see what failed — improve
+  the tool rather than living with it, and log what changed. A test must stay
+  bounded: compare digests rather than raw frame buffers (a failed `deepEqual`
+  on two buffers makes node build a diff and once reached 22 GB), and cap any
+  loop over recorded draw calls. A machine-wide guard (`node-test-guard`, a
+  systemd user service) kills any `node --test` process over 4 GB, so a test
+  that dies with SIGKILL has probably hit it: `journalctl --user -u node-test-guard`.
 
 ## How the level is put together
 

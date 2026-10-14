@@ -319,7 +319,13 @@ var TRAITS = {
   // umbrella four cells before anybody else does, bridges rather than drops,
   // and never volunteers to stand in the way. The fast walk is the tell: it is
   // the one that is always somewhere else already.
-  skittish: { label: "skittish", turnLimit: 2, fallMargin: 4, bridgeAt: 4,  bashFirst: false, blockBias: -2, buildCap: 2, noFloat: false, standDown: 0, digBias: 60, pace: 1.14, wary: true }
+  skittish: { label: "skittish", turnLimit: 2, fallMargin: 4, bridgeAt: 4,  bashFirst: false, blockBias: -2, buildCap: 2, noFloat: false, standDown: 0, digBias: 60, pace: 1.14, wary: true },
+
+  // Hallucinates. Once a level it lands, sees an exit that is not there and
+  // sets off for it with total confidence; on arrival the door dissolves and
+  // it turns back the way it came. See dreamSteer. The only trait whose
+  // mistake the rest of the board can see.
+  dreamer:  { label: "dreamer",  turnLimit: 3, fallMargin: 1, bridgeAt: 8,  bashFirst: false, blockBias: 0, buildCap: 2, noFloat: false, standDown: 0, digBias: 0, pace: 0.97, mirage: true }
 }
 
 // Who turns up is a cast, not a uniform draw. A colony picks CAST_SIZE of the
@@ -335,7 +341,7 @@ var TRAIT_COMMON = ["steady", "steady", "steady", "brave", "cautious"]
 // would spend a slot on a personality that was turning up anyway.
 var TRAIT_DISTINCT = [
   "curious", "stubborn", "tinkerer", "engineer", "sentinel",
-  "burrower", "hoarder", "follower", "skittish"
+  "burrower", "hoarder", "follower", "skittish", "dreamer"
 ]
 
 var CAST_SIZE = 3
@@ -345,7 +351,8 @@ var COMMON_SHARE = 0.55
 
 var TRAIT_ORDER = [
   "steady", "brave", "cautious", "curious", "stubborn", "tinkerer",
-  "engineer", "sentinel", "burrower", "hoarder", "follower", "skittish"
+  "engineer", "sentinel", "burrower", "hoarder", "follower", "skittish",
+  "dreamer"
 ]
 
 // Fisher-Yates on the world's own stream, so a pinned colonySeed still
@@ -975,6 +982,11 @@ function newWorld(level, attempt, colonySeed) {
     // the personality of agents it had not met yet.
     eventRng: makeRng(colonySeed + 7919),
     traitCounts: {},
+    // Mirages get a stream of their own for the reason events do: a dreamer
+    // landing mid-level must not reshuffle the whims of agents still queued.
+    dreamRng: makeRng(colonySeed + 15485863),
+    mirages: [],       // exits only a dreamer can see; see dreamSteer
+    hallucinations: 0,
 
     // Events: what may happen to this level while it is being played, and the
     // modifiers a live one has switched on. See the block above stepEvents.
@@ -6660,6 +6672,78 @@ function herdSteer(w, ag) {
   if (best) ag.dir = best.dir
 }
 
+// ---------------------------------------------------------------------------
+// Hallucination
+// ---------------------------------------------------------------------------
+// A dreamer lands, and sometimes the floor it lands on has a second exit on
+// it: lit, framed, a short walk away, and entirely imaginary. It faces the
+// mirage and walks; when it arrives the door comes apart and it turns back.
+// That is the whole rule. It costs a round trip, never a life — the mirage is
+// only ever placed down a clear, flat, known-safe stretch, never on the real
+// door, and an agent gets one per level — so it reads as a joke the colony
+// tells about itself rather than a trap the level sets.
+//
+// Landing is the moment for the same reason as herdSteer: it is when an agent
+// is deciding which way to face anyway.
+var MIRAGE_CHANCE = 0.55  // per landing, until it has had its one
+var MIRAGE_MIN = 8        // cells: close enough to see, far enough to cost something
+var MIRAGE_MAX = 26
+var MIRAGE_LIFE = 360     // ticks before it gives up on a door it cannot reach
+var MIRAGE_FADE = 24      // ticks the door takes to come apart, for Draw
+
+function dreamSteer(w, ag) {
+  if (!traitOf(ag).mirage || ag.dreamt || ag.special || ag.state !== "walk") return
+  if (w.dreamRng() >= MIRAGE_CHANCE) return
+  var x0 = Math.floor(ag.x), y = Math.floor(ag.y)
+  var dir = w.dreamRng() < 0.5 ? -1 : 1
+  var run = mirageRun(w, x0, y, dir)
+  if (run < MIRAGE_MIN) { dir = -dir; run = mirageRun(w, x0, y, dir) }
+  if (run < MIRAGE_MIN) return
+  var reach = MIRAGE_MIN + Math.floor(w.dreamRng() * (Math.min(run, MIRAGE_MAX) - MIRAGE_MIN + 1))
+  var x = x0 + dir * reach
+  // A mirage on top of the real door is a door.
+  if (!eventSafeX(w, x)) return
+  ag.dreamt = true
+  ag.dir = dir
+  w.mirages.push({ x: x, y: y, dir: dir, by: ag.id, born: w.ticks, popped: -1, reached: false })
+  w.hallucinations++
+  feedNote(w, agentTag(w, ag) + " · SEES AN EXIT")
+}
+
+// How far it can walk on the level, with headroom, nothing known to be lethal
+// and ground under every step. Three cells short of where that ends, so the
+// door stands on floor rather than over a lip.
+function mirageRun(w, x, y, dir) {
+  for (var n = 1; n <= MIRAGE_MAX + 3; n++) {
+    var xx = x + dir * n
+    if (xx < 1 || xx >= COLS - 1 || solid(w, xx, y) || solid(w, xx, y - 1) ||
+        !solid(w, xx, y + 1) || hazardZoneAt(w, xx, y, true) || pitAt(w, xx)) return n - 4
+  }
+  return MIRAGE_MAX
+}
+
+function stepMirages(w) {
+  if (!w.mirages) return
+  for (var i = w.mirages.length - 1; i >= 0; i--) {
+    var m = w.mirages[i]
+    if (m.popped >= 0) {
+      if (w.ticks - m.popped > MIRAGE_FADE) w.mirages.splice(i, 1)
+      continue
+    }
+    var ag = agentById(w, m.by)
+    var walking = ag && !ag.gone && ag.state === "walk"
+    if (walking && Math.floor(ag.y) === m.y && Math.abs(ag.x - (m.x + 0.5)) < 1) {
+      m.reached = true
+      ag.dir = -m.dir
+      feedNote(w, agentTag(w, ag) + " · HALLUCINATION DETECTED")
+    }
+    // It also lets go when anything else turns it, takes it off the floor, or
+    // it simply never gets there: a mirage is only ever about the walk to it.
+    if (m.reached || !walking || ag.dir !== m.dir || Math.floor(ag.y) !== m.y ||
+        w.ticks - m.born > MIRAGE_LIFE) m.popped = w.ticks
+  }
+}
+
 function stepFall(w, ag) {
   var cx = Math.floor(ag.x)
   var speed = descentSpeed(w, ag, cx), ny = ag.y + speed
@@ -6769,6 +6853,7 @@ function fallLands(w, ag, cx, ny) {
     }
     ag.floater = false
     herdSteer(w, ag)
+    dreamSteer(w, ag)
     return true
   }
   return false
@@ -10422,6 +10507,7 @@ function finishWorldStep(w, active, blockers, moving) {
   }
 
   stepEvents(w)
+  stepMirages(w)
   stepMission(w)
   stepHazard(w)
   stepMines(w)

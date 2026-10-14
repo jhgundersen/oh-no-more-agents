@@ -92,6 +92,15 @@ var EVENT_LINES = {
     "An agent was compromised and kept working normally, which is worse."
   ],
 
+  // Only when a dreamer actually walked to an exit that was not there.
+  mirage: [
+    "An agent cited an exit that does not exist. It was very well formatted.",
+    "Hallucination detected: the door was confidently made up.",
+    "One of them walked to a source it had invented. Then walked back.",
+    "The exit was real in the sense that the agent believed in it.",
+    "Grounding was applied on arrival. Mostly to the agent's expectations."
+  ],
+
   // Only when a carrier actually reached the door still carrying it.
   carrier: [
     "One of them took it home with it. Nobody noticed.",
@@ -122,6 +131,7 @@ function outcomeLine(w) {
   // its EVENTS table from here resolves in a browser and throws in QML.
   for (var m in (w.eventMechs || {})) add(m, true)
   add("carrier", w.carrierHome === true)
+  add("mirage", w.hallucinations > 0)
   var pool = facts.length && Math.random() < 0.78 ? facts : outcome
   return pool[Math.floor(Math.random() * pool.length)]
 }

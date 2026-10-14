@@ -2625,12 +2625,43 @@ function drawActors(ctx, w, pal, opts) {
   drawLevelTransition(ctx, w, pal)
 }
 
+// A dreamer's exit. The same lit mouth as the real one, so it is believable
+// for exactly as long as it takes to notice it has no frame and will not hold
+// still: every other row swims sideways like heat haze. It comes apart a row
+// at a time when the dreamer arrives, or gives up. Whole art pixels only, so
+// the panel draws it the same as the page.
+var MIRAGE_DOOR_W = 22, MIRAGE_DOOR_H = 18
+function drawMirage(ctx, w, pal, m) {
+  var C = w.k.CELL
+  var left = Math.round((m.x + 0.5) * C - MIRAGE_DOOR_W / 2), foot = (m.y + 1) * C
+  var age = w.ticks - m.born
+  var fading = m.popped >= 0 ? (w.ticks - m.popped) / 24 : 0   // MIRAGE_FADE in Sim.js
+  if (fading >= 1) return
+  var rise = Math.min(1, age / 18)                    // it shimmers into being
+  ctx.save()
+  for (var row = 0; row < MIRAGE_DOOR_H; row += 2) {
+    var wave = Math.round(Math.sin(w.ticks * 0.21 + row * 0.9) * (1 + fading * 6))
+    var lit = row / MIRAGE_DOOR_H
+    ctx.globalAlpha = (0.32 + lit * 0.48) * rise * (1 - fading) * (0.85 + 0.15 * Math.sin(w.ticks * 0.5))
+    ctx.fillStyle = lit > 0.5 ? pal.exitGlow : pal.exitDeep
+    var shrink = Math.floor(fading * MIRAGE_DOOR_W / 2)
+    if (MIRAGE_DOOR_W - shrink * 2 > 0)
+      ctx.fillRect(left + wave + shrink, foot - MIRAGE_DOOR_H + row, MIRAGE_DOOR_W - shrink * 2, 2)
+  }
+  // A sign over the door, in case there was any doubt.
+  ctx.globalAlpha = 0.9 * rise * (1 - fading)
+  ctx.fillStyle = pal.exitLight
+  ctx.fillRect(left + 7, foot - MIRAGE_DOOR_H - 3, 8, 2)
+  ctx.restore()
+}
+
 function drawActorFixtures(ctx, w, pal) {
   drawActorMines(ctx, w, pal)
   drawActorLadders(ctx, w, pal)
   drawActorParticles(ctx, w, pal)
   if (w.prints && w.prints.length) drawPrints(ctx, w, pal)
   if (w.eventSiteFx) drawEventSite(ctx, w, pal, w.eventSiteFx)
+  if (w.mirages) for (var mi = 0; mi < w.mirages.length; mi++) drawMirage(ctx, w, pal, w.mirages[mi])
   if (w.boulder) drawBoulder(ctx, w, pal, w.boulder)
   if (w.frozen) for (var fz = 0; fz < w.frozen.length; fz++) drawFrozen(ctx, w, pal, w.frozen[fz])
   if (w.pads) for (var pd = 0; pd < w.pads.length; pd++) drawPadPair(ctx, w, pal, w.pads[pd])
@@ -8132,7 +8163,8 @@ var TRAIT_LOOKS = {
   burrower: { x: 0,   y: 0,    stride: 1,    draw: drawTraitBurrower },
   hoarder:  { x: 0,   y: 0,    stride: 1,    draw: drawTraitHoarder },
   follower: { x: 0,   y: 0,    stride: 1,    arms: true, draw: drawTraitFollower },
-  skittish: { x: 0,   y: 0,    stride: 1.5,  arms: true, draw: drawTraitSkittish }
+  skittish: { x: 0,   y: 0,    stride: 1.5,  arms: true, draw: drawTraitSkittish },
+  dreamer:  { x: 0,   y: -0.5, stride: 1,    draw: drawTraitDreamer }
 }
 var TRAIT_POSES = { walk: true, wait: true, block: true, ride: true }
 function agentTraitLook(w, ag) {
@@ -8241,6 +8273,13 @@ function drawTraitFollower(p) {
   if (!p.hands) return
   traitPixel(p, p.pal.skin, -0.5, 9.5, 1, 0.5) // checking the colleague behind
   traitPixel(p, p.pal.lapel, 0, 8.5, 0.5, 1)
+}
+function drawTraitDreamer(p) {
+  // Eyes on the middle distance, and a loosened tie. Somewhere out there is
+  // a door only it can see.
+  traitPixel(p, p.pal.shirt, 5.5, 3, 0.5, 0.5)
+  traitPixel(p, p.pal.robe, 3, 7.5, 1, 0.5)
+  traitPixel(p, p.pal.lapel, 3.5, 8, 0.5, 1.5)
 }
 function drawTraitSkittish(p) {
   traitPixel(p, p.pal.lapel, 1, 6.5, 0.5, 1)

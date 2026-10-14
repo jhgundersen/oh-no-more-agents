@@ -5166,3 +5166,37 @@ Reviewed and merged by the loop. Level 8, tick 400, full frame against main at 1
 Merge fix: dropping `drawAssemblyLabels` left "cached rails" on `layers.slice(0, 3)`, which now took in the animated `drawAssemblyLife`. The failing `deepEqual` on two raw 800×496 buffers made node build a diff of them and the run reached 22 GB before it was killed. Now `slice(0, 2)`, and `picture()` returns a pixel digest so a failed comparison is a 64-character diff; `footprint` refuses non-finite or larger-than-board rectangles and recording stops at 20k fills. The file runs in 2 s; `npm run check` 881/881.
 
 **Deployed** after 192 (name="build" content="525f1324"), gated on a passing check (881 tests): the Factory art. Level 8 in headless Chromium, no console errors.
+
+## 193 — 2026-10-14 · The dreamer: an exit that is not there
+
+**Change:** a thirteenth trait, `dreamer`, cast like the other distinctive
+ones. Its rule (`dreamSteer`, at landing beside `herdSteer`): once a level, on
+55% of landings until it happens, it sees a mirage exit 8–26 cells along its
+own floor, faces it and walks. On arrival the door comes apart, the ticker says
+HALLUCINATION DETECTED and it turns back the way it came — a round trip, never
+a life. The mirage is only placed down a stretch with headroom, ground under
+every step, no known hazard reach and no pit, never on the real exit or hatch
+(`eventSafeX`), and it lets go if anything else turns the agent, takes it off
+the floor, or after 360 ticks. Mirages draw from their own `dreamRng`, so a
+dreamer landing mid-level does not reshuffle the whims of agents still queued.
+Draw: a lit doorway with a sign over it, every other row swimming like heat
+haze, coming apart row by row (whole art pixels, so the panel shows it too);
+the dreamer's res-2 tell is a far-off glance and a loosened tie. Outcome: five
+"cited a source that does not exist" lines, only when a hallucination happened.
+
+**Measured:** `simcheck play 60` base vs new: 60/60 cleared both, home
+877/917 (96%) → 881/929 (95%), 0 hangs, avg 41s → 40s — noise from the
+reshuffled casts. 80 runs over levels 1–40: 62 dreamers, 42 mirages, 40
+reached, 2 abandoned.
+
+**Tests:** `test/dreamer.test.js` (6): placement invariants on every mirage met
+over 24 levels, one per agent, arrival reverses and early turns release,
+non-dreamers/heroes/fallers never dream, read-only deterministic drawing that
+fades out on whole pixels, and outcome lines only after a hallucination.
+`bouncer-art` "actual level 13" pinned one colony's timeline (seed `13 * 7919 + 13`, death
+at 580); a new trait reshuffles every cast, so it now uses seed 102991 (same
+story, death at 580) and reads its moments off a scouting run instead of a tick
+list. `npm run check` 888/888 in 15 s, run under `systemd-run -p MemoryMax=6G`.
+
+**Tooling:** AGENTS.md gains the fast-and-bounded tools convention and the
+`node-test-guard` note (from the supervisor).

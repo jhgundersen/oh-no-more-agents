@@ -134,12 +134,26 @@ test("throw landing puff is at Sim's destination, lasts eight ticks and restores
 })
 
 test("actual level 13 walk, palm, scuffle, throw, stagger and dated defeat never write world state", () => {
-  const w = S.generate(13, 0, 13 * 7919 + 13)
+  // A colony in which the Bouncer walks, scuffles, recovers and is put down.
+  // The colony comes from the cast, so a new trait reshuffles it; the moments
+  // are read off a first run rather than pinned, and only the seed is chosen.
+  const seed = 102991, moments = new Set(), scout = S.generate(13, 0, seed)
+  let last = "", died = -1
+  while (scout.ticks < 2400 && died < 0) {
+    S.step(scout)
+    const en = scout.enemies.find(e => e.kind === "bouncer")
+    if (!en) continue
+    if (en.state !== last) { moments.add(scout.ticks); moments.add(scout.ticks + 4); last = en.state }
+    if (en.gone) died = en.diedAt
+  }
+  assert.ok(died > 0, "this colony must still put its Bouncer down; pick another seed if a cast change moved it")
+  for (const age of [8, 14, 31, 32]) moments.add(died + age)
+  const w = S.generate(13, 0, seed)
   assert.ok(w.enemyRoster.includes("bouncer"))
-  for (const tick of [129, 350, 360, 388, 417, 421, 425, 450, 552, 580, 588, 594, 611, 612]) {
+  for (const tick of [...moments].sort((a, b) => a - b)) {
     while (w.ticks < tick) S.step(w)
     const en = w.enemies.find(e => e.kind === "bouncer")
-    if (tick === 580) { assert.ok(en.gone); assert.equal(en.diedAt, 580) }
+    if (tick === died + 8) { assert.ok(en.gone); assert.equal(en.diedAt, died) }
     for (const res of [1, 2]) {
       w.res = res
       const before = JSON.stringify(w), img = canvas(400 * res, 248 * res, theme.background)
