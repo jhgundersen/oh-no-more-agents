@@ -209,6 +209,7 @@ function drawTerrain(ctx, w, pal) {
   if (w.biome === "Subway") drawSubwayMaterials(ctx, w, pal)
   if (w.biome === "Harbour") drawHarbourMaterials(ctx, w, pal)
   if ((w.res || 1) >= 2) drawTerrainFine(ctx, w, pal)
+  if (w.biome === "Cavern") drawCavernMaterials(ctx, w, pal)
 
   drawFactoryPlates(ctx, w, pal)
   if ((w.res || 1) >= 2 && !BUILT[w.biome]) drawTerrainDepth(ctx, w)
@@ -480,6 +481,11 @@ var BACKDROPS = {
 }
 
 function drawBackdrop(ctx, w, pal) {
+  if (cavernPage(w)) {
+    drawCavernBackdrop(ctx, w, pal)
+    ctx.fillStyle = pal.backLit // match the coarse recipe's canvas state
+    return
+  }
   var fn = BACKDROPS[w.biome]
   var top = w.k.SKY * w.k.CELL
   if (fn) fn(ctx, backRng(w), { x: 0, y: top, w: w.k.COLS * w.k.CELL, h: w.k.ROWS * w.k.CELL - top, world: w }, pal)
@@ -999,6 +1005,7 @@ function drawDecor(ctx, w, pal) {
     var jungle = w.biome === "Jungle"
     var desert = w.biome === "Desert"
     if (w.biome === "Harbour") { drawHarbourDecor(ctx, w, pal, d, px, py); continue }
+    if (cavernPage(w)) { drawCavernDecor(ctx, w, pal, d, px, py); continue }
     if (w.biome === "Subway") { drawSubwayDecor(ctx, w, pal, d, px, py); continue }
     drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert)
     if ((w.res || 1) >= 2) drawDecorFine(ctx, pal, d, px, py, py + C,
@@ -2039,6 +2046,7 @@ function drawMachines(ctx, w, pal) {
   if (w.biome === "Subway") drawSubwayMachines(ctx, w, pal)
   if (w.biome === "Harbour") drawHarbourMachines(ctx, w, pal)
   if (w.biome === "Foundry") drawFoundryHeat(ctx, w, pal)
+  if (w.biome === "Cavern") drawCavernLife(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
   if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
   if (w.updraft) drawUpdrafts(ctx, w, pal)
@@ -13919,4 +13927,216 @@ function drawDrip(ctx, w, d, C) {
   ctx.fillRect(px - 1 - t, at - 1 - up, 1, 1)
   ctx.fillRect(px + 1 + t, at - 1 - up, 1, 1)
   if (t < 3) ctx.fillRect(px, at - 2 - t * 1.5, 1, 1)
+}
+
+// Cavern, page only: old limestone, wet calcite and living pinpricks in the
+// dark. Geometry belongs to the cached terrain; only the breath of the fungi
+// and a little grit use the actor pass. No scenery state is stored on the world.
+var CAVERN_STONE = ["#35464d", "#3b4c52", "#405157", "#46575b"]
+var CAVERN_SHADOW = "#25353d", CAVERN_WET = "#78928f", CAVERN_MOSS = "#526e5e"
+var CAVERN_GLOW = "#79bcaa", CAVERN_CORE = "#b4dfc9", CAVERN_CALCITE = "#7e8980"
+
+function cavernPage(w) { return w.biome === "Cavern" && (w.res || 1) >= 2 }
+function cavernHash(x, y, level) { return ((x * 73856093) ^ (y * 19349663) ^ (level * 83492791)) >>> 0 }
+
+function drawCavernBackdrop(ctx, w, pal) {
+  if (!cavernPage(w)) return
+  ctx.save()
+  var wide = w.k.COLS * w.k.CELL, tall = w.k.ROWS * w.k.CELL
+  ctx.fillStyle = pal.hatchMouth; ctx.fillRect(0, 0, wide, tall)
+  // Long folded bedding behind the whole cave, including the hatch's void.
+  ctx.globalAlpha = 0.3
+  for (var y = -10; y < tall; y += 19) {
+    for (var x = 0; x < wide; x += 4) {
+      var fold = Math.round(5 * Math.sin(x / 57 + y / 21 + w.level) + 2 * Math.sin(x / 19))
+      ctx.fillStyle = pal.backDim; ctx.fillRect(x, y + fold, 4, 6)
+      ctx.fillStyle = pal.back; ctx.fillRect(x, y + fold, 4, 0.5)
+    }
+  }
+  ctx.globalAlpha = 1
+  for (var i = 0; i < w.corridors.length; i++) drawCavernRecess(ctx, w, pal, i)
+  // The ceiling above the hatch is a cave roof too, not an outdoor sky.
+  for (var tooth = 0; tooth < 9; tooth++) {
+    var h = cavernHash(tooth, 0, w.level), tx = 10 + h % (wide - 20)
+    drawCavernCurtain(ctx, pal, tx, 0, 12 + h % 20, h)
+  }
+  ctx.restore()
+}
+
+function drawCavernRecess(ctx, w, pal, i) {
+  var c = w.corridors[i], floor = c.floorY * w.k.CELL, roof = floor - 26
+  // Curtains of flowstone are well behind the walkable floor. Different widths
+  // and lengths break up the old full-height, straight-sided pillars.
+  ctx.globalAlpha = 0.75
+  for (var n = 0; n < 4; n++) {
+    var h = cavernHash(n, i + 1, w.level), x = 12 + h % (w.k.COLS * w.k.CELL - 24)
+    drawCavernCurtain(ctx, pal, x, roof, 14 + h % 25, h)
+    drawCavernFormation(ctx, x + 19, floor, 4 + (h >>> 12) % 14, 7, -1, pal.backDim, pal.hatchMouth)
+  }
+  ctx.globalAlpha = 1
+}
+
+function drawCavernCurtain(ctx, pal, x, roof, height, seed) {
+  // Three fused lobes, like mineral deposited by water over centuries. A
+  // wavering seam follows each fold; the ends are deliberately unequal.
+  for (var lobe = 0; lobe < 3; lobe++) {
+    var length = height - (seed >>> (lobe * 3)) % 11
+    for (var row = 0; row < length; row++) {
+      var width = Math.max(0.5, Math.round((7 - row / length * 6.5) * 2) / 2)
+      var dx = Math.round(Math.sin(row / 9 + lobe) * 2) / 2
+      var left = x + lobe * 5 + dx - Math.round(width * 0.5 * 2) / 2
+      ctx.fillStyle = pal.back; ctx.fillRect(left, roof + row, width, 1)
+      ctx.fillStyle = pal.backDim; ctx.fillRect(left + width - 0.5, roof + row, 0.5, 1)
+      ctx.fillStyle = pal.backLit; ctx.fillRect(left, roof + row, 0.5, 1)
+    }
+  }
+}
+
+// Half-pixel courses, asymmetrical taper and a shaded face rather than a cone.
+function drawCavernFormation(ctx, x, base, height, width, dir, body, shade) {
+  for (var row = 0; row < height; row++) {
+    var taper = Math.max(0.5, Math.round(width * Math.pow(1 - row / height, 1.6) * 2) / 2)
+    var y = dir > 0 ? base + row : base - row - 1
+    var left = x - Math.round(taper * 0.65 * 2) / 2
+    ctx.fillStyle = body; ctx.fillRect(left, y, taper, 1)
+    ctx.fillStyle = shade; ctx.fillRect(left + taper - 0.5, y, 0.5, 1)
+    if (shade === CAVERN_SHADOW && row > 1 && taper > 2) {
+      ctx.fillStyle = CAVERN_CALCITE; ctx.globalAlpha *= 0.3
+      ctx.fillRect(left + 0.5, y, 0.5, 1); ctx.globalAlpha /= 0.3
+    }
+  }
+}
+
+function drawCavernMaterials(ctx, w, pal) {
+  if (!cavernPage(w)) return
+  ctx.save()
+  var k = w.k, C = k.CELL
+  for (var y = 0; y < k.ROWS; y++) for (var x = 0; x < k.COLS; x++) {
+    var m = w.terrain[y * k.COLS + x]
+    if (m !== k.DIRT && m !== k.ROCK && m !== k.ORE) continue
+    drawCavernStone(ctx, w, x, y)
+  }
+  ctx.restore()
+}
+
+function drawCavernStone(ctx, w, x, y) {
+  var k = w.k, C = k.CELL, px = x * C, py = y * C
+  var h = cavernHash(x, y, w.level), fold = Math.round(2 * Math.sin(x / 9 + w.level))
+  var bed = (y + fold + k.ROWS) % 9
+  ctx.fillStyle = CAVERN_STONE[Math.floor(bed / 3) + (bed === 8 ? 1 : 0)]
+  ctx.fillRect(px, py, C, C)
+  // Bedding runs across material boundaries: ore is mineral, not a checker.
+  ctx.fillStyle = CAVERN_SHADOW
+  if (bed === 0 || bed === 4) ctx.fillRect(px, py + 1 + (h % 2) * 0.5, C, 0.5)
+  if (h % 19 === 0) drawCavernCrack(ctx, px, py, h)
+  if (y > 0 && !w.terrain[(y - 1) * k.COLS + x]) drawCavernLedge(ctx, px, py, h)
+  if (y + 1 < k.ROWS && !w.terrain[(y + 1) * k.COLS + x]) {
+    ctx.fillStyle = CAVERN_SHADOW; ctx.fillRect(px, py + C - 1, C, 1)
+    ctx.fillStyle = CAVERN_CALCITE
+    ctx.globalAlpha = 0.25; ctx.fillRect(px + 0.5, py + C - 1.5, 2, 0.5); ctx.globalAlpha = 1
+  }
+  if (x > 0 && !w.terrain[y * k.COLS + x - 1]) {
+    ctx.fillStyle = CAVERN_WET; ctx.globalAlpha = 0.3
+    ctx.fillRect(px, py + 0.5, 0.5, C - 0.5); ctx.globalAlpha = 1
+  }
+  if (x + 1 < k.COLS && !w.terrain[y * k.COLS + x + 1]) {
+    ctx.fillStyle = CAVERN_SHADOW; ctx.fillRect(px + C - 0.5, py, 0.5, C)
+  }
+}
+
+function drawCavernCrack(ctx, x, y, h) {
+  ctx.fillStyle = CAVERN_SHADOW
+  var start = 0.5 + (h >>> 8) % 3 * 0.5
+  ctx.fillRect(x + start, y, 0.5, 1.5)
+  ctx.fillRect(x + start + 0.5, y + 1.5, 0.5, 1)
+  ctx.fillRect(x + start, y + 2.5, 1, 0.5)
+  ctx.fillStyle = CAVERN_CALCITE; ctx.globalAlpha = 0.18
+  ctx.fillRect(x + start + 1, y + 1.5, 0.5, 1); ctx.globalAlpha = 1
+}
+
+function drawCavernLedge(ctx, x, y, h) {
+  ctx.fillStyle = CAVERN_SHADOW; ctx.fillRect(x, y + 1, 4, 0.5)
+  ctx.fillStyle = CAVERN_WET; ctx.globalAlpha = 0.65
+  ctx.fillRect(x, y, 4, 0.5); ctx.globalAlpha = 1
+  if (h % 5 < 2) {
+    ctx.fillStyle = CAVERN_MOSS; ctx.fillRect(x + 0.5, y + 0.5, 2.5, 1)
+    ctx.fillRect(x + 1, y + 1.5, 1, 0.5)
+  }
+  if (h % 3 === 0) {
+    ctx.fillStyle = CAVERN_CORE; ctx.globalAlpha = 0.45
+    ctx.fillRect(x + 1, y, 1.5, 0.5); ctx.globalAlpha = 1
+  }
+}
+
+function drawCavernDecor(ctx, w, pal, d, x, y) {
+  if (!cavernPage(w)) return
+  ctx.save()
+  var base = y + w.k.CELL
+  if (d.kind === "hang") {
+    drawCavernFormation(ctx, x + 2, y, 2 + d.size * 3, 5 + d.size, 1, CAVERN_STONE[2], CAVERN_SHADOW)
+    drawCavernFormation(ctx, x + 5, y, 2 + d.size, 2, 1, CAVERN_STONE[1], CAVERN_SHADOW)
+    ctx.fillStyle = CAVERN_WET; ctx.fillRect(x + 1.5, y, 0.5, 2)
+    // Preserve the familiar bead and leave the existing live drips alone.
+    ctx.fillStyle = pal.poolGlint; ctx.globalAlpha = 0.55
+    ctx.fillRect(x + 2, y + 2 + d.size * 3, 0.5, 0.5)
+  } else if (d.kind === "spire") {
+    drawCavernFormation(ctx, x + 2, base, 3 + d.size * 3, 5 + d.size, -1, CAVERN_STONE[3], CAVERN_SHADOW)
+    ctx.fillStyle = CAVERN_CALCITE; ctx.globalAlpha = 0.5
+    ctx.fillRect(x + 1.5, base - 2 - d.size * 3, 0.5, 2 + d.size * 2)
+  } else if (d.kind === "tuft") drawCavernFungi(ctx, x, base, d.seed)
+  else drawCavernRubble(ctx, x, base, d.seed)
+  ctx.restore()
+}
+
+function drawCavernFungi(ctx, x, base, seed) {
+  for (var i = 0; i < 3; i++) {
+    var height = 2 + (seed >>> (i * 2)) % 4, px = x + i * 2.5, top = base - height
+    ctx.fillStyle = CAVERN_MOSS; ctx.fillRect(px + 0.5, top, 0.5, height)
+    ctx.fillStyle = CAVERN_GLOW; ctx.fillRect(px - 0.5, top, 2.5, 0.5)
+    ctx.fillRect(px, top - 0.5, 1.5, 0.5)
+    ctx.fillStyle = CAVERN_CORE; ctx.fillRect(px, top - 0.5, 0.5, 0.5)
+    ctx.fillStyle = CAVERN_SHADOW; ctx.fillRect(px, top + 0.5, 1.5, 0.5)
+  }
+}
+
+function drawCavernRubble(ctx, x, base, seed) {
+  for (var i = 0; i < 4; i++) {
+    var rise = 1 + (seed >>> i) % 3
+    ctx.fillStyle = CAVERN_STONE[3]; ctx.fillRect(x + i * 1.5, base - rise, 1.5, rise)
+    ctx.fillStyle = CAVERN_CALCITE; ctx.globalAlpha = 0.4
+    ctx.fillRect(x + i * 1.5, base - rise, 1, 0.5); ctx.globalAlpha = 1
+  }
+}
+
+function drawCavernLife(ctx, w, pal) {
+  if (!cavernPage(w)) return
+  ctx.save()
+  for (var i = 0; i < w.decor.length; i++) {
+    var d = w.decor[i]
+    if (!lightDecorAlive(w, d)) continue
+    if (d.kind === "tuft" && d.seed % 3 === 0) drawCavernFungalLight(ctx, w, d)
+    if (d.kind === "hang") drawCavernGrit(ctx, w, pal, d)
+  }
+  ctx.restore()
+}
+
+function drawCavernFungalLight(ctx, w, d) {
+  var x = d.x * w.k.CELL, base = (d.y + 1) * w.k.CELL
+  var pulse = 0.12 + 0.035 * Math.sin(w.ticks / 43 + d.seed)
+  drawLightPool(ctx, w, CAVERN_GLOW, x + 2, base - 3, 10, 6, pulse)
+  ctx.fillStyle = CAVERN_CORE; ctx.globalAlpha = 0.32 + pulse
+  for (var i = 0; i < 3; i++) {
+    var height = 2 + (d.seed >>> (i * 2)) % 4
+    moteFineRect(ctx, w, x + i * 2.5, base - height - 0.5, 1, 0.5)
+  }
+  ctx.globalAlpha = 1
+}
+
+function drawCavernGrit(ctx, w, pal, d) {
+  var age = (w.ticks + d.seed) % 211
+  if (age >= 17) return
+  var x = d.x * w.k.CELL + 3, y = d.y * w.k.CELL + 2 + d.size * 3 + Math.floor(age * age / 20) * 0.5
+  ctx.fillStyle = pal.dust; ctx.globalAlpha = 0.25 * (1 - age / 17)
+  moteFineRect(ctx, w, x, y, 0.5, 0.5)
+  ctx.globalAlpha = 1
 }

@@ -4497,3 +4497,50 @@ before. One weakness kept for later: the same furnace-and-ladle stamp appears
 three or four times a level, so a long Foundry level repeats itself.
 
 **Deployed** after 172 (name="build" content="eadab782"), gated on a passing check (799 tests): the Foundry art, parries with your own umbrella. Browser check of level 4 clean.
+
+## 173 — 2026-10-14 · Limestone and living light in the Cavern (on a branch)
+
+**Change:** Draw-only, page-resolution Cavern art. Folded limestone beds and
+hairline fractures replace the blue patchwork, including the checkered wall;
+wet ledges catch pale calcite highlights and carry small moss patches. Dim
+strata and irregular, fluted flowstone curtains give the corridors a far wall,
+and the hatch's void now has a cave roof. Foreground formations have asymmetric
+faces, mineral ridges and rubble. Small luminous fungi replace the grass tufts;
+a selected third breathe slowly and cast a local pool of light. Ceiling grit
+falls occasionally. The existing live drips, exit and guard booth retain their
+rules and art. Palette, Sim and Outcome are unchanged.
+
+Static bedding, formations and surface detail use the terrain cache; only
+fungal light and grit run each frame, before agents, guards and umbrellas.
+All new art is gated on Cavern and `(w.res || 1) >= 2`, uses the half-pixel
+grid, reads the world without writes and derives variation from coordinates,
+level and ticks rather than RNG.
+
+**Checked:** `npm run stamp`, `npm run check` and `npm run crap` pass. Eight
+component tests cover read-only proxies, forbidden Math.random, deterministic
+pixels, canvas-state restoration, the half-pixel grid, clock-independent cached
+art, surviving terrain and support, pulse/grit phases, drip spots, actor
+layering and panel component bytes. CRAP at or above 30: **0**; maximum
+**28.5**, new functions at most **13.0**. Seeded old/new comparison across all
+nineteen biomes: **1,080 identical frames** in the other eighteen (two layouts,
+ticks 77/240/600, five themes, res 1/2); Cavern's **60** res-1/unspecified-res
+frames also identical, and all **30** res-2 frames changed. Saved baseline,
+comparison harness and results in `/tmp/codex-cavern/`.
+
+**Looked:** before/after levels 1, 20 and 39 at ticks 77 and 476, with enlarged
+terrain crops: `/tmp/codex-cavern/sheet.png`. Also inspected enlarged guard,
+umbrella and exit crops, and level 1 in all five themes. The first far-wall
+bands were too regular and bright; softened them and replaced repeated cones
+with uneven mineral curtains. Faces, hostile red, umbrellas and the exit stay
+clear against the damp stone.
+
+**Measured:** warmed res-2 software rasteriser, tick 476, median of nine batches
+of forty frames, old → new. Level 1: actors **0.563 → 0.704 ms**, full terrain
++ actors **13.327 → 25.390 ms**. Level 39: actors **1.891 → 2.015 ms**, full
+**15.644 → 28.235 ms**. Subway control, level 18: actors **2.681 → 2.690 ms**,
+full **31.878 → 31.844 ms**. Reduced the animated light pools to selected
+clusters after the first timing pass. Terrain is cached in ordinary play;
+these are Node raster times, not browser FPS.
+
+**Next:** review the opening cave in longer page play. Committed on
+`codex/cavern` only; no push or deployment.
