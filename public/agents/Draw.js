@@ -6442,6 +6442,7 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   if (ag.brollyFor > 0 && st !== "fall") { drawUmbrellaShield(ctx, w, pal, ag, ox, oy); return }
   if (st === "walk" && drawUmbrellaFolding(ctx, w, pal, ag, ox, oy)) return
   if (st === "walk" && dripOver(w, ag)) { drawUmbrellaOverhead(ctx, w, pal, ox, oy, 1, brollyColour(w, pal, ag)); return }
+  if (st === "walk" && ag.ownBrolly && (w.res || 1) >= 2) { drawFurledBrolly(ctx, w, pal, ag, ox, oy); return }
   if (!(ag.floater && st === "fall" && ag.fall > 2)) return
   // It breathes. A canopy that holds one shape all the way down reads as a
   // prop being carried; one that flexes against the air reads as the thing
@@ -6482,6 +6483,21 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
 // vanishing — canopy narrowing to a furled point, then gone (it goes back in
 // the pocket). Page resolution only.
 var BROLLY_FOLD = 8
+// One umbrella each, kept: once an agent has floated it walks on with the
+// umbrella furled in its leading hand like a cane, the tip tapping the floor
+// every other stride. Page resolution only.
+function drawFurledBrolly(ctx, w, pal, ag, ox, oy) {
+  var d = ag.dir, tap = Math.floor((ag.anim || 0) / 4) % 2 ? 0.5 : 0
+  ctx.fillStyle = pal.umbrellaStem
+  blitFine(ctx, ox, oy, d, 6.5, 9, 1, 0.5)                 // crook over the hand
+  blitFine(ctx, ox, oy, d, 7.5, 9.5, 0.5, 0.5)
+  blitFine(ctx, ox, oy, d, 7 + tap, 15, 0.5, 1)            // ferrule
+  ctx.fillStyle = brollyColour(w, pal, ag)
+  blitFine(ctx, ox, oy, d, 7, 9.5, 0.5, 1.5)               // furled canopy
+  blitFine(ctx, ox, oy, d, 7 + tap / 2, 11, 1, 2.5)
+  blitFine(ctx, ox, oy, d, 7 + tap, 13.5, 0.5, 1.5)
+}
+
 function drawUmbrellaFolding(ctx, w, pal, ag, ox, oy) {
   if ((w.res || 1) < 2 || ag.brollyClosedAt === undefined) return false
   var age = w.ticks - ag.brollyClosedAt

@@ -487,6 +487,18 @@ doorways through thin walls (≤3 cells) the colony meets, open 150 of every
 - Measured +0.1/+0.2 against no gates (400 plays × 2), 0.45 fewer bashers a
   level.
 
+## One umbrella each
+
+The FLOAT stock is where an agent's umbrella comes from, not a supply of
+single-use chutes: the first fall that needs one takes it (`ag.ownBrolly`),
+and the agent keeps it, folded, for every fall after. At res 2 a walker that
+owns one carries it furled like a cane (`drawFurledBrolly`). When every
+landing used the umbrella up, two cliffs on one level ran the stock dry and
+10 of 13 splats in 300 levels came after that; keeping it took home 93.0% →
+93.5% and levels under half home 7 → 3. Walkers also check their own
+footing (`stepWalk` → `unsupported`): a walker whose floor is blown away
+falls, and opens its umbrella if the drop would kill.
+
 ## Fighting back
 
 The red team (guard posts, `planGuard`: from level 3, `guardChance` 40% rising to 65% by level 100) is the

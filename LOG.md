@@ -4388,3 +4388,28 @@ before the pin was updated.
 1250 → 1238. 169 back above half, 79 and one 284 colony below; 284 itself is
 not fixed (the colony falls now, but there are no umbrellas left).
 Tests 787 (`test/footing.test.js`); nothing over CRAP 30.
+
+## 169 — 2026-10-14 · One umbrella each
+
+The page says "one umbrella each". The game said one umbrella per fall: the
+FLOAT stock paid for every deadly drop and the landing used it up.
+
+**Measured first** (300 levels): the stock ran dry on 23 levels, and 10 of
+the 13 splats came after it had (levels 37, 112, 113, 149, 284) — two cliffs
+on one level, every agent paying twice.
+
+**Change:** the first fall that needs an umbrella takes one from the stock
+(`ag.ownBrolly`); after that the agent keeps it and opens the same one. At
+res 2 a walker that owns one carries it furled in the leading hand like a
+cane, its tip tapping the floor every other stride (`drawFurledBrolly`; they
+are men in suits — it was always going to be a cane). Looked at level 2
+enlarged, three nudges to get the crook on the hand and the canopy clear of
+the sleeve, then in headless Chromium: canes on the floor below, no errors.
+
+**Result** (400 levels × 2 colonies): home 93.01% → 93.53%; levels under half
+home 7 → 3 (113 and both 284 colonies recover). Tests 791
+(`test/brolly-kept.test.js`: one take per owner, floats on an empty stock
+with its own, carried at res 2 only, panel unchanged). Nothing over CRAP 30.
+
+**Next:** the umbrella parry still takes from the stock even when the agent
+has an umbrella in its hand.
