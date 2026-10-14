@@ -4659,3 +4659,9 @@ flank. The mirrored bay pours on its own side.
 Tests 817 (`foundry-art.test.js`: all three kinds occur; the converter flame
 blows and rests, clips to air, hides behind rock; mirrored pours fall right
 of the furnace). Nothing over CRAP 30.
+
+## 178 — 2026-10-14 · Spaceship art on a branch
+
+Looked at Spaceship, Skyscraper and Data Center at res 2: the last two read as places (desks and fire escapes; green racks); the Spaceship is grey blocks and portholes. Spaceship art started on `codex/spaceship`, with the Cavern lesson in the brief: keep the terrain, add on top, compare side by side. Level 4 in headless Chromium: converters top and bottom, a mirrored bay mid-right, no console errors.
+
+**Deployed** after 178 (name="build" content="1c2c87b0"), gated on a passing check (817 tests): three kinds of Foundry bay.
