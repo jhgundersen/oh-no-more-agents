@@ -4495,3 +4495,5 @@ read, and the agents, umbrellas and hero stay distinct from the orange. The
 cyan marks by the furnace on level 4 are a hero's effect that was there
 before. One weakness kept for later: the same furnace-and-ladle stamp appears
 three or four times a level, so a long Foundry level repeats itself.
+
+**Deployed** after 172 (name="build" content="eadab782"), gated on a passing check (799 tests): the Foundry art, parries with your own umbrella. Browser check of level 4 clean.
