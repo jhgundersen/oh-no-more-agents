@@ -5897,3 +5897,93 @@ Terrain is cached in play; these are software raster times, not browser FPS.
 
 **Next:** ready for the Building Site revision review; commit on this branch
 only, no push or deployment.
+
+## 203 — 2026-10-15 · Light through the great dial (on a branch)
+
+**Why:** the Clock Tower already had clockwork shutters and a rear dial from
+111–112. The page wanted clearer glass, gearing and service-room depth while
+preserving the gate's readable timing and the colony's route.
+
+**Changed:** `codex/clocktower`, from approved `codex/buildingsite` at `cb47f23`.
+A cached 172-art-pixel dial surrounds the original axle, with restrained warm
+backlighting, a feathered halo, leading in unequal sectors, and true Roman
+hours viewed from behind: both glyphs and their order mirror, and three
+o'clock lies on the left. Dusty light falls through the dial before terrain.
+Cached bronze wheel rims and bearings retain the original three pinion centres
+and counter-rotation rates. Distinct service bays alternate bell ropes with
+unequal lengths and tassels, spare pinions, timber braces and paired weights;
+neighbouring bays differ. No Sim.js or Palette.js changes.
+
+The res-2 scenery pass now draws three turning spoke/tooth sets, reversed
+hands, a swinging bob above the lowest floor in a clear service lane, and
+twelve slow dust flecks. At most **350** small rectangles before clipping,
+with no per-frame rim or light-shaft repaint, RNG, world writes or scenery
+state. Static glass, light, rims, ropes and fittings live on the terrain cache;
+all added motion rejects terrain, original props, hazards, exit, pits and the
+whole gate cassette/dial/guide/shutter bounds. Anchors remain fixed through
+carving. The original movement/light functions remain the res-1 path; panel
+pixels are unchanged. Original gate and shutter recipes, timing, occupancy
+behaviour, materials, props, booth, captives, hazards and exit remain intact.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-clocktower/coverage-safe.sh` pass: **950** tests in check and
+coverage. Eleven new page-art tests cover biome/resolution gates, forbidden
+world writes and RNG, deterministic digests, half-pixel grid and state
+restoration, cached/fixed anchors, varied adjacent bays, exact mirrored Roman
+glyph/order pixels and reversed hour placement, five-theme masonry/glass
+contrast, motion budgets, a visible level-16 bob, slow swing, complete original
+prop/gate reservations, paint order, unchanged opaque actor/umbrella colours,
+original component digests and four 600-tick gate playthroughs with complete
+world digests. Existing gate phase/width/countdown/occupancy/event tests pass.
+CRAP: **0** functions at or above 30, maximum **29.3**; all 22 new helpers
+have **100%** coverage and score at most **6.0**. The changed machine dispatcher
+has 100% coverage and scores **3.0**.
+
+Heap **2048 MB**, `ulimit -v 6000000`, one check worker/two coverage workers,
+Factory art test excluded under the standing instruction. Retained the
+continuous queue: another full run suspends only our validation process tree
+until it completes. Pending logs and a completion marker prevent stale passes.
+New image assertions use digests; recording is capped at 20k component fills,
+paint-order checks stream under 100k fills, and live footprint loops cover at
+most one cell.
+
+**Looked:** level 16, seed 3, tick 400 at **1×** and actual `shoot.js crop 16`,
+paired in `/tmp/codex-clocktower/shoot-crop-pair.png`. Matching parent/branch
+levels 16/35/54 at ticks 77/476 are in `sheet.png`, with 1× full frames,
+2× crops and 4× details; level 73 covers all five themes. `gates-sheet.png`
+uses a real level-35 gate with colleagues alongside, comparing shut, opening
+start, half-open, fully open and half-closing. Its bars, pawls, countdown dial
+and dark slot stay clear. `readability-sheet.png` pairs seven original hazard
+fixtures and open/furled umbrellas in idle/charge/fire/rest. The glass remains
+lower contrast than masonry; dark suits, pale faces, bright heroes, canopies,
+clockmakers and the exit retain their silhouettes and colours.
+
+Seeded comparison: **1,080** identical other-biome frames, **60** identical
+Clock Tower res-1/unspecified-res frames, **30** changed Clock Tower res-2
+frames: two layouts, ticks 77/240/600, five themes. Baseline, harnesses,
+images, comparisons and logs are under `/tmp/codex-clocktower/`.
+
+**Pipeline/cost:** the old Clock Tower page repainted static rims and shafts
+on every tick and hid the long pendulum bob below level 16's bottom floor.
+Cached those recipes for the page and moved its bob into visible air, while
+retaining the panel path and exact gate drawing. At tick 476, total actor
+rectangles dropped **1,884 → 1,101** on level 16 and **1,570 → 890** on
+level 54. The bounded live layer adds depth without duplicating old scenery.
+Reused the fast rasterizer, zero-copy comparisons, single sheet composition,
+single-world crop/phase shots and continuously guarded validation. The 1,170
+comparison frames took **17.21 s**, peak RSS **204.5 MB**. Gate crops are
+composed after their seeded pose images exist. No package/tool source changes.
+
+**Measured:** warmed res-2 software rasterizer at tick 476, median of nine
+batches of forty frames, interleaved parent/branch, after tests and coverage.
+Level 16: actors **1.188 → 0.794 ms**, full terrain + actors
+**8.393 → 9.313 ms**.
+Level 54: actors **1.093 → 0.743 ms**, full terrain + actors
+**9.148 → 10.219 ms**.
+Subway control, level 18: actors **1.070 → 1.072 ms**, full terrain + actors
+**15.068 → 15.081 ms**.
+Terrain is cached in play; these are Node software raster times, not browser FPS.
+
+**Next:** ready for Clock Tower art review. Commit on `codex/clocktower`
+only; no push or deployment.
