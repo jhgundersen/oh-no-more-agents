@@ -4742,3 +4742,5 @@ full terrain + actors **11.300 → 14.482** and **11.816 → 15.247 ms** respect
 `codex/spaceship`; no history rewrite, push or deployment.
 
 Revision reviewed and merged by the loop. Level 7, tick 400, full frame against main: the difference now shows at a glance — a frame of pipes and girders on the back wall, amber lights on deck edges, cyan console strips, all over the original terrain, which is unchanged. The back-wall grid is a little busy behind the agents, but they stay readable.
+
+**Deployed** after 179 (name="build" content="4466460b"), gated on a passing check (827 tests): the Spaceship art. Level 7 in headless Chromium, no console errors.
