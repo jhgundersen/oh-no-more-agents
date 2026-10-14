@@ -198,6 +198,7 @@ function drawTerrain(ctx, w, pal) {
   if (w.biome === "Harbour") drawHarbourSky(ctx, w, pal)
   if (desertPage(w)) drawDesertSky(ctx, w)
 
+  if (iceCavePage(w)) drawGlacierBackdrop(ctx, w)
   if (spaceshipPage(w)) drawSpaceshipBackdrop(ctx, w, pal)
   if (ruinsPage(w)) drawRuinsTemple(ctx, w, pal)
   drawBackdrop(ctx, w, pal)
@@ -232,6 +233,7 @@ function drawTerrain(ctx, w, pal) {
   if (desertPage(w)) drawDesertSurfaces(ctx, w)
   if (ruinsPage(w)) drawRuinsMasonry(ctx, w, pal)
   if (junglePage(w)) drawJungleSurfaces(ctx, w)
+  if (iceCavePage(w)) drawGlacierSurfaces(ctx, w)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
   drawSea(ctx, w, pal)
@@ -2595,6 +2597,7 @@ function drawActors(ctx, w, pal, opts) {
   clearLayer(ctx, w)
   drawAnimatedLight(ctx, w, pal)
   if (junglePage(w)) drawJungleLife(ctx, w)
+  if (iceCavePage(w)) drawGlacierLife(ctx, w)
   drawDrips(ctx, w, pal)
   drawMachines(ctx, w, pal)
   drawActiveEventAir(ctx, w, pal)
@@ -15211,5 +15214,166 @@ function jungleAirRect(ctx, w, x, y, width, height) {
       xx = nextX
     }
     yy = nextY
+  }
+}
+
+// Ice Cave, page only. The old grain, checker blocks, crystals and icicles
+// stay in front of a much older glacier. Broad facets belong to the far wall;
+// thin cracks and bubbles sit on surviving ice, never on tools or empty cells.
+// Static art uses the terrain cache; only light and glints read the clock.
+var GLACIER_DEEP = "#153747"
+var GLACIER_BLUE = "#204f68"
+var GLACIER_TEAL = "#286875"
+var GLACIER_LIT = "#489aa5"
+var GLACIER_CRACK = "#367b98"
+var GLACIER_FROST = "#b0e0e9"
+var GLACIER_FLASH = "#e0fbff"
+
+function iceCavePage(w) { return w.biome === "Ice Cave" && (w.res || 1) >= 2 }
+function glacierHash(x, y, level) { return ((x * 73856093) ^ (y * 19349663) ^ (level * 83492791)) >>> 0 }
+function glacierIce(w, x, y) {
+  var k = w.k
+  if (x < 0 || y < 0 || x >= k.COLS || y >= k.ROWS) return false
+  var m = w.terrain[y * k.COLS + x]
+  return m === k.DIRT || m === k.ROCK || m === k.ORE
+}
+
+function drawGlacierBackdrop(ctx, w) {
+  if (!iceCavePage(w)) return
+  ctx.save()
+  var tall = w.k.ROWS * w.k.CELL, wide = w.k.COLS * w.k.CELL
+  // Faceted frozen columns, separated by deep crevasses. Changing shoulders
+  // break the verticals; light is trapped in narrow faces, not an outdoor sky.
+  for (var i = 0; i < 9; i++) {
+    var h = glacierHash(i, 0, w.level), x = 12 + i * 46 + h % 17
+    drawGlacierColumn(ctx, x, 22 + h % 17, tall, 13 + h % 12, h)
+  }
+  // Compressed strata cross the far ice in long, stepped blue-green ribbons.
+  ctx.globalAlpha = 0.32
+  for (var y = 42; y < tall; y += 39) for (var bx = 0; bx < wide; bx += 4) {
+    var bend = Math.round(4 * Math.sin(bx / 48 + y / 31 + w.level))
+    ctx.fillStyle = GLACIER_TEAL; ctx.fillRect(bx, y + bend, 4, 2)
+    ctx.fillStyle = GLACIER_LIT; ctx.fillRect(bx, y + bend, 4, 0.5)
+  }
+  ctx.restore()
+}
+
+function drawGlacierColumn(ctx, x, top, bottom, width, seed) {
+  for (var y = top; y < bottom; y += 2) {
+    var shoulder = Math.round(3 * Math.sin(y / 27 + seed % 9))
+    var taper = Math.min(width, 3 + Math.floor((y - top) / 3))
+    ctx.globalAlpha = 0.9
+    ctx.fillStyle = GLACIER_DEEP; ctx.fillRect(x + shoulder - 6, y, taper + 10, 2)
+    ctx.fillStyle = GLACIER_BLUE; ctx.fillRect(x + shoulder, y, taper, 2)
+    ctx.fillStyle = GLACIER_TEAL; ctx.fillRect(x + shoulder + 2, y, Math.max(1, Math.floor(taper / 3)), 2)
+    ctx.globalAlpha = 0.65
+    ctx.fillStyle = GLACIER_LIT; ctx.fillRect(x + shoulder + 1, y, 1, 2)
+    // An internal fracture down the unlit face, with short branching scars.
+    if (y % 12 === 0) {
+      ctx.fillStyle = GLACIER_DEEP
+      ctx.fillRect(x + shoulder + taper - 4, y, 3, 0.5)
+      ctx.fillRect(x + shoulder + taper - 3, y + 0.5, 0.5, 1.5)
+    }
+  }
+}
+
+function drawGlacierSurfaces(ctx, w) {
+  if (!iceCavePage(w)) return
+  ctx.save()
+  var k = w.k
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 1; x < k.COLS - 1; x++) {
+    if (!glacierIce(w, x, y)) continue
+    var h = glacierHash(x, y, w.level), px = x * k.CELL, py = y * k.CELL
+    // A bright rime line on the original floor edge, with tiny broken teeth.
+    if (!w.terrain[(y - 1) * k.COLS + x]) {
+      ctx.fillStyle = GLACIER_FROST; ctx.globalAlpha = 0.65
+      ctx.fillRect(px, py, k.CELL, 0.5)
+      if (h % 3 === 0) ctx.fillRect(px + 1, py + 0.5, 1.5, 0.5)
+    }
+    drawGlacierInclusions(ctx, px, py, h)
+  }
+  ctx.restore()
+}
+
+function drawGlacierInclusions(ctx, x, y, h) {
+  // Sparse hairlines keep the old speckled faces and all block colours visible.
+  if (h % 13 === 0) {
+    ctx.fillStyle = GLACIER_CRACK; ctx.globalAlpha = 0.65
+    ctx.fillRect(x + 1, y + 0.5, 0.5, 1)
+    ctx.fillRect(x + 1.5, y + 1.5, 0.5, 1)
+    ctx.fillRect(x + 2, y + 2.5, 1, 0.5)
+    ctx.fillStyle = GLACIER_FROST; ctx.globalAlpha = 0.5
+    ctx.fillRect(x + 2, y + 1.5, 0.5, 1)
+  }
+  if (h % 29 === 0) {
+    ctx.fillStyle = GLACIER_CRACK; ctx.globalAlpha = 0.75
+    ctx.fillRect(x + 1, y + 1, 1.5, 1.5)
+    ctx.fillStyle = GLACIER_FROST; ctx.globalAlpha = 0.7
+    ctx.fillRect(x + 1, y + 1, 1, 0.5)
+    ctx.fillRect(x + 1, y + 1.5, 0.5, 0.5)
+    ctx.fillRect(x + 2, y + 2, 0.5, 0.5)
+  }
+}
+
+function drawGlacierLife(ctx, w) {
+  if (!iceCavePage(w)) return
+  ctx.save()
+  for (var i = 0; i < w.corridors.length; i++) {
+    var c = w.corridors[i], floor = c.floorY * w.k.CELL
+    drawGlacierGlow(ctx, w, i, floor)
+    for (var n = 0; n < 15; n++) {
+      var h = glacierHash(n, i + 1, w.level)
+      var x = 3 + h % (w.k.COLS - 6), y = c.floorY + (h >>> 8) % 3
+      if (glacierIce(w, x, y)) drawGlacierGlint(ctx, w, x * w.k.CELL + 2, y * w.k.CELL + 1.5, h)
+    }
+  }
+  ctx.restore()
+}
+
+function drawGlacierGlow(ctx, w, row, floor) {
+  var wide = w.k.COLS * w.k.CELL
+  ctx.fillStyle = GLACIER_LIT
+  ctx.globalAlpha = 0.08 + 0.035 * Math.sin(w.ticks / 100 + row)
+  // Cold light wells behind the play; clipped to current air after events dig
+  // or grow ice. Half-pixel strips keep the light hard-edged on the page.
+  for (var n = 0; n < 5; n++) {
+    var h = glacierHash(n, row, w.level), x = 8 + h % (wide - 32)
+    for (var y = floor - 23; y < floor - 6; y += 2)
+      glacierAirRect(ctx, w, x + Math.floor((y - floor + 23) / 6), y, 8, 2)
+  }
+  ctx.globalAlpha = 0.3
+  ctx.fillStyle = GLACIER_FROST
+  for (var i = 0; i < 7; i++) {
+    var mx = (i * 59 + w.level * 17 + Math.floor(w.ticks / 12)) % (wide - 4)
+    var my = floor - 24 + ((i * 7 + row * 11 + Math.floor(w.ticks / 20)) % 17)
+    glacierAirRect(ctx, w, mx, my, 0.5, 0.5)
+  }
+}
+
+function glacierAirRect(ctx, w, x, y, width, height) {
+  // Batch at cell boundaries rather than visiting individual canvas pixels.
+  var C = w.k.CELL, right = x + width, bottom = y + height
+  for (var yy = y; yy < bottom;) {
+    var nextY = Math.min(bottom, (Math.floor(yy / C) + 1) * C)
+    for (var xx = x; xx < right;) {
+      var nextX = Math.min(right, (Math.floor(xx / C) + 1) * C)
+      if (mechanismAir(w, xx, yy)) ctx.fillRect(xx, yy, nextX - xx, nextY - yy)
+      xx = nextX
+    }
+    yy = nextY
+  }
+}
+
+function drawGlacierGlint(ctx, w, x, y, seed) {
+  var phase = (w.ticks + seed % 211) % 211
+  if (phase >= 30) return
+  var shine = Math.sin(phase / 30 * Math.PI)
+  ctx.fillStyle = GLACIER_FLASH; ctx.globalAlpha = shine * 0.85
+  ctx.fillRect(x, y, 0.5, 0.5)
+  if (shine > 0.6) {
+    ctx.fillRect(x - 1, y, 2.5, 0.5)
+    ctx.fillRect(x, y - 1, 0.5, 2.5)
+    ctx.fillStyle = GLACIER_TEAL; ctx.globalAlpha = shine * 0.5
+    ctx.fillRect(x - 1.5, y - 0.5, 0.5, 0.5)
   }
 }
