@@ -4896,3 +4896,5 @@ ordinary play; these are Node raster times, not browser FPS.
 `codex/desert` only; no push or deployment.
 
 Reviewed and merged by the loop. Level 11, tick 400, full frame against main at 1x: golden drifts on every edge, warm strata, glyph panels on the back wall, a hotter sky; the original rock intact.
+
+**Deployed** after 184 (name="build" content="12ca3918"), gated on a passing check (846 tests): floaters parry in mid-air (183), the Desert art (184). Level 20 in headless Chromium, no console errors.
