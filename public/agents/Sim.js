@@ -8367,6 +8367,17 @@ function stepCamp(w, ag) {
   ag.cool = Math.round(spec.cool / 2)
 }
 
+// Every way a hero's own move has nothing for this wall ends here. Mid-level
+// it turns, as it always did — its move will come back, and the colony needs
+// its tools. With the rest of the colony settled and the wall between it and
+// home, the colony's tools are lent instead: on level 18 Gradient Descent, a
+// stomper with home on its own floor, turned at both sides of a two-cell
+// pocket every few ticks until the stall cutoff, in 8 of 24 colonies.
+function heroGivesWay(w, ag) {
+  if (crossingHelps(w, ag) && lastOut(w) && borrowWallTools(w, ag)) return
+  turnAround(w, ag)
+}
+
 function borrowWallTools(w, ag) {
   var footY = Math.floor(ag.y), ax = Math.floor(ag.x) + ag.dir
   var acting = w.acting
@@ -8410,17 +8421,17 @@ function specialAtWall(w, ag) {
   // walked a hundred cells and spent the move somewhere else on the way, in 7
   // of 24 colonies (`npm run playtest`). Waiting is still waiting for the move.
   if (ag.cool > 0 && ag.cool <= HERO_WAIT && crossingHelps(w, ag)) { ag.waitFor = 2; ag.still = 0; return }
-  if (ag.cool > 0) { turnAround(w, ag); return }
+  if (ag.cool > 0) { heroGivesWay(w, ag); return }
 
   // Ada Blocker has no move for a wall — its move is for what a wall cannot
   // help with. Turning at one must not spend the cooldown, or it arrives at
   // the danger it exists for with the plate still on its back.
-  if (spec.act === "shield" || spec.act === "throttle" || spec.act === "net" || spec.act === "reload") { turnAround(w, ag); return }
+  if (spec.act === "shield" || spec.act === "throttle" || spec.act === "net" || spec.act === "reload") { heroGivesWay(w, ag); return }
 
   if (spec.act === "ceiling") { startCeiling(w, ag); return }
 
   // Drilling downward is only ever the answer when down is where home is.
-  if (spec.act === "stomp" && !exitBelow(w, ag)) { turnAround(w, ag); return }
+  if (spec.act === "stomp" && !exitBelow(w, ag)) { heroGivesWay(w, ag); return }
 
   // And surfacing only when up is. Same rule, other way up: a sub that blows
   // its tanks at every wall it meets spends the level rising through ceilings
@@ -8428,7 +8439,7 @@ function specialAtWall(w, ag) {
   // tower for the reason everything else that answers "home is above me" is
   // stood down there — the answer on a tower is a machine at the end of a
   // floor, not a hole in the storey above.
-  if (spec.act === "ballast" && (!exitAbove(w, ag) || liftRouted(w))) { turnAround(w, ag); return }
+  if (spec.act === "ballast" && (!exitAbove(w, ag) || liftRouted(w))) { heroGivesWay(w, ag); return }
 
   // Not on a wall facing away from home. The move is on a long cooldown, and
   // spent on the wrong wall it came back in lock-step: on level 49 Context
@@ -8447,9 +8458,8 @@ function specialAtWall(w, ag) {
   // waited out its cooldown at a pillar it could not phase through, turned,
   // and came back to do it again, in 8 of 24 colonies.
   if (!specialCut(w, ag, spec.act, true)) {
-    if (crossingHelps(w, ag) && lastOut(w) && borrowWallTools(w, ag)) return
     ag.cool = Math.round(spec.cool / 3)
-    turnAround(w, ag)
+    heroGivesWay(w, ag)
     return
   }
 

@@ -6096,3 +6096,18 @@ runs out of climbers and bashers — balance, not a soft-lock); level 18 stall
 8/24; level 2 stall 6/24; level 32 stall 6/24 (Hal Lucination wandering in
 three different ways); levels 10, 23, 36, 55 stall 2/24; single runs on 4, 5,
 9, 12, 24, 27, 38.
+
+## 211 — 2026-10-15 · Level 18: heroes give way the same way everywhere
+
+**Level 18 (Subway): stall-cutoff endings 8 → 0 of 24.** Gradient Descent, a
+stomper, only drives down when home is below; on level 18 home is on its own
+floor, and it was trapped in a two-cell pocket between an overhang and a wall,
+turning at both every few ticks until the cutoff. Every exit from
+`specialAtWall` that used to just turn — on cooldown, a move that cannot answer
+the wall, a stomper with home level, a sub with home not above, the heroes
+whose move is not for walls — now goes through `heroGivesWay`: mid-level it
+turns as before (the colony needs its tools, and the move comes back); with
+the rest of the colony settled and the wall between it and home, it borrows
+the colony's tools (`borrowWallTools`, 209–210). Levels 1–57 × 24: home
+95.53% → 95.54%, stall endings 39 → 31, clock-outs 5 → 5, hangs 0; no other
+level moves 2 points. One test. `npm run check` 1008/1008; CRAP under 30.

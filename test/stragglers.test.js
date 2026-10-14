@@ -184,3 +184,17 @@ test("a hero whose own move cannot pass a wall toward home borrows the colony's 
   S.specialAtWall(w, last)
   assert.notEqual(JSON.stringify(w.skills), before, "last out: it borrows")
 })
+
+test("a stomper with home on its own floor, last out at a wall toward home, borrows the colony's tools", () => {
+  const w = box(90)
+  for (let y = 24; y <= 29; y++) w.terrain[y * w.k.COLS + 45] = w.k.DIRT
+  w.exit = { x: 80, y: 25, w: 6, h: 5 }                                     // same floor: no stomping
+  w.special = "piledriver"; w.specialSpec = S.specialSpec("piledriver")
+  w.released = w.toRelease; w.saved = w.toRelease - 1
+  const ag = Object.assign(S.spawn(w), { x: 44.4, y: 29, dir: 1, state: "walk", special: "piledriver", cool: 0 })
+  w.agents = [ag]
+  const before = JSON.stringify(w.skills)
+  S.specialAtWall(w, ag)
+  assert.notEqual(JSON.stringify(w.skills), before)
+  assert.equal(ag.dir, 1)
+})
