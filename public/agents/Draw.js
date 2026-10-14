@@ -6492,7 +6492,9 @@ function drawPoseSwim(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
 
 // The umbrella, drawn behind nothing and above everything.
 function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
-  if (ag.brollyFor > 0 && st !== "fall") { drawUmbrellaShield(ctx, w, pal, ag, ox, oy); return }
+  // Swung at a gun, the umbrella faces the gun — falling too (Sim lets a
+  // floater parry), for the moment it takes before it is overhead again.
+  if (ag.brollyFor > 0 && (st !== "fall" || ag.floater)) { drawUmbrellaShield(ctx, w, pal, ag, ox, oy); return }
   if (st === "walk" && drawUmbrellaFolding(ctx, w, pal, ag, ox, oy)) return
   if (st === "walk" && dripOver(w, ag)) { drawUmbrellaOverhead(ctx, w, pal, ox, oy, 1, brollyColour(w, pal, ag)); return }
   if (st === "walk" && ag.ownBrolly && (w.res || 1) >= 2) { drawFurledBrolly(ctx, w, pal, ag, ox, oy); return }

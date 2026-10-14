@@ -78,3 +78,20 @@ test("a parry or an overhead guard uses the agent's own umbrella when it has one
   w.skills.floater = 0; other.ownBrolly = false
   assert.equal(S.brollyInHand(w, other), false, "no umbrella anywhere")
 })
+
+test("a floater can parry a round in mid-air; a faller without an open umbrella cannot", () => {
+  const [w, ag] = walker()
+  let parried = false
+  for (let t = 0; t < 100 && !parried; t++) {
+    w.ticks = t
+    Object.assign(ag, { state: "fall", floater: true, brollyFor: 0, ownBrolly: true })
+    parried = S.umbrellaParries(w, ag, ag.x + 10)
+  }
+  assert.ok(parried, "some tick in a hundred parries")
+  assert.equal(ag.brollyDir, 1, "toward the gun")
+  for (let t = 0; t < 100; t++) {
+    w.ticks = t
+    Object.assign(ag, { state: "fall", floater: false, brollyFor: 0, ownBrolly: true })
+    assert.equal(S.umbrellaParries(w, ag, ag.x + 10), false)
+  }
+})

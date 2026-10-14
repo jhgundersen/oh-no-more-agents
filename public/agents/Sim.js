@@ -4666,7 +4666,11 @@ var BROLLY_PARRY = 50
 function umbrellaParries(w, ag, fromX) {
   if (ag.special) return false
   if (ag.brollyFor > 0) return brollyFacing(ag, fromX)
-  if (ag.state !== "walk") return false
+  // Walking, or floating down under an open umbrella: a gunner by the foot of
+  // a drop shot every faller in turn (level 20 lost six that way), and the
+  // one in the air with a canopy over it can swing it at the gun as well as
+  // anyone on the floor. A short drop without one is still a clean shot.
+  if (ag.state !== "walk" && !(ag.state === "fall" && ag.floater)) return false
   if ((w.ticks * 37 + ag.id * 61 + 11) % 100 >= BROLLY_PARRY) return false
   if (!brollyInHand(w, ag)) return false
   ag.brollyFor = BROLLY_HOLD

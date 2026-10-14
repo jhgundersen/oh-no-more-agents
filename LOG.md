@@ -4820,3 +4820,24 @@ in ordinary play; these are Node raster times, not browser FPS.
 Reviewed and merged by the loop. Level 3, tick 400, full frame against main at 1x: a green aurora along the back, white snow caps on every floor edge, blue ice on the pillars, snowfall; the original rock untouched beneath. Still a grey biome, but now a cold one.
 
 **Deployed** after 182 (name="build" content="9973a8a5"), gated on a passing check (837 tests): the Frost art. Level 3 in headless Chromium, no console errors.
+
+## 183 — 2026-10-14 · Umbrellas up in mid-air
+
+**Started:** Desert art on `codex/desert` (Codex; same brief lessons).
+
+**Survey after 164–182:** 200 levels, 199 cleared, 94% home. The Cavern was
+lowest again (88%), and level 20 — about 13 minutes in for a new viewer —
+failed all three attempts at 10/15. Six of its five-plus losses were the
+same death: a gunner by the foot of a shaft shooting each agent as it fell.
+Over 197 guard levels, 37 of the red team's kills were fallers.
+
+**Tried both ways** (394 guard plays): gunners that ignore fallers, 92.17% →
+92.74% home; floaters allowed to parry, 92.17% → 92.64%. Kept the second —
+it makes the umbrella the answer, and adds umbrella moments rather than
+removing gunfire.
+
+**Change:** a floater (falling with its umbrella open) can parry a round like
+a walker; a short drop without one is still a clean shot. Draw shows the
+canopy swung toward the gun while it holds, then overhead again. Level 20
+clears (11/15). Looked at level 20, ticks 451 and 455, enlarged: the round
+stops on the canopy with a spark and a NOPE. Tests 838.
