@@ -14215,57 +14215,75 @@ function spaceshipPage(w) {
   return w.biome === "Spaceship" && (w.res || 1) >= 2
 }
 
+// Fixed ship hardware colours: dark enough to sit behind the colony, with
+// saturated emissive displays that stay legible in every page theme.
+var SHIP_WALL = "#283746", SHIP_PIPE = "#405367", SHIP_JOINT = "#607486"
+var SHIP_LIGHTS = ["#36e5ed", "#76ef96", "#ffbd45", "#f45b69"]
+
 function drawSpaceshipBackdrop(ctx, w, pal) {
   if (!spaceshipPage(w)) return
   ctx.save()
+  // Reinforce the existing ribs from behind, leaving their faces and every
+  // original porthole on top. Broad shoulders and brackets, not hairlines.
+  for (var rx = 20; rx < 400; rx += 50) {
+    ctx.fillStyle = SHIP_WALL
+    ctx.fillRect(rx - 6, w.k.SKY * w.k.CELL, 6, 224)
+    ctx.fillStyle = SHIP_PIPE
+    ctx.fillRect(rx - 6, w.k.SKY * w.k.CELL, 1, 224)
+    for (var ry = 40; ry < 248; ry += 24) {
+      ctx.fillStyle = SHIP_PIPE
+      ctx.fillRect(rx - 8, ry, 8, 3)
+      ctx.fillStyle = SHIP_JOINT
+      ctx.fillRect(rx - 7, ry, 2, 1)
+    }
+  }
   for (var i = 0; i < w.corridors.length; i++) {
-    var y = w.corridors[i].floorY * w.k.CELL - 21
-    // Paired supply/return pipes, with couplings and doglegs around service bays.
-    ctx.fillStyle = pal.backDim
-    ctx.fillRect(12, y, 376, 3)
-    ctx.fillStyle = pal.backLit
-    ctx.fillRect(12, y + 0.5, 376, 0.5)
-    ctx.fillRect(12, y + 2, 376, 0.5)
+    var y = w.corridors[i].floorY * w.k.CELL - 22
+    // Supply and return: two full-width pipes with collars and a lit shoulder.
+    ctx.fillStyle = SHIP_WALL
+    ctx.fillRect(12, y, 376, 7)
+    ctx.fillStyle = SHIP_PIPE
+    ctx.fillRect(12, y, 376, 2)
+    ctx.fillRect(12, y + 4, 376, 2)
     for (var x = 34; x < 388; x += 50) {
-      ctx.fillStyle = pal.back
-      ctx.fillRect(x, y - 0.5, 2, 4)
-      ctx.fillStyle = pal.backLit
-      ctx.fillRect(x + 0.5, y, 0.5, 3)
+      ctx.fillStyle = SHIP_JOINT
+      ctx.fillRect(x, y - 1, 3, 4)
+      ctx.fillRect(x, y + 3, 3, 4)
+      ctx.fillStyle = SHIP_WALL
+      ctx.fillRect(x + 1, y, 1, 2)
+      ctx.fillRect(x + 1, y + 4, 1, 2)
     }
     var bx = 42 + (w.level * 19 + i * 97) % 280
-    drawSpaceshipService(ctx, pal, bx, y + 4, (w.level + i) % 3)
+    drawSpaceshipService(ctx, pal, bx, y + 8, (w.level + i) % 3)
   }
   ctx.restore()
 }
 
 function drawSpaceshipService(ctx, pal, x, y, kind) {
   // Three recessed fittings: heat exchanger, cable manifold, instrument rack.
+  ctx.fillStyle = SHIP_WALL
+  ctx.fillRect(x, y, 30, 14)
+  ctx.fillStyle = SHIP_PIPE
+  ctx.fillRect(x, y, 30, 1)
+  ctx.fillRect(x, y, 1, 14)
   ctx.fillStyle = pal.backDim
-  ctx.fillRect(x, y, 22, 12)
-  ctx.fillStyle = pal.decorDim
-  ctx.fillRect(x, y, 22, 0.5)
-  ctx.fillRect(x, y, 0.5, 12)
-  ctx.fillStyle = pal.back
-  ctx.fillRect(x + 2, y + 2, 18, 8)
+  ctx.fillRect(x + 2, y + 2, 26, 10)
+  ctx.fillStyle = SHIP_PIPE
   if (kind === 0) {
-    ctx.fillStyle = pal.decorDim
-    for (var v = 0; v < 7; v++) ctx.fillRect(x + 3 + v * 2.5, y + 3, 0.5, 6)
-    ctx.fillRect(x + 3, y + 5.5, 16, 0.5)
+    for (var v = 0; v < 8; v++) ctx.fillRect(x + 3 + v * 3, y + 3, 1, 8)
+    ctx.fillRect(x + 3, y + 6, 23, 1)
   } else if (kind === 1) {
-    ctx.fillStyle = pal.decorDim
-    for (var p = 0; p < 3; p++) {
-      ctx.fillRect(x + 3 + p * 5, y + 2, 1, 5 + p)
-      ctx.fillRect(x + 3 + p * 5, y + 6 + p, 4, 1)
+    for (var p = 0; p < 4; p++) {
+      ctx.fillRect(x + 3 + p * 6, y + 2, 2, 5 + p)
+      ctx.fillRect(x + 3 + p * 6, y + 6 + p, 5, 1)
     }
   } else {
-    ctx.fillStyle = pal.skyTop
-    for (var r = 0; r < 3; r++) ctx.fillRect(x + 3, y + 2.5 + r * 2.5, 16, 1.5)
-    ctx.fillStyle = pal.poolLip
-    ctx.globalAlpha = 0.18
-    for (var led = 0; led < 6; led++) ctx.fillRect(x + 4 + led * 2.5, y + 3, 1, 0.5)
-    ctx.fillRect(x + 4, y + 5.5, 7, 0.5)
-    ctx.fillRect(x + 4, y + 8, 11, 0.5)
-    ctx.globalAlpha = 1
+    for (var r = 0; r < 3; r++) {
+      ctx.fillRect(x + 3, y + 3 + r * 3, 24, 2)
+      ctx.fillStyle = SHIP_JOINT
+      ctx.fillRect(x + 4, y + 3 + r * 3, 2, 1)
+      ctx.fillStyle = SHIP_PIPE
+    }
   }
 }
 
@@ -14277,80 +14295,118 @@ function drawSpaceshipMaterials(ctx, w, pal) {
     var m = w.terrain[y * k.COLS + x]
     if (m === k.EMPTY || m === k.BRICK) continue
     drawSpaceshipFixings(ctx, w, pal, x, y, m)
+    drawSpaceshipDeck(ctx, w, pal, x, y)
   }
-  for (var i = 0; i < w.corridors.length; i++) {
-    var b = spaceshipInstrument(w, i)
+  for (var i = 0; i < w.corridors.length; i++) for (var slot = 0; slot < 3; slot++) {
+    var b = spaceshipInstrument(w, i, slot)
     if (!spaceshipInstrumentAlive(w, b)) continue
     ctx.fillStyle = pal.rigDark
-    ctx.fillRect(b.x, b.y, 11, 5)
+    ctx.fillRect(b.x, b.y, 20, 6)
     ctx.fillStyle = pal.steelEdge
-    ctx.fillRect(b.x, b.y, 11, 0.5)
-    ctx.fillRect(b.x, b.y, 0.5, 5)
+    ctx.fillRect(b.x, b.y, 20, 0.5)
+    ctx.fillRect(b.x, b.y, 0.5, 6)
     ctx.fillStyle = pal.hatchMouth
-    ctx.fillRect(b.x + 1.5, b.y + 1, 6, 3)
+    ctx.fillRect(b.x + 1, b.y + 1, 12, 4)
     ctx.fillStyle = pal.steelShade
-    ctx.fillRect(b.x + 8, b.y + 1, 2, 3)
+    ctx.fillRect(b.x + 14, b.y + 1, 5, 4)
   }
   ctx.restore()
 }
 
 function drawSpaceshipFixings(ctx, w, pal, x, y, m) {
-  var k = w.k, C = k.CELL, px = x * C, py = y * C
-  // Keep the wide, alternating original panels; only their seams get a groove.
-  if (x % 9 === 0 || y % 5 === 0) {
-    ctx.fillStyle = materialShade(k, pal, m)
-    ctx.fillRect(px + 0.5, py + 0.5, x % 9 === 0 ? 0.5 : C - 1, y % 5 === 0 ? 0.5 : C - 1)
-  }
+  var C = w.k.CELL, px = x * C, py = y * C
+  // One-art-pixel recessed seams on the original nine-by-five-cell plates.
+  // Most of the panel face keeps its original colour and texture.
+  ctx.fillStyle = pal.rigDark
+  ctx.globalAlpha = 0.65
+  if (x % 9 === 0) ctx.fillRect(px, py, 1, C)
+  if (y % 5 === 0) ctx.fillRect(px, py, C, 1)
+  ctx.globalAlpha = 1
   if (x % 9 === 1 && y % 5 === 1) {
-    ctx.fillStyle = materialShade(k, pal, m)
+    ctx.fillStyle = materialShade(w.k, pal, m)
     ctx.fillRect(px + 1, py + 1, 1, 1)
-    ctx.fillStyle = materialEdge(k, pal, m)
+    ctx.fillStyle = materialEdge(w.k, pal, m)
     ctx.fillRect(px + 1, py + 1, 0.5, 0.5)
     ctx.fillRect(px + 2.5, py + 2.5, 1, 0.5)
   }
-  if (y > 0 && w.terrain[(y - 1) * k.COLS + x] === k.EMPTY) {
-    // Deck tread breaks, below the existing bright walking edge.
-    ctx.fillStyle = materialShade(k, pal, m)
-    ctx.fillRect(px + 1, py + 1, 0.5, 1)
-    if ((x + w.level) % 7 === 0) {
-      ctx.fillStyle = pal.decorLit
-      ctx.fillRect(px + 2, py + 0.5, 1.5, 0.5)
-    }
+}
+
+function drawSpaceshipDeck(ctx, w, pal, x, y) {
+  var k = w.k, C = k.CELL, px = x * C, py = y * C
+  if (w.terrain[(y - 1) * k.COLS + x] !== k.EMPTY) return
+  // A continuous deck lip, with tread divisions below the original edge.
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(px, py + 0.5, C, 0.5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(px, py + 1, 1, 2)
+  // Two rows of diagonal caution tape, only on the cells beside a drop.
+  if (!w.terrain[y * k.COLS + x - 1] || !w.terrain[y * k.COLS + x + 1]) {
+    ctx.fillStyle = SHIP_LIGHTS[2]
+    ctx.fillRect(px + 1, py + 1, 2, 1)
+    ctx.fillRect(px + 2, py + 2, 2, 1)
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(px, py + 2, 2, 1)
+    ctx.fillRect(px + 3, py + 1, 1, 1)
   }
 }
 
-function spaceshipInstrument(w, i) {
-  return { x: (10 + (w.level * 7 + i * 23) % 75) * w.k.CELL,
-    y: w.corridors[i].floorY * w.k.CELL + 3, phase: w.level * 17 + i * 43 }
+function spaceshipInstrument(w, i, slot) {
+  slot = slot || 0
+  var base = 18 + slot * 32 + (w.level * 7 + i * 11) % 4
+  var b = { x: base * w.k.CELL, y: w.corridors[i].floorY * w.k.CELL + 2,
+    phase: w.level * 17 + i * 43 + slot * 31 }
+  // The original viewports own their whole footprint. Find a nearby mounting
+  // point from decor alone: a breach must remove a console, never move it.
+  for (var n = 0; n <= 12; n++) {
+    b.x = (base + (n % 2 ? -(n + 1) / 2 : n / 2)) * w.k.CELL
+    if (!spaceshipWindowOverlap(w, b)) return b
+  }
+  return b
+}
+
+function spaceshipWindowOverlap(w, b) {
+  var C = w.k.CELL
+  for (var i = 0; i < w.decor.length; i++) {
+    var d = w.decor[i]
+    if (d.kind !== "window") continue
+    if (b.x < (d.x + d.size + 2) * C + 1 && b.x + 20 > d.x * C - 1 &&
+        b.y < (d.y + d.size + 1) * C + 1 && b.y + 6 > d.y * C - 1) return true
+  }
+  return false
 }
 
 function spaceshipInstrumentAlive(w, b) {
+  if (spaceshipWindowOverlap(w, b)) return false
   var C = w.k.CELL, cols = w.k.COLS
-  for (var y = Math.floor(b.y / C); y <= Math.floor((b.y + 4.5) / C); y++)
-    for (var x = Math.floor(b.x / C); x <= Math.floor((b.x + 10.5) / C); x++)
-      if (!w.terrain[y * cols + x]) return false
+  for (var y = Math.floor(b.y / C); y <= Math.floor((b.y + 5.5) / C); y++)
+    for (var x = Math.floor(b.x / C); x <= Math.floor((b.x + 19.5) / C); x++)
+      if (!w.terrain[y * cols + x] || w.terrain[y * cols + x] === w.k.BRICK) return false
   return true
 }
 
 function drawSpaceshipInstruments(ctx, w, pal) {
   if (!spaceshipPage(w)) return
   ctx.save()
-  for (var i = 0; i < w.corridors.length; i++) {
-    var b = spaceshipInstrument(w, i)
+  for (var i = 0; i < w.corridors.length; i++) for (var slot = 0; slot < 3; slot++) {
+    var b = spaceshipInstrument(w, i, slot)
     if (!spaceshipInstrumentAlive(w, b)) continue
-    var sweep = Math.floor((w.ticks + b.phase) / 9) % 10
-    ctx.fillStyle = pal.poolLip
-    ctx.globalAlpha = 0.55
-    ctx.fillRect(b.x + 2, b.y + 2.5, 5, 0.5)
-    ctx.fillStyle = pal.poolGlint
-    ctx.globalAlpha = 0.7
-    ctx.fillRect(b.x + 2 + sweep * 0.5, b.y + 1.5, 0.5, 2)
-    ctx.fillStyle = pal.warn
-    ctx.globalAlpha = (w.ticks + b.phase) % 80 < 56 ? 0.8 : 0.25
-    ctx.fillRect(b.x + 8.5, b.y + 1.5, 1, 0.5)
-    ctx.fillStyle = pal.poolLip
-    ctx.globalAlpha = (w.ticks + b.phase) % 111 < 88 ? 0.8 : 0.25
-    ctx.fillRect(b.x + 8.5, b.y + 3, 1, 0.5)
+    drawSpaceshipDisplay(ctx, w, b)
   }
   ctx.restore()
+}
+
+function drawSpaceshipDisplay(ctx, w, b) {
+  var clock = w.ticks + b.phase, sweep = Math.floor(clock / 12) % 11
+  ctx.fillStyle = SHIP_LIGHTS[0]
+  ctx.globalAlpha = 0.65
+  ctx.fillRect(b.x + 2, b.y + 3, 10, 1)
+  ctx.globalAlpha = 1
+  ctx.fillRect(b.x + 2 + sweep, b.y + 1, 1, 4)
+  // Independent cadences keep the row alive without strobing the whole ship.
+  for (var led = 0; led < 4; led++) {
+    ctx.fillStyle = SHIP_LIGHTS[led]
+    ctx.globalAlpha = (clock + led * 19) % (83 + led * 17) < 62 ? 1 : 0.2
+    ctx.fillRect(b.x + 14 + (led % 2) * 3, b.y + 1 + Math.floor(led / 2) * 2, 2, 1)
+  }
+  ctx.globalAlpha = 1
 }

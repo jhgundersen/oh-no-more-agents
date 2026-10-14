@@ -4709,3 +4709,26 @@ in normal play; these are Node raster times, not browser FPS.
 
 **Next:** review the ship's instruments in longer page play. Committed on
 `codex/spaceship` only; no push or deployment.
+
+**Revision after review — 2026-10-14:** the first pass was too timid at the
+visitor's 800×496 viewing size. Strengthened the back wall with broad bulkhead
+shoulders and brackets, paired two-art-pixel conduits with collars, and larger
+service fittings. Hull seams are now one art pixel wide; exposed floors have
+lit deck lips and yellow-black tape beside drops. Up to three consoles per
+corridor carry saturated cyan/green/amber/red lamps, independently blinking
+from `w.ticks`, and slow cyan scanner sweeps. Console placement avoids the
+original viewports, uses decor alone so a breach cannot move a mounting point,
+and hides the whole console when its hull is removed. Original terrain
+colours, panel pattern, portholes, stars and decor keep their drawing paths;
+actors and the exit draw above the instruments. No world writes or RNG; Draw
+only, with the existing res-2 gate. Inspected ORIGINAL (`main`) against this
+revision on levels 7, 26 and 45 at ticks 77/476: full frames at 1× viewing size
+and matching crops at 2×, `/tmp/codex-spaceship/sheet2.png`. Ten component tests,
+`npm run stamp`, `npm run check` and `npm run crap -- --threshold 30` pass;
+changed helpers have 100% line coverage and CRAP at most **9.0**, whole-project
+maximum **28.5**. Comparison against main: **1,140 byte-identical protected
+frames**, all **30** Spaceship res-2 frames changed. Warmed software-raster
+actor medians: level 7 **2.007 → 2.057 ms**, level 45 **0.924 → 0.968 ms**;
+full terrain + actors **11.300 → 14.482** and **11.816 → 15.247 ms** respectively
+(terrain is cached in play; Node timings, not browser FPS). New commit on
+`codex/spaceship`; no history rewrite, push or deployment.
