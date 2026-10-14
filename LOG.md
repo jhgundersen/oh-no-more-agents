@@ -4827,7 +4827,7 @@ Reviewed and merged by the loop. Level 3, tick 400, full frame against main at 1
 
 **Survey after 164–182:** 200 levels, 199 cleared, 94% home. The Cavern was
 lowest again (88%), and level 20 — about 13 minutes in for a new viewer —
-failed all three attempts at 10/15. Six of its five-plus losses were the
+failed all three attempts at 10/15. All six losses on its first attempt were the
 same death: a gunner by the foot of a shaft shooting each agent as it fell.
 Over 197 guard levels, 37 of the red team's kills were fallers.
 
