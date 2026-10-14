@@ -4744,3 +4744,19 @@ full terrain + actors **11.300 → 14.482** and **11.816 → 15.247 ms** respect
 Revision reviewed and merged by the loop. Level 7, tick 400, full frame against main: the difference now shows at a glance — a frame of pipes and girders on the back wall, amber lights on deck edges, cyan console strips, all over the original terrain, which is unchanged. The back-wall grid is a little busy behind the agents, but they stay readable.
 
 **Deployed** after 179 (name="build" content="4466460b"), gated on a passing check (827 tests): the Spaceship art. Level 7 in headless Chromium, no console errors.
+
+## 180 — 2026-10-14 · Frame rate, and the umbrellas on the report card
+
+**Measured, no change:** three biome art passes later, frame times in
+headless Chromium on levels 1, 7 (Spaceship), 18 (Subway) and 42 (Foundry):
+16.7 ms median, 16.8 ms worst frame over 240 — a steady 60 fps everywhere.
+
+**Change:** the end-of-level report said nothing about umbrellas, the one
+thing the game is about. It now has an umbrella line under the fight and
+the MVP: "8 UMBRELLA LANDINGS · 4 HANDED OUT" (Sim counts a landing in the
+one place a floated fall ends, `w.brollyLandings`; bookkeeping only).
+Looked at levels 61 and 126: with escorts, a boss down, the MVP and the
+umbrellas the card stacks evenly. Adding the row tipped `drawLevelResults`
+to CRAP 67; it now draws a list of rows (`reportRows`) and is back under,
+with the plate the same height as before for every existing combination.
+Tests 829 (`test/report-brolly.test.js`).

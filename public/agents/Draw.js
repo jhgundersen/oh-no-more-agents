@@ -2810,11 +2810,39 @@ function mvpLine(w) {
   return parts.join(" · ")
 }
 
+// The umbrellas: how many times one carried somebody down, and how many
+// Cloud Provider handed out. Every report has one when anybody floated.
+function brollyLine(w) {
+  var n = w.brollyLandings || 0
+  if (!n) return ""
+  var line = n + (n === 1 ? " UMBRELLA LANDING" : " UMBRELLA LANDINGS")
+  if (w.provisioned > 0) line += " · " + w.provisioned + " HANDED OUT"
+  return line
+}
+
+// The lines under the verdict, in order: rescued escorts (a row of badges),
+// the fight, its MVP, the umbrellas. Each that has something to say.
+function reportRows(w, pal) {
+  var rows = []
+  if (w.escortsHome > 0) rows.push({ escort: true, step: 16 })
+  var battle = battleLine(w)
+  if (battle) rows.push({ text: battle, colour: pal.warn, step: 12 })
+  var mvp = battle ? mvpLine(w) : ""
+  if (mvp) rows.push({ text: mvp, colour: pal.decorLit, step: 12 })
+  var brolly = brollyLine(w)
+  if (brolly) rows.push({ text: brolly, colour: pal.umbrellaRim, step: 12 })
+  return rows
+}
+
 function drawLevelResults(ctx, w, pal) {
   var cx = Math.round(w.k.COLS * w.k.CELL / 2)
   var y = Math.round(w.k.ROWS * w.k.CELL / 2) - 31 + Math.max(0, 10 - w.doneTicks) * 2
-  var battle = battleLine(w), mvp = battle ? mvpLine(w) : ""
-  var extra = (w.escortsHome > 0 ? 16 : 0) + (battle ? 16 : 0) + (mvp ? 12 : 0)
+  var rows = reportRows(w, pal), extra = 0, padded = false
+  // Text rows close with 4px of plate below them; the badge row has its own.
+  for (var i = 0; i < rows.length; i++) {
+    extra += rows[i].step
+    if (rows[i].text && !padded) { extra += 4; padded = true }
+  }
   drawTransitionPlate(ctx, w, pal, cx - 136, y, 62 + extra)
   ctx.fillStyle = pal.decorLit
   drawTransitionText(ctx, "LEVEL " + w.level + " · REPORT", cx, y + 8, 1)
@@ -2822,14 +2850,11 @@ function drawLevelResults(ctx, w, pal) {
   drawTransitionText(ctx, w.saved + " / " + w.toRelease + " HOME", cx, y + 22, 2)
   ctx.fillStyle = w.saved === 0 ? pal.urgent : pal.exitLight
   drawTransitionText(ctx, levelVerdict(w), cx, y + 43, 1)
-  drawEscortReport(ctx, w, pal, cx, y + 59)
-  if (battle) {
-    ctx.fillStyle = pal.warn
-    drawTransitionText(ctx, battle, cx, y + 61 + (w.escortsHome > 0 ? 16 : 0), 1)
-  }
-  if (mvp) {
-    ctx.fillStyle = pal.decorLit
-    drawTransitionText(ctx, mvp, cx, y + 73 + (w.escortsHome > 0 ? 16 : 0), 1)
+  var at = y + 59
+  for (var r = 0; r < rows.length; r++) {
+    if (rows[r].escort) drawEscortReport(ctx, w, pal, cx, at)
+    else { ctx.fillStyle = rows[r].colour; drawTransitionText(ctx, rows[r].text, cx, at + 2, 1) }
+    at += rows[r].step
   }
 }
 

@@ -6759,7 +6759,10 @@ function fallLands(w, ag, cx, ny) {
     ag.landedAt = w.ticks
     ag.landedFrom = ag.fall
     ag.fall = 0
-    if (ag.floater) ag.brollyClosedAt = w.ticks   // for Draw: the umbrella folds
+    if (ag.floater) {
+      ag.brollyClosedAt = w.ticks                  // for Draw: the umbrella folds
+      w.brollyLandings = (w.brollyLandings || 0) + 1   // for the report card
+    }
     ag.floater = false
     herdSteer(w, ag)
     return true
