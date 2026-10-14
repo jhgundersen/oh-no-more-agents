@@ -202,6 +202,7 @@ function drawTerrain(ctx, w, pal) {
   if (spaceshipPage(w)) drawSpaceshipBackdrop(ctx, w, pal)
   if (ruinsPage(w)) drawRuinsTemple(ctx, w, pal)
   drawAssemblyBackdrop(ctx, w)
+  drawOfficeBackdrop(ctx, w)
   drawBackdrop(ctx, w, pal)
   if (desertPage(w)) drawDesertRelics(ctx, w)
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
@@ -235,6 +236,7 @@ function drawTerrain(ctx, w, pal) {
   if (ruinsPage(w)) drawRuinsMasonry(ctx, w, pal)
   if (junglePage(w)) drawJungleSurfaces(ctx, w)
   if (iceCavePage(w)) drawGlacierSurfaces(ctx, w)
+  drawOfficeSurfaces(ctx, w, pal)
   drawAssemblyEdges(ctx, w)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
@@ -2601,6 +2603,7 @@ function drawActors(ctx, w, pal, opts) {
   if (junglePage(w)) drawJungleLife(ctx, w)
   if (iceCavePage(w)) drawGlacierLife(ctx, w)
   drawAssemblyLife(ctx, w)
+  drawOfficeLife(ctx, w)
   drawDrips(ctx, w, pal)
   drawMachines(ctx, w, pal)
   drawActiveEventAir(ctx, w, pal)
@@ -15723,4 +15726,150 @@ function drawAssemblyJoint(ctx, x, y, radius) {
   ctx.fillRect(x - radius + 0.5, y - radius + 0.5, radius * 2 - 1, radius * 2 - 1)
   ctx.fillStyle = ASSEMBLY_DARK
   ctx.fillRect(x - 0.5, y - 0.5, 1, 1)
+}
+
+// Skyscraper at page resolution: a curtain wall looking out across the city.
+// The original slabs, office desks and lift/fire-escape recipes stay in front.
+// Architecture is cached; distant office lights change before fixtures/actors.
+function skyscraperPage(w) { return w.biome === "Skyscraper" && (w.res || 1) >= 2 }
+
+var OFFICE_NIGHT = "#192530"
+var OFFICE_GLASS = "#243746"
+var OFFICE_FRAME = "#40525f"
+var OFFICE_EDGE = "#687785"
+var OFFICE_CITY = "#16212b"
+var OFFICE_CITY_EDGE = "#30434f"
+var OFFICE_LAMP = "#a3986d"
+var OFFICE_REFLECT = "#647f8d"
+
+function officeWindows(w, row) {
+  var c = w.corridors[row], windows = [], C = w.k.CELL
+  // Fixed bays, set back from the original lift indicators at both ends.
+  for (var x = (c.x0 + 6) * C; x + 42 <= (c.x1 - 5) * C; x += 48)
+    windows.push({ x: x, y: c.floorY * C - 27, width: 42, height: 22,
+      seed: w.level * 19 + row * 43 + x })
+  return windows
+}
+
+function drawOfficeBackdrop(ctx, w) {
+  if (!skyscraperPage(w)) return
+  ctx.save()
+  for (var row = 0; row < w.corridors.length; row++) {
+    var windows = officeWindows(w, row)
+    for (var i = 0; i < windows.length; i++) drawOfficeWindow(ctx, windows[i])
+    // Ceiling coffers and recessed light strips sit above the city glazing.
+    var y = w.corridors[row].floorY * w.k.CELL - 31
+    ctx.fillStyle = OFFICE_NIGHT
+    ctx.fillRect(48, y, 304, 3)
+    ctx.fillStyle = OFFICE_FRAME
+    ctx.fillRect(48, y, 304, 0.5)
+    for (var lx = 70; lx < 335; lx += 48) {
+      ctx.fillRect(lx, y + 1, 21, 1)
+      ctx.fillStyle = OFFICE_EDGE
+      ctx.fillRect(lx + 1, y + 1.5, 19, 0.5)
+      ctx.fillStyle = OFFICE_FRAME
+    }
+  }
+  ctx.restore()
+}
+
+function drawOfficeWindow(ctx, b) {
+  var x = b.x, y = b.y
+  ctx.fillStyle = OFFICE_NIGHT
+  ctx.fillRect(x, y, b.width, b.height)
+  ctx.fillStyle = OFFICE_GLASS
+  ctx.fillRect(x + 1.5, y + 1, b.width - 3, b.height - 2)
+  // A staggered skyline, not another copy of the room's support columns.
+  for (var i = 0; i < 5; i++) {
+    var h = 5 + (b.seed + i * 17) % 12, bx = x + 2 + i * 7.5
+    ctx.fillStyle = OFFICE_CITY
+    ctx.fillRect(bx, y + b.height - 2 - h, 7, h)
+    ctx.fillStyle = OFFICE_CITY_EDGE
+    ctx.fillRect(bx, y + b.height - 2 - h, 7, 0.5)
+    if (i % 2 === 0) ctx.fillRect(bx + 3, y + b.height - 4 - h, 0.5, 2)
+    drawOfficeCityLights(ctx, b, i, h, 0)
+  }
+  // Two slim mullions, a deep sill and a broken diagonal glass reflection.
+  ctx.fillStyle = OFFICE_FRAME
+  ctx.fillRect(x, y, 1.5, b.height)
+  ctx.fillRect(x + b.width - 1.5, y, 1.5, b.height)
+  ctx.fillRect(x + 14, y, 1, b.height)
+  ctx.fillRect(x + 28, y, 1, b.height)
+  ctx.fillRect(x, y + b.height - 1.5, b.width, 1.5)
+  ctx.fillStyle = OFFICE_EDGE
+  ctx.fillRect(x, y, b.width, 0.5)
+  ctx.fillRect(x, y + b.height - 1, b.width, 0.5)
+  ctx.globalAlpha = 0.24
+  ctx.fillStyle = OFFICE_REFLECT
+  for (var r = 0; r < 7; r++) ctx.fillRect(x + 3 + r, y + 2 + r * 1.5, 2, 1.5)
+  ctx.globalAlpha = 1
+}
+
+function drawOfficeCityLights(ctx, b, building, height, phase) {
+  var bx = b.x + 2 + building * 7.5, top = b.y + b.height - 2 - height
+  for (var row = 0; row < Math.floor(height / 3); row++) for (var col = 0; col < 2; col++) {
+    var seed = b.seed + building * 31 + row * 7 + col * 13
+    if ((seed + phase) % 5 !== 0) continue
+    var lx = bx + 1 + col * 3, rx = lx - b.x
+    if ((rx < 15 && rx + 1 > 14) || (rx < 29 && rx + 1 > 28)) continue
+    ctx.fillStyle = OFFICE_LAMP
+    ctx.fillRect(lx, top + 1.5 + row * 3, 1, 1)
+  }
+}
+
+function drawOfficeSurfaces(ctx, w, pal) {
+  if (!skyscraperPage(w)) return
+  ctx.save()
+  // Sparse angled glints inside the original tinted glass cells. No new
+  // face covers the grain; steel floors, concrete and built ground are exempt.
+  var C = w.k.CELL, cols = w.k.COLS
+  ctx.fillStyle = pal.dirtEdge
+  ctx.globalAlpha = 0.38
+  for (var y = w.k.SKY; y < w.k.ROWS - 2; y++) for (var x = 11; x < cols - 11; x++) {
+    if (w.terrain[y * cols + x] !== w.k.DIRT || (x + y * 3) % 11 !== 0) continue
+    ctx.fillRect(x * C + 0.5, y * C + 0.5, 1.5, 0.5)
+    ctx.fillRect(x * C + 2, y * C + 1, 0.5, 1)
+  }
+  ctx.restore()
+}
+
+function officeInk(ctx, w) {
+  var e = w.exit, C = w.k.CELL
+  return { fillStyle: OFFICE_LAMP, fillRect: function(x, y, width, height) {
+    // Lights are one art pixel. Reject rather than slice at glazing mullions,
+    // live terrain and the original exit/decor: they must never sit in front.
+    if (x < (e.x + e.w + 2) * C && x + width > (e.x - 2) * C &&
+        y < (e.y + e.h + 1) * C && y + height > e.y * C - 10) return
+    if (!officeClear(w, x, y, width, height)) return
+    ctx.fillStyle = this.fillStyle
+    ctx.fillRect(x, y, width, height)
+  } }
+}
+
+function officeClear(w, x, y, width, height) {
+  for (var yy = y; yy < y + height; yy += 0.5)
+    for (var xx = x; xx < x + width; xx += 0.5)
+      if (!mechanismAir(w, xx, yy)) return false
+  for (var i = 0; i < w.decor.length; i++) {
+    var d = w.decor[i], dx = d.x * w.k.CELL, dy = (d.y + 1) * w.k.CELL
+    // Office desk/monitor and loose props keep their whole silhouettes.
+    if (x < dx + 14 && x + width > dx - 5 && y < dy + 1 && y + height > dy - 17) return false
+  }
+  return true
+}
+
+function drawOfficeLife(ctx, w) {
+  if (!skyscraperPage(w)) return
+  ctx.save()
+  var ink = officeInk(ctx, w)
+  for (var row = 0; row < w.corridors.length; row++) {
+    var windows = officeWindows(w, row)
+    for (var i = 0; i < windows.length; i++) {
+      var b = windows[i], phase = Math.floor((w.ticks + b.seed) / 160) % 5
+      // Only the windows off in the cached recipe can light up live. The
+      // buildings never move; a slow light cycle suggests distant overtime.
+      for (var j = 0; j < 5; j++) drawOfficeCityLights(ink, b, j, 5 + (b.seed + j * 17) % 12, phase + 1)
+    }
+  }
+  ctx.restore()
 }
