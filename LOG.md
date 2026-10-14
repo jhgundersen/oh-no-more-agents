@@ -6505,3 +6505,17 @@ Terrain is cached in play; these are software raster times, not browser FPS.
 only, no push or deployment.
 
 Reviewed and merged by the loop. Level 15: scaffold poles and boards, a hard-hat rack, wheelbarrow, plywood, sparse orange hi-vis and a safety board; the crane intact.
+
+## 221 — 2026-10-15 · Not stuck while walking home
+
+On level 70 the stall cutoff ended the level with the last agent on the exit's
+own floor, eight cells from the door, walking at it — in 3 of 12 colonies. The
+cutoff ends a nearly finished level once nobody has been "moving" for 210
+ticks, and a walker counts as moving only if it has beaten its closest-ever
+distance to home in the last 300; an agent that got near once, turned back and
+is coming again reads as stuck the whole way in. Now a walker on the exit's
+floor facing the door counts as moving (`homeStretch`). The cutoff's other
+limit — 600 ticks with nobody getting home — still bounds the level. Levels
+1–150 × 24 (3600 runs) against main: home 95.373% → 95.441% (+37 agents), stall
+endings 86 → 53, clock-outs 12 → 12, average level 1197 → 1199 ticks, hangs
+0; level 2: 95% → 97%, stall 6 → 1. One test. `npm run check` 1046/1046.

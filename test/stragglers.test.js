@@ -277,3 +277,17 @@ test("a hero may dig through a last layer over a lethal drop; an ordinary agent 
   for (let x = 0; x < w.k.COLS; x++) w.terrain[60 * w.k.COLS + x] = w.k.EMPTY          // bottomless
   assert.equal(S.digOpensDeath(w, hero, 40, 29), true, "but not into nothing")
 })
+
+test("a walker on the exit's floor heading for the door counts as moving, however long since its best", () => {
+  const w = box(90)
+  w.exit = { x: 10, y: 25, w: 6, h: 5 }                                    // floor 30, west
+  const ag = Object.assign(S.spawn(w), { x: 30.5, y: 29, dir: -1, state: "walk", idle: 900 })
+  assert.equal(S.homeStretch(w, ag), true)
+  const counts = { active: 0, blockers: 0, moving: 0 }
+  S.tallyAgent(w, counts, ag)
+  assert.equal(counts.moving, 1)
+  ag.dir = 1
+  assert.equal(S.homeStretch(w, ag), false, "walking away from the door")
+  ag.dir = -1; ag.y = 20
+  assert.equal(S.homeStretch(w, ag), false, "another floor")
+})

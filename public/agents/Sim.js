@@ -8463,6 +8463,16 @@ function stepCamp(w, ag) {
 // home, the colony's tools are lent instead: on level 18 Gradient Descent, a
 // stomper with home on its own floor, turned at both sides of a two-cell
 // pocket every few ticks until the stall cutoff, in 8 of 24 colonies.
+// On the exit's own floor, walking at the door. `idle` measures against the
+// closest an agent has ever been, so one that got near, turned back and is now
+// coming again reads as stuck the whole way in — and on level 70 the stall
+// cutoff ended the level with the last agent eight cells from the door,
+// walking at it, in 3 of 12 colonies. The cutoff's other limit (600 ticks of
+// nobody getting home) still bounds it.
+function homeStretch(w, ag) {
+  return Math.abs(Math.floor(ag.y) + 1 - exitFloor(w)) <= 1 && facingHome(w, ag)
+}
+
 function heroGivesWay(w, ag) {
   if (facingHome(w, ag) && lastOut(w) && borrowWallTools(w, ag)) return
   turnAround(w, ag)
@@ -10593,7 +10603,7 @@ function stepAgents(w) {
     if (ag.gone) continue
     var outcome = stepOneAgent(w, ag)
     if (outcome === "door") { counts.active++; counts.moving++ }
-    else if (outcome === "on") tallyAgent(counts, ag)
+    else if (outcome === "on") tallyAgent(w, counts, ag)
   }
   return counts
 }
@@ -10618,10 +10628,10 @@ function stepOneAgent(w, ag) {
 // A camped sniper counts with the blockers: it is standing somewhere on
 // purpose and it is never coming home either. Without this the level waits
 // for it and every Beam Search level runs to the nuke.
-function tallyAgent(counts, ag) {
+function tallyAgent(w, counts, ag) {
   counts.active++
   if (ag.state === "block" || ag.state === "camp") counts.blockers++
-  if (ag.state !== "walk" || ag.idle < 300) counts.moving++
+  if (ag.state !== "walk" || ag.idle < 300 || homeStretch(w, ag)) counts.moving++
 }
 
 // Before it acts: out of a pit it should be falling in, and through its
