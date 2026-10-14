@@ -4635,3 +4635,5 @@ and it drowned out the news.
 
 **Change:** the ticker hears about the first two hand-outs a level; the rest
 happen quietly. Tests 815.
+
+**Deployed** after 176 (name="build" content="f63e0d9b"), gated on a passing check (815 tests): Cloud Provider.
