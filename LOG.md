@@ -4429,3 +4429,16 @@ are rare and mostly come before an agent owns one, so this is a consistency
 fix, not a balance change. Tests 792.
 
 (The first commit of 170 went in with its new test failing: the test picked "another agent" when only one had been released. Fixed in the next commit; nothing was deployed in between. Commit only behind a passing check.)
+
+## 171 — 2026-10-14 · Looking at the board
+
+**Looked:** levels 41–43 in headless Chromium through a whole level, and one
+of every biome at res 2 (`shoot.js biomes`). Most biomes read at a glance;
+the Foundry is the blandest by a distance — dark grey stone, embers too
+small to see, one lava pool in a corner. For the biome that should be the
+hottest on the board, nothing says heat.
+
+**Started:** Foundry art on branch `codex/foundry` (Codex, brief in the
+scratchpad): warm underglow, molten seams, furnace silhouettes, sparks,
+shimmer — Draw only, res 2 only, every other biome byte-identical. To be
+reviewed and merged by the loop.
