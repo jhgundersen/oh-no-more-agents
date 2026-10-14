@@ -6055,3 +6055,23 @@ it down from its camp:
 Levels 1–57 × 24 colonies against 208: home 95.51% → 95.51%, stall endings 46
 → 42, clock-outs 5 → 5, hangs 0; no level worse by 2 points. Two tests in
 `stragglers.test.js`. `npm run check` 1006/1006; CRAP under 30.
+
+**Deployed** at 00:42 after 209 (name="build" content="6d4123cd"), gated on a
+passing check (1006 tests), covering 197–209: the play-test harness, the 429
+fix, the commit line, the straggler fixes, the phone layout, `npm run fps`,
+rubber duck debugging, pep talks, the gate wait, the daily standup, share
+links, and the Trench, Data Center and Library art. Verified on production in
+headless Chromium:
+- a share link (`?level=7&seed=12345`, opened twice) plays the same colony both
+  times and cleans the address bar; a real click on "copy link" shows LINK
+  COPIED, puts `…/?level=1&seed=1899087605` on the clipboard, and opening that
+  link plays level 1 with that seed;
+- after five finished levels the daily standup holds the next level (four
+  agents in the ring, a status bubble, the sprint board), and a click skips it
+  to the next level without pausing; no console errors anywhere.
+To reach a standup quickly the check finished five levels by hand on the live
+page — which also reported their few agents to the global counter as rescues.
+A few dozen at most; not repeated, and the next check of this kind will run
+against a local server.
+The skip hint was barely visible on the floor colour; it now uses the label
+colour (committed after the deploy).

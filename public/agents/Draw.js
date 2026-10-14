@@ -3058,7 +3058,7 @@ function drawStandup(ctx, w, pal, s) {
   ctx.fillRect(0, floor, W, 2)
   ctx.fillStyle = pal.decorLit
   drawTransitionText(ctx, "DAILY STANDUP", W / 2, 14, 2)
-  ctx.fillStyle = pal.decorDim
+  ctx.fillStyle = pal.label        // decorDim all but vanished on the floor colour
   drawTransitionText(ctx, "TAP OR CLICK TO SKIP", W / 2, H - 12, 1)
   drawSprintBoard(ctx, pal, W - 92, floor - 70)
   var n = s.speakers.length, cx = W / 2 - 30
