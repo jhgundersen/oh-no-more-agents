@@ -4155,3 +4155,5 @@ so the live page was not affected); my own hat test put its agent on an
 unsuitable cell. Fixed (a guard; the test uses `padSpot`), checks green, and
 redeployed below with the deploy gated on `npm run check` passing. From here
 the deploy step runs only after a passing check.
+
+**Deployed** (fix) (name="build" content="31dbb3f0"): checks green. Browser check clean.
