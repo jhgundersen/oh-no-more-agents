@@ -3895,3 +3895,12 @@ not (`BRAWL_HERO`). Measured over 140 plays with both a special and a guard
 post: 92.42 → 92.47% home, 12 scuffles by heroes, hero deaths unchanged
 (13). Small, and consistent: Vector Van Damme now goes into the cloud.
 Tests 718.
+
+## 147 — 2026-10-14 · Brollies out
+
+The fight cloud showed a sleeve and a fist, a red boot, a hat and the
+guard's fist in turn. A fifth thing now pokes out of it: the agent's own
+umbrella, closed, swung like a club — rising out of one side and coming down
+crook first, in that agent's umbrella colour (`brollyColour`). The umbrella is
+the colony's one piece of kit; it would be in the fight. Looked at level 5's
+scuffle at ticks 316–319. Tests 718.

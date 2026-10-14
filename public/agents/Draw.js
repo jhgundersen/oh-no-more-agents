@@ -8325,7 +8325,7 @@ function drawBrawl(ctx, w, pal, en) {
     ctx.fillRect(Math.round((cx + Math.cos(sa) * sr * 1.4) / step) * step,
       Math.round((cy + Math.sin(sa) * sr) / step) * step, step, step)
   }
-  drawBrawlLimbs(ctx, w, pal, cx, cy, t)
+  drawBrawlLimbs(ctx, w, pal, cx, cy, t, en)
   drawBrawlStars(ctx, pal, cx, cy, t, step)
   ctx.restore()
 }
@@ -8353,8 +8353,9 @@ function brawlBlob(ctx, x, y, r, step) {
 }
 
 // One limb out of the cloud at a time, in turn, each for four ticks.
-function drawBrawlLimbs(ctx, w, pal, cx, cy, t) {
-  var which = (t >> 2) % 4
+function drawBrawlLimbs(ctx, w, pal, cx, cy, t, en) {
+  var which = (t >> 2) % 5
+  if (which === 4) { drawBrawlBrolly(ctx, w, pal, cx, cy, t, en); return }
   if (which === 0) {                              // a suit sleeve and a fist
     ctx.fillStyle = pal.suit || pal.rigDark
     ctx.fillRect(cx + 5, cy - 2, 3, 2)
@@ -8375,6 +8376,23 @@ function drawBrawlLimbs(ctx, w, pal, cx, cy, t) {
     ctx.fillStyle = pal.skin
     ctx.fillRect(cx - 9, cy - 4, 2, 3)
   }
+}
+
+// The agent's own umbrella, closed and swung like a club: it rises out of the
+// cloud on one side and comes down on the other, crook first.
+function drawBrawlBrolly(ctx, w, pal, cx, cy, t, en) {
+  var ag = null
+  for (var i = 0; en && i < w.agents.length && !ag; i++) if (w.agents[i].id === en.brawlWith) ag = w.agents[i]
+  var side = (t >> 3) % 2 ? 1 : -1, up = (t % 4) < 2
+  ctx.fillStyle = ag ? brollyColour(w, pal, ag) : pal.umbrella
+  for (var k = 0; k < 6; k++) {
+    var x = cx + side * (3 + k), y = cy - 4 - (up ? k : k >> 1)
+    ctx.fillRect(x, y, 2, 2)
+  }
+  ctx.fillStyle = pal.umbrellaStem
+  var hx = cx + side * 9, hy = cy - 4 - (up ? 6 : 3)
+  ctx.fillRect(hx, hy - 1, 1, 2)                 // the crook
+  ctx.fillRect(hx - side, hy - 2, 2, 1)
 }
 
 function drawBrawlStars(ctx, pal, cx, cy, t, step) {
