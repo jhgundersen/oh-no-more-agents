@@ -4760,3 +4760,53 @@ umbrellas the card stacks evenly. Adding the row tipped `drawLevelResults`
 to CRAP 67; it now draws a list of rows (`reportRows`) and is back under,
 with the plate the same height as before for every existing combination.
 Tests 829 (`test/report-brolly.test.js`).
+
+## 181 — 2026-10-14 · Snow and northern light in Frost (on a branch)
+
+**Change:** Draw-only, page-resolution Frost art, added over the original
+terrain. Crisp white caps follow exposed top edges, with stepped drifts and
+blue dents; exposed cliff sides catch a narrow translucent glaze and glints.
+The original grey mottling, ledge faces, mountain ridge, icicles, crystals,
+clumps, hazards, exit and ICE SECURITY booth keep their original draw paths.
+A dark green/blue/violet aurora moves slowly behind the original peaks; brighter
+near snowflakes drift among the existing motes, occasionally bending in a gust.
+Walking colleagues exhale small fading breath puffs, staggered by id.
+Palette, Sim and Outcome are unchanged.
+
+Snow and ice use the terrain cache. Aurora, snowfall and breath run before
+actors and fixtures, read the world without writes or Math.random, and derive
+variation from level, coordinates, ids and ticks. All additions are gated on
+Frost and `(w.res || 1) >= 2`, on the half-pixel grid. The live aurora mirrors
+the original deterministic ridge so it cannot paint across a mountain.
+
+**Checked:** `npm run stamp` and `npm run check` pass. Eight component tests
+cover read-only proxies, forbidden Math.random, deterministic pixels, canvas
+state, the half-pixel grid, cached versus animated art, surviving support,
+untouched bridge bricks, original ridge occlusion, air-only flakes, breath
+phases, actor layering and original component bytes at both resolutions.
+`npm run crap` reports **0** functions at or above 30; maximum **28.6**,
+Frost helpers at most **10.0** with 100% coverage. Coverage ran in one test
+process (`--test-isolation=none`) after the default coverage process was
+terminated by the environment; the full coverage run and threshold check pass.
+Seeded main/new Draw comparison across all nineteen biomes: **1,080 identical
+frames** in the other eighteen (two layouts, ticks 77/240/600, five themes,
+res 1/2); Frost's **60** res-1/unspecified-res frames also identical, and all
+**30** res-2 frames changed. Baseline, harness and results: `/tmp/codex-frost/`.
+
+**Looked:** original main versus this branch on levels 3, 22 and 41 at ticks
+77/476: full 800×496 frames at 1× viewing size, matching crops at 2×, and
+4× detail crops in `/tmp/codex-frost/sheet.png`. Also inspected all five themes
+and level 60. The first aurora read like a rail with repeated hanging bars;
+replaced those with a broader soft veil. Removed repeated gaps in the blue
+cliff glaze. The full frames now read snowy at a glance, retain the original
+terrain texture, and keep faces, guards, umbrellas and exits distinct.
+
+**Measured:** warmed res-2 software rasteriser, tick 476, median of nine batches
+of forty frames, interleaved old/new. Level 3: actors **2.036 → 2.672 ms**,
+full terrain + actors **15.131 → 16.353 ms**. Level 41: actors
+**2.225 → 2.844 ms**, full **16.842 → 18.614 ms**. Subway control, level 18:
+actors **2.702 → 2.695 ms**, full **32.091 → 32.131 ms**. Terrain is cached
+in ordinary play; these are Node raster times, not browser FPS.
+
+**Next:** review Frost's snowfall in longer page play. Committed on
+`codex/frost` only; no push or deployment.
