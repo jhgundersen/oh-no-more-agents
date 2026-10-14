@@ -6571,6 +6571,18 @@ function throwArc(w, ag, C) {
   }
 }
 
+// The landing is dated by the same throw clock, at Sim's destination.
+function drawThrowLanding(ctx, w, pal, ag) {
+  if (ag.thrownAt === undefined || ag.thrownFrom === undefined || ag.state !== "stunned") return
+  var age = w.ticks - ag.thrownAt - THROW_FLIGHT
+  if (age < 0 || age >= 8) return
+  ctx.save()
+  ctx.translate(Math.round(ag.x * w.k.CELL), Math.round((ag.y + 1) * w.k.CELL))
+  ctx.globalAlpha = 0.7 * (1 - age / 8)
+  drawDeathDust(ctx, pal, age, 3)
+  ctx.restore()
+}
+
 // Up out of a won scuffle (Sim's brawlTick sets wonAt): the forward fist
 // punched at the sky, pumping twice, with two stars over it — the colony's
 // own colour for a moment it does not get many of.
@@ -8378,37 +8390,145 @@ function drawBrawlStars(ctx, pal, cx, cy, t, step) {
 }
 var BRAWL_STAR = "#ffe68a"
 
-// The Bouncer (Sim: bouncerThrows): no gun, arms folded, bald, shades and an
-// earpiece, a size broader than a gunner in the red team's oxblood. Its arms
-// unfold while it is reeling from a lost scuffle, and its pips count the
-// scuffles still needed to put it down.
+// The nightclub's access controller: shoulders first, black shirt under an
+// oxblood jacket, a shaved head and an unmistakable stop palm. All clocks and
+// proximity come from Sim; even the loose badge is only a dated drawing.
 var BOUNCER_SKIN = "#c9a28a", BOUNCER_SUIT = "#8f1f35", BOUNCER_DARK = "#5e1424"
+var BOUNCER_BLACK = "#16161c", BOUNCER_EDGE_LIT = "#ba4b58"
 function drawBouncer(ctx, w, pal, en, ox, oy, dir, m) {
-  ctx.fillStyle = BOUNCER_SUIT
-  blit(ctx, ox, oy, dir, -1, 5, 10, 8)                 // shoulders and chest
+  var stride = en.state === "walk" ? [0, 1, 0, -1][(en.anim >> 3) % 4] : 0
+  var heavy = { stride: stride, bob: Math.abs(stride) }
+  oy += m.bob - heavy.bob
+  var hurt = en.hurtAt === undefined ? 30 : w.ticks - en.hurtAt
+  var reel = en.state === "recover" && hurt >= 0 && hurt < 30
+    ? Math.max(1, 3 - Math.floor(hurt / 10)) : 0
+  var bx = ox + dir * stride - dir * reel, by = oy + Math.min(2, reel)
+  drawEnemyFeet(ctx, w, en, ox, oy, dir, heavy, 13, BOUNCER_BLACK)
+  drawBouncerBody(ctx, w, bx, by, dir)
+  drawBouncerHead(ctx, w, bx, by, dir)
+  drawBouncerArms(ctx, w, bx, by, dir, reel, bouncerPalm(w, en))
+  if (hurt >= 0 && hurt < 6) drawBouncerFlash(ctx, bx, by, dir, hurt)
+  drawBouncerPips(ctx, en, ox, oy)
+}
+
+function bouncerPalm(w, en) {
+  if (en.state !== "walk") return false
+  return (w.agents || []).some(function(ag) {
+    var ahead = (ag.x - en.x) * en.dir
+    return !ag.gone && !ag.special && ag.state === "walk" &&
+      Math.abs(ag.y - en.y) < 2 && ahead >= 0 && ahead < 5
+  })
+}
+
+function drawBouncerBody(ctx, w, ox, oy, dir) {
+  ctx.fillStyle = BOUNCER_BLACK
+  blit(ctx, ox, oy, dir, -2, 4, 13, 4)            // broad shoulder shelf
+  blit(ctx, ox, oy, dir, -1, 8, 11, 5)
   ctx.fillStyle = BOUNCER_DARK
-  blit(ctx, ox, oy, dir, -1, 5, 10, 1)
-  ctx.fillStyle = BOUNCER_SKIN
-  blit(ctx, ox, oy, dir, 2, 0, 5, 5)                   // the head, shaved
-  ctx.fillStyle = "#16161c"
-  blit(ctx, ox, oy, dir, 2, 2, 5, 1)                   // shades
+  blit(ctx, ox, oy, dir, -1, 5, 11, 8)
+  ctx.fillStyle = BOUNCER_SUIT
+  blit(ctx, ox, oy, dir, -1, 5, 4, 7)
+  blit(ctx, ox, oy, dir, 7, 5, 3, 7)
+  ctx.fillStyle = BOUNCER_EDGE_LIT
+  blit(ctx, ox, oy, dir, -1, 4, 4, 1)
+  blit(ctx, ox, oy, dir, 7, 4, 3, 1)
+  ctx.fillStyle = BOUNCER_BLACK
+  blit(ctx, ox, oy, dir, 3, 5, 4, 8)              // black shirt, open lapels
   ctx.fillStyle = "#d9d7cf"
-  blit(ctx, ox, oy, dir, 1, 2, 1, 2)                   // earpiece
-  if (en.state === "recover") {
-    ctx.fillStyle = BOUNCER_SUIT
-    blit(ctx, ox, oy, dir, -2, 6, 1, 5); blit(ctx, ox, oy, dir, 9, 6, 1, 5)   // arms flung out
-    ctx.fillStyle = BOUNCER_SKIN
-    blit(ctx, ox, oy, dir, -2, 11, 1, 1); blit(ctx, ox, oy, dir, 9, 11, 1, 1)
-  } else {
-    ctx.fillStyle = BOUNCER_DARK
-    blit(ctx, ox, oy, dir, 0, 8, 8, 2)                 // arms folded
-    ctx.fillStyle = BOUNCER_SKIN
-    blit(ctx, ox, oy, dir, 0, 8, 1, 1); blit(ctx, ox, oy, dir, 7, 9, 1, 1)
+  blit(ctx, ox, oy, dir, 3, 5, 1, 3)
+  blit(ctx, ox, oy, dir, 6, 5, 1, 3)              // lanyard
+  ctx.fillStyle = "#ff5268"
+  blit(ctx, ox, oy, dir, 4, 10, 3, 2)             // ACCESS DENIED pass
+  if ((w.res || 1) >= 2) drawBouncerFine(ctx, ox, oy, dir)
+}
+
+function drawBouncerHead(ctx, w, ox, oy, dir) {
+  ctx.fillStyle = BOUNCER_DARK
+  blit(ctx, ox, oy, dir, 2, 2, 5, 3)              // thick neck
+  ctx.fillStyle = BOUNCER_SKIN
+  blit(ctx, ox, oy, dir, 2, -2, 4, 1)             // rounded shaved crown
+  blit(ctx, ox, oy, dir, 1, -1, 6, 4)
+  blit(ctx, ox, oy, dir, 2, 3, 5, 1)              // square jaw, nose
+  blit(ctx, ox, oy, dir, 7, 1, 1, 1)
+  ctx.fillStyle = "#e1bd9f"
+  blit(ctx, ox, oy, dir, 2, -1, 4, 1)
+  ctx.fillStyle = BOUNCER_BLACK
+  blit(ctx, ox, oy, dir, 1, 0, 7, 1)              // shades across both eyes
+  blit(ctx, ox, oy, dir, 2, 1, 2, 1)
+  blit(ctx, ox, oy, dir, 5, 1, 2, 1)
+  blit(ctx, ox, oy, dir, 4, 3, 2, 1)              // unsmiling mouth
+  ctx.fillStyle = "#d9d7cf"
+  blit(ctx, ox, oy, dir, 0, 0, 1, 2)              // earpiece
+  ctx.fillStyle = BOUNCER_BLACK
+  blit(ctx, ox, oy, dir, 0, 2, 1, 3)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = "#8a8a99"
+    for (var i = 0; i < 4; i++)
+      blitFine(ctx, ox, oy, dir, i % 2 ? -0.5 : 0, 2 + i * 0.5, 1, 0.5)
+    ctx.fillStyle = "#a9b1d6"
+    blitFine(ctx, ox, oy, dir, 2, 0, 1.5, 0.5)
+    blitFine(ctx, ox, oy, dir, 5, 0, 1.5, 0.5)
   }
-  drawEnemyFeet(ctx, w, en, ox, oy, dir, m, 13, BOUNCER_DARK)
+}
+
+function drawBouncerFine(ctx, ox, oy, dir) {
+  ctx.fillStyle = BOUNCER_EDGE_LIT
+  blitFine(ctx, ox, oy, dir, 2, 5, 0.5, 3)
+  blitFine(ctx, ox, oy, dir, 7, 5, 0.5, 3)
+  ctx.fillStyle = "#d9d7cf"
+  blitFine(ctx, ox, oy, dir, 4, 8, 2, 0.5)
+  blitFine(ctx, ox, oy, dir, 5, 8.5, 0.5, 1.5)
+  // A white rejection cross on the red pass; readable without microscopic text.
+  blitFine(ctx, ox, oy, dir, 4.5, 10, 0.5, 0.5)
+  blitFine(ctx, ox, oy, dir, 5.5, 10, 0.5, 0.5)
+  blitFine(ctx, ox, oy, dir, 5, 10.5, 0.5, 0.5)
+  blitFine(ctx, ox, oy, dir, 4.5, 11, 0.5, 0.5)
+  blitFine(ctx, ox, oy, dir, 5.5, 11, 0.5, 0.5)
+}
+
+function drawBouncerArms(ctx, w, ox, oy, dir, reel, palm) {
+  ctx.fillStyle = BOUNCER_DARK
+  if (reel) {
+    blit(ctx, ox, oy, dir, -4, 5, 4, 2)
+    blit(ctx, ox, oy, dir, 9, 6, 4, 2)
+    ctx.fillStyle = BOUNCER_SKIN
+    blit(ctx, ox, oy, dir, -5, 4, 2, 3)
+    blit(ctx, ox, oy, dir, 12, 5, 2, 3)
+  } else if (palm) {
+    blit(ctx, ox, oy, dir, -1, 8, 4, 3)           // off arm remains folded
+    blit(ctx, ox, oy, dir, 8, 7, 5, 2)
+    ctx.fillStyle = BOUNCER_SKIN
+    blit(ctx, ox, oy, dir, 12, 3, 2, 5)          // raised flat stop palm
+    blit(ctx, ox, oy, dir, 11, 6, 1, 2)          // thumb
+    if ((w.res || 1) >= 2) {
+      ctx.fillStyle = "#94735f"
+      blitFine(ctx, ox, oy, dir, 12.5, 3, 0.5, 2)
+      blitFine(ctx, ox, oy, dir, 12, 6, 1.5, 0.5)
+    }
+  } else {
+    blit(ctx, ox, oy, dir, -1, 8, 11, 2)
+    ctx.fillStyle = BOUNCER_SUIT
+    blit(ctx, ox, oy, dir, 0, 8, 4, 1)
+    blit(ctx, ox, oy, dir, 6, 9, 3, 1)
+    ctx.fillStyle = BOUNCER_SKIN
+    blit(ctx, ox, oy, dir, 7, 8, 2, 1)
+    blit(ctx, ox, oy, dir, 0, 9, 2, 1)
+  }
+}
+
+function drawBouncerFlash(ctx, ox, oy, dir, age) {
+  ctx.fillStyle = "#ffffff"
+  ctx.globalAlpha = 0.75 * (1 - age / 6)
+  blit(ctx, ox, oy, dir, 1, -1, 6, 5)
+  blit(ctx, ox, oy, dir, -2, 4, 13, 4)
+  blit(ctx, ox, oy, dir, -1, 8, 11, 5)
+  ctx.globalAlpha = 1
+}
+
+function drawBouncerPips(ctx, en, ox, oy) {
   for (var i = 0; i < 3; i++) {
     ctx.fillStyle = i < en.hp ? "#ff5268" : "#3a2a30"
-    ctx.fillRect(ox + 1 + i * 3, oy - 3, 2, 1)
+    ctx.fillRect(ox + i * 3, oy - 5, 2, 1)
   }
 }
 
@@ -8418,7 +8538,7 @@ var ENEMY_DRAW = { bouncer: drawBouncer, gun: drawGunner, drone: drawDrone, oper
 // Like colony deaths, these are dated poses at the last position, not actors.
 // The last event is only a hint: unrecognised events keep the kind's defeat.
 var ENEMY_DEFEAT_TICKS = 32
-var ENEMY_DEFEAT_DRAW = { gun: drawDefeatGunner, drone: drawDefeatDrone,
+var ENEMY_DEFEAT_DRAW = { bouncer: drawDefeatBouncer, gun: drawDefeatGunner, drone: drawDefeatDrone,
   operator: drawDefeatOperator, sniper: drawDefeatSniper,
   xeno: drawDefeatXeno, harpoon: drawDefeatDiver }
 var ENEMY_DEFEAT_CAUSE = { "mine boom": drawDefeatBlast,
@@ -8441,6 +8561,61 @@ function drawEnemyDefeat(ctx, w, pal, en) {
   if (Object.prototype.hasOwnProperty.call(ENEMY_DEFEAT_CAUSE, en.diedBy))
     ENEMY_DEFEAT_CAUSE[en.diedBy](ctx, w, pal, age)
   ctx.restore()
+}
+
+// A heavy does not evaporate: knees buckle, shoulder hits, then the whole
+// jacket spreads on the floor. The pass flies off; the dust marks the weight.
+function drawDefeatBouncer(ctx, w, pal, age, en) {
+  spriteFlip = false
+  if (age < 8) drawBouncerKnees(ctx, w, age)
+  else drawBouncerFallen(ctx, w, age)
+  drawBouncerBadgeFall(ctx, age)
+  if (age >= 8 && age < 20) drawDeathDust(ctx, pal, age - 8, 10)
+}
+
+function drawBouncerKnees(ctx, w, age) {
+  var drop = Math.floor(age / 3)
+  drawBouncerBody(ctx, w, -4 - drop, -16 + drop, 1)
+  drawBouncerHead(ctx, w, -4 - drop, -16 + drop, 1)
+  drawBouncerArms(ctx, w, -4 - drop, -16 + drop, 1, 1, false)
+  ctx.fillStyle = BOUNCER_BLACK
+  ctx.fillRect(-5, -3, 5, 3); ctx.fillRect(2, -3, 4, 3)
+}
+
+function drawBouncerFallen(ctx, w, age) {
+  var slumped = age < 14
+  ctx.fillStyle = BOUNCER_BLACK
+  ctx.fillRect(slumped ? -8 : -12, slumped ? -10 : -6, 12, 5)
+  ctx.fillRect(1, -3, 7, 3)
+  ctx.fillStyle = BOUNCER_DARK
+  ctx.fillRect(slumped ? -7 : -11, slumped ? -9 : -5, 11, 4)
+  ctx.fillStyle = BOUNCER_SUIT
+  ctx.fillRect(slumped ? -7 : -11, slumped ? -9 : -5, 5, 3)
+  ctx.fillRect(slumped ? -1 : -5, slumped ? -8 : -4, 6, 3)
+  ctx.fillStyle = BOUNCER_EDGE_LIT
+  ctx.fillRect(slumped ? -7 : -11, slumped ? -9 : -5, 5, 1)
+  ctx.fillStyle = BOUNCER_SKIN
+  ctx.fillRect(slumped ? -10 : -15, slumped ? -11 : -5, 5, 4)
+  ctx.fillRect(-3, -2, 3, 1)
+  ctx.fillStyle = BOUNCER_BLACK
+  ctx.fillRect(slumped ? -10 : -15, slumped ? -9 : -3, 5, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = "#d9d7cf"
+    ctx.fillRect(slumped ? -10 : -15, slumped ? -10 : -4, 0.5, 1)
+    ctx.fillStyle = BOUNCER_EDGE_LIT
+    ctx.fillRect(-7, -3.5, 5, 0.5)
+  }
+}
+
+function drawBouncerBadgeFall(ctx, age) {
+  if (age < 8) return
+  var flight = Math.min(10, age - 8)
+  var x = 5 + Math.floor(flight * 0.7)
+  var y = -2 - Math.round(Math.sin(flight / 10 * Math.PI) * 6)
+  ctx.fillStyle = "#ff5268"
+  ctx.fillRect(x, y, 3, 2)
+  ctx.fillStyle = "#d9d7cf"
+  ctx.fillRect(x, y, 2, 1)
 }
 
 // Three dated poses at the last feet position: knees, shoulder, then flat.
@@ -10248,6 +10423,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
     ? Math.round(w.lifts[ag.liftIx].car * C) - SPRITE_PX
     : Math.round((ag.y + 1) * C) - SPRITE_PX
   oy += eventFloatBob(w, ag)
+  drawThrowLanding(ctx, w, pal, ag)
   var thrown = throwArc(w, ag, C)
   ox += thrown.dx
   oy -= thrown.lift
