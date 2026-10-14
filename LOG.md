@@ -6815,3 +6815,23 @@ replays it while the report card waits, a click skips to the card without
 pausing, and a level with no big moment goes straight to the card). The
 bridge landing moved into `landBridge` to keep `stepBuild` under the CRAP gate.
 `npm run check` 1079/1079; CRAP under 30.
+
+## 231 — 2026-10-15 · Sweepstake
+
+The watcher can pick who gets home first. The first tap on an agent in a
+level, before anybody is home, is the pick — a bet, not a pep talk, so it
+nudges nobody and the run is the same run (an instant replay re-simulates
+without it). The pick says MY MONEY'S ON YOU and wears a small turning gold
+coin until it is home. The first three levels of a visit put TAP AN AGENT: WHO
+GETS HOME FIRST? on the ticker. The report card says how it went —
+"CALLED IT: AGENT 003 FIRST HOME" in gold, "YOUR PICK AGENT 009 CAME HOME
+3RD", or "YOUR PICK AGENT 042 DID NOT MAKE IT" — with "· CALLED 3 OF 9" from a
+tally kept in this browser only (localStorage, silent without it). Later taps
+are pep talks, as before. Sim only keeps `homeOrder`, read by nothing in it.
+
+**Tests:** `sweepstake.test.js` (4: home order kept and changing nothing; every
+form of the line, ordinals and the tally, within the plate and the font; gold
+when called and the coin until home; in headless Chromium the first tap is the
+pick with no pep talk, the ticker explains it, and a finished level tallies
+it). The pep-talk browser test notes that its first tap is now the pick.
+`npm run check` 1083/1083; CRAP under 30.

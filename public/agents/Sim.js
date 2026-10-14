@@ -1001,6 +1001,7 @@ function newWorld(level, attempt, colonySeed) {
     conflictRng: makeRng(colonySeed + 2038074743),
     outage: null,      // { at, len } when the lights will go out; purely visual, see rollOutage
     moments: [],       // the level's best bits, for the page's instant replay; see noteMoment
+    homeOrder: [],     // ids in the order they got home, for the page's sweepstake
     conflicts: 0,      // merge conflicts resolved, for the report card and sfx
     duck: null,        // the rubber duck, while there is one; see stepDuck
     ducked: 0,         // problems explained to it, for the report card
@@ -10794,6 +10795,7 @@ function agentAtExit(w, ag, e) {
   ag.state = "saved"
   ag.fade = 0
   w.saved++
+  if (w.homeOrder) w.homeOrder.push(ag.id)
   if (w.saved === w.toRelease && w.timeLimit - w.ticks < 300) noteMoment(w, "photo", 4, ag)
   // A carrier that beats its own incubation to the door goes home with it
   // and counts, like everybody else, as a rescue. It is the best outcome

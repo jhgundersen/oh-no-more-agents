@@ -38,6 +38,7 @@
   var levelsCleared = 0
   var globalSaved = null
   var milestone = null      // this session's community milestone, if one was crossed
+  var levelsThisVisit = 0   // the sweepstake's how-to shows on the first few
   var pendingReports = []
   var pendingBatch = null
   var flushedThisSession = false
@@ -465,6 +466,8 @@
     world.res = RES
     world.doneHold = DONE_HOLD
     if (milestone) world.milestone = milestone
+    // The first few levels of a visit say how the sweepstake works.
+    if (++levelsThisVisit <= 3) world.feed.push({ t: 45, text: "TAP AN AGENT: WHO GETS HOME FIRST?" })
     world.reducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
     completionLine = ""
     lastTerrainVersion = 0
@@ -492,6 +495,7 @@
     if (world.done && completionLine === "") {
       completionLine = outcomeLine(world)
       noteSightings(world)
+      noteBet(world)
       startReplay(world)
       lifetimeSaved += world.saved
       if (world.saved > 0) levelsCleared += 1
@@ -799,6 +803,19 @@
     w.sightings = { seen: seen, fresh: fresh }
   }
 
+  // Sweepstake tally (Draw's betLine): how many first-home calls this viewer
+  // has got right, in this browser only, silent without storage.
+  var BETS_KEY = "oh-no-more-agents-sweepstake"
+  function noteBet(w) {
+    if (w.bet === undefined) return
+    try {
+      var t = JSON.parse(localStorage.getItem(BETS_KEY) || "{}")
+      t = { right: (t.right | 0) + (w.homeOrder && w.homeOrder[0] === w.bet ? 1 : 0), total: (t.total | 0) + 1 }
+      localStorage.setItem(BETS_KEY, JSON.stringify(t))
+      w.betTally = t
+    } catch (e) { /* no tally, still the line */ }
+  }
+
   // "Copy link": this level with this colony (share.js). The toast says
   // whether the clipboard took it; a browser that refuses gets the old
   // select-and-copy, and failing that the toast admits it.
@@ -1013,6 +1030,13 @@
       if (replay) { endReplay(); return }
       var ag = running && world ? agentUnder(ev) : null
       if (!ag) { togglePause(); return }
+      // The first tap of a level, before anybody is home, is the watcher's
+      // pick in the sweepstake — a bet, not a pep talk, so it nudges nobody.
+      if (world.bet === undefined && world.saved === 0 && !world.done && !ag.special) {
+        world.bet = ag.id; world.betAt = world.ticks
+        paintActors()
+        return
+      }
       if (pepTalk(world, ag)) (world.pepLog = world.pepLog || []).push({ t: world.ticks, id: ag.id })
       paintActors()
     })

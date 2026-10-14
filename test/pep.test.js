@@ -93,7 +93,9 @@ test("on the page, with touch: a tap on an agent is a pep talk, a tap on empty b
       await b.cmd("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] })
       await sleep(150)
     }
-    // The agent keeps walking between reading where it is and the tap
+    // The first tap of a level is the sweepstake pick (sweepstake.test.js),
+    // so the pep talk comes on a later one. The agent keeps walking between
+    // reading where it is and the tap
     // landing, and under a loaded test run that can be a body-width: retry with
     // a fresh position, a few times.
     for (let i = 0; i < 6; i++) {

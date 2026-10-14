@@ -3040,6 +3040,25 @@ function commitHash(w) {
 }
 
 // ---------------------------------------------------------------------------
+// Sweepstake (the page's pick; Sim's homeOrder)
+// ---------------------------------------------------------------------------
+function betCalled(w) { return !!w.homeOrder && w.homeOrder[0] === w.bet }
+function ordinal(n) {
+  var teen = n % 100 >= 11 && n % 100 <= 13
+  return n + (teen ? "TH" : ["TH", "ST", "ND", "RD"][n % 10] || "TH")
+}
+function betLine(w) {
+  var who = "AGENT " + ("00" + w.bet).slice(-3)
+  var place = w.homeOrder ? w.homeOrder.indexOf(w.bet) : -1
+  var line = place === 0 ? "CALLED IT: " + who + " FIRST HOME"
+    : place > 0 ? "YOUR PICK " + who + " CAME HOME " + ordinal(place + 1)
+    : "YOUR PICK " + who + " DID NOT MAKE IT"
+  var t = w.betTally
+  if (t && t.total > 0 && line.length + 18 <= REPORT_CHARS) line += " · CALLED " + t.right + " OF " + t.total
+  return line
+}
+
+// ---------------------------------------------------------------------------
 // Sightings strip
 // ---------------------------------------------------------------------------
 // Seven little icons on the report card, one per rare thing (Outcome's
@@ -3129,6 +3148,7 @@ function reportRows(w, pal) {
   // The AGI, either way: a bonus line in gold, or its obituary.
   if (w.agiHome) rows.push({ text: "AGI ACHIEVED · +1 BONUS", colour: AGI_GOLD, step: 12 })
   else if (w.agiLost) rows.push({ text: "AGI LOST. STILL FIVE YEARS AWAY.", colour: pal.urgent, step: 12 })
+  if (w.bet !== undefined && w.bet !== null) rows.push({ text: betLine(w), colour: betCalled(w) ? AGI_GOLD : pal.label, step: 12 })
   rows.push({ text: commitLine(w), colour: pal.decor, step: 12 })
   // The watcher's sightings (the page sets w.sightings at the end of a level).
   if (w.sightings) {
@@ -7184,6 +7204,7 @@ function quipFor(w, ag) {
     [ag.queuedAt, "AFTER YOU"],      // the front of a 429 queue
     [ag.servedAt, "200 OK"],         // each one let through
     [ag.pepAt, PEP_TEXT[(ag.pepLine || 0) % PEP_TEXT.length]],   // a watcher's pep talk
+    [w.bet === ag.id ? w.betAt : undefined, "MY MONEY'S ON YOU"],  // the watcher's pick
     [ag.conflictAt, ag.conflictSide > 0 ? "<<<<<<<" : ">>>>>>>"],  // nose to nose in a merge conflict
     [ag.rebasedAt, "REBASED"],                                     // and the one that gave way
     [ag.duckAt, "SO BASICALLY"],     // explaining it to the rubber duck...
@@ -11623,6 +11644,7 @@ var PEP_GLOW = 18
 function drawAgentGlitter(ctx, w, ag, ox, oy) {
   if (ag.agi || (ag.pepAt !== undefined && w.ticks - ag.pepAt >= 0 && w.ticks - ag.pepAt < PEP_GLOW)) drawAgiSparkle(ctx, w, ag, ox, oy)
   if (w.milestone && ag.state !== "saved") drawPartyHat(ctx, w.milestone.kind, ag, ox, oy)
+  if (w.bet === ag.id && ag.state !== "saved") drawBetCoin(ctx, w, ox, oy)
 }
 
 // A community milestone (Outcome's milestoneFor; web.js puts it on the world):
@@ -11643,6 +11665,20 @@ function drawPartyHat(ctx, kind, ag, ox, oy) {
     ctx.fillStyle = "#ffffff"
     ctx.fillRect(cx, top - 1, 1, 1)                 // the pompom
   }
+  ctx.restore()
+}
+
+// The watcher's pick in the sweepstake: a little gold coin over its head,
+// turning (the bright edge moves) so it reads at a glance among the hats.
+function drawBetCoin(ctx, w, ox, oy) {
+  var x = ox + 3, y = oy - 6, turn = (w.ticks >> 3) % 4
+  ctx.save()
+  ctx.fillStyle = "#b8860b"
+  ctx.fillRect(x, y, 3, 3)
+  ctx.fillStyle = AGI_GOLD
+  ctx.fillRect(x + (turn === 3 ? 1 : 0), y, turn % 2 ? 2 : 3, 3)
+  ctx.fillStyle = "#fff3b0"
+  ctx.fillRect(x + (turn > 1 ? 2 : 0), y, 1, 1)
   ctx.restore()
 }
 
