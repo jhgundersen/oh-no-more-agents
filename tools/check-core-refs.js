@@ -35,11 +35,18 @@ function strip(text) {
     .replace(/'[^'\n]*'/g, "''")
 }
 
-const defines = {}, uses = {}
+const defines = {}, uses = {}, twice = []
 
 for (const name of CORE) {
   const text = strip(fs.readFileSync(path.join(AGENTS, name), "utf8"))
-  defines[name] = new Set([...text.matchAll(/^(?:function|var)\s+([A-Za-z_]\w*)/gm)].map(m => m[1]))
+  const top = [...text.matchAll(/^(?:function|var)\s+([A-Za-z_]\w*)/gm)].map(m => m[1])
+  defines[name] = new Set(top)
+  // And twice in the same file: the later one silently wins. A new
+  // DUCK_REACH = 4 for the rubber duck was overwritten by the Debug hero's
+  // DUCK_REACH = 18 three thousand lines further down, and nothing said so.
+  const counts = {}
+  for (const d of top) counts[d] = (counts[d] || 0) + 1
+  for (const d in counts) if (counts[d] > 1) twice.push(`  ${d} is declared ${counts[d]} times in ${name}`)
   const local = new Set([...text.matchAll(/\b(?:var|function)\s+([A-Za-z_]\w*)/g)].map(m => m[1]))
 
   // The lookbehind matters: `k.CELL` and `ctx.fillRect(` are property accesses
@@ -67,7 +74,12 @@ for (const name of CORE)
     seen[d] = name
   }
 
-if (problems.length || dupes.length) {
+if (problems.length || dupes.length || twice.length) {
+  if (twice.length) {
+    console.error("check-core-refs: a name is declared more than once in the same file:")
+    console.error(twice.join("\n"))
+    console.error("                 the last declaration silently replaces the others.")
+  }
   if (problems.length) {
     console.error("check-core-refs: a core file reaches into another:")
     console.error(problems.join("\n"))

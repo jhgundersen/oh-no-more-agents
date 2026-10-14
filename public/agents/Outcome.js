@@ -124,6 +124,14 @@ var EVENT_LINES = {
     "The AGI did not make it. The press release went out anyway."
   ],
 
+  // Only when somebody actually explained its problem to the duck.
+  duck: [
+    "One agent explained the problem to a rubber duck and solved it halfway through the sentence.",
+    "The rubber duck said nothing, which is exactly what was needed.",
+    "Debugged by duck. The duck takes no credit and no equity.",
+    "Rubber duck debugging: still undefeated."
+  ],
+
   // Only when a carrier actually reached the door still carrying it.
   carrier: [
     "One of them took it home with it. Nobody noticed.",
@@ -158,6 +166,7 @@ function outcomeLine(w) {
   add("ratelimit", w.rateLimited > 0)
   add("agiHome", w.agiHome === true)
   add("agiLost", w.agiLost === true)
+  add("duck", w.ducked > 0)
   var pool = facts.length && Math.random() < 0.78 ? facts : outcome
   return pool[Math.floor(Math.random() * pool.length)]
 }

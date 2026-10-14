@@ -60,7 +60,13 @@ export async function browser() {
   }
   const cmd = (method, params = {}) => new Promise(r => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })) })
   await cmd("Runtime.enable"); await cmd("Page.enable")
-  return { cmd, errors, close() { ws.close(); proc.kill(); fs.rmSync(profile, { recursive: true, force: true }) } }
+  // Chromium keeps writing its profile for a moment after the kill; removing it
+  // straight away failed with ENOTEMPTY and took the report down with it.
+  const exited = new Promise(r => proc.on("exit", r))
+  return { cmd, errors, async close() {
+    ws.close(); proc.kill(); await Promise.race([exited, sleep(3000)])
+    try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) } catch { /* a temp dir; the OS will have it */ }
+  } }
 }
 
 // Everything measured inside the page, in CSS pixels.
@@ -127,7 +133,7 @@ async function main(argv) {
   const server = await serve(), b = await browser(), report = []
   const url = `http://127.0.0.1:${server.address().port}/?phone-check`
   try { for (const view of VIEWS) report.push(await capture(b, view, url, opts.out)) }
-  finally { b.close(); server.close() }
+  finally { await b.close(); server.close() }
   if (!print(report, b.errors, opts, console.log)) process.exitCode = 1
 }
 

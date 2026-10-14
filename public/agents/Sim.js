@@ -994,6 +994,9 @@ function newWorld(level, attempt, colonySeed) {
     hallucinations: 0,
     limitRng: makeRng(colonySeed + 2750159),
     agiRng: makeRng(colonySeed + 433494437),
+    duckRng: makeRng(colonySeed + 179424673),
+    duck: null,        // the rubber duck, while there is one; see stepDuck
+    ducked: 0,         // problems explained to it, for the report card
     agiAt: -2,         // which release is the AGI: -2 undecided, -1 none; see crownAgi
     agiId: -1,
     agiHome: false,
@@ -6095,6 +6098,7 @@ function spawn(w) {
     fuse: 0,
     waitFor: 0,       // holding at a danger for its reload, rather than pacing
     queueFor: 0,      // standing in a 429 queue; see stepRateLimit
+    explainFor: 0,    // explaining the problem to a rubber duck; see stepDuck
     mineCool: 0,      // one charge at a time, and not again until it has gone off
     shieldFor: 0,     // ticks left on the plate; renewed while a threat is in front
     throttleFor: 0,   // Rate Limiter's pose and signal, after it throttles something
@@ -6827,6 +6831,85 @@ function restoreAgi(w, dead, back) {
   w.agiId = back.id
   w.agiLost = false
   feedNote(w, "AGI RESTORED FROM BACKUP")
+}
+
+// ---------------------------------------------------------------------------
+// Rubber duck debugging
+// ---------------------------------------------------------------------------
+// The first time somebody has gone RUBBER_IDLE ticks without getting any closer
+// to home, there is a chance a rubber duck drops onto the floor just ahead of
+// it. Walking into the duck, it stops, picks it up and explains the problem
+// out loud — which, as everyone who has done this knows, is when you see it.
+// Then it gets the rescue the stall rules would have given it six hundred
+// ticks later (forceEscape), minus the six hundred ticks, and carries on.
+// Once a level, a duck that nobody reaches goes away, and the explanation is a
+// countdown that ends on its own; nothing here can hold anyone.
+var RUBBER_IDLE = 300       // ticks without progress before a duck may appear
+var RUBBER_CHANCE = 0.25    // that it does, the first time someone gets there
+var RUBBER_REACH = 4        // cells either side of the stuck agent it may land
+var RUBBER_TALK = 48        // ticks of explaining
+var RUBBER_LIFE = 600       // ticks a duck waits on the floor for somebody
+
+function stepDuck(w) {
+  var d = w.duck
+  if (d) {
+    if (d.takenBy < 0 && w.ticks - d.at > RUBBER_LIFE) w.duck = null
+    else if (d.takenBy < 0) pickUpDuck(w, d)
+    return
+  }
+  if (w.duckDone || w.done || w.nuking) return
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.special || ag.state !== "walk" || ag.idle < RUBBER_IDLE) continue
+    w.duckDone = true                       // the first stuck agent, duck or no duck
+    if (w.duckRng() >= RUBBER_CHANCE) return
+    var x = duckSpot(w, ag)
+    if (x < 0) return
+    w.duck = { x: x, y: Math.floor(ag.y), at: w.ticks, takenBy: -1, takenAt: -1 }
+    feedNote(w, "A RUBBER DUCK APPEARS")
+    return
+  }
+}
+
+// Ahead of it on its own floor if there is room, behind it if not: open, on
+// the ground, out of any known danger and not over a pit.
+function duckSpot(w, ag) {
+  var x0 = Math.floor(ag.x), y = Math.floor(ag.y)
+  for (var n = 2; n <= RUBBER_REACH; n++) for (var s = 0; s < 2; s++) {
+    var x = x0 + (s ? -ag.dir : ag.dir) * n
+    if (x < 1 || x >= COLS - 1) continue
+    if (solid(w, x, y) || !solid(w, x, y + 1) || pitAt(w, x) || hazardZoneAt(w, x, y, true)) continue
+    return x
+  }
+  return -1
+}
+
+function pickUpDuck(w, d) {
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.special || ag.state !== "walk" || ag.queueFor > 0) continue
+    if (Math.floor(ag.y) !== d.y || Math.abs(ag.x - (d.x + 0.5)) > 0.8) continue
+    d.takenBy = ag.id
+    d.takenAt = w.ticks
+    ag.explainFor = RUBBER_TALK
+    ag.duckAt = w.ticks          // for Draw's quips
+    w.ducked++
+    return
+  }
+}
+
+function explaining(w, ag) {
+  if (!(ag.explainFor > 0)) return false
+  if (ag.state !== "walk" || unsupported(w, ag)) { ag.explainFor = 0; return false }
+  ag.still = 0
+  if (--ag.explainFor > 0) return true
+  // Eureka. Everything the stall rules know about this agent's loop is
+  // wiped, and the rescue they would eventually have run, runs now.
+  ag.idle = 0; ag.turns = 0; ag.passes = {}; ag.bucket = ""; ag.markD = Infinity
+  w.duck = null
+  feedNote(w, agentTag(w, ag) + " · EXPLAINED IT TO THE DUCK")
+  forceEscape(w, ag)
+  return true
 }
 
 // ---------------------------------------------------------------------------
@@ -10358,7 +10441,7 @@ var AGENT_STEPS = {
 
 function agentActs(w, ag) {
   tickAgentTimers(w, ag)
-  if (queued(w, ag)) { w.acting = null; return }
+  if (queued(w, ag) || explaining(w, ag)) { w.acting = null; return }
   if (ag.special && ag.state === "walk") specialReacts(w, ag)
   if (ag.rescueCool > 0) ag.rescueCool--
   watchStill(w, ag)
@@ -10731,6 +10814,7 @@ function finishWorldStep(w, active, blockers, moving) {
   stepEvents(w)
   stepMirages(w)
   stepRateLimit(w)
+  stepDuck(w)
   stepAgi(w)
   stepMission(w)
   stepHazard(w)

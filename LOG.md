@@ -5737,3 +5737,42 @@ Terrain is cached in ordinary play; these are Node raster times, not browser FPS
 only; no push or deployment.
 
 Reviewed and merged by the loop. Level 12: racks with clear green and amber LEDs and cabinet depth; agents readable.
+
+## 203 — 2026-10-15 · Frame rate measured, and rubber duck debugging
+
+**Tool: `npm run fps -- 8 9 10 [--seconds N] [--speed 0-2] [--json]`**
+(`tools/fps.js`, on top of phone.js's local server and Chromium driver). Opens
+each level on the real page at page resolution, times requestAnimationFrame
+for N seconds and reports median fps, the 5th-percentile fps, the worst frame,
+the share of time in tasks over 50ms, and the renderer main thread's busy share
+from CDP's TaskDuration — the headroom. Measured on this machine, headless
+software rendering, the fastest speed: Factory 8, Skyscraper 9, Trench 10, Data
+Center 12 and Subway 18 all hold **60 fps, p5 60, worst frame 17ms, no long
+tasks, main thread 9–12% busy**. Nothing to fix; the art passes cost nothing a
+frame can see. Also: phone.js's `close()` now waits for Chromium to exit before
+removing its profile (it threw ENOTEMPTY and took a report with it).
+
+**Rubber duck debugging.** The first agent of a level to go 300 ticks without
+getting any closer to home has a one-in-four chance of a rubber duck dropping
+onto the floor a few cells ahead of it (behind, if there is no room ahead;
+never over a pit, in a known hazard or in mid-air) — A RUBBER DUCK APPEARS.
+Walking into it, the agent stops, holds it up and explains: SO BASICALLY…
+OH! After 48 ticks everything the stall rules know about its loop is wiped and
+it gets the rescue they would have run six hundred ticks later (`forceEscape`),
+without the bomb — EXPLAINED IT TO THE DUCK. Once a level; a duck nobody reaches
+goes after 600 ticks; a fall, a lost floor or anything else that isn't walking
+ends the explanation. A plop and a squeaky quack in sfx.js, four outcome lines,
+and RUBBER-DUCKED on the report card's commit line. Over 57 levels × 24
+colonies a duck is used in 163 of 1368 runs (12%); home 95.42% → 95.38%,
+stall endings 48 → 51, hangs 0 — a gag, balance-neutral within noise.
+
+**Found on the way, and now a check.** The duck's `DUCK_REACH = 4` was silently
+replaced by the Debug hero's `DUCK_REACH = 18` declared three thousand lines
+later in the same file — the second `var` wins. The duck's constants are now
+`RUBBER_*`, and `tools/check-core-refs.js` (part of `npm run check`) fails on a
+name declared more than once within a core file, as it already did across
+files.
+
+**Tests:** `duck.test.js` (8), `fps.test.js` (3, one a 1-second real Chromium
+measurement). `npm run check` 974/974; CRAP worst 30.0 (`drawHeldDuck` keeps
+`drawAgent` under the gate).

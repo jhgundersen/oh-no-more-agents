@@ -2688,10 +2688,31 @@ function drawRateLimitSign(ctx, w, pal, rl) {
 }
 
 // What the colony is going through rather than what is on the level: a
-// dreamer's mirage, the 429 sign over a queue.
+// dreamer's mirage, the 429 sign over a queue, a rubber duck on the floor.
 function drawColonyAsides(ctx, w, pal) {
   if (w.mirages) for (var mi = 0; mi < w.mirages.length; mi++) drawMirage(ctx, w, pal, w.mirages[mi])
   if (w.rateLimit) drawRateLimitSign(ctx, w, pal, w.rateLimit)
+  if (w.duck && w.duck.takenBy < 0) drawFloorDuck(ctx, w, w.duck)
+}
+
+// The rubber duck waiting on the floor: it drops in from a few cells up with a
+// bounce, then sits there bobbing very slightly, facing the way it landed.
+// Whole art pixels, the colony's debugging duck's own colours.
+var RUBBER_DROP = 10
+function drawFloorDuck(ctx, w, d) {
+  var C = w.k.CELL, age = w.ticks - d.at
+  var foot = (d.y + 1) * C, x = Math.round((d.x + 0.5) * C) - 3
+  var lift = age < RUBBER_DROP ? Math.round((RUBBER_DROP - age) * 1.6) : (age < RUBBER_DROP + 4 ? 1 : (age >> 4) % 2)
+  var y = foot - 5 - lift
+  ctx.save()
+  ctx.fillStyle = DUCK_YELLOW
+  ctx.fillRect(x, y + 2, 5, 3)                 // body
+  ctx.fillRect(x + 2, y, 2, 2)                 // head
+  ctx.fillStyle = DUCK_BEAK
+  ctx.fillRect(x + 4, y + 1, 1, 1)
+  ctx.fillStyle = "#1a1a20"
+  ctx.fillRect(x + 3, y, 1, 1)
+  ctx.restore()
 }
 
 function drawActorFixtures(ctx, w, pal) {
@@ -2901,6 +2922,7 @@ function commitLine(w) {
   if (w.hallucinations > 0) notes.push(w.hallucinations + " HALLUCINATED AN EXIT")
   if (w.hazardKills > 0) notes.push(w.hazardKills + " LOST IN PROD")
   if (w.brollyLandings > 0) notes.push(w.brollyLandings + (w.brollyLandings === 1 ? " UMBRELLA" : " UMBRELLAS"))
+  if (w.ducked > 0) notes.push("RUBBER-DUCKED")
   if (w.eventLog && w.eventLog.length) notes.push("SCOPE CHANGED MID-SPRINT")
   var line = type + ": " + subject
   for (var i = 0; i < notes.length && i < 2; i++) {
@@ -6908,7 +6930,9 @@ function quipFor(w, ag) {
     [ag.dreamtAt, "EXIT!"],          // a dreamer sees its mirage
     [ag.wokeAt, "OH."],              // and arrives at it
     [ag.queuedAt, "AFTER YOU"],      // the front of a 429 queue
-    [ag.servedAt, "200 OK"]          // each one let through
+    [ag.servedAt, "200 OK"],         // each one let through
+    [ag.duckAt, "SO BASICALLY"],     // explaining it to the rubber duck...
+    [ag.duckAt === undefined ? undefined : ag.duckAt + 30, "OH!"]   // ...and seeing it
   ]
   for (var i = 0; i < cands.length; i++) {
     var at = cands[i][0]
@@ -7072,6 +7096,12 @@ function drawReloadTrail(ctx, w, fx) {
 // body, an orange beak, an eye, bobbing as it squeaks. The colour is the
 // duck's, not the theme's, like the umbrella.
 var DUCK_YELLOW = "#ffd23f", DUCK_BEAK = "#ff8a1f"
+// The Debug hero's own duck, or the level's rubber duck while somebody is
+// explaining the problem to it.
+function drawHeldDuck(ctx, ag, ox, oy, dir) {
+  if (ag.debugFor > 0) drawDuck(ctx, ag, ox, oy, dir)
+  else if (ag.explainFor > 0) drawDuck(ctx, { debugFor: ag.explainFor }, ox, oy, dir)
+}
 function drawDuck(ctx, ag, ox, oy, dir) {
   var bob = (ag.debugFor >> 2) % 2, x = dir > 0 ? ox + 8 : ox - 5, y = oy + 3 - bob
   ctx.fillStyle = DUCK_YELLOW
@@ -11203,7 +11233,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   drawReleaseRing(ctx, pal, ag, ox, oy, w.ticks)
   if (ag.netFor > 0) drawNetThrow(ctx, w, ag, ox, oy, dir, hair)
   if (ag.reloadFor > 0) drawReloadSign(ctx, ag, ox, oy, hair)
-  if (ag.debugFor > 0) drawDuck(ctx, ag, ox, oy, dir)
+  drawHeldDuck(ctx, ag, ox, oy, dir)
   drawCampShot(ctx, w, pal, ag, ox, oy, dir, st, w.k.CELL)
 
   // No special borrows the colony's umbrella. At a lethal height each carries

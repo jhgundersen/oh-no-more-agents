@@ -17,6 +17,7 @@
     "sim": "node tools/simcheck.js",
     "playtest": "node tools/playtest.js",
     "phone": "node tools/phone.js",
+    "fps": "node tools/fps.js",
     "shot": "node tools/shoot.js",
     "stamp": "node tools/stamp-assets.js",
     "sync": "node tools/sync-copies.js",

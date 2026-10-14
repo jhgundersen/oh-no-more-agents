@@ -69,5 +69,5 @@ test("end to end in Chromium: a phone view is captured and measured", { skip: !c
     assert.ok(fs.statSync(r.file).size > 1000)
     assert.equal(r.metrics.viewport.w, 844)
     assert.deepEqual(r.notes, [], "the landscape layout fits a thumb")
-  } finally { b.close(); server.close(); fs.rmSync(out, { recursive: true, force: true }) }
+  } finally { await b.close(); server.close(); fs.rmSync(out, { recursive: true, force: true }) }
 })

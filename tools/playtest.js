@@ -44,7 +44,8 @@ export function playtestRun(S, level, salt) {
     dreamsReached: w.agents.filter(a => a.wokeAt !== undefined).length,
     limited: w.rateLimited || 0,
     longestQueue,
-    agi: w.agiId >= 0 ? (w.agiHome ? "home" : w.agiLost ? "lost" : "open") : ""
+    agi: w.agiId >= 0 ? (w.agiHome ? "home" : w.agiLost ? "lost" : "open") : "",
+    ducked: w.ducked || 0
   }
 }
 
