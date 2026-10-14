@@ -37,3 +37,13 @@ test("end to end from git objects: the same ref twice renders identically, and c
     assert.equal(img.W, a.img.W * 2 + 8)
   } finally { fs.rmSync(dir, { recursive: true, force: true }) }
 })
+
+test("--out may be a directory: the file goes inside it", async () => {
+  const { outPath } = await import("../tools/compare.js")
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cmp-out-"))
+  try {
+    assert.equal(outPath({ out: dir, ref: "codex/clock tower", level: 16 }), path.join(dir, "codex_clock_tower-L16.png"))
+    assert.equal(outPath({ out: "shots/new/", ref: "a", level: 2 }), path.join("shots/new", "a-L2.png"))
+    assert.equal(outPath({ out: path.join(dir, "x.png"), ref: "a", level: 2 }), path.join(dir, "x.png"))
+  } finally { fs.rmSync(dir, { recursive: true, force: true }) }
+})

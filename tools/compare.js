@@ -31,6 +31,15 @@ export function parseArgs(argv) {
     base: opt("--base", "main"), out: opt("--out", path.join("shots", `compare-${plain[0].replace(/[^\w.-]+/g, "_")}-${level}.png`)) }
 }
 
+// --out may name a file or a directory (existing, or written with a trailing
+// slash); a directory gets <ref>-L<level>.png inside it. A directory used to
+// fail with EISDIR.
+export function outPath(opts) {
+  const o = opts.out
+  const isDir = /[\\/]$/.test(o) || (fs.existsSync(o) && fs.statSync(o).isDirectory())
+  return isDir ? path.join(o, `${opts.ref.replace(/[^\w.-]+/g, "_")}-L${opts.level}.png`) : o
+}
+
 // The core files of `ref`, as written in git, in a fresh temp dir.
 export function checkout(ref) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "compare-"))
@@ -110,8 +119,10 @@ async function main(argv) {
   try {
     const left = render(dirs[0], opts), right = render(dirs[1], opts)
     const { img, box } = compose(left.img, right.img, opts, left.D)
-    fs.mkdirSync(path.dirname(opts.out), { recursive: true })
-    writePNG(opts.out, img, 1)
+    const out = outPath(opts)
+    fs.mkdirSync(path.dirname(out), { recursive: true })
+    writePNG(out, img, 1)
+    opts.out = out
     console.log(`${opts.out}  ${box ? `differs in ${box.x1 - box.x0 + 1}x${box.y1 - box.y0 + 1}px at ${box.x0},${box.y0}` : "identical"}  ${((Date.now() - started) / 1000).toFixed(1)} s`)
   } finally { for (const d of dirs) fs.rmSync(d, { recursive: true, force: true }) }
 }
