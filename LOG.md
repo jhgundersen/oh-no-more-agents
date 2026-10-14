@@ -4181,3 +4181,5 @@ not), and fails on the old rule.
 **Measured:** Rooftops falls 13 → 9, home 92.54 → 92.76% (120 plays); all
 guard-post levels 93.1 → 93.4%, all 480 plays 94.23 → 94.61%. `npm run sim`
 99% / 94%, hangs 0. Tests 753.
+
+**Deployed** after 160 (name="build" content="d97d0b09"), gated on a passing check: the bridge fix. Browser check clean.
