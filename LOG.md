@@ -5963,3 +5963,30 @@ Terrain is cached in ordinary play; these are Node raster times, not browser FPS
 no push or deployment.
 
 Reviewed and merged by the loop. Library: dimmer back shelves so the floors read, warm lamp pools, the clipped sign removed.
+
+## 207 — 2026-10-15 · Library merged; level 54 waits at the gate
+
+**Merged** `codex/library` (205–206 above) after review.
+
+**Level 54 (Clock Tower): clock-outs 5 → 0 of 24 colonies, home 95% → 100%.**
+The bottom floor has a run of pillars and then a clockwork gate. At a shut gate
+an agent turned round (with `waitFor` so the loop detector would leave it
+alone) — and turning meant climbing back over the pillars, spending a climber
+each way, then meeting the gate again, until the toolbar or the clock ran out;
+the level's hero, Beam Search, sat in its camp over the exit the whole time
+because the colony only stands campers down when everybody still out is a
+blocker or a camper. Now an agent waits at a shut gate, facing it: a gate is
+shut for at most 90 ticks of its 240. Levels 1–57 × 24 colonies: home 95.41% →
+95.51% (+20 agents), clock-outs 10 → 5, stall endings 45 → 46, average level
+1224 → 1203 ticks, hangs 0; no other level moves 2 points.
+
+Tried and taken back out: a camping hero breaking camp once the rest of the
+colony is settled (`lastOut`). It got level 54 out of the clock too, but it
+cost level 23 (Foundry, also Beam Search) three points, and the gate alone
+does all of the work on 54.
+
+`npm run check` 994/994; CRAP under 30.
+
+**Still on the list:** level 36 stall 6/24 and one clock-out; level 32 stall
+8/24; level 2 stall 8/24; level 18 stall; level 6 clock-outs; level 23 (87%,
+Beam Search camping over the exit).

@@ -116,3 +116,15 @@ test("alone at a current that is running, a diver waits at its edge; in company,
   w.hazards[0].phase = "fire"; ag.x = 46.5
   assert.equal(S.currentAhead(w, ag, 47.1), null, "already in it")
 })
+
+test("at a shut clockwork gate an agent waits at it, facing it, rather than walking away", () => {
+  const w = box(90)
+  for (let y = 26; y <= 29; y++) w.terrain[y * w.k.COLS + 45] = w.k.STEEL
+  w.gates = [{ x0: 45, x1: 45, top: 26, bottom: 29, open: false }]
+  const ag = Object.assign(S.spawn(w), { x: 44.4, y: 29, dir: 1, state: "walk", still: 7 })
+  w.agents = [ag]
+  assert.equal(S.wallBypassed(w, ag), true)
+  assert.equal(ag.dir, 1); assert.ok(ag.waitFor > 0); assert.equal(ag.still, 0)
+  w.gates[0].open = true
+  assert.equal(S.gateShutAt(w, 45, 29), null)
+})

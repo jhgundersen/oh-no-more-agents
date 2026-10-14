@@ -5449,9 +5449,15 @@ function wallBypassed(w, ag) {
   if (ag.special) { specialAtWall(w, ag); return true }
 
   // A shut clockwork gate is steel too, but it will open: wait for it, at it,
-  // rather than pace into the stall rules. Still a counted turn: not counting
-  // it (so nobody gives up on a gate and digs) measured 0.2–0.5 worse.
-  if (gateShutAt(w, ax, footY)) { turnAround(w, ag); ag.waitFor = 12; return true }
+  // rather than pace into the stall rules.
+  //
+  // At it, not near it: this used to turn the agent round as well (and count
+  // the turn, which measured better than not counting it), and with
+  // anything behind it — level 54 has a run of pillars before a gate on its
+  // bottom floor — every turn was a climber spent going back over them and
+  // another coming back, until the toolbar or the clock ran out. A gate is
+  // shut for at most 90 ticks of its 240.
+  if (gateShutAt(w, ax, footY)) { ag.waitFor = 2; ag.still = 0; return true }
 
   // Steel is the one honest "no". Nothing to try, so don't waste a skill on it.
   if (at(w, ax, footY) === STEEL) { turnAround(w, ag); return true }
