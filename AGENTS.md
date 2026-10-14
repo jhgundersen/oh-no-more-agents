@@ -489,7 +489,7 @@ doorways through thin walls (≤3 cells) the colony meets, open 150 of every
 
 ## Fighting back
 
-The red team (guard posts, `planGuard`: from level 3, 40% of levels) is the
+The red team (guard posts, `planGuard`: from level 3, `guardChance` 40% rising to 65% by level 100) is the
 fight the game is named for. Three ways the colony answers it, each rolled
 from stable state (ticks, ids) so none draws on a random stream:
 

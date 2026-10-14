@@ -1244,7 +1244,7 @@ function planGuard(w, level, corridors, hazardCorridors) {
   // reshuffling the established terrain, hazards, specials or personalities.
   var enemyRng = makeRng(level * 65537 + 4049)
   var boss = bossLevel(w, level)
-  if (level < 3 || (enemyRng() >= 0.40 && !boss)) return null
+  if (level < 3 || (enemyRng() >= guardChance(level) && !boss)) return null
   // Hide the post on a deeper corridor. Its exact depth and position use a
   // separate stream, so neither the established map nor the enemy roster is
   // reshuffled. Starting down-route means the guards must patrol and fly to
@@ -1288,6 +1288,12 @@ function planGuard(w, level, corridors, hazardCorridors) {
   // stream is the same for every level after this one.
   if (boss) { w.enemyRoster = ["gun"]; w.bossPost = true }
   return guardPlan
+}
+
+// The red team gets more interested the further the colony gets: two levels
+// in five have a post at first, two in three from level 100 on.
+function guardChance(level) {
+  return 0.40 + Math.min(0.25, level * 0.0025)
 }
 
 // Every eighth level the post is held by The Moderator: a gunner like any

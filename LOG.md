@@ -4003,3 +4003,27 @@ AudioContext and checks that nothing plays while it is off, that each of ten
 changes in a world (home, down, boom, umbrella save, umbrella opening, doors,
 line, throw, scuffle, level over) plays something, and that moving to a new
 world plays nothing for the difference. Tests 747.
+
+## 151 — 2026-10-14 · The red team takes more interest
+
+Nothing about a level changed with how far the colony had come: level 300
+played like level 30. Guard posts now ramp — `guardChance`: 40% plus a
+quarter-point a level, capped at 65% from level 100 (the boss levels are
+unaffected; the roll is the same draw, so only which levels have a post
+moves).
+
+**Measured** (levels by band, one colony each, before → after):
+
+| levels | posts | home |
+|---|---|---|
+| 1–50 | 46 → 50% | 92.6 → 92.8% |
+| 51–100 | 46 → 64% | 95.3 → 94.6% |
+| 101–200 | 48 → 68% | 95.4 → 95.1% |
+| 201–300 | 45 → 67% | 96.3 → 96.3% |
+
+More fights deeper into a session, at almost no cost — the colony now has
+answers to a post (parries, brawls, ricochets). Later levels were already
+the easier ones. `npm run sim`: 100% / 94%, hangs 0. Tests 747.
+
+(Also considered: a colour per agent's tie. Rejected — black suit, black tie
+is the colony's look.)
