@@ -6627,7 +6627,11 @@ function fallLands(w, ag, cx, ny) {
     // Bricks or moved terrain below a pit's lip are debris in a bottomless
     // shaft, not a floor. Without this, level 13's agents built off the board
     // boundary, landed on row 61, and paced around inside the pit.
-    if (shaft && yy >= shaft.floorY) continue
+    // The lip row itself is where a bridge across the pit is laid, and a
+    // bridge is a floor: somebody floating down onto one lands on it. Below
+    // the lip it is debris (iteration 160: twelve agents in 120 Rooftops plays
+    // saw a bridge far below, opened umbrellas, and sank through it).
+    if (shaft && yy > shaft.floorY) continue
     if (!solid(w, cx, yy)) continue
     ag.y = yy - 1
     var net = ag.fall > killingFall(w) && !ag.floater ? netAt(w, cx, ag.y) : null
@@ -8952,7 +8956,7 @@ function stepEnemyFall(w, en) {
     // A pit stays bottomless for hostiles too. They previously landed on the
     // solid out-of-bounds row and patrolled the same impossible floor agents
     // were correctly falling through.
-    if (shaft && yy >= shaft.floorY) continue
+    if (shaft && yy > shaft.floorY) continue      // the lip row is a bridge; see fallLands
     if (!solid(w, cx, yy)) continue
     en.y = yy - 1
     en.state = en.kind === "operator" ? "operate" : (en.kind === "sniper" ? "camp" : "walk")

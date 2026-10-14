@@ -248,3 +248,23 @@ test("a parried round sometimes goes back into the guard who fired it", () => {
   for (let t = 0; t < 100; t++) { w.ticks = t; S.umbrellaRicochet(w, ag, drone) }
   assert.ok(!drone.gone, "a drone is not shot by its own round")
 })
+
+test("a faller lands on a bridge laid across a bottomless crossing, and sinks through debris below it", () => {
+  let w = null
+  for (let lv = 17; lv < 400 && !w; lv++) { const t = S.generate(lv, 0, 3); if (t.pits.some(p => p.crossing)) w = t }
+  const p = w.pits.find(p => p.crossing), x = Math.floor((p.x0 + p.x1) / 2)
+  const drop = (row) => {
+    for (let xx = p.x0; xx <= p.x1; xx++) w.terrain[row * w.k.COLS + xx] = w.k.DIRT
+    const ag = S.spawn(w)
+    Object.assign(ag, { x: x + 0.5, y: p.floorY - 5, state: "fall", fall: 0, floater: true, dir: 1 })
+    w.agents = [ag]
+    for (let t = 0; t < 400 && ag.state === "fall" && !ag.gone; t++) S.stepFall(w, ag)
+    for (let xx = p.x0; xx <= p.x1; xx++) w.terrain[row * w.k.COLS + xx] = w.k.EMPTY
+    return ag
+  }
+  const onBridge = drop(p.floorY)
+  assert.equal(onBridge.state, "walk", "landed on the bridge")
+  assert.equal(onBridge.y, p.floorY - 1)
+  const onDebris = drop(p.floorY + 3)
+  assert.ok(onDebris.gone || onDebris.y > p.floorY + 3, "debris below the lip is not a floor")
+})

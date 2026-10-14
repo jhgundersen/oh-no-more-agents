@@ -4157,3 +4157,27 @@ redeployed below with the deploy gated on `npm run check` passing. From here
 the deploy step runs only after a passing check.
 
 **Deployed** (fix) (name="build" content="31dbb3f0"): checks green. Browser check clean.
+
+## 160 — 2026-10-14 · Floating through a bridge
+
+Rooftops deaths by cause, 120 plays: red team 79, boom 20, **fell 13** — out
+of the bottom of the world, through the bottomless crossings that 126 made
+common there. Twelve of the thirteen were floating on their umbrellas when
+they went, and most had stepped off the *top* corridor at one column and
+floated forty rows straight down.
+
+**The bug:** a bridge across a crossing is laid on the pit's lip row. The
+landing scan (`fallLands`) treated everything at or below the lip as debris
+in a bottomless shaft — the rule from the level-13 fix, where bricks deep in
+a pit had become a floor at row 61. So the decision to step off counted the
+bridge as ground far below (a long drop: open the umbrella), and the fall
+then sank straight through it. Walkers on the bridge were never affected.
+
+**Fix:** the lip row itself is a floor (`yy > shaft.floorY` is debris, not
+`>=`), in `fallLands` and in `stepEnemyFall` alike. A regression test drops
+an umbrella onto a bridge at the lip (lands) and onto debris below it (does
+not), and fails on the old rule.
+
+**Measured:** Rooftops falls 13 → 9, home 92.54 → 92.76% (120 plays); all
+guard-post levels 93.1 → 93.4%, all 480 plays 94.23 → 94.61%. `npm run sim`
+99% / 94%, hangs 0. Tests 753.
