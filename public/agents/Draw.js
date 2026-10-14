@@ -2697,15 +2697,17 @@ function drawOutageGlows(ctx, w, pal) {
     ctx.fillRect(x + (ag.dir > 0 ? 2 : 0), y + 4, 1, 1)
   }
 }
+// Just under the sky band: the sky is where event warnings and the hero's card
+// live, and on production an event warning covered the status line.
 function drawStatusBanner(ctx, w, pal, text, ink, W) {
-  var width = text.length * 4 + 14, left = Math.round(W / 2 - width / 2)
+  var width = text.length * 4 + 14, left = Math.round(W / 2 - width / 2), top = w.k.SKY * w.k.CELL + 2
   ctx.globalAlpha = 1
   ctx.fillStyle = pal.rigDark
-  ctx.fillRect(left, 3, width, 11)
+  ctx.fillRect(left, top, width, 11)
   ctx.fillStyle = ink
-  ctx.fillRect(left + 4, 7, 3, 3)                                        // the status dot
+  ctx.fillRect(left + 4, top + 4, 3, 3)                                  // the status dot
   ctx.fillStyle = "#f4f4ec"
-  drawTransitionText(ctx, text, W / 2 + 4, 6, 1)
+  drawTransitionText(ctx, text, W / 2 + 4, top + 3, 1)
 }
 
 // A dreamer's exit. The same lit mouth as the real one, so it is believable

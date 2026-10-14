@@ -58,3 +58,13 @@ test("dark only inside its window, a status banner through it and after, gentler
   assert.equal(D.outageLevel({ ...w, ticks: 305 }), 0.5, "fades in")
   for (const ch of "INVESTIGATING - DEGRADED PERFORMANCE RESOLVED") assert.ok(D.TRANSITION_GLYPHS[ch])
 })
+
+test("the status banner sits below the sky band, clear of event warnings and the hero's card", () => {
+  const pal = P.build(themeOf("tokyo-night").theme, 9), w = S.generate(9, 0, 3)
+  w.outage = { at: 300, len: 120 }
+  const img = canvas(400, 248), rows = []
+  const fill = img.ctx.fillRect.bind(img.ctx)
+  img.ctx.fillRect = (x, y, a, b) => { if (img.ctx.fillStyle === pal.rigDark) rows.push(y); fill(x, y, a, b) }
+  D.drawOutage(img.ctx, { ...w, ticks: 360 }, pal)
+  assert.ok(rows.length && rows.every(y => y >= w.k.SKY * w.k.CELL), `banner at ${rows}`)
+})
