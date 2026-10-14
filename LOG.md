@@ -4665,3 +4665,5 @@ of the furnace). Nothing over CRAP 30.
 Looked at Spaceship, Skyscraper and Data Center at res 2: the last two read as places (desks and fire escapes; green racks); the Spaceship is grey blocks and portholes. Spaceship art started on `codex/spaceship`, with the Cavern lesson in the brief: keep the terrain, add on top, compare side by side. Level 4 in headless Chromium: converters top and bottom, a mirrored bay mid-right, no console errors.
 
 **Deployed** after 178 (name="build" content="1c2c87b0"), gated on a passing check (817 tests): three kinds of Foundry bay.
+
+Spaceship review (on `codex/spaceship`): **too timid.** At the full 800x496 frame, level 7 before and after are nearly indistinguishable — faint seams, one small panel, hairline conduits. Not worse, not clearly richer either: the Cavern feedback overcorrected. Sent back for bolder additions that read at 1x (saturated blinking lights, visible plating seams and hazard stripes, back-wall ribs and conduits with presence), still keeping the original terrain.
