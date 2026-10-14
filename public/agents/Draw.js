@@ -2570,6 +2570,7 @@ function drawActors(ctx, w, pal, opts) {
   var k = w.k
   clearLayer(ctx, w)
   drawAnimatedLight(ctx, w, pal)
+  drawDrips(ctx, w, pal)
   drawMachines(ctx, w, pal)
   drawActiveEventAir(ctx, w, pal)
   drawLifts(ctx, w, pal)
@@ -6440,6 +6441,7 @@ function drawPoseSwim(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
 function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   if (ag.brollyFor > 0 && st !== "fall") { drawUmbrellaShield(ctx, w, pal, ag, ox, oy); return }
   if (st === "walk" && drawUmbrellaFolding(ctx, w, pal, ag, ox, oy)) return
+  if (st === "walk" && dripOver(w, ag)) { drawUmbrellaOverhead(ctx, w, pal, ox, oy, 1, brollyColour(w, pal, ag)); return }
   if (!(ag.floater && st === "fall" && ag.fall > 2)) return
   // It breathes. A canopy that holds one shape all the way down reads as a
   // prop being carried; one that flexes against the air reads as the thing
@@ -13573,4 +13575,115 @@ function drawHarbourBoothTop(ctx, pal, x, y) {
   ctx.fillStyle = pal.oreShade; ctx.fillRect(x - 11, y - 18, 22, 3)
   ctx.fillStyle = pal.oreEdge; ctx.fillRect(x - 10, y - 18, 20, 1)
   drawHarbourRing(ctx, x + 9, y - 9, HARBOUR_RED)
+}
+
+// ---------------------------------------------------------------------------
+// Drips. In the wet biomes water gathers at a few cracks in the ceiling and
+// falls, every couple of seconds, to the floor below. An agent walking under
+// a falling drop puts its umbrella up and the drop lands on the canopy. All of
+// it comes from the terrain and the clock; the simulation knows nothing of it.
+// ---------------------------------------------------------------------------
+var DRIP_BIOMES = { "Cavern": 1, "Harbour": 1, "Subway": 1, "Jungle": 1, "Ice Cave": 1 }
+var DRIP_GRAVITY = 0.03     // cells per tick per tick
+var DRIP_GATHER = 24        // ticks the bead swells at the crack before it lets go
+var DRIP_SPLASH = 6
+
+// Ceiling cracks: about one column in eleven, the first ceiling in it with a
+// fall of three to fourteen rows under it. Rescanned each frame — a dozen
+// columns — so a bashed or built ceiling is never out of date. Page
+// resolution only: the panel's picture is unchanged.
+function dripSpots(w) {
+  if (!DRIP_BIOMES[w.biome] || !w.terrain || (w.res || 1) < 2) return []
+  var k = w.k, spots = []
+  for (var x = 3; x < k.COLS - 3; x++) {
+    var h = (x * 2654435761 + w.level * 40503) >>> 0
+    if (h % 11) continue
+    var spot = dripColumn(w, x, h)
+    if (spot) spots.push(spot)
+  }
+  return spots
+}
+
+function dripColumn(w, x, h) {
+  var k = w.k
+  for (var y = 1; y < k.ROWS - 2; y++) {
+    if (!w.terrain[y * k.COLS + x] || w.terrain[(y + 1) * k.COLS + x]) continue
+    var floor = y + 1
+    while (floor < k.ROWS && !w.terrain[floor * k.COLS + x]) floor++
+    var drop = floor - (y + 1)
+    if (drop < 3 || drop > 14 || floor >= k.ROWS) return null
+    return { x: x, top: y + 1, floor: floor, period: 80 + (h >>> 8) % 60, phase: (h >>> 16) % 140 }
+  }
+  return null
+}
+
+// Ticks since this spot's drop let go of the crack; negative while it is
+// still gathering there.
+function dripAge(w, d) {
+  return (w.ticks + d.phase) % d.period - DRIP_GATHER
+}
+
+function dripFallTime(d, row) {
+  return Math.sqrt(2 * Math.max(0, row - d.top) / DRIP_GRAVITY)
+}
+
+// The canopy row over a walking agent, in cells (canopy 26px over the feet).
+// In an ordinary six-row corridor that is level with the crack itself, so the
+// drop lands on the canopy as soon as it lets go.
+function canopyRow(ag) { return ag.y + 1 - 26 / 4 }
+
+function underDrip(d, ag) {
+  return ag.state === "walk" && !ag.gone && Math.abs(d.x + 0.5 - ag.x) <= 1.4
+    && canopyRow(ag) > d.top - 2 && ag.y <= d.floor
+}
+
+// Where the drop stops: the first canopy under it, else the floor.
+function dripStop(w, d) {
+  var stop = d.floor
+  for (var i = 0; i < w.agents.length; i++)
+    if (underDrip(d, w.agents[i])) stop = Math.min(stop, canopyRow(w.agents[i]))
+  return Math.max(stop, d.top)
+}
+
+// Up from just before the drop lets go until its splash is over.
+function dripOver(w, ag) {
+  var spots = dripSpots(w)
+  for (var i = 0; i < spots.length; i++) {
+    var d = spots[i]
+    if (!underDrip(d, ag)) continue
+    var age = dripAge(w, d)
+    if (age > -8 && age < dripFallTime(d, canopyRow(ag)) + 10) return true
+  }
+  return false
+}
+
+function drawDrips(ctx, w, pal) {
+  var spots = dripSpots(w)
+  if (!spots.length) return
+  ctx.fillStyle = pal.poolGlint
+  for (var i = 0; i < spots.length; i++) drawDrip(ctx, w, spots[i], w.k.CELL)
+  ctx.globalAlpha = 1
+}
+
+function drawDrip(ctx, w, d, C) {
+  var px = d.x * C + C / 2 - 1, age = dripAge(w, d)
+  if (age < 0) {
+    var swell = age + DRIP_GATHER
+    ctx.globalAlpha = 0.35 + 0.5 * swell / DRIP_GATHER
+    ctx.fillRect(px, d.top * C, 1, swell > DRIP_GATHER / 2 ? 2 : 1)
+    return
+  }
+  var stop = dripStop(w, d), y = d.top + 0.5 * DRIP_GRAVITY * age * age
+  if (y < stop) {
+    ctx.globalAlpha = 0.8
+    ctx.fillRect(px, Math.round(y * C), 1, 2)
+    return
+  }
+  var t = Math.floor(age - dripFallTime(d, stop))
+  if (t >= DRIP_SPLASH) return
+  var at = Math.round(stop * C), up = Math.min(t, 3)
+  ctx.globalAlpha = 0.8 * (1 - t / DRIP_SPLASH)
+  ctx.fillRect(px - 1 - t, at - 1 - up, 1, 1)
+  ctx.fillRect(px + 1 + t, at - 1 - up, 1, 1)
+  if (t < 3) ctx.fillRect(px, at - 2 - t * 1.5, 1, 1)
 }

@@ -4332,3 +4332,28 @@ Terrain differs on 7 of 400 levels.
 half home 10 → 7 (228 and 363 no longer). Level 228 goes 18/18 in four
 colonies where it got 1–4. Tests 782 (`test/steps.test.js`); nothing over
 CRAP 30.
+
+## 167 — 2026-10-14 · Drips
+
+Three gameplay iterations in a row; this one is for the umbrella.
+
+**Considered, dropped:** rain. Every biome is a cross-section with a ceiling:
+walkers are under open sky 1–12% of the time, mostly about 2%.
+
+**Change (Draw only, page resolution only):** drips. In the wet biomes
+(Cavern, Harbour, Subway, Jungle, Ice Cave) about one column in eleven has a
+crack in its first ceiling. A bead gathers there and lets go every three or
+four seconds, falls (accelerating) and splashes on the floor. A walker under
+it puts its umbrella up overhead just before the drop lets go and keeps it
+up through the splash, and the drop splashes on the canopy rather than the
+floor. Everything comes from the terrain, the level number and the clock: no
+RNG, nothing stored on the world, nothing on the panel at res 1. In a
+six-row corridor the canopy is level with the crack, so the drop lands on it
+almost at once — the umbrella going up is the moment.
+
+**Looked:** levels 1, 18 and 19 at res 2, enlarged: three walkers under
+umbrellas, a drop mid-fall and its splash; level 19 in headless Chromium,
+umbrellas going up on the quay, no console errors. Tests 785
+(`test/drips.test.js`: only wet biomes and res 2, cracks from the terrain
+alone, up for part of the cycle and only under the crack, read-only, no RNG,
+half-pixel grid). Nothing over CRAP 30.
