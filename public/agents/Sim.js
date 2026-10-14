@@ -1287,7 +1287,12 @@ function planGuard(w, level, corridors, hazardCorridors) {
   }
   // The boss holds the post alone. The rolls above are still made, so the
   // stream is the same for every level after this one.
-  if (boss) { w.enemyRoster = ["gun"]; w.bossPost = true }
+  if (boss) {
+    var bouncer = (level / BOSS_EVERY) % 2 === 0
+    w.enemyRoster = [bouncer ? "bouncer" : "gun"]
+    w.bossPost = true
+    w.bossName = bouncer ? "THE HEAD BOUNCER" : "THE MODERATOR"
+  }
   return guardPlan
 }
 
@@ -1303,6 +1308,15 @@ function guardChance(level) {
 // post is a dive crew's.
 var BOSS_EVERY = 8
 var BOSS_HP = 3
+// Every other boss level it is the Head Bouncer instead: a Bouncer, with
+// everything that means (no gun, throws people out, beaten by a crowd), that
+// takes HEAD_BOUNCER_HP scuffles won.
+var HEAD_BOUNCER_HP = 5
+
+function enemyHp(w, kind) {
+  if (kind === "bouncer") return w.bossPost ? HEAD_BOUNCER_HP : BOUNCER_HP
+  return w.bossPost ? BOSS_HP : 1
+}
 function bossLevel(w, level) {
   return level >= BOSS_EVERY && level % BOSS_EVERY === 0 && !submerged(w)
 }
@@ -8488,7 +8502,7 @@ function spawnEnemy(w, kind) {
     deployLeft: kind === "operator" ? 6 : (kind === "sniper" ? 9 : 0),
     timer: 0, fall: 0, anim: 0, shoves: 0,
     targetId: 0, lineTo: 0, lineY: 0, shotFor: 0,
-    boss: !!w.bossPost, hp: w.bossPost ? BOSS_HP : (kind === "bouncer" ? BOUNCER_HP : 1),
+    boss: !!w.bossPost, hp: enemyHp(w, kind),
     gone: false
   }
 }
@@ -9130,7 +9144,7 @@ function brawlTick(w, en) {
   if (roll < odds) {
     killEnemy(w, en)
     if (en.gone) creditDowned(ag)
-    feedNote(w, en.boss && en.gone ? "THE MODERATOR IS DOWN" : agentTag(w, ag) + (en.gone ? " · WINS THE SCUFFLE" : " · LANDS ONE"))
+    feedNote(w, en.boss && en.gone ? w.bossName + " IS DOWN" : agentTag(w, ag) + (en.gone ? " · WINS THE SCUFFLE" : " · LANDS ONE"))
     ag.wonAt = w.ticks + 1     // for Draw: the fist goes up as it gets up
     w.brawlsWon = (w.brawlsWon || 0) + 1
     w.lastEvent = "brawl won"

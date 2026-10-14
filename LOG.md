@@ -4083,3 +4083,18 @@ stops a round. One per agent, the newest, 36 ticks, fading; page resolution
 only; drawn from stamps Sim already keeps (`wonAt`, `thrownAt`, `brollyFor`).
 Looked at level 5 (LGTM), 13 (429) and 24 (NOPE). Over a low ceiling the
 bubble sits over the rock above, like a comic's would. Tests 749.
+
+## 156 — 2026-10-14 · The Head Bouncer
+
+Every boss level was the Moderator. Now they alternate: 8, 24, 40 … the
+Moderator; 16, 32, 48 … **the Head Bouncer** — a Bouncer (122/142: no gun,
+throws agents out, beaten by a crowd) that takes five scuffles won
+(`HEAD_BOUNCER_HP`), drawn with the Moderator's gold: a crown on the shaved
+head, a chain across the jacket, five pips. `w.bossName` carries the name to
+the intro warning, the battle line and the ticker.
+
+**Measured** (72 boss-level plays, levels 8–320 × 2): Moderator levels 88.8%
+home, down in 16 of 36; Head Bouncer levels 95.0% home, down in 10 of 36 —
+it kills nobody, it holds the door. Two different climaxes: a gunfight to
+survive, and a crowd to push through. Looked at level 16 (Clock Tower).
+Tests 750.

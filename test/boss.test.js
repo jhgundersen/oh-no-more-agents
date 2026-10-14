@@ -12,7 +12,9 @@ test("every eighth level (not the Trench) has the boss post, alone", () => {
     const w = S.generate(lv, 0, 5)
     if (lv % S.BOSS_EVERY === 0 && !w.submerged) {
       assert.ok(w.bossPost, `level ${lv}`)
-      assert.deepEqual(w.enemyRoster, ["gun"])
+      const head = (lv / S.BOSS_EVERY) % 2 === 0
+      assert.deepEqual(w.enemyRoster, [head ? "bouncer" : "gun"])
+      assert.equal(w.bossName, head ? "THE HEAD BOUNCER" : "THE MODERATOR")
       assert.ok(w.enemyHatch)
     } else assert.ok(!w.bossPost, `level ${lv}`)
   }
@@ -44,4 +46,10 @@ test("an ordinary guard is still one hit", () => {
   assert.ok(!en.boss)
   S.killEnemy(w, en)
   assert.ok(en.gone)
+})
+
+test("the Head Bouncer takes HEAD_BOUNCER_HP, an ordinary Bouncer BOUNCER_HP", () => {
+  const boss = S.generate(16, 0, 5), plain = S.generate(5, 0, 5)
+  assert.equal(S.spawnEnemy(boss, "bouncer").hp, S.HEAD_BOUNCER_HP)
+  assert.equal(S.spawnEnemy(plain, "bouncer").hp, S.BOUNCER_HP)
 })

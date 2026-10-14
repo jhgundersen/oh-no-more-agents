@@ -2713,7 +2713,7 @@ function drawLevelIntro(ctx, w, pal) {
   drawTransitionText(ctx, "LEVEL " + w.level + " · " + w.biome.toUpperCase(), cx, y + 21, 2)
   if (w.bossPost && Math.floor(w.ticks / 6) % 2 === 0) {
     ctx.fillStyle = pal.urgent
-    drawTransitionText(ctx, "WARNING · THE MODERATOR HOLDS THIS LEVEL", cx, y + 41, 1)
+    drawTransitionText(ctx, "WARNING · " + (w.bossName || "THE MODERATOR") + " HOLDS THIS LEVEL", cx, y + 41, 1)
   }
 }
 
@@ -2767,7 +2767,7 @@ function battleLine(w) {
   var parts = []
   var enemies = w.enemies || []
   for (var b = 0; b < enemies.length; b++)
-    if (enemies[b].boss && enemies[b].gone) parts.push("THE MODERATOR DOWN")
+    if (enemies[b].boss && enemies[b].gone) parts.push((w.bossName || "THE MODERATOR") + " DOWN")
   if (w.enemiesKilled > 0) parts.push(w.enemiesKilled + (w.enemiesKilled === 1 ? " GUARD" : " GUARDS") + " DOWN")
   if (w.umbrellaSaves > 0) parts.push(w.umbrellaSaves + " UMBRELLA " + (w.umbrellaSaves === 1 ? "SAVE" : "SAVES"))
   return parts.join(" · ")
@@ -8204,8 +8204,9 @@ function drawEnemy(ctx, w, pal, en, opts) {
   var m = enemyMotion(w, en)
   var ox = Math.round(en.x * w.k.CELL) - SPRITE_W / 2 - en.dir * enemyRecoil(en)
   var oy = Math.round((en.y + 1) * w.k.CELL) - SPRITE_PX - m.bob
-  var fn = en.boss ? drawModerator : (ENEMY_DRAW[en.kind] || drawGunner)
+  var fn = en.boss && en.kind !== "bouncer" ? drawModerator : (ENEMY_DRAW[en.kind] || drawGunner)
   fn(ctx, w, pal, en, ox, oy, en.dir, m)
+  if (en.boss && en.kind === "bouncer") drawHeadBouncerCrown(ctx, en, ox, oy)
   if (opts && opts.labels) drawEnemyLabel(ctx, w, en, ox, oy)
   ctx.globalAlpha = 1
 }
@@ -8615,10 +8616,21 @@ function drawBouncerFlash(ctx, ox, oy, dir, age) {
 }
 
 function drawBouncerPips(ctx, en, ox, oy) {
-  for (var i = 0; i < 3; i++) {
+  var n = en.boss ? 5 : 3, left = en.boss ? ox - 3 : ox
+  for (var i = 0; i < n; i++) {
     ctx.fillStyle = i < en.hp ? "#ff5268" : "#3a2a30"
-    ctx.fillRect(ox + i * 3, oy - 5, 2, 1)
+    ctx.fillRect(left + i * 3, oy - 5, 2, 1)
   }
+}
+
+// The Head Bouncer: the same heavy, with the Moderator's gold — a crown on
+// the shaved head and a chain across the jacket — so it reads as the boss.
+function drawHeadBouncerCrown(ctx, en, ox, oy) {
+  ctx.fillStyle = BOSS_GOLD
+  ctx.fillRect(ox + 1, oy - 2, 6, 1)
+  ctx.fillRect(ox + 1, oy - 4, 1, 2); ctx.fillRect(ox + 3, oy - 5, 2, 3); ctx.fillRect(ox + 6, oy - 4, 1, 2)
+  ctx.fillRect(ox + 2, oy + 8, 4, 1)
+  ctx.fillRect(ox + 3, oy + 9, 2, 1)
 }
 
 var ENEMY_DRAW = { bouncer: drawBouncer, gun: drawGunner, drone: drawDrone, operator: drawOperator,
@@ -8645,7 +8657,7 @@ function drawEnemyDefeat(ctx, w, pal, en) {
   ctx.globalAlpha = Math.min(1, (ENEMY_DEFEAT_TICKS - age) / 10)
   // A force push throws the kit away from the facing, without moving Sim.
   if (en.diedBy === "force pushed") ctx.translate(-Math.min(12, Math.floor(age / 2)), 0)
-  if (en.boss) drawDefeatModerator(ctx, w, pal, age, en)
+  if (en.boss && en.kind !== "bouncer") drawDefeatModerator(ctx, w, pal, age, en)
   else draw(ctx, w, pal, age, en)
   if (Object.prototype.hasOwnProperty.call(ENEMY_DEFEAT_CAUSE, en.diedBy))
     ENEMY_DEFEAT_CAUSE[en.diedBy](ctx, w, pal, age)
