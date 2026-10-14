@@ -2697,6 +2697,7 @@ function drawColonyAsides(ctx, w, pal) {
   if (w.mirages) for (var mi = 0; mi < w.mirages.length; mi++) drawMirage(ctx, w, pal, w.mirages[mi])
   if (w.rateLimit) drawRateLimitSign(ctx, w, pal, w.rateLimit)
   if (w.duck && w.duck.takenBy < 0) drawFloorDuck(ctx, w, w.duck)
+  if (w.milestone) drawConfetti(ctx, w)
 }
 
 // The rubber duck waiting on the floor: it drops in from a few cells up with a
@@ -11422,6 +11423,46 @@ function drawAgiSparkle(ctx, w, ag, ox, oy) {
 var PEP_GLOW = 18
 function drawAgentGlitter(ctx, w, ag, ox, oy) {
   if (ag.agi || (ag.pepAt !== undefined && w.ticks - ag.pepAt >= 0 && w.ticks - ag.pepAt < PEP_GLOW)) drawAgiSparkle(ctx, w, ag, ox, oy)
+  if (w.milestone && ag.state !== "saved") drawPartyHat(ctx, w.milestone.kind, ag, ox, oy)
+}
+
+// A community milestone (Outcome's milestoneFor; web.js puts it on the world):
+// party hats in the colony's colours, gold on a hundred-thousand, a crown on
+// the million. Whole pixels, a pure function of the agent's id.
+var PARTY = ["#ff5f8a", "#5fd0ff", "#ffd23f", "#8cff6a", "#c58bff"]
+function drawPartyHat(ctx, kind, ag, ox, oy) {
+  var cx = ox + 4, top = oy - 4
+  ctx.save()
+  if (kind === "million") {
+    ctx.fillStyle = "#ffd23f"
+    ctx.fillRect(cx - 2, top + 2, 5, 2)
+    ctx.fillRect(cx - 2, top, 1, 2); ctx.fillRect(cx, top, 1, 2); ctx.fillRect(cx + 2, top, 1, 2)
+  } else {
+    ctx.fillStyle = kind === "hundred" ? "#ffd23f" : PARTY[(ag.id || 0) % PARTY.length]
+    ctx.fillRect(cx - 1, top + 2, 3, 2)
+    ctx.fillRect(cx, top, 1, 2)
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(cx, top - 1, 1, 1)                 // the pompom
+  }
+  ctx.restore()
+}
+
+// And a burst of confetti out of the hatch as the first agent drops in.
+var CONFETTI_TICKS = 70
+function drawConfetti(ctx, w) {
+  var age = w.ticks - w.firstReleaseAt, C = w.k.CELL
+  if (!(age >= 0 && age < CONFETTI_TICKS) || !w.hatch) return
+  var n = w.milestone.kind === "ten" ? 24 : 48
+  var hx = (w.hatch.x + 0.5) * C, hy = (w.hatch.y + 2) * C
+  ctx.save()
+  for (var i = 0; i < n; i++) {
+    var vx = Math.sin(i * 2.3) * 1.4, vy = -0.5 - (i % 5) * 0.15      // a soft pop, then down across the board
+    var x = Math.round(hx + vx * age), y = Math.round(hy + vy * age + 0.035 * age * age)
+    ctx.globalAlpha = Math.min(1, (CONFETTI_TICKS - age) / 20)
+    ctx.fillStyle = PARTY[i % PARTY.length]
+    ctx.fillRect(x, y, (i + age >> 2) % 2 ? 2 : 1, 1)
+  }
+  ctx.restore()
 }
 
 function agentDrawColors(w, pal, ag, st) {

@@ -53,20 +53,25 @@ export async function browser() {
   await new Promise(r => { ws.onopen = r })
   let id = 0
   const pending = new Map(), errors = []
+  // Made first: the handler below reads onEvent from it from the first message.
+  const api = { errors, onEvent: null }
   ws.onmessage = m => {
     const d = JSON.parse(m.data)
     if (d.id && pending.has(d.id)) { pending.get(d.id)(d.result || {}); pending.delete(d.id) }
     if (d.method === "Runtime.exceptionThrown") errors.push(d.params.exceptionDetails.text)
+    if (d.method && api.onEvent) api.onEvent(d)     // e.g. Fetch.requestPaused, for tests that mock the API
   }
   const cmd = (method, params = {}) => new Promise(r => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })) })
   await cmd("Runtime.enable"); await cmd("Page.enable")
   // Chromium keeps writing its profile for a moment after the kill; removing it
   // straight away failed with ENOTEMPTY and took the report down with it.
   const exited = new Promise(r => proc.on("exit", r))
-  return { cmd, errors, async close() {
+  api.cmd = cmd
+  api.close = async () => {
     ws.close(); proc.kill(); await Promise.race([exited, sleep(3000)])
     try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) } catch { /* a temp dir; the OS will have it */ }
-  } }
+  }
+  return api
 }
 
 // Everything measured inside the page, in CSS pixels.

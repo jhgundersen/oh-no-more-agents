@@ -11094,6 +11094,7 @@ function step(w) {
       w.releaseTimer = 0
       w.released++
       w.lastReleaseAt = w.ticks
+      if (w.released === 1) w.firstReleaseAt = w.ticks     // for Draw: a milestone's confetti
       var newcomer = spawn(w)
       w.agents.push(newcomer)
       crownAgi(w, newcomer)

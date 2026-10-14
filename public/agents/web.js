@@ -37,6 +37,7 @@
   var lifetimeSaved = 0
   var levelsCleared = 0
   var globalSaved = null
+  var milestone = null      // this session's community milestone, if one was crossed
   var pendingReports = []
   var pendingBatch = null
   var flushedThisSession = false
@@ -261,7 +262,7 @@
       clearTimeout(timer)
       if (done) return          // the timeout already gave up on this one
       lastStatsAt = Date.now()
-      globalSaved = stats.totalSaved
+      noteTotal(stats.totalSaved)
       noteBuild(stats.build)
       pendingReports.shift()
       headFailures = 0
@@ -291,7 +292,7 @@
       if (!response.ok) throw new Error("counter unavailable")
       return response.json()
     }).then(function (stats) {
-      globalSaved = stats.totalSaved
+      noteTotal(stats.totalSaved)
       noteBuild(stats.build)
       render()
       flushGlobalSaves()
@@ -443,11 +444,27 @@
   // Level lifecycle — Panel.qml's, step for step
   // -------------------------------------------------------------------------
 
+  // Every total the counter hands back passes through here: a round number
+  // crossed (Outcome's milestoneFor) dresses the colony for the rest of the
+  // session, starting with the level on screen.
+  function noteTotal(total) {
+    var m = milestoneFor(globalSaved, total)
+    globalSaved = total
+    if (!m || (milestone && milestone.n >= m.n)) return
+    milestone = m
+    if (world) celebrate(world)
+  }
+  function celebrate(w) {
+    w.milestone = milestone
+    w.feed.push({ t: Math.max(w.ticks, 40), text: milestone.line })
+  }
+
   function newLevel(n, seed) {
     level = Math.max(1, n)
     world = generate(level, 0, seed)
     world.res = RES
     world.doneHold = DONE_HOLD
+    if (milestone) world.milestone = milestone
     completionLine = ""
     lastTerrainVersion = 0
     rebuildPalette()

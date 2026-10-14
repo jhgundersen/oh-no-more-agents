@@ -242,3 +242,34 @@ function standupLines(recap, speakers) {
   return out.map(function (l) { return ["YESTERDAY: " + l[0], "TODAY: " + l[1], "BLOCKERS: " + l[2]] })
 }
 
+// ---------------------------------------------------------------------------
+// Community milestones
+// ---------------------------------------------------------------------------
+// The page fetches the worldwide rescue total anyway. When it crosses a round
+// number while somebody is watching — every 10,000, with 100,000s and the
+// million as bigger occasions — the colony dresses for it for the rest of the
+// session. Pure cosmetics: the counter and its API are untouched. `previous`
+// is the total the page last saw (null at first), `total` the new one; null
+// total, null result. A total that has only just passed a round number when
+// the page opens counts too, so the party is not only for whoever happened to
+// be watching at the exact moment.
+var MILESTONE_STEP = 10000
+var MILESTONE_FRESH = 300     // "only just passed", at first sight
+
+function milestoneFor(previous, total) {
+  if (typeof total !== "number" || !(total >= MILESTONE_STEP)) return null
+  var m = Math.floor(total / MILESTONE_STEP) * MILESTONE_STEP
+  var crossed = typeof previous === "number" ? previous < m : total - m < MILESTONE_FRESH
+  if (!crossed) return null
+  return { n: m, kind: m % 1000000 === 0 ? "million" : m % 100000 === 0 ? "hundred" : "ten",
+    line: "COMMUNITY MILESTONE: " + withCommas(m) + " AGENTS HOME" }
+}
+
+// By hand: this file also runs in the Omarchy panel's QML engine, where
+// toLocaleString with a locale argument is not something to count on.
+function withCommas(n) {
+  var s = String(Math.floor(n)), out = ""
+  for (var i = 0; i < s.length; i++) out += (i && (s.length - i) % 3 === 0 ? "," : "") + s[i]
+  return out
+}
+

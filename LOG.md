@@ -6306,3 +6306,26 @@ that is not walking ends it, and no level ends with anyone still in one.
 for ordinary walkers facing each other and on the coin, a fall ends it, played
 levels end clean, bubbles stacked and the commit line), a cue in `sfx.test.js`.
 `npm run check` 1030/1030; CRAP under 30.
+
+## 218 — 2026-10-15 · Community milestones
+
+The page already fetches the worldwide rescue total. When it crosses a round
+number while somebody is watching — every 10,000, with a hundred-thousand and
+the million as bigger occasions — or has only just passed one (within 300)
+when the page opens, the colony dresses for it for the rest of the session:
+party hats in five colours with a white pompom, gold hats on a hundred-
+thousand, crowns on the million; a burst of confetti out of the hatch as the
+first agent drops in; and a ticker line after the intro, COMMUNITY MILESTONE:
+490,000 AGENTS HOME. Outcome.js `milestoneFor(previous, total)` decides (pure,
+and its comma formatting is by hand because the Omarchy panel's QML engine
+runs that file too); web.js passes every total it receives through
+`noteTotal` and stamps the session's milestone on each new world; Draw.js
+draws hats and confetti from it; Sim only records `firstReleaseAt`. Purely
+cosmetic: no counter, API or simulation change, and with no total (offline)
+nothing happens. `tools/phone.js`'s Chromium driver gained an `onEvent` hook so
+a test can answer the page's API calls itself (CDP Fetch).
+
+**Tests:** `milestone.test.js` (3: the crossing rule and its refusals, hats
+and confetti only with a milestone and read-only, and in headless Chromium a
+mocked total of 490,050 puts the milestone and the ticker line on the colony
+while an offline page shows none). `npm run check` 1033/1033; CRAP under 30.
