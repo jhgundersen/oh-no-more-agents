@@ -4029,3 +4029,21 @@ the easier ones. `npm run sim`: 100% / 94%, hangs 0. Tests 747.
 is the colony's look.)
 
 **Deployed** after 151 (name="build" content="89e81c20"): station chime and line zing, the guard ramp. Browser check clean.
+
+## 152 — 2026-10-14 · Checked in a real browser
+
+After a run of new mechanics (bosses, Bouncers, Rooftops lines, the Subway,
+sound), the page itself, played rather than simulated:
+
+- **Why are later levels easier?** (151: 92.6% home in 1–50, 96% past 200.)
+  Colony size, corridors, toolbar and time limit are flat across bands; only
+  fixed hazards fall (0.36 → 0.23 a level) as guard posts, which replace
+  them, rise. The rest is level-to-level variance. Nothing to fix.
+- **Soak:** the local build in headless Chromium for 2.5 and 3.3 minutes from
+  level 1 — levels advanced, the home counter climbed, no exceptions.
+- **The new content in the page:** level 8 (the Moderator, Factory), 13 (a
+  Bouncer; it finished and moved on to 14 inside 25 s), 17 (Rooftops) and
+  36 (Subway), set through localStorage and played 25 s each at Brisk: no
+  exceptions.
+
+No code change.
