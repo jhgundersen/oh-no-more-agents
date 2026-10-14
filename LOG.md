@@ -6254,3 +6254,10 @@ cutoff), hangs 0. Level 83: 95% → 100%, stall 10 → 0; level 92: 88% → 91%,
 stall 10 → 2; level 23: stall 2 → 0. Levels 1–57 × 24 against 213: home
 95.56% → 95.72% (+31), stall 28 → 21, clock-outs 5 → 4. One test.
 `npm run check` 1022/1022; CRAP under 30.
+
+**List after 215** (`npm run playtest -- 1-150 --seeds 12`, 1800 runs, 95%
+home, no hangs, nothing worse than 3/12): clock-outs on 6 (Ice Cave tool
+budget), 92 (the hero ends in a three-wide pocket over a one-cell floor with
+six diggers in the toolbar, and the rescue spends nothing — the descent rules
+refuse it; next to look at), 61, 101, 138 (one run each); stall endings on 70,
+81, 113 (3/12), 2, 55, 84 (2/12).
