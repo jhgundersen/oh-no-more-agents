@@ -4514,3 +4514,10 @@ game; stopping the hunt here.
 a boss taking a hit (a metallic clang), backup on its way (radio squelch and
 two beeps, 164), a mission done (three rising notes). Still off by default.
 Tests 800.
+
+Cavern review (on `codex/cavern`): **rejected as drawn.** Enlarged level 1,
+tick 400, against main: the blue mottled rock with lit edges, the checkered
+ore block and the decor tufts became flat grey-green slabs with lower
+contrast — different, and drabber, on the one level everybody sees. Kept for
+the revision: the background formations, the fungi and their light, the grit.
+Sent back for a revision that keeps the original rock and adds on top.
