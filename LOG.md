@@ -5094,3 +5094,5 @@ ordinary play; these are Node raster times, not browser FPS.
 no push or deployment.
 
 Reviewed and merged by the loop. Level 6, tick 400, full frame against main at 1x: teal glacier curtains fill the back wall, glints sparkle across the ice; nothing like the Frost's snow and aurora. The original blocks, icicles and rubble in front; the agents read.
+
+**Deployed** after 190 (name="build" content="255a6063"), gated on a passing check (872 tests): the Ice Cave art. Level 6 in headless Chromium, no console errors.
