@@ -531,7 +531,12 @@ function makeBuildRoom(w, cells, builder) {
       var newFoot = cell.y - 1
       var rise = footY - newFoot
       if (rise < 1 || rise > MAX_STEP) return false
-      if (ag.state !== "walk" && ag.state !== "fall") return false
+      // A blocker is lifted too, and keeps blocking a step higher. Refusing
+      // it left the bridge on level 10's bottom crossing one brick short: the
+      // blocker guarding the far lip stood inside the last brick's cell, the
+      // builder waited out its patience and gave up, and the gap it left
+      // stranded whoever came after.
+      if (ag.state !== "walk" && ag.state !== "fall" && ag.state !== "block") return false
       var ax = Math.floor(ag.x)
       if (solid(w, ax, newFoot) || !headroom(w, ax, newFoot)) return false
       if (!lifts[ag.id] || newFoot < lifts[ag.id].y) lifts[ag.id] = { ag: ag, y: newFoot }
@@ -540,7 +545,7 @@ function makeBuildRoom(w, cells, builder) {
   for (var id in lifts) {
     var lift = lifts[id]
     lift.ag.y = lift.y
-    lift.ag.state = "walk"
+    if (lift.ag.state !== "block") lift.ag.state = "walk"
     lift.ag.fall = 0
     lift.ag.floater = false
     lift.ag.still = 0
@@ -5677,8 +5682,14 @@ function edgeOverDanger(w, ag, far) {
   turnAround(w, ag)
 }
 
+// `far >= 2`, not `> 2`: a landing two cells out is a one-cell gap, and a
+// one-cell gap over nothing is the cheapest bridge there is. It used to fall
+// through to turning round, so a straggler at a crossing part-filled with
+// debris — one hole left at x39 on level 10's bottom floor — paced between it
+// and the far wall with twenty-two builders in the toolbar until the stall
+// cutoff ended the level (26 of 40 colonies; `npm run playtest`).
 function edgeBottomless(w, ag, far) {
-  if (far > 2 && crossingHelps(w, ag) && canStartBuild(w, ag, true) && spend(w, ag, "builder")) { startBuild(w, ag, true); return }
+  if (far >= 2 && crossingHelps(w, ag) && canStartBuild(w, ag, true) && spend(w, ag, "builder")) { startBuild(w, ag, true); return }
   // Not when the way home is above: a blocker's job is to stop the colony
   // walking into a hole on its route, and a hole below an agent that is
   // already under the exit is not on anybody's route. Level 509 drops a
@@ -5909,17 +5920,36 @@ function startBuild(w, ag, flat) {
 // slack, either. Stopping while the ground ahead was still a stride or two
 // below the floor it set out from finished the bridge in a dip, and the
 // forty-odd agents a run that cost were more than the bricks were worth.
+// Both cells of the stride ahead, not just the far one. A bridge steps two
+// cells at a time, and testing only `nx` called a bridge landed with a
+// bottomless hole still in the cell between: level 10's bottom crossing ended
+// one short of the far floor, and everyone who walked it met a one-cell gap
+// over nothing, turned round, and paced until the stall cutoff.
 function bridgeLanded(w, ag, nx, ny) {
   var climbed = ag.buildY - Math.floor(ny)
+  var near = Math.floor(ag.x) + ag.dir
   return dropDepth(w, Math.floor(nx), Math.floor(ny)) <= climbed
+    && (near === Math.floor(nx) || dropDepth(w, near, Math.floor(ny)) <= climbed)
 }
 
 function willBuild(ag, wantUp) {
   return ag.built < traitOf(ag).buildCap + (wantUp ? 2 : 0)
 }
 
+// The last one or two out are past caring about their personality. A trait's
+// build cap is a character note, and on a full corridor it is what stops
+// everyone in the queue laying a bridge; but once the rest of the colony is
+// settled it only stands between a straggler and a one-brick gap, with twenty
+// builders unspent, until the stall cutoff ends the level (level 10 did that
+// in 15 of 40 colonies after the bridge fixes). Same test the cutoff uses.
+// Crossings only (`urgent`): letting stragglers lay free-choice staircases
+// as well ran level 54 out of the clock in three more colonies of 24.
+function lastOut(w) {
+  return w.released >= w.toRelease && w.saved + w.lost >= w.toRelease - 2
+}
+
 function canStartBuild(w, ag, urgent) {
-  if (!willBuild(ag, exitAbove(w, ag) && !liftRouted(w))) return false
+  if (!willBuild(ag, exitAbove(w, ag) && !liftRouted(w)) && !(urgent && lastOut(w))) return false
   var footY = Math.floor(ag.y)
   var fx = Math.floor(ag.x)
   var dir = buildDirection(w, ag)
@@ -8192,6 +8222,14 @@ function specialAtWall(w, ag) {
   // stood down there — the answer on a tower is a machine at the end of a
   // floor, not a hole in the storey above.
   if (spec.act === "ballast" && (!exitAbove(w, ag) || liftRouted(w))) { turnAround(w, ag); return }
+
+  // Not on a wall facing away from home. The move is on a long cooldown, and
+  // spent on the wrong wall it came back in lock-step: on level 49 Context
+  // Window cut the east wall of a bottom corridor, cooled down while it walked
+  // to the west wall it actually needed and turned there, and had its move
+  // back exactly as it reached the east wall again — until the stall cutoff,
+  // in 7 of 24 colonies (`npm run playtest`). It turns and saves the move.
+  if (!crossingHelps(w, ag)) { turnAround(w, ag); return }
 
   // Ask first. A block too big to shift, a column too short to topple, a wall
   // with nothing but steel behind it — it turns and tries somewhere else

@@ -5510,3 +5510,49 @@ these are Node raster times, not browser FPS.
 no push or deployment.
 
 Reviewed and merged by the loop. Level 10 at res 2: light shafts, kelp, fish and a faint whale; divers and exit readable.
+
+## 199 — 2026-10-14 · Stragglers: four rules that kept the last ones out
+
+Traced with `npm run playtest` and fixed where the stragglers actually were.
+Each rule has a unit test in `test/stragglers.test.js` that fails on the old
+code.
+
+**Level 10 (Trench), the bottom crossing.** Three things stacked:
+- `bridgeLanded` tested only the far cell of a two-cell stride, so a bridge was
+  "landed" with a bottomless hole still in the nearer cell — every bridge over
+  that crossing ended one brick short.
+- `makeBuildRoom` would lift a walker standing in a brick's cell but not a
+  blocker; the blocker guarding the far lip stood in the last brick, the
+  builder waited out its patience and abandoned the bridge. A blocker is now
+  lifted onto the brick and keeps blocking.
+- `edgeBottomless` only bridged when the landing was more than two cells out,
+  so a one-cell gap fell through to turning round. And a straggler that had
+  spent its trait's build cap could not bridge it with twenty builders in the
+  toolbar: once the rest of the colony is settled (`lastOut`, the stall
+  cutoff's own test) the cap no longer applies — to crossings only; letting
+  stragglers lay free staircases too ran level 54 out of the clock in three
+  more colonies of 24, so that was taken back out.
+Level 10: home 82% → 88%, stall-cutoff endings 15 → 8 of 24 colonies.
+
+**Level 49 (Desert), a hero in lock-step.** Context Window's quarry move went
+on the east wall of a bottom corridor — away from home — and its 220-tick
+cooldown came back exactly as it reached that wall again, having turned at the
+west wall it needed on the way. A hero now turns at a wall facing away from
+home and keeps its move (`crossingHelps`). Level 49: stall endings 9 → 0 of
+24, home 94% → 97%.
+
+**Measured, levels 1–57 × 24 colonies, against main before this iteration:**
+home 95.15% → 95.31% (+33 agents), stall-cutoff endings 77 → 63, clock-outs 9 →
+10 (level 10's one), hangs 0 → 0. No level worse by 2 points or more.
+`npm run check` 944/944; CRAP worst 29.2.
+
+**Still on the list (21–57, 24 colonies each), for later:**
+- level 54 (Clock Tower): runs out the clock in 5/24, also on the old code
+- level 24: stall cutoff in 8/24 (9 stranded)
+- level 36: stall cutoff in 7/24
+- levels 32 and 51: stall cutoff in 5/24 each
+- levels 25, 40, 41, 42, 55: one straggler in one run each
+- 1–20: level 2 (stall 18/40), level 18 (13/40), level 6 (clock 5/40)
+
+Not deployed: 17 minutes since the last deploy (196, 23:40); the next batch
+covers 197–199.
