@@ -4667,3 +4667,78 @@ Looked at Spaceship, Skyscraper and Data Center at res 2: the last two read as p
 **Deployed** after 178 (name="build" content="1c2c87b0"), gated on a passing check (817 tests): three kinds of Foundry bay.
 
 Spaceship review (on `codex/spaceship`): **too timid.** At the full 800x496 frame, level 7 before and after are nearly indistinguishable — faint seams, one small panel, hairline conduits. Not worse, not clearly richer either: the Cavern feedback overcorrected. Sent back for bolder additions that read at 1x (saturated blinking lights, visible plating seams and hazard stripes, back-wall ribs and conduits with presence), still keeping the original terrain.
+
+## 179 — 2026-10-14 · Services and instruments aboard the Spaceship
+
+**Change (Draw, res 2 only):** added detail over the original hull: narrow
+panel grooves, sparse paired fasteners, deck tread breaks and occasional lit
+edge markers. The corridors have paired supply/return conduits with couplings
+on the far wall, plus three kinds of recessed service fitting — heat exchanger,
+cable manifold and instrument rack. Small instruments mounted in the hull show
+coolant-coloured scanning traces and independently blinking status lamps.
+
+The original terrain colours, panel pattern, portholes and stars, pipes and
+other decor, motes, hazards, airlock and REMOTE OFFICE booth retain their
+existing drawing paths. Background services draw before the original ribs and
+portholes; hull fixings and instrument housings use the terrain cache. Only the
+displays run each frame, before actors and the exit. Instruments disappear when
+any part of their housing is breached. All additions use the half-pixel grid,
+read the world without writes or RNG, and are gated on Spaceship and
+`(w.res || 1) >= 2`. Palette, Sim and Outcome are unchanged.
+
+**Checked:** `npm run stamp`, `npm run check` and `npm run crap` pass. Seven new
+component tests cover resolution and biome gates, read-only proxies, forbidden
+Math.random, deterministic pixels, canvas-state restoration, the half-pixel
+grid, cached versus animated detail, surviving terrain, sparse palette-only
+fixings, actor layering and original panel component bytes. New functions have
+100% line coverage and CRAP at most **10.0**. Functions at or above 30: **0**;
+maximum **28.5**.
+
+Seeded old/new Draw comparison over all nineteen biomes: **1,080 identical
+frames** across the other eighteen (two layouts, ticks 77/240/600, all five
+themes, res 1/2). Spaceship's **60** res-1/unspecified-res frames are identical;
+all **30** res-2 frames changed. Baseline, comparison harness and results are
+in `/tmp/codex-spaceship/`.
+
+**Looked:** `node tools/shoot.js level 7 --res 2`; matched before/after levels
+7, 26 and 45 at ticks 77 and 476, with the same terrain/decor crops at 2× and
+4×: `/tmp/codex-spaceship/sheet.png`. The first instrument traces were too grey;
+changed the small displays to the existing coolant colours. The added plate
+fixings preserve the large original colour blocks and bright floor edges;
+the low-contrast services give the empty corridors depth. Faces, hostile gear,
+umbrellas and the airlock stay clear.
+
+**Measured:** warmed res-2 software rasteriser, tick 476, median of nine batches
+of forty frames, interleaved old → new. Level 7: actors **2.013 → 2.019 ms**,
+full terrain + actors **11.509 → 12.936 ms**. Level 45: actors
+**0.918 → 0.922 ms**, full **11.833 → 13.419 ms**. Subway control, level 18:
+actors **2.646 → 2.642 ms**, full **31.744 → 31.782 ms**. Terrain is cached
+in normal play; these are Node raster times, not browser FPS.
+
+**Next:** review the ship's instruments in longer page play. Committed on
+`codex/spaceship` only; no push or deployment.
+
+**Revision after review — 2026-10-14:** the first pass was too timid at the
+visitor's 800×496 viewing size. Strengthened the back wall with broad bulkhead
+shoulders and brackets, paired two-art-pixel conduits with collars, and larger
+service fittings. Hull seams are now one art pixel wide; exposed floors have
+lit deck lips and yellow-black tape beside drops. Up to three consoles per
+corridor carry saturated cyan/green/amber/red lamps, independently blinking
+from `w.ticks`, and slow cyan scanner sweeps. Console placement avoids the
+original viewports, uses decor alone so a breach cannot move a mounting point,
+and hides the whole console when its hull is removed. Original terrain
+colours, panel pattern, portholes, stars and decor keep their drawing paths;
+actors and the exit draw above the instruments. No world writes or RNG; Draw
+only, with the existing res-2 gate. Inspected ORIGINAL (`main`) against this
+revision on levels 7, 26 and 45 at ticks 77/476: full frames at 1× viewing size
+and matching crops at 2×, `/tmp/codex-spaceship/sheet2.png`. Ten component tests,
+`npm run stamp`, `npm run check` and `npm run crap -- --threshold 30` pass;
+changed helpers have 100% line coverage and CRAP at most **9.0**, whole-project
+maximum **28.5**. Comparison against main: **1,140 byte-identical protected
+frames**, all **30** Spaceship res-2 frames changed. Warmed software-raster
+actor medians: level 7 **2.007 → 2.057 ms**, level 45 **0.924 → 0.968 ms**;
+full terrain + actors **11.300 → 14.482** and **11.816 → 15.247 ms** respectively
+(terrain is cached in play; Node timings, not browser FPS). New commit on
+`codex/spaceship`; no history rewrite, push or deployment.
+
+Revision reviewed and merged by the loop. Level 7, tick 400, full frame against main: the difference now shows at a glance — a frame of pipes and girders on the back wall, amber lights on deck edges, cyan console strips, all over the original terrain, which is unchanged. The back-wall grid is a little busy behind the agents, but they stay readable.
