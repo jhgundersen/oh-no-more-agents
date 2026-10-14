@@ -72,7 +72,7 @@ test("the fight cloud draws at both resolutions and hides both fighters", () => 
     const calls = []
     const ctx = { globalAlpha: 1, fillStyle: "", save() {}, restore() {},
       fillRect(x, y, ww, hh) { calls.push([x, y, ww, hh]) } }
-    for (let t = 0; t < 16; t++) {
+    for (let t = 0; t < 40; t++) {
       w.ticks = t; calls.length = 0
       D.drawEnemy(ctx, w, pal, en)
       assert.ok(calls.length > 20)

@@ -3904,3 +3904,5 @@ umbrella, closed, swung like a club — rising out of one side and coming down
 crook first, in that agent's umbrella colour (`brollyColour`). The umbrella is
 the colony's one piece of kit; it would be in the fight. Looked at level 5's
 scuffle at ticks 316–319. Tests 718.
+
+(The cloud test now draws 40 ticks so it reaches the umbrella frames: `drawBrawlBrolly` 90 → 11; nothing over 30.)
