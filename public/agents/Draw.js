@@ -203,6 +203,7 @@ function drawTerrain(ctx, w, pal) {
   if (ruinsPage(w)) drawRuinsTemple(ctx, w, pal)
   drawAssemblyBackdrop(ctx, w)
   drawOfficeBackdrop(ctx, w)
+  drawAbyssBackdrop(ctx, w)
   drawBackdrop(ctx, w, pal)
   if (desertPage(w)) drawDesertRelics(ctx, w)
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
@@ -2604,6 +2605,7 @@ function drawActors(ctx, w, pal, opts) {
   if (iceCavePage(w)) drawGlacierLife(ctx, w)
   drawAssemblyLife(ctx, w)
   drawOfficeLife(ctx, w)
+  drawAbyssLife(ctx, w)
   drawDrips(ctx, w, pal)
   drawMachines(ctx, w, pal)
   drawActiveEventAir(ctx, w, pal)
@@ -15935,4 +15937,192 @@ function drawOfficeLife(ctx, w) {
     }
   }
   ctx.restore()
+}
+
+// Page-only deep water. The original spires, sea filter, fish and snow remain
+// in front. Large depth planes/shafts/whale/kelp are cached; only small caustic
+// fragments, frond tips and bubbles animate, before the original fixtures.
+function trenchPage(w) { return w.biome === "Trench" && !!w.submerged && (w.res || 1) >= 2 }
+
+var ABYSS_DEPTH = ["#183541", "#17313e", "#152e3b", "#132b37", "#112734", "#102431", "#0e212e", "#0c1e2b", "#0b1c29", "#091926", "#081723", "#071520"]
+var ABYSS_SHAFT = "#356b77"
+var ABYSS_RIM = "#568d94"
+var ABYSS_WHALE = "#203845"
+var ABYSS_WHALE_EDGE = "#2b4853"
+var ABYSS_KELP = "#29483f"
+var ABYSS_LEAF = "#355c50"
+var ABYSS_BUBBLE = "#638e99"
+
+function abyssShafts(w) {
+  var shafts = []
+  for (var i = 0; i < 4; i++) shafts.push({ x: 28 + i * 91 + (w.level * 17 + i * 13) % 23,
+    width: 16 + (w.level * 7 + i * 11) % 16, deep: 110 + (w.level * 31 + i * 41) % 115 })
+  return shafts
+}
+
+function drawAbyssBackdrop(ctx, w) {
+  if (!trenchPage(w)) return
+  ctx.save()
+  var wide = w.k.COLS * w.k.CELL, tall = w.k.ROWS * w.k.CELL
+  // Explicit bands make the depth gradient identical in Canvas and shots.
+  for (var row = 0; row < ABYSS_DEPTH.length; row++) {
+    var top = Math.floor(row * tall / ABYSS_DEPTH.length)
+    var bottom = Math.floor((row + 1) * tall / ABYSS_DEPTH.length)
+    ctx.fillStyle = ABYSS_DEPTH[row]; ctx.fillRect(0, top, wide, bottom - top)
+  }
+  var shafts = abyssShafts(w)
+  for (var i = 0; i < shafts.length; i++) drawAbyssShaft(ctx, shafts[i])
+  drawAbyssWhale(ctx, abyssWhale(w))
+  var beds = abyssKelpBeds(w)
+  for (var k = 0; k < beds.length; k++) drawAbyssKelp(ctx, beds[k])
+  ctx.restore()
+}
+
+function drawAbyssShaft(ctx, b) {
+  // Vertical, from water overhead rather than a sun off to one side. Narrow
+  // nested curtains and broken edges suggest refracted light, not a beam gun.
+  for (var row = 0; row < 18; row++) {
+    var y = Math.floor(row * b.deep / 18), next = Math.floor((row + 1) * b.deep / 18)
+    var width = Math.max(3, b.width - Math.floor(row * 0.7)), x = b.x + Math.floor((b.width - width) / 2)
+    ctx.globalAlpha = 0.24 * (1 - row / 22)
+    ctx.fillStyle = ABYSS_SHAFT; ctx.fillRect(x, y, width, next - y)
+    ctx.globalAlpha = 0.14 * (1 - row / 20)
+    ctx.fillStyle = ABYSS_RIM; ctx.fillRect(x + Math.floor(width / 3), y, Math.max(1, Math.floor(width / 5)), next - y)
+    if (row % 3 === 0) ctx.fillRect(x - 1, y + 1, 0.5, 3)
+  }
+  ctx.globalAlpha = 1
+}
+
+function abyssWhale(w) {
+  // One distant animal in a middle storey, anchored to original metadata.
+  // The widest original bay gives its outline room; carving never moves it.
+  var c = w.corridors[Math.floor(w.corridors.length / 2) - 1]
+  var ends = [c.x0].concat(c.obstacles, [c.x1]), best = 0
+  for (var i = 1; i < ends.length - 1; i++) if (ends[i + 1] - ends[i] > ends[best + 1] - ends[best]) best = i
+  return { x: (ends[best] + (best ? 8 : 3)) * w.k.CELL, y: c.floorY * w.k.CELL - 20, dir: w.level % 2 ? -1 : 1 }
+}
+
+function whaleRect(ctx, b, x, y, width, height) {
+  ctx.fillRect(b.dir > 0 ? b.x + x : b.x + 70 - x - width, b.y + y, width, height)
+}
+
+function drawAbyssWhale(ctx, b) {
+  // A broad blunt head, deep belly and horizontal flukes. Much larger and
+  // dimmer than the toothed shark; no eye, lit port or telegraph colours.
+  ctx.globalAlpha = 0.62
+  ctx.fillStyle = ABYSS_WHALE
+  var rows = [[22, 37], [16, 46], [12, 51], [9, 55], [7, 58], [6, 60], [7, 59],
+    [9, 57], [12, 53], [16, 48], [22, 39], [29, 28]]
+  for (var r = 0; r < rows.length; r++) whaleRect(ctx, b, rows[r][0], r + 3, rows[r][1], 1)
+  whaleRect(ctx, b, 1, 7, 10, 3)
+  whaleRect(ctx, b, 0, 4, 3, 3); whaleRect(ctx, b, 0, 10, 3, 3)
+  whaleRect(ctx, b, 3, 5, 3, 2); whaleRect(ctx, b, 3, 10, 3, 2)
+  whaleRect(ctx, b, 28, 1, 3, 2); whaleRect(ctx, b, 25, 2, 7, 2)
+  whaleRect(ctx, b, 45, 13, 8, 2); whaleRect(ctx, b, 48, 15, 7, 1)
+  ctx.fillStyle = ABYSS_WHALE_EDGE
+  whaleRect(ctx, b, 22, 3, 37, 0.5); whaleRect(ctx, b, 12, 5, 10, 0.5)
+  ctx.globalAlpha = 1
+}
+
+function abyssKelpBeds(w) {
+  var beds = []
+  for (var i = 1; i < w.corridors.length; i++) {
+    var c = w.corridors[i], x = (i % 2 ? c.x0 + 9 : c.x1 - 12) * w.k.CELL
+    beds.push({ x: x, y: c.floorY * w.k.CELL, seed: w.level * 13 + i * 29 })
+  }
+  return beds
+}
+
+function drawAbyssKelp(ctx, b) {
+  for (var stem = 0; stem < 3; stem++) {
+    var height = 16 + (b.seed + stem * 7) % 13
+    for (var row = 0; row < height; row += 2) {
+      var x = b.x + stem * 5 + Math.round(Math.sin(row / 6 + stem) * 3)
+      ctx.fillStyle = ABYSS_KELP; ctx.fillRect(x, b.y - row - 2, 1, 2)
+      if (row % 6 !== 0) continue
+      var dir = (row + stem * 6) % 12 ? 1 : -1
+      ctx.fillStyle = ABYSS_LEAF
+      ctx.fillRect(x + (dir > 0 ? 1 : -5), b.y - row - 3, 5, 1)
+      ctx.fillRect(x + (dir > 0 ? 3 : -6), b.y - row - 4, 3, 1)
+    }
+  }
+}
+
+function abyssReserved(w) {
+  var C = w.k.CELL, e = w.exit
+  var boxes = [{ x: (e.x - 2) * C, y: e.y * C - 10, width: (e.w + 4) * C, height: (e.h + 1) * C + 10 }]
+  for (var i = 0; i < w.hazards.length; i++) {
+    var h = w.hazards[i]
+    boxes.push({ x: h.zx0 * C - 20, y: h.zy0 * C - 8,
+      width: (h.zx1 - h.zx0 + 1) * C + 40, height: (h.zy1 - h.zy0 + 1) * C + 16 })
+  }
+  for (var p = 0; p < w.pits.length; p++) {
+    var pit = w.pits[p]
+    boxes.push({ x: pit.x0 * C - 2, y: pit.floorY * C - 5,
+      width: (pit.x1 - pit.x0 + 1) * C + 4, height: w.k.ROWS * C - pit.floorY * C + 5 })
+  }
+  // Original crystal/spire/rubble silhouettes are on the cached layer.
+  for (var d = 0; d < w.decor.length; d++) {
+    var prop = w.decor[d]
+    boxes.push({ x: prop.x * C - 4, y: prop.y * C - 14, width: 14, height: 19 })
+  }
+  return boxes
+}
+
+function abyssInk(ctx, w) {
+  var reserved = abyssReserved(w)
+  return { fillStyle: ABYSS_BUBBLE, fillRect: function(x, y, width, height) {
+    if (!abyssClear(w, x, y, width, height, reserved)) return
+    ctx.fillStyle = this.fillStyle; ctx.fillRect(x, y, width, height)
+  } }
+}
+
+function abyssClear(w, x, y, width, height, reserved) {
+  if (!mechanismAir(w, x, y) || !mechanismAir(w, x + width - 0.5, y) ||
+      !mechanismAir(w, x, y + height - 0.5) || !mechanismAir(w, x + width - 0.5, y + height - 0.5)) return false
+  return !reserved.some(function(b) {
+    return x < b.x + b.width && x + width > b.x && y < b.y + b.height && y + height > b.y
+  })
+}
+
+function drawAbyssLife(ctx, w) {
+  if (!trenchPage(w)) return
+  ctx.save()
+  var ink = abyssInk(ctx, w), shafts = abyssShafts(w)
+  // Eight faint caustic fragments, not an animated full-board wash.
+  ctx.globalAlpha = 0.12
+  ink.fillStyle = ABYSS_RIM
+  for (var i = 0; i < 8; i++) {
+    var s = shafts[i % 4], c = w.corridors[i % w.corridors.length]
+    var phase = w.ticks * 0.015 + i * 1.7
+    var x = s.x + Math.round(Math.sin(phase) * 4 * 2) / 2
+    var y = c.floorY * w.k.CELL - 16 + i % 3
+    ink.fillRect(x, y, 4, 0.5); ink.fillRect(x + 3.5, y + 0.5, 0.5, 1)
+  }
+  // Twelve rising bubble rings anchored to kelp. Fixtures/downwells keep their cues.
+  ctx.globalAlpha = 0.38
+  ink.fillStyle = ABYSS_BUBBLE
+  var beds = abyssKelpBeds(w)
+  for (var bubble = 0; bubble < 12; bubble++) {
+    var bed = beds[bubble % beds.length], rise = (w.ticks * 0.10 + bubble * 7) % 32
+    var bx = bed.x + 17 + Math.round(Math.sin(w.ticks * 0.025 + bubble) * 2 * 2) / 2
+    var by = Math.round((bed.y - rise - 2) * 2) / 2
+    drawAbyssBubble(ink, bx, by)
+  }
+  ctx.globalAlpha = 0.7
+  ink.fillStyle = ABYSS_LEAF
+  // Only one frond tip per bed sways; the large plants stay cached.
+  for (var k = 0; k < beds.length; k++) {
+    var b = beds[k], height = 16 + b.seed % 13
+    var row = Math.floor((height - 1) / 2) * 2
+    var tipX = b.x + Math.round(Math.sin(row / 6) * 3)
+    var sway = Math.round(Math.sin(w.ticks * 0.035 + k) * 2) / 2
+    ink.fillRect(tipX + sway, b.y - row - 2, 2, 0.5)
+  }
+  ctx.restore()
+}
+
+function drawAbyssBubble(ctx, x, y) {
+  ctx.fillRect(x + 0.5, y, 1, 0.5); ctx.fillRect(x + 0.5, y + 1.5, 1, 0.5)
+  ctx.fillRect(x, y + 0.5, 0.5, 1); ctx.fillRect(x + 1.5, y + 0.5, 0.5, 1)
 }
