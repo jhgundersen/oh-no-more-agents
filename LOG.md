@@ -4146,3 +4146,12 @@ at level 6 after a drone strike: dark and small, as a reminder should be.
 Tests 752.
 
 **Deployed** after 159 (name="build" content="ddc6b5e4"): bosses in every biome, hats on the floor. Browser check clean.
+
+**Mistake in the deploy above:** it went out with three tests failing — the
+deploy command was chained after `npm run check` without stopping on its
+result. Two death-pose tests draw from a mock world with no terrain, and
+`drawFallenHat` read `w.terrain` unguarded (the real game always has terrain,
+so the live page was not affected); my own hat test put its agent on an
+unsuitable cell. Fixed (a guard; the test uses `padSpot`), checks green, and
+redeployed below with the deploy gated on `npm run check` passing. From here
+the deploy step runs only after a passing check.

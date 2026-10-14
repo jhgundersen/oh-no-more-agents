@@ -168,7 +168,7 @@ test("the red team answers back: NOT TONIGHT from a throwing Bouncer, BANNED fro
 
 test("a fallen agent's hat stays on the ground after the death pose, then fades; not in mid-air, not at res 1", () => {
   const w = S.generate(5, 0, 1), c = w.corridors[1]
-  const ag = { x: 40.5, y: c.floorY - 1, gone: true, state: "dead", diedAt: 100 }
+  const ag = { x: S.padSpot(w, c, 40) + 0.5, y: c.floorY - 1, gone: true, state: "dead", diedAt: 100 }
   const calls = []
   const ctx = { globalAlpha: 1, fillStyle: "", save() {}, restore() {}, fillRect(...a) { calls.push(a) } }
   for (const [res, age, want] of [[2, 10, false], [2, 40, true], [2, 299, true], [2, 300, false], [1, 40, false]]) {

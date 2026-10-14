@@ -2963,7 +2963,7 @@ var DEATH_DRAW = {
 // drowning), and only at page resolution.
 var HAT_TICKS = 300, HAT_FADE = 60
 function drawFallenHat(ctx, w, ag, age) {
-  if ((w.res || 1) < 2 || age < DEATH_TICKS || age >= HAT_TICKS) return
+  if ((w.res || 1) < 2 || age < DEATH_TICKS || age >= HAT_TICKS || !w.terrain || !(ag.x >= 0)) return
   var C = w.k.CELL, cx = Math.floor(ag.x), feet = Math.floor(ag.y)
   if (feet < 0 || feet + 1 >= w.k.ROWS || !w.terrain[(feet + 1) * w.k.COLS + cx] || w.terrain[feet * w.k.COLS + cx]) return
   var x = Math.round(ag.x * C), y = (feet + 1) * C
