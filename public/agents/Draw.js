@@ -224,6 +224,7 @@ function drawTerrain(ctx, w, pal) {
   if (w.biome === "Foundry") drawFoundryMaterials(ctx, w, pal)
   if (spaceshipPage(w)) drawSpaceshipMaterials(ctx, w, pal)
   drawTerrainLight(ctx, w, pal)
+  if (frostPage(w)) drawFrostSurfaces(ctx, w)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
   drawSea(ctx, w, pal)
@@ -2049,6 +2050,7 @@ function drawMachines(ctx, w, pal) {
   if (w.biome === "Harbour") drawHarbourMachines(ctx, w, pal)
   if (w.biome === "Foundry") drawFoundryHeat(ctx, w, pal)
   if (spaceshipPage(w)) drawSpaceshipInstruments(ctx, w, pal)
+  if (frostPage(w)) drawFrostWeather(ctx, w)
   if (w.biome === "Cavern") drawCavernLife(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
   if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
@@ -14434,4 +14436,124 @@ function drawSpaceshipDisplay(ctx, w, b) {
     ctx.fillRect(b.x + 14 + (led % 2) * 3, b.y + 1 + Math.floor(led / 2) * 2, 2, 1)
   }
   ctx.globalAlpha = 1
+}
+
+// Frost on the page: snow lies on the existing stone, it does not replace it.
+// Surface detail repaints with the terrain; weather runs before all actors.
+function frostPage(w) {
+  return w.biome === "Frost" && (w.res || 1) >= 2
+}
+
+var FROST_SNOW = "#edf8ff", FROST_BLUE = "#9dcfe7", FROST_ICE = "#67abc9"
+
+function drawFrostSurfaces(ctx, w) {
+  if (!frostPage(w)) return
+  var k = w.k, C = k.CELL, cols = k.COLS
+  ctx.save()
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 0; x < cols; x++) {
+    var m = w.terrain[y * cols + x]
+    if (m === k.EMPTY || m === k.BRICK) continue
+    if (w.terrain[(y - 1) * cols + x] === k.EMPTY) drawFrostCap(ctx, w, x, y)
+    drawFrostIce(ctx, w, x, y)
+  }
+  ctx.restore()
+}
+
+function drawFrostCap(ctx, w, x, y) {
+  var C = w.k.CELL, px = x * C, py = y * C
+  // Broad white caps, with a slow stepped drift rather than noisy cell teeth.
+  // The old lit edge and every fleck below its first row remain exposed.
+  var drift = (x + y * 7 + w.level * 3) % 19
+  var high = drift < 6 ? 1 + Math.min(drift, 5 - drift) * 0.5 : 0.5
+  ctx.globalAlpha = 1
+  ctx.fillStyle = FROST_BLUE
+  ctx.fillRect(px, py + 0.5, C, 0.5)
+  ctx.fillStyle = FROST_SNOW
+  ctx.fillRect(px, py - high, C, high + 0.5)
+  // A wind-scoured blue dent in the deeper banks, above the stone itself.
+  if (high > 1) {
+    ctx.fillStyle = FROST_BLUE
+    ctx.fillRect(px + 1, py - 0.5, 2, 0.5)
+  }
+}
+
+function drawFrostIce(ctx, w, x, y) {
+  var k = w.k, C = k.CELL, base = y * k.COLS, px = x * C, py = y * C
+  var side = x > 0 && w.terrain[base + x - 1] === k.EMPTY ? -1
+    : x + 1 < k.COLS && w.terrain[base + x + 1] === k.EMPTY ? 1 : 0
+  if (!side || (x * 7 + y + w.level) % 5 === 0) return
+  var edge = side < 0 ? px : px + C - 1.5
+  ctx.fillStyle = FROST_ICE
+  ctx.globalAlpha = 0.28
+  ctx.fillRect(edge, py, 1.5, C)
+  ctx.fillStyle = FROST_BLUE
+  ctx.globalAlpha = 0.4
+  ctx.fillRect(side < 0 ? px : px + C - 0.5, py, 0.5, C)
+  // Staggered glints, no wash across the original mottled faces.
+  if ((x + y * 3) % 4 === 0) {
+    ctx.globalAlpha = 0.8
+    ctx.fillRect(edge + 0.5, py + 1.5, 0.5, 1)
+  }
+}
+
+function drawFrostWeather(ctx, w) {
+  if (!frostPage(w)) return
+  ctx.save()
+  drawFrostAurora(ctx, w)
+  drawFrostSnow(ctx, w)
+  drawFrostBreath(ctx, w)
+  ctx.restore()
+}
+
+function drawFrostAurora(ctx, w) {
+  var C = w.k.CELL, top = w.k.SKY * C, wide = w.k.COLS * C
+  // Mirror backFrost's deterministic ridge, so the live ribbon stays BEHIND
+  // every original peak as well as the terrain. This is a local stream only.
+  var ridge = 30, r = backRng(w), t = w.ticks
+  for (var x = 0; x < wide; x += 3) {
+    ridge = Math.max(10, Math.min(70, ridge + Math.floor(r() * 13) - 6))
+    var horizon = top + 70 - ridge
+    var y = Math.round((top + 24 + Math.sin(x / 53 + w.level) * 11 + Math.sin(x / 97 + t / 240) * 5) * 2) / 2
+    var height = 10 + Math.round(Math.sin(x / 31 + t / 180) * 4)
+    for (var row = 0; row < height; row += 2) {
+      if (y + row + 2 > horizon) continue
+      ctx.fillStyle = row < 4 ? "#54416b" : row < 8 ? "#315c68" : "#32775e"
+      ctx.globalAlpha = 0.12 + row / height * 0.38
+      moteFineRect(ctx, w, x, y + row, 3, 2)
+    }
+  }
+}
+
+function drawFrostSnow(ctx, w) {
+  var wide = w.k.COLS * w.k.CELL, tall = w.k.ROWS * w.k.CELL, t = w.ticks
+  // The original motes still draw. These brighter near flakes give them depth;
+  // an occasional gust bends the fall, without a simulation wind or clock.
+  var gust = Math.max(0, Math.sin(t / 95 + w.level) - 0.65) * 12
+  for (var i = 0; i < 100; i++) {
+    var pace = 0.18 + (i % 5) * 0.045
+    var x = Math.floor(((i * 73 + w.level * 19 + t * 0.13 + Math.sin(t / 40 + i) * (3 + gust)) % wide) * 2) / 2
+    var y = Math.floor(((i * 43 + w.level * 11 + t * pace) % tall) * 2) / 2
+    ctx.fillStyle = i % 3 ? FROST_BLUE : FROST_SNOW
+    ctx.globalAlpha = i % 3 ? 0.5 : 0.85
+    moteFineRect(ctx, w, x, y, 1, 1)
+    if (i % 7 === 0) {
+      moteFineRect(ctx, w, x - 0.5, y + 0.5, 2, 0.5)
+      moteFineRect(ctx, w, x + 0.5, y - 0.5, 0.5, 2)
+    }
+  }
+}
+
+function drawFrostBreath(ctx, w) {
+  var C = w.k.CELL
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i], age = (w.ticks + ag.id * 17) % 96
+    if (ag.gone || ag.state !== "walk" || age >= 24) continue
+    var x = Math.round(ag.x * C) + ag.dir * (5 + Math.floor(age / 5) * 0.5)
+    var y = Math.round((ag.y + 1) * C) - SPRITE_PX + 6 - Math.floor(age / 8) * 0.5
+    ctx.fillStyle = FROST_SNOW
+    ctx.globalAlpha = (1 - age / 24) * 0.45
+    moteFineRect(ctx, w, x - 1, y, 2 + Math.floor(age / 8), 1)
+    ctx.globalAlpha *= 0.5
+    moteFineRect(ctx, w, x, y - 0.5, 2, 0.5)
+  }
 }
