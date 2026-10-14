@@ -5164,3 +5164,5 @@ no push or deployment.
 Reviewed and merged by the loop. Level 8, tick 400, full frame against main at 1x: gantry rails, conveyors carrying boxes, robot arms and safety stripes read as a production line, nothing like the Foundry. One fix in review: the "BAY 3" signs read "BA'o 7" at 3x — the ceiling, drawn later, clipped the tops of the letters, and lowering the sign put it under the stations instead. The signs are gone; the line reads without them.
 
 Merge fix: dropping `drawAssemblyLabels` left "cached rails" on `layers.slice(0, 3)`, which now took in the animated `drawAssemblyLife`. The failing `deepEqual` on two raw 800×496 buffers made node build a diff of them and the run reached 22 GB before it was killed. Now `slice(0, 2)`, and `picture()` returns a pixel digest so a failed comparison is a 64-character diff; `footprint` refuses non-finite or larger-than-board rectangles and recording stops at 20k fills. The file runs in 2 s; `npm run check` 881/881.
+
+**Deployed** after 192 (name="build" content="525f1324"), gated on a passing check (881 tests): the Factory art. Level 8 in headless Chromium, no console errors.
