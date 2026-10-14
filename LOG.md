@@ -4144,3 +4144,5 @@ a fall out of the world or a drowning), only at page resolution. A level
 remembers what it cost, where it cost it, without saying so in words. Looked
 at level 6 after a drone strike: dark and small, as a reminder should be.
 Tests 752.
+
+**Deployed** after 159 (name="build" content="ddc6b5e4"): bosses in every biome, hats on the floor. Browser check clean.
