@@ -196,6 +196,7 @@ function drawTerrain(ctx, w, pal) {
   drawTerrainSky(ctx, w, pal)
   if (w.biome === "Harbour") drawHarbourSky(ctx, w, pal)
 
+  if (spaceshipPage(w)) drawSpaceshipBackdrop(ctx, w, pal)
   drawBackdrop(ctx, w, pal)
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
 
@@ -221,6 +222,7 @@ function drawTerrain(ctx, w, pal) {
   ctx.fillRect(0, k.SKY * C, cols * C, (rows - k.SKY) * C)
 
   if (w.biome === "Foundry") drawFoundryMaterials(ctx, w, pal)
+  if (spaceshipPage(w)) drawSpaceshipMaterials(ctx, w, pal)
   drawTerrainLight(ctx, w, pal)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
@@ -2046,6 +2048,7 @@ function drawMachines(ctx, w, pal) {
   if (w.biome === "Subway") drawSubwayMachines(ctx, w, pal)
   if (w.biome === "Harbour") drawHarbourMachines(ctx, w, pal)
   if (w.biome === "Foundry") drawFoundryHeat(ctx, w, pal)
+  if (spaceshipPage(w)) drawSpaceshipInstruments(ctx, w, pal)
   if (w.biome === "Cavern") drawCavernLife(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
   if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
@@ -14203,4 +14206,151 @@ function drawCavernGrit(ctx, w, pal, d) {
   ctx.fillStyle = pal.dust; ctx.globalAlpha = 0.25 * (1 - age / 17)
   moteFineRect(ctx, w, x, y, 0.5, 0.5)
   ctx.globalAlpha = 1
+}
+
+// The page's ship interior, added over the original hull rather than painted
+// over it. Back-wall services precede the original ribs and portholes; plate
+// fixings and instrument housings are cached. Only their displays run live.
+function spaceshipPage(w) {
+  return w.biome === "Spaceship" && (w.res || 1) >= 2
+}
+
+function drawSpaceshipBackdrop(ctx, w, pal) {
+  if (!spaceshipPage(w)) return
+  ctx.save()
+  for (var i = 0; i < w.corridors.length; i++) {
+    var y = w.corridors[i].floorY * w.k.CELL - 21
+    // Paired supply/return pipes, with couplings and doglegs around service bays.
+    ctx.fillStyle = pal.backDim
+    ctx.fillRect(12, y, 376, 3)
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(12, y + 0.5, 376, 0.5)
+    ctx.fillRect(12, y + 2, 376, 0.5)
+    for (var x = 34; x < 388; x += 50) {
+      ctx.fillStyle = pal.back
+      ctx.fillRect(x, y - 0.5, 2, 4)
+      ctx.fillStyle = pal.backLit
+      ctx.fillRect(x + 0.5, y, 0.5, 3)
+    }
+    var bx = 42 + (w.level * 19 + i * 97) % 280
+    drawSpaceshipService(ctx, pal, bx, y + 4, (w.level + i) % 3)
+  }
+  ctx.restore()
+}
+
+function drawSpaceshipService(ctx, pal, x, y, kind) {
+  // Three recessed fittings: heat exchanger, cable manifold, instrument rack.
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(x, y, 22, 12)
+  ctx.fillStyle = pal.decorDim
+  ctx.fillRect(x, y, 22, 0.5)
+  ctx.fillRect(x, y, 0.5, 12)
+  ctx.fillStyle = pal.back
+  ctx.fillRect(x + 2, y + 2, 18, 8)
+  if (kind === 0) {
+    ctx.fillStyle = pal.decorDim
+    for (var v = 0; v < 7; v++) ctx.fillRect(x + 3 + v * 2.5, y + 3, 0.5, 6)
+    ctx.fillRect(x + 3, y + 5.5, 16, 0.5)
+  } else if (kind === 1) {
+    ctx.fillStyle = pal.decorDim
+    for (var p = 0; p < 3; p++) {
+      ctx.fillRect(x + 3 + p * 5, y + 2, 1, 5 + p)
+      ctx.fillRect(x + 3 + p * 5, y + 6 + p, 4, 1)
+    }
+  } else {
+    ctx.fillStyle = pal.skyTop
+    for (var r = 0; r < 3; r++) ctx.fillRect(x + 3, y + 2.5 + r * 2.5, 16, 1.5)
+    ctx.fillStyle = pal.poolLip
+    ctx.globalAlpha = 0.18
+    for (var led = 0; led < 6; led++) ctx.fillRect(x + 4 + led * 2.5, y + 3, 1, 0.5)
+    ctx.fillRect(x + 4, y + 5.5, 7, 0.5)
+    ctx.fillRect(x + 4, y + 8, 11, 0.5)
+    ctx.globalAlpha = 1
+  }
+}
+
+function drawSpaceshipMaterials(ctx, w, pal) {
+  if (!spaceshipPage(w)) return
+  ctx.save()
+  var k = w.k
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 3; x < k.COLS - 3; x++) {
+    var m = w.terrain[y * k.COLS + x]
+    if (m === k.EMPTY || m === k.BRICK) continue
+    drawSpaceshipFixings(ctx, w, pal, x, y, m)
+  }
+  for (var i = 0; i < w.corridors.length; i++) {
+    var b = spaceshipInstrument(w, i)
+    if (!spaceshipInstrumentAlive(w, b)) continue
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(b.x, b.y, 11, 5)
+    ctx.fillStyle = pal.steelEdge
+    ctx.fillRect(b.x, b.y, 11, 0.5)
+    ctx.fillRect(b.x, b.y, 0.5, 5)
+    ctx.fillStyle = pal.hatchMouth
+    ctx.fillRect(b.x + 1.5, b.y + 1, 6, 3)
+    ctx.fillStyle = pal.steelShade
+    ctx.fillRect(b.x + 8, b.y + 1, 2, 3)
+  }
+  ctx.restore()
+}
+
+function drawSpaceshipFixings(ctx, w, pal, x, y, m) {
+  var k = w.k, C = k.CELL, px = x * C, py = y * C
+  // Keep the wide, alternating original panels; only their seams get a groove.
+  if (x % 9 === 0 || y % 5 === 0) {
+    ctx.fillStyle = materialShade(k, pal, m)
+    ctx.fillRect(px + 0.5, py + 0.5, x % 9 === 0 ? 0.5 : C - 1, y % 5 === 0 ? 0.5 : C - 1)
+  }
+  if (x % 9 === 1 && y % 5 === 1) {
+    ctx.fillStyle = materialShade(k, pal, m)
+    ctx.fillRect(px + 1, py + 1, 1, 1)
+    ctx.fillStyle = materialEdge(k, pal, m)
+    ctx.fillRect(px + 1, py + 1, 0.5, 0.5)
+    ctx.fillRect(px + 2.5, py + 2.5, 1, 0.5)
+  }
+  if (y > 0 && w.terrain[(y - 1) * k.COLS + x] === k.EMPTY) {
+    // Deck tread breaks, below the existing bright walking edge.
+    ctx.fillStyle = materialShade(k, pal, m)
+    ctx.fillRect(px + 1, py + 1, 0.5, 1)
+    if ((x + w.level) % 7 === 0) {
+      ctx.fillStyle = pal.decorLit
+      ctx.fillRect(px + 2, py + 0.5, 1.5, 0.5)
+    }
+  }
+}
+
+function spaceshipInstrument(w, i) {
+  return { x: (10 + (w.level * 7 + i * 23) % 75) * w.k.CELL,
+    y: w.corridors[i].floorY * w.k.CELL + 3, phase: w.level * 17 + i * 43 }
+}
+
+function spaceshipInstrumentAlive(w, b) {
+  var C = w.k.CELL, cols = w.k.COLS
+  for (var y = Math.floor(b.y / C); y <= Math.floor((b.y + 4.5) / C); y++)
+    for (var x = Math.floor(b.x / C); x <= Math.floor((b.x + 10.5) / C); x++)
+      if (!w.terrain[y * cols + x]) return false
+  return true
+}
+
+function drawSpaceshipInstruments(ctx, w, pal) {
+  if (!spaceshipPage(w)) return
+  ctx.save()
+  for (var i = 0; i < w.corridors.length; i++) {
+    var b = spaceshipInstrument(w, i)
+    if (!spaceshipInstrumentAlive(w, b)) continue
+    var sweep = Math.floor((w.ticks + b.phase) / 9) % 10
+    ctx.fillStyle = pal.poolLip
+    ctx.globalAlpha = 0.55
+    ctx.fillRect(b.x + 2, b.y + 2.5, 5, 0.5)
+    ctx.fillStyle = pal.poolGlint
+    ctx.globalAlpha = 0.7
+    ctx.fillRect(b.x + 2 + sweep * 0.5, b.y + 1.5, 0.5, 2)
+    ctx.fillStyle = pal.warn
+    ctx.globalAlpha = (w.ticks + b.phase) % 80 < 56 ? 0.8 : 0.25
+    ctx.fillRect(b.x + 8.5, b.y + 1.5, 1, 0.5)
+    ctx.fillStyle = pal.poolLip
+    ctx.globalAlpha = (w.ticks + b.phase) % 111 < 88 ? 0.8 : 0.25
+    ctx.fillRect(b.x + 8.5, b.y + 3, 1, 0.5)
+  }
+  ctx.restore()
 }
