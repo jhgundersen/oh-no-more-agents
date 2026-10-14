@@ -126,11 +126,23 @@ test("boss defeat kneels, topples and bounces its crown, then expires with no co
 })
 
 test("actual boss poses and Sim-dated defeat leave the entire world unchanged", () => {
-  const w = S.generate(8, 0, 63365)
-  for (const tick of [129, 145, 326, 334, 371, 392, 624, 640, 656]) {
+  // A Moderator level where it falls: found, not pinned, so the test survives
+  // a change to which levels get a boss.
+  let found = null
+  for (let lv = S.BOSS_EVERY; lv < 400 && !found; lv += S.BOSS_EVERY) for (let seed = 1; seed < 6 && !found; seed++) {
+    const probe = S.generate(lv, 0, seed)
+    if (!probe.bossPost || probe.bossName !== "THE MODERATOR") continue
+    while (!probe.done && probe.ticks < 6000) S.step(probe)
+    const boss = probe.enemies.find(e => e.boss)
+    if (boss && boss.gone && boss.diedAt) found = { lv, seed, died: boss.diedAt }
+  }
+  assert.ok(found, "a level where the Moderator falls")
+  const w = S.generate(found.lv, 0, found.seed)
+  const ticks = [60, 120, 200, found.died - 30, found.died, found.died + 8, found.died + 16].filter((t, i, a) => t > 0 && a.indexOf(t) === i).sort((x, y) => x - y)
+  for (const tick of ticks) {
     while (w.ticks < tick) S.step(w)
     const en = w.enemies.find(e => e.boss)
-    if (tick === 624) { assert.ok(en.gone); assert.equal(en.diedAt, 624) }
+    if (tick === found.died) { assert.ok(en.gone); assert.equal(en.diedAt, found.died) }
     for (const res of [1, 2]) {
       w.res = res
       const before = JSON.stringify(w), img = canvas(400 * res, 248 * res, theme.background)

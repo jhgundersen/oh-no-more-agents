@@ -4110,3 +4110,23 @@ a Bouncer is usually straight into its next scuffle. Sim stamps `threwAt` and
 Head Bouncer. Tests 751.
 
 **Deployed** after 157 (name="build" content="b8502088"): quips both ways, the Head Bouncer. Browser check clean.
+
+## 158 — 2026-10-14 · Bosses everywhere, not in half the biomes
+
+**Looked at first:** three whole frames of a busy guard level (13) with all
+the new overlay — ticker, quips both ways, a fight cloud, sparks. It reads:
+each overlay is local and small, and the ticker sits on the bedrock. Then the
+biomes by home rate: Ruins lowest (87%), and its deaths were 80% red team —
+a quarter of the Ruins levels sampled were boss levels.
+
+**The bug:** bosses came every 8th level and there are 18 biomes. 8 and 18
+share a factor, so boss levels only ever landed in the 9 odd-numbered biomes
+(Ruins, Foundry, Ice Cave, Factory, Data Center, Mail Room, Clock Tower,
+Subway; the Trench is skipped), each on one level in four — and never in the
+other nine. **`BOSS_EVERY` is 7** now: coprime with 18, so the bosses rotate
+through every biome (Moderator on 7, 21, 35 …; Head Bouncer on 14, 28 …).
+
+Ruins is still lowest after the change (86% over 15 levels — its gun-pair
+posts, not its bosses; noted for later). `npm run sim`: 99% / 94%, hangs 0.
+The Moderator art test pinned level 8's timeline; it now finds a level where
+the Moderator falls and checks around that. Tests 751.

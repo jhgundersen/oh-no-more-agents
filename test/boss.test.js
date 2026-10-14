@@ -2,12 +2,12 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import { loadCore } from "../tools/load-core.js"
 
-// The Moderator: every eighth level the guard post is one gunner that takes
+// The Moderator: every BOSS_EVERY-th level the guard post is one gunner that takes
 // BOSS_HP hits to put down; each hit only staggers it.
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js")
 
-test("every eighth level (not the Trench) has the boss post, alone", () => {
+test("every BOSS_EVERY-th level (not the Trench) has the boss post, alone", () => {
   for (let lv = 1; lv <= 96; lv++) {
     const w = S.generate(lv, 0, 5)
     if (lv % S.BOSS_EVERY === 0 && !w.submerged) {
@@ -21,7 +21,7 @@ test("every eighth level (not the Trench) has the boss post, alone", () => {
 })
 
 test("the boss takes BOSS_HP hits, staggering on each but the last", () => {
-  const w = S.generate(8, 0, 5)
+  const w = S.generate(7, 0, 5)
   const en = S.spawnEnemy(w, "gun")
   w.enemies = [en]
   assert.equal(en.boss, true)
@@ -49,7 +49,7 @@ test("an ordinary guard is still one hit", () => {
 })
 
 test("the Head Bouncer takes HEAD_BOUNCER_HP, an ordinary Bouncer BOUNCER_HP", () => {
-  const boss = S.generate(16, 0, 5), plain = S.generate(5, 0, 5)
+  const boss = S.generate(14, 0, 5), plain = S.generate(5, 0, 5)
   assert.equal(S.spawnEnemy(boss, "bouncer").hp, S.HEAD_BOUNCER_HP)
   assert.equal(S.spawnEnemy(plain, "bouncer").hp, S.BOUNCER_HP)
 })

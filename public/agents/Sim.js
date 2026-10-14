@@ -1302,11 +1302,11 @@ function guardChance(level) {
   return 0.40 + Math.min(0.25, level * 0.0025)
 }
 
-// Every eighth level the post is held by The Moderator: a gunner like any
+// Every seventh level the post is held by a boss — The Moderator: a gunner like any
 // other, except that it takes BOSS_HP hits — rounds, scuffles, ricochets —
 // to put down, and each one only staggers it. Not in the Trench, where the
 // post is a dive crew's.
-var BOSS_EVERY = 8
+var BOSS_EVERY = 7
 var BOSS_HP = 3
 // Every other boss level it is the Head Bouncer instead: a Bouncer, with
 // everything that means (no gun, throws people out, beaten by a crowd), that

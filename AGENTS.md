@@ -508,11 +508,11 @@ from stable state (ticks, ids) so none draws on a random stream:
   three cells, stunned but alive; it takes `BOUNCER_HP` 3 scuffles won, at
   the brawl odds minus `BOUNCER_EDGE` 20, so the colony beats it by bunching
   up. About two throws a level, put down in 10 of 18, nobody killed by it.
-- **The Moderator** (`bossLevel`): every eighth level (not the Trench) the
+- **The Moderator** (`bossLevel`): every seventh level (not the Trench) the
   post is one crowned gunner with `BOSS_HP` 3; any hit — round, scuffle,
   ricochet — only staggers it (`staggerBoss`) until the last. Those levels
   sit near 84% home against 93% overall: the climax, on purpose.
-  Every other boss level (16, 32 …) it is the **Head Bouncer** instead: a
+  Every other boss level (14, 28 …) it is the **Head Bouncer** instead: a
   Bouncer with `HEAD_BOUNCER_HP` 5, crowned; it kills nobody and holds the
   door (95% home). `w.bossName` names whichever it is.
 
