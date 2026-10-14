@@ -5642,3 +5642,84 @@ Terrain is cached in ordinary play; these are Node raster times, not browser FPS
 
 **Next:** ready for Library revision review. Commit on `codex/library` only;
 no push or deployment.
+
+## 200 — 2026-10-15 · A little sorting office (on a branch)
+
+**Change:** Draw-only, page-resolution Mail Room art on `codex/mailroom`,
+based on approved `codex/library` (`b84c73b`). Recessed 4×3 pigeonhole banks
+carry folded, stamped envelopes, including empty slots and small stacks.
+Warm paper and timber are muted, with the lower slots fading further: the
+original opaque letter floors remain the stronger plane. Service-wall parcel
+chutes have dark mouths, stepped ramps and string-tied parcels. One green
+franking press per storey has trays, paper stock, a roller opening and a small
+stamp. An optional raster-label `RETURN / TO / SENDER` bin appears only when
+its complete rectangle clears terrain and fixtures, otherwise it is omitted.
+Original materials, pigeonholes, letters, rails, props, tubes/capsules, hazards,
+pits, hostiles, missions, agents, umbrellas and exit keep their recipes. Sim,
+Palette and Outcome are unchanged.
+
+The walls, chutes, presses and bin are cached beneath the original terrain,
+props and actors. Only a small envelope and press head per station animate,
+with staggered four-phase 120-tick cycles and at most **30** fills in the tested
+layouts. Incoming paper moves through the press and emerges with a stamp.
+Live pixels reject solid terrain, original exit/decor/hazard/pit bounds, tube
+segments and both complete hoppers. Whole envelopes are omitted when occluded,
+so no orphan fold or stamp remains. All additions require Mail Room and
+`(w.res || 1) >= 2`, use the half-pixel grid and read existing ticks without
+RNG, world writes or scenery state. Carving cannot relocate their anchors.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-mailroom/coverage-safe.sh` pass: **927** tests. Eleven new page-art
+tests cover biome/resolution gates, read-only proxies and forbidden RNG,
+deterministic digests, half-pixel placement/state restoration, cache anchors,
+far/near sorting-panel luminance across five themes, empty/varied pigeonholes,
+animation budgets, complete envelope/prop/pipe/hopper clearance, whole-bin
+labels, paint ordering, unchanged opaque actor colours, original component
+digests, Dead Letter Queue/Backlog edits on an intact corridor span, and four
+600-tick pneumatic-tube playthroughs with complete world digests. CRAP: **0**
+functions at or above 30, maximum **29.3**; new helpers at most **11.0**,
+all with 100% coverage.
+
+Same **2048 MB** Node heap, `ulimit -v 6000000`, one check worker/two coverage
+workers and queue before each phase. Factory's art test remains excluded under
+the standing instruction. Image assertions use small digests, component
+recording is capped at 20k fills, full-pass ordering streams markers under a
+100k-call bound, and live footprint loops stay within one cell.
+
+**Looked:** level 14, seed 3, tick 400 at **1×**, with the exact shoot crop
+paired in `/tmp/codex-mailroom/shoot-crop-pair.png`. Also matching parent/branch
+levels 14, 33 and 52 at ticks 77/476, full 800×496 frames at 1×, 2× crops and
+4× details in `sheet.png`; level 71 in all five themes. Open/furled umbrellas
+and rockfall/geyser/brazier/tesla/fence/crusher/turret in idle/charge/fire/rest
+are paired in `readability-sheet.png`. Paper tones leave dark suits, pale faces,
+canopies, original pink signals, hazard tells, brass tube paths, capsule ports,
+mission parcels and the exit clear. Review expanded the generic decor bounds
+for the original hanging signs and franking trays; a sign could otherwise
+cover part of the new bin's label.
+
+Seeded comparison: **1,080 identical frames** across the other eighteen biomes
+and **60** identical Mail Room res-1/unspecified-res frames (two layouts,
+ticks 77/240/600, five themes). All **30** Mail Room res-2 frames changed.
+Baseline, harnesses, comparison results and logs are in `/tmp/codex-mailroom/`.
+
+**Pipeline:** retained the fast rasterizer, single sheet composition, streamed
+paint-order checks, seeded single-world crop/phase shots and validation queue.
+Pending phase logs plus the completion marker keep earlier results distinct.
+The top corridor contains a hole at the old pinned event coordinate; the
+event art test now selects an intact, safe floor span. Complete original
+prop footprints are recorded in the focused clearance check, catching the
+hanging-sign/tray extent mismatch before delivery. No package/tool source edits.
+
+**Measured:** warmed res-2 software rasterizer at tick 476, median of nine
+batches of forty frames, interleaved parent/branch, after tests and coverage.
+Level 14: actors **0.792 → 0.811 ms**, full terrain + actors
+**10.576 → 11.381 ms**.
+Level 52: actors **0.395 → 0.400 ms**, full terrain + actors
+**13.462 → 14.018 ms**.
+Subway control, level 18: actors **2.298 → 2.335 ms**, full terrain + actors
+**15.302 → 15.239 ms**.
+Terrain is cached in ordinary play; these are Node raster times, not browser FPS.
+
+**Next:** ready for Mail Room art review. Commit on `codex/mailroom` only;
+no push or deployment.
