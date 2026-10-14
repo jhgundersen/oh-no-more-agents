@@ -209,6 +209,7 @@ function drawTerrain(ctx, w, pal) {
   drawReadingHall(ctx, w)
   drawPostalHall(ctx, w)
   drawWorksite(ctx, w)
+  drawDialHall(ctx, w)
   if (desertPage(w)) drawDesertRelics(ctx, w)
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
 
@@ -2615,6 +2616,7 @@ function drawActors(ctx, w, pal, opts) {
   drawReadingDust(ctx, w)
   drawPostalCycle(ctx, w)
   drawWorkDrums(ctx, w)
+  drawDialMotion(ctx, w)
   drawDrips(ctx, w, pal)
   drawMachines(ctx, w, pal)
   drawActiveEventAir(ctx, w, pal)
@@ -13101,8 +13103,11 @@ function drawClockShafts(ctx, w, pal) {
   ctx.restore()
 }
 function drawClockMachines(ctx, w, pal) {
-  drawClockMovement(ctx, w, pal)
-  drawClockShafts(ctx, w, pal)
+  // The page caches its rims and light; the panel retains the original pass.
+  if (!clocktowerPage(w)) {
+    drawClockMovement(ctx, w, pal)
+    drawClockShafts(ctx, w, pal)
+  }
   for (var i = 0; i < w.gates.length; i++) drawClockGate(ctx, w, pal, w.gates[i])
 }
 function clockGateDrawing(w, g) {
@@ -17273,4 +17278,256 @@ function drawWorkDrums(ctx, w) {
     ctx.fillRect(b.x + 6, b.base - 9, 0.5, 0.5)
   }
   ctx.restore()
+}
+
+// Page-only backlit dial and the service side of the movement. Static glass,
+// rims, bearings, light and ropes are cached beneath the playable masonry.
+function clocktowerPage(w) { return w.biome === "Clock Tower" && (w.res || 1) >= 2 }
+var DIAL_BACK = "#1e2223"
+var DIAL_GLASS = "#877d5d"
+var DIAL_LIGHT = "#c5b483"
+var DIAL_METAL = "#89764f"
+var DIAL_EDGE = "#aa9566"
+var DIAL_WOOD = "#585044"
+var DIAL_ROPE = "#8e8067"
+var DIAL_ROMAN = ["XII", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"]
+
+function dialGeometry(w) {
+  var f = clockFace(w)
+  return { x: f.x, y: f.y, r: 86 }
+}
+function dialWheels(w) {
+  var f = clockFace(w)
+  return [{ x: f.x - 78, y: f.y + 28, r: 21, speed: 600, dir: 1 },
+    { x: f.x - 47, y: f.y + 51, r: 16, speed: 450, dir: -1 },
+    { x: f.x + 77, y: f.y + 70, r: 25, speed: 700, dir: 1 }]
+}
+function drawDialHall(ctx, w) {
+  if (!clocktowerPage(w)) return
+  ctx.save()
+  var f = dialGeometry(w)
+  drawDialGlass(ctx, f)
+  drawDialLeading(ctx, f)
+  ctx.fillStyle = DIAL_METAL; ctx.globalAlpha = 0.5
+  ctx.fillRect(f.x + 92, f.y - 8, 8, 3) // separate pendulum suspension
+  drawDialLight(ctx, f)
+  var wheels = dialWheels(w)
+  for (var i = 0; i < wheels.length; i++) drawDialWheel(ctx, wheels[i])
+  for (var row = 0; row < w.corridors.length; row++) {
+    var bays = dialBays(w, row)
+    for (var b = 0; b < bays.length; b++) drawDialBay(ctx, bays[b])
+  }
+  ctx.restore()
+}
+function drawDialGlass(ctx, f) {
+  // A restrained warm gradient is visible through the dial, never over people.
+  for (var y = -92; y <= 92; y += 2) {
+    var halo = Math.floor(Math.sqrt(92 * 92 - y * y))
+    ctx.fillStyle = DIAL_LIGHT; ctx.globalAlpha = 0.045
+    ctx.fillRect(f.x - halo, f.y + y, Math.max(1, halo * 2), 2)
+  }
+  for (var row = -f.r; row <= f.r; row += 2) {
+    var half = Math.floor(Math.sqrt(f.r * f.r - row * row))
+    ctx.globalAlpha = 1; ctx.fillStyle = DIAL_BACK
+    ctx.fillRect(f.x - half, f.y + row, Math.max(1, half * 2), 2)
+    ctx.fillStyle = DIAL_GLASS
+    ctx.globalAlpha = 0.11 + (1 - Math.abs(row) / f.r) * 0.12
+    ctx.fillRect(f.x - half, f.y + row, Math.max(1, half * 2), 2)
+  }
+  ctx.globalAlpha = 0.5; ctx.fillStyle = DIAL_METAL
+  clockRing(ctx, f.x, f.y, f.r, 1)
+  ctx.globalAlpha = 0.35; ctx.fillStyle = DIAL_EDGE
+  clockRing(ctx, f.x, f.y, f.r - 4, 0.5)
+  for (var n = 0; n < 12; n++) {
+    var a = -n * Math.PI / 6 - Math.PI / 2
+    var x = f.x + Math.round(Math.cos(a) * 75), y2 = f.y + Math.round(Math.sin(a) * 75)
+    ctx.globalAlpha = 0.48; ctx.fillStyle = DIAL_LIGHT
+    drawDialNumeral(ctx, DIAL_ROMAN[n], x, y2 - 2.5)
+  }
+  ctx.globalAlpha = 1
+}
+function drawDialNumeral(ctx, text, cx, y) {
+  // Both the character order and each glyph face reverse through the glass.
+  var width = text.length * 4 - 1
+  for (var i = 0; i < text.length; i++) {
+    var glyph = TRANSITION_GLYPHS[text[i]]
+    for (var row = 0; row < 5; row++) for (var col = 0; col < 3; col++)
+      if (glyph[row] & (1 << (2 - col))) ctx.fillRect(cx + width / 2 - 1 - i * 4 - col, y + row, 1, 1)
+  }
+}
+function drawDialLeading(ctx, f) {
+  ctx.fillStyle = DIAL_METAL; ctx.globalAlpha = 0.22
+  // Unequal glazing sectors and cross ties break the repeated-panel rhythm.
+  for (var n = 0; n < 5; n++) {
+    var a = [-2.8, -1.9, -0.45, 0.8, 2.15][n]
+    for (var d = 8; d < f.r - 7; d++)
+      ctx.fillRect(f.x + Math.round(Math.cos(a) * d * 2) / 2, f.y + Math.round(Math.sin(a) * d * 2) / 2, 0.5, 0.5)
+  }
+  ctx.globalAlpha = 0.5; ctx.fillStyle = DIAL_METAL
+  ctx.fillRect(f.x - 4, f.y - 3, 8, 6)
+  ctx.fillStyle = DIAL_EDGE
+  ctx.fillRect(f.x - 3, f.y - 2.5, 6, 0.5)
+  ctx.globalAlpha = 1
+}
+function drawDialLight(ctx, f) {
+  ctx.fillStyle = DIAL_LIGHT
+  for (var shaft = 0; shaft < 3; shaft++) {
+    var x = f.x - 50 + shaft * 43, y = f.y - 48 + shaft * 9
+    for (var band = 0; band < 10; band++) {
+      ctx.globalAlpha = 0.075 - band * 0.005
+      ctx.fillRect(x - band * 3 - 3, y + band * 9, 6 + band * 1.5, 9)
+      ctx.globalAlpha = 0.025
+      ctx.fillRect(x - band * 3 - 6, y + band * 9, 12 + band * 1.5, 9)
+    }
+  }
+  ctx.globalAlpha = 1
+}
+function drawDialWheel(ctx, g) {
+  ctx.fillStyle = DIAL_BACK; ctx.globalAlpha = 0.65
+  clockRing(ctx, g.x, g.y, g.r + 2, 2)
+  ctx.fillStyle = DIAL_METAL; ctx.globalAlpha = 0.42
+  clockRing(ctx, g.x, g.y, g.r, 1)
+  ctx.fillStyle = DIAL_EDGE; ctx.globalAlpha = 0.25
+  clockRing(ctx, g.x, g.y, g.r - 2, 0.5)
+  ctx.fillStyle = DIAL_METAL; ctx.globalAlpha = 0.65
+  ctx.fillRect(g.x - 3, g.y - 3, 6, 6)
+  ctx.fillStyle = DIAL_EDGE
+  ctx.fillRect(g.x - 2, g.y - 2.5, 4, 0.5)
+  ctx.globalAlpha = 1
+}
+function dialBays(w, row) {
+  var c = w.corridors[row], bays = [], C = w.k.CELL
+  for (var x = (c.x0 + 9) * C; x + 24 < (c.x1 - 5) * C; x += 80)
+    bays.push({ x: x, base: c.floorY * C, kind: (w.level + row * 2 + bays.length) % 4,
+      seed: w.level * 31 + row * 43 + x })
+  return bays
+}
+function drawDialBay(ctx, b) {
+  ctx.save(); ctx.globalAlpha = 0.55
+  if (b.kind === 0) drawDialRopes(ctx, b)
+  else if (b.kind === 1) drawDialRack(ctx, b)
+  else if (b.kind === 2) drawDialBrace(ctx, b)
+  else drawDialWeights(ctx, b)
+  ctx.restore()
+}
+function drawDialRopes(ctx, b) {
+  ctx.fillStyle = DIAL_WOOD
+  ctx.fillRect(b.x - 2, b.base - 25, 27, 2)
+  for (var rope = 0; rope < 3; rope++) {
+    var x = b.x + 3 + rope * 8, top = b.base - 23, h = 13 + (b.seed + rope * 3) % 6
+    ctx.fillStyle = DIAL_ROPE
+    ctx.fillRect(x, top, 1, h)
+    ctx.fillStyle = DIAL_EDGE
+    for (var twist = 0; twist < h; twist += 3) ctx.fillRect(x, top + twist, 0.5, 1)
+    ctx.fillStyle = DIAL_ROPE
+    ctx.fillRect(x - 1, top + h, 3, 2)
+    ctx.fillRect(x - 1, top + h + 2, 0.5, 2); ctx.fillRect(x + 1, top + h + 2, 0.5, 2)
+  }
+}
+function drawDialRack(ctx, b) {
+  ctx.fillStyle = DIAL_WOOD
+  ctx.fillRect(b.x, b.base - 4, 27, 1)
+  ctx.fillRect(b.x + 2, b.base - 3, 1, 3); ctx.fillRect(b.x + 24, b.base - 3, 1, 3)
+  ctx.fillStyle = DIAL_METAL
+  clockRing(ctx, b.x + 8, b.base - 8, 4, 0.5)
+  clockRing(ctx, b.x + 19, b.base - 7, 3, 0.5)
+  ctx.fillStyle = DIAL_EDGE
+  ctx.fillRect(b.x + 8, b.base - 11, 0.5, 7)
+  ctx.fillRect(b.x + 17, b.base - 14, 3, 2)
+}
+function drawDialBrace(ctx, b) {
+  ctx.fillStyle = DIAL_WOOD
+  ctx.fillRect(b.x, b.base - 24, 2, 24)
+  for (var row = 0; row < 22; row++) ctx.fillRect(b.x + 2 + row, b.base - 23 + row, 2, 1)
+  ctx.fillStyle = DIAL_METAL
+  ctx.fillRect(b.x - 1, b.base - 23, 4, 1); ctx.fillRect(b.x + 22, b.base - 2, 4, 1)
+}
+function drawDialWeights(ctx, b) {
+  ctx.fillStyle = DIAL_METAL
+  ctx.fillRect(b.x + 5, b.base - 24, 0.5, 15); ctx.fillRect(b.x + 19, b.base - 24, 0.5, 11)
+  ctx.fillStyle = DIAL_WOOD
+  ctx.fillRect(b.x + 2, b.base - 10, 6, 8); ctx.fillRect(b.x + 16, b.base - 14, 6, 7)
+  ctx.fillStyle = DIAL_EDGE
+  ctx.fillRect(b.x + 2, b.base - 10, 0.5, 7); ctx.fillRect(b.x + 16, b.base - 14, 0.5, 6)
+}
+function dialReserved(w) {
+  var boxes = abyssReserved(w), C = w.k.CELL
+  for (var i = 0; i < w.decor.length; i++) {
+    var d = w.decor[i]
+    if (d.kind === "hang") boxes.push({ x: d.x * C - 2, y: d.y * C, width: 7, height: 11 + d.size * 2 })
+  }
+  for (var j = 0; j < w.gates.length; j++) {
+    var g = w.gates[j]
+    boxes.push({ x: g.x0 * C - 4, y: g.top * C - 9,
+      width: (g.x1 - g.x0 + 1) * C + 8, height: (g.bottom - g.top + 1) * C + 10 })
+  }
+  return boxes
+}
+function dialInk(ctx, w) {
+  var boxes = dialReserved(w)
+  return { fillStyle: DIAL_EDGE, fillRect: function(x, y, width, height) {
+    if (!abyssClear(w, x, y, width, height, boxes)) return
+    ctx.fillStyle = this.fillStyle; ctx.fillRect(x, y, width, height)
+  } }
+}
+function drawDialMotion(ctx, w) {
+  if (!clocktowerPage(w)) return
+  ctx.save()
+  var ink = dialInk(ctx, w), wheels = dialWheels(w)
+  ctx.globalAlpha = 0.35
+  for (var i = 0; i < wheels.length; i++) drawDialSpin(ink, w, wheels[i])
+  drawDialHands(ink, w)
+  ctx.globalAlpha = 0.55
+  drawDialPendulum(ink, w)
+  ctx.globalAlpha = 0.3
+  drawDialDust(ink, w)
+  ctx.restore()
+}
+function drawDialSpin(ink, w, g) {
+  var spin = w.ticks / g.speed * g.dir
+  for (var spoke = 0; spoke < 3; spoke++) {
+    var a = spin + spoke * Math.PI * 2 / 3
+    for (var d = 4; d < g.r - 2; d++) {
+      var x = Math.round((g.x + Math.cos(a) * d) * 2) / 2, y = Math.round((g.y + Math.sin(a) * d) * 2) / 2
+      ink.fillStyle = DIAL_METAL; ink.fillRect(x, y, 1, 1)
+    }
+  }
+  ink.fillStyle = DIAL_EDGE
+  for (var tooth = 0; tooth < 12; tooth++) {
+    var t = spin + tooth * Math.PI / 6
+    ink.fillRect(Math.round((g.x + Math.cos(t) * (g.r + 1)) * 2) / 2,
+      Math.round((g.y + Math.sin(t) * (g.r + 1)) * 2) / 2, 1, 0.5)
+  }
+}
+function drawDialHands(ink, w) {
+  var f = dialGeometry(w)
+  ink.fillStyle = DIAL_METAL
+  for (var hand = 0; hand < 2; hand++) {
+    var angle = -w.ticks / (hand ? 18000 : 1500) - (hand ? 2.5 : 1.2)
+    for (var d = 4; d < (hand ? 36 : 64); d++)
+      ink.fillRect(Math.round((f.x + Math.cos(angle) * d) * 2) / 2,
+        Math.round((f.y + Math.sin(angle) * d) * 2) / 2, 1, 1)
+  }
+}
+function drawDialPendulum(ink, w) {
+  var f = clockFace(w), beat = Math.sin(w.ticks * Math.PI / 30)
+  var pivot = f.x + 96, x = pivot - Math.round(beat * 10), y = f.y + 60
+  ink.fillStyle = DIAL_METAL
+  for (var d = 0; d < 66; d += 2)
+    ink.fillRect(Math.round((pivot + (x - pivot) * d / 66) * 2) / 2, f.y - 6 + d, 1, 2)
+  for (var row = -4; row <= 4; row++) {
+    var half = 7 - Math.abs(row)
+    for (var col = -half; col < half; col += 3) ink.fillRect(x + col, y + row, Math.min(3, half - col), 1)
+  }
+  ink.fillStyle = DIAL_EDGE
+  ink.fillRect(x - 3, y - 3, 3, 0.5); ink.fillRect(x - 4, y - 2, 1, 2)
+}
+function drawDialDust(ink, w) {
+  var f = dialGeometry(w)
+  ink.fillStyle = DIAL_LIGHT
+  for (var i = 0; i < 12; i++) {
+    var x = f.x - 70 + (i * 23 + w.level * 7) % 130 - Math.floor(w.ticks / 40 + i) % 5
+    var y = f.y - 35 + Math.floor((w.ticks * (0.018 + i * 0.002) + i * 17) % 95 * 2) / 2
+    ink.fillRect(x, y, 0.5, 0.5)
+  }
 }
