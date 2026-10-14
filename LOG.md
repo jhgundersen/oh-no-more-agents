@@ -4521,3 +4521,79 @@ ore block and the decor tufts became flat grey-green slabs with lower
 contrast — different, and drabber, on the one level everybody sees. Kept for
 the revision: the background formations, the fungi and their light, the grit.
 Sent back for a revision that keeps the original rock and adds on top.
+
+## 174 — 2026-10-14 · Limestone and living light in the Cavern (on a branch)
+
+**Change:** Draw-only, page-resolution Cavern art. Folded limestone beds and
+hairline fractures replace the blue patchwork, including the checkered wall;
+wet ledges catch pale calcite highlights and carry small moss patches. Dim
+strata and irregular, fluted flowstone curtains give the corridors a far wall,
+and the hatch's void now has a cave roof. Foreground formations have asymmetric
+faces, mineral ridges and rubble. Small luminous fungi replace the grass tufts;
+a selected third breathe slowly and cast a local pool of light. Ceiling grit
+falls occasionally. The existing live drips, exit and guard booth retain their
+rules and art. Palette, Sim and Outcome are unchanged.
+
+Static bedding, formations and surface detail use the terrain cache; only
+fungal light and grit run each frame, before agents, guards and umbrellas.
+All new art is gated on Cavern and `(w.res || 1) >= 2`, uses the half-pixel
+grid, reads the world without writes and derives variation from coordinates,
+level and ticks rather than RNG.
+
+**Checked:** `npm run stamp`, `npm run check` and `npm run crap` pass. Eight
+component tests cover read-only proxies, forbidden Math.random, deterministic
+pixels, canvas-state restoration, the half-pixel grid, clock-independent cached
+art, surviving terrain and support, pulse/grit phases, drip spots, actor
+layering and panel component bytes. CRAP at or above 30: **0**; maximum
+**28.5**, new functions at most **13.0**. Seeded old/new comparison across all
+nineteen biomes: **1,080 identical frames** in the other eighteen (two layouts,
+ticks 77/240/600, five themes, res 1/2); Cavern's **60** res-1/unspecified-res
+frames also identical, and all **30** res-2 frames changed. Saved baseline,
+comparison harness and results in `/tmp/codex-cavern/`.
+
+**Looked:** before/after levels 1, 20 and 39 at ticks 77 and 476, with enlarged
+terrain crops: `/tmp/codex-cavern/sheet.png`. Also inspected enlarged guard,
+umbrella and exit crops, and level 1 in all five themes. The first far-wall
+bands were too regular and bright; softened them and replaced repeated cones
+with uneven mineral curtains. Faces, hostile red, umbrellas and the exit stay
+clear against the damp stone.
+
+**Measured:** warmed res-2 software rasteriser, tick 476, median of nine batches
+of forty frames, old → new. Level 1: actors **0.563 → 0.704 ms**, full terrain
++ actors **13.327 → 25.390 ms**. Level 39: actors **1.891 → 2.015 ms**, full
+**15.644 → 28.235 ms**. Subway control, level 18: actors **2.681 → 2.690 ms**,
+full **31.878 → 31.844 ms**. Reduced the animated light pools to selected
+clusters after the first timing pass. Terrain is cached in ordinary play;
+these are Node raster times, not browser FPS.
+
+**Next:** review the opening cave in longer page play. Committed on
+`codex/cavern` only; no push or deployment.
+
+**Revision after review — 2026-10-14:** the first pass above was rejected for
+flattening the original blue terrain. Removed the green stone repaint and all
+foreground decor replacements. The original palette, mottling, lit edges,
+checkered ore, grass tufts, spires, hanging formations and rubble now render
+through their original paths. Added terrain detail is limited to occasional
+half-pixel glints in each material's existing edge colour; ore gets no overlay.
+The dark background curtains and strata remain, with fungi growing beside
+selected tufts rather than replacing them. Their small breathing light pools
+and the falling grit remain read-only and RNG-free; fungi and light both stop
+when their adjacent floor or air is removed.
+
+Compared ORIGINAL (current `main`) against this revision at tick 400 on levels
+1, 20 and 39, inspecting matched 2× and 4× crops before finishing. The foreground
+keeps its texture and gains contrast against the darker recesses; no green wash
+remains. Contact sheet: `/tmp/codex-cavern/sheet2.png`. Nine component tests
+include a new original-decor command hash and sparse, palette-only terrain
+checks with byte-identical ore. `npm run stamp`, `npm run check` and
+`npm run crap -- --threshold 30` pass; maximum CRAP **28.5**, Cavern helpers
+at most **7.0**. Comparison with main: **1,140 byte-identical protected frames**
+(all other biomes at res 1/2, Cavern at res 1/unspecified; two layouts, three
+ticks, five themes), with all **30** Cavern res-2 frames changed. New commit
+on `codex/cavern`; no history rewrite, push or deployment.
+
+Revision reviewed and merged by the loop. Level 1, tick 400, enlarged against
+main: the rock, ore block and decor are exactly as before; behind them, dark
+mineral curtains and mounds on the back wall, faint strata, a few fungi with
+small pools of light. A modest gain — the cave has depth now — and nothing
+the first visitor sees got worse.
