@@ -5820,3 +5820,80 @@ Terrain is cached in ordinary play; these are Node raster times, not browser FPS
 
 **Next:** ready for Building Site art review. Commit on `codex/buildingsite`
 only; no push or deployment.
+
+## 202 — 2026-10-15 · Open scaffolds and fewer jackets (on a branch)
+
+**Why:** review of level 15, seed 3, tick 400 found the repeating framed
+brown workwear too much like a museum. The safety board and cones already read.
+
+**Changed:** revision on `codex/buildingsite`, from `23c32d1`. Removed the
+closed display frames and jackets from every bay. A fixed seven-part sequence
+varies scaffold boards/clamps, hi-vis workwear, stacked rebar, spray-marked
+plywood, a hard-hat rack, a wheelbarrow and strapped pallets; neighbouring
+bays always differ. At most **two** jackets per level hang from bare wall
+hooks, in saturated orange/yellow with a broad pale reflective band. Mixers
+stay in the gaps. An open scaffold run carries visible poles, guardrails,
+projecting boards, clamp collars and diagonal braces across the quiet back
+wall. Static props remain dimmer overall than playable concrete in all five
+themes, including the brightest yellow jacket. No Sim/Palette changes.
+
+The approved safety board, original cones, terrain and crane/gantry recipes
+remain intact. All changes are cached below terrain at res 2. The live mixer
+pass is unchanged: no new per-frame work, RNG, world writes or scenery state.
+The existing terrain/fixture/exit and complete crane/rider reservations remain.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-buildingsite-revision/coverage-safe.sh` pass: **939** tests in
+check and coverage. Updated the cache/contrast checks for all seven contents
+and both jacket colours; a new density/adjacency check spans Building Sites
+through level 395, verifies seven distinct silhouettes, broad reflective
+bands, bare hooks and canvas-state restoration. All original crane, terrain,
+fixture, event, umbrella, read-only and simulation replay checks still pass.
+CRAP: **0** functions at or above 30, maximum **29.3**. All 22 worksite
+helpers have **100%** coverage, maximum **6.0**.
+
+Node heap **2048 MB**, `ulimit -v 6000000`, one check worker/two coverage
+workers; Factory's art test remains excluded. Retained the continuous shared
+machine queue, which suspends only our validation children if another test
+starts, and the pending-phase logs/completion marker. The guard suspended and
+resumed check and coverage during this run instead of overlapping other full
+runs or restarting completed phases. Digest assertions and
+bounded draw recording remain; no full image diffs enter assertion messages.
+
+**Looked:** exact reported level 15, seed 3, tick 400 at **1×**, actual
+`shoot.js crop 15`, and the paired crop. Comparison with `23c32d1` at levels
+15/34/53, ticks 77/476, full frames at 1× plus enlarged crops/details, is in
+`/tmp/codex-buildingsite-revision/sheet.png`. Level 72 covers all five themes.
+`rides-sheet.png` pairs wait/up/across/down/back poses; `readability-sheet.png`
+pairs original hazards and open/furled umbrellas. Scaffold silhouettes read
+as a continuous structure, wheelbarrows retain their tray/wheel/handles, and
+bright workwear has an empty hook above it. Dark suits, faces, umbrellas,
+pink hazard signals, crane cable/collar/rider and exit remain clear.
+
+Seeded full-frame comparison: **1,140 identical** frames (other eighteen
+biomes plus Building Site res 1/unspecified), **30 changed** Building Site
+res-2 frames. An additional **60 actor-only** frames are byte-identical to
+`23c32d1`, across four Building Sites, three ticks and five themes. The scene
+revision is entirely in cached art. Baseline, harnesses, images and logs are
+under `/tmp/codex-buildingsite-revision/`.
+
+**Pipeline:** reused zero-copy comparison buffers and the single sheet builder;
+1,170 full-frame comparisons took **26.34 s**, peak RSS **200 MB**, while
+check was running. Actor-only isolation takes under a second and confirms
+unchanged animation without replaying or composing more full scenes. Retained
+single-world crop/ride shots and the guarded validation queue. No package/tool
+source changes.
+
+**Measured:** warmed res-2 rasterizer at tick 476, median of nine batches of
+forty frames, interleaved original/revision, after tests and coverage.
+Level 15: actors **0.742 → 0.732 ms**, full terrain + actors
+**13.719 → 13.775 ms**.
+Level 53: actors **0.456 → 0.453 ms**, full terrain + actors
+**13.432 → 13.514 ms**.
+Subway control, level 18: actors **1.056 → 1.060 ms**, full terrain + actors
+**15.074 → 15.037 ms**.
+Terrain is cached in play; these are software raster times, not browser FPS.
+
+**Next:** ready for the Building Site revision review; commit on this branch
+only, no push or deployment.

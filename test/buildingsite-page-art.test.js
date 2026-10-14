@@ -84,9 +84,10 @@ test("scaffolds, jackets, tape, rebar and mixers have fixed cached anchors", () 
     w.terrain.fill(w.k.EMPTY)
     assert.deepEqual([w.corridors.map((_, row) => D.workBays(w, row)), D.workMixers(w), D.workSafetyBox(w)], anchors)
     assert.equal(picture(ctx => D.drawWorkBay(ctx, bay)).buf, old)
-    assert.ok(back.calls.some(c => c[2] === 40 && c[3] === 24 && c[4] === D.WORK_BACK))
+    assert.ok(!back.calls.some(c => c[2] === 40 && c[3] === 24), "no framed display bays")
+    assert.ok(back.calls.some(c => c[2] === 3 && c[3] === 1 && c[4] === D.WORK_EDGE), "scaffold clamps")
     assert.ok(back.calls.some(c => c[2] === 24 && c[3] === 1.5 && c[4] === D.WORK_YELLOW))
-    assert.ok(back.calls.some(c => c[2] === 6 && c[3] === 10))
+    assert.ok(back.calls.some(c => c[2] === 6 && c[3] === 9 && [D.WORK_VIS_ORANGE, D.WORK_VIS_YELLOW].includes(c[4])), "sparse hi-vis jackets")
     assert.ok(back.calls.some(c => c[2] === 29 && c[3] === 0.5))
   }
   const { w } = sample(15, "tokyo-night")
@@ -102,13 +103,42 @@ test("far workwear and scaffold panels are lower contrast than playable concrete
     for (let i = 0; i < img.buf.length; i += 3) sum += img.buf[i] * 0.2126 + img.buf[i + 1] * 0.7152 + img.buf[i + 2] * 0.0722
     return sum / (img.W * img.H)
   }
-  for (const name of Object.keys(THEMES)) for (const seed of [0, 1]) {
+  for (const name of Object.keys(THEMES)) for (const kind of [0, 1, 2, 3, 4, 5, 6]) for (const seed of [0, 1]) {
     const { w, pal } = sample(15, name), far = canvas(40, 24, D.WORK_BACK), near = canvas(40, 24, D.WORK_BACK)
-    D.drawWorkBay(far.ctx, { x: 0, base: 24, seed })
+    D.drawWorkBay(far.ctx, { x: 0, base: 24, seed, kind })
     near.ctx.fillStyle = pal.rock; near.ctx.fillRect(0, 0, 40, 24)
     for (let y = 0; y < 6; y++) for (let x = 0; x < 10; x++)
       D.drawSiteCell(near.ctx, w.k, pal, w.k.ROCK, x * 4, y * 4, x, y, true)
     assert.ok(mean(far) < mean(near) * 0.8, `${name}: concrete stays the stronger plane`)
+  }
+})
+test("neighbouring work bays differ, with at most two bright jackets on bare hooks", () => {
+  for (let level = 15; level < 400; level += S.BIOMES.length) {
+    const { w } = sample(level)
+    let jackets = 0
+    for (let row = 0; row < w.corridors.length; row++) {
+      const bays = D.workBays(w, row)
+      bays.forEach((bay, i) => {
+        if (bay.kind === 1) jackets++
+        if (i > 0) assert.notEqual(bay.kind, bays[i - 1].kind, "no identical neighbours")
+      })
+    }
+    assert.ok(jackets <= 2)
+  }
+  const pictures = []
+  for (let kind = 0; kind < 7; kind++) {
+    const img = picture(ctx => D.drawWorkBay(ctx, { x: 36, base: 68, kind, seed: kind }))
+    pictures.push(img.buf)
+    assert.ok(img.calls.length < 80)
+    assert.equal(img.ctx.globalAlpha, 0.8); assert.equal(img.ctx.fillStyle, "#123456")
+  }
+  assert.equal(new Set(pictures).size, 7, "distinct scaffold, workwear, rebar, plywood, hats, barrow and pallet silhouettes")
+  for (const seed of [0, 1]) {
+    const img = picture(ctx => D.drawWorkJacket(ctx, 60, 45, seed))
+    assert.ok(img.calls.some(c => c[4] === (seed ? D.WORK_VIS_ORANGE : D.WORK_VIS_YELLOW) && c[5] === 0.85))
+    assert.ok(img.calls.some(c => c[4] === D.WORK_REFLECT && c[2] === 6 && c[3] === 1 && c[5] === 0.95))
+    assert.ok(img.calls.every(c => c[2] <= 6), "no frame around jacket")
+    assert.equal(img.ctx.globalAlpha, 0.8); assert.equal(img.ctx.fillStyle, "#123456")
   }
 })
 test("drum animation stays bounded and clears complete terrain, fixture and crane envelopes", () => {

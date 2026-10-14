@@ -16556,7 +16556,7 @@ function drawPostalCycle(ctx, w) {
   ctx.restore()
 }
 
-// Page-only second scaffold plane. Quiet steel and workwear sit behind the
+// Page-only open scaffold and varied storage bays sit behind the
 // playable concrete; only three tiny drum glints repaint on the actor layer.
 function buildingSitePage(w) { return w.biome === "Building Site" && (w.res || 1) >= 2 }
 var WORK_BACK = "#181c20"
@@ -16566,11 +16566,23 @@ var WORK_YELLOW = "#9b8b47"
 var WORK_ORANGE = "#ae763f"
 var WORK_DARK = "#303438"
 var WORK_PAPER = "#b0b7a0"
+var WORK_WOOD = "#79674a"
+var WORK_GREEN = "#667966"
+var WORK_HAT = "#b5a344"
+var WORK_SPRAY = "#af7359"
+var WORK_VIS_ORANGE = "#f38b24"
+var WORK_VIS_YELLOW = "#e3df45"
+var WORK_REFLECT = "#d4dfd1"
+var WORK_BAY_DRAW = [drawWorkScaffold, drawWorkHanging, drawWorkBars, drawWorkPlywood, drawWorkHats, drawWorkBarrow, drawWorkPallet]
 
 function workBays(w, row) {
   var c = w.corridors[row], bays = [], C = w.k.CELL
-  for (var x = (c.x0 + 5) * C + row % 2 * 12; x + 40 <= (c.x1 - 4) * C; x += 64)
-    bays.push({ x: x, base: c.floorY * C, seed: w.level * 17 + row * 31 + x })
+  for (var x = (c.x0 + 5) * C + row % 2 * 12; x + 40 <= (c.x1 - 4) * C; x += 64) {
+    var kind = (w.level + row * 3 + bays.length) % 7
+    // At most two hooks with jackets per level. Deeper stores hold plywood.
+    if (kind === 1 && row > 1) kind = 3
+    bays.push({ x: x, base: c.floorY * C, kind: kind, seed: w.level * 17 + row * 31 + x })
+  }
   return bays
 }
 function workMixers(w) {
@@ -16583,6 +16595,7 @@ function drawWorksite(ctx, w) {
   if (!buildingSitePage(w)) return
   ctx.save()
   for (var row = 0; row < w.corridors.length; row++) {
+    drawWorkScaffoldRun(ctx, w, row)
     var bays = workBays(w, row)
     for (var i = 0; i < bays.length; i++) drawWorkBay(ctx, bays[i])
   }
@@ -16592,27 +16605,116 @@ function drawWorksite(ctx, w) {
   drawWorkSafety(ctx, w, boxes)
   ctx.restore()
 }
-function drawWorkBay(ctx, b) {
-  ctx.globalAlpha = 0.85
+function drawWorkScaffoldRun(ctx, w, row) {
+  var c = w.corridors[row], C = w.k.CELL, base = c.floorY * C
   ctx.fillStyle = WORK_BACK
-  ctx.fillRect(b.x, b.base - 24, 40, 24)
-  ctx.globalAlpha = 0.4
-  ctx.fillStyle = WORK_STEEL
-  ctx.fillRect(b.x + 1, b.base - 24, 1, 24); ctx.fillRect(b.x + 38, b.base - 24, 1, 24)
-  ctx.fillRect(b.x, b.base - 23, 40, 1)
-  ctx.fillRect(b.x, b.base - 6, 40, 1.5)
-  for (var step = 0; step < 22; step++) {
-    ctx.fillRect(b.x + 6 + step, b.base - 23 + step, 0.5, 1)
-    ctx.fillRect(b.x + 32 - step, b.base - 23 + step, 0.5, 1)
+  ctx.globalAlpha = 0.5
+  ctx.fillRect(c.x0 * C, base - 26, (c.x1 - c.x0) * C, 26)
+  for (var x = (c.x0 + 2) * C + row % 2 * 8; x < (c.x1 - 2) * C; x += 60) {
+    ctx.globalAlpha = 0.55
+    ctx.fillStyle = WORK_STEEL
+    ctx.fillRect(x, base - 26, 1, 26)
+    ctx.fillStyle = WORK_EDGE
+    ctx.fillRect(x, base - 26, 0.5, 26)
+    ctx.fillRect(x - 1, base - 19, 3, 1); ctx.fillRect(x - 1, base - 5, 3, 1) // tube clamps
+    ctx.fillStyle = WORK_STEEL
+    ctx.fillRect(x, base - 18, 48, 0.5)
+    ctx.fillStyle = WORK_WOOD
+    ctx.fillRect(x + 2, base - 4, 46, 1.5) // projecting scaffold board, no enclosing frame
+    ctx.fillStyle = WORK_EDGE
+    ctx.fillRect(x + 2, base - 4, 46, 0.5)
+    for (var step = 0; step < 20; step++) {
+      ctx.fillStyle = WORK_STEEL
+      ctx.fillRect(x + 2 + step * 2, base - 25 + step, 1, 0.5)
+    }
   }
-  ctx.fillStyle = WORK_EDGE
-  ctx.fillRect(b.x + 1.5, b.base - 24, 0.5, 24)
-  ctx.fillRect(b.x + 38.5, b.base - 24, 0.5, 24)
-  drawWorkTape(ctx, b.x + 8, b.base - 6)
-  drawWorkJacket(ctx, b.x + 20, b.base - 21, b.seed)
-  drawWorkRebar(ctx, b.x + 3, b.base)
   ctx.globalAlpha = 1
 }
+function drawWorkBay(ctx, b) {
+  ctx.save()
+  ctx.globalAlpha = 0.6
+  WORK_BAY_DRAW[b.kind](ctx, b)
+  ctx.restore()
+}
+function drawWorkScaffold(ctx, b) {
+  ctx.fillStyle = WORK_STEEL
+  ctx.fillRect(b.x + 12, b.base - 23, 1, 23)
+  ctx.fillRect(b.x + 31, b.base - 25, 1, 25)
+  ctx.fillStyle = WORK_WOOD
+  ctx.fillRect(b.x + 7, b.base - 14, 31, 1.5)
+  ctx.fillRect(b.x + 8, b.base - 8, 27, 1.5)
+  ctx.fillStyle = WORK_EDGE
+  ctx.fillRect(b.x + 11, b.base - 15, 3, 1); ctx.fillRect(b.x + 30, b.base - 15, 3, 1)
+  ctx.fillRect(b.x + 11, b.base - 9, 3, 1); ctx.fillRect(b.x + 30, b.base - 9, 3, 1)
+  drawWorkTape(ctx, b.x + 9, b.base - 14)
+}
+function drawWorkHanging(ctx, b) { drawWorkJacket(ctx, b.x + 20, b.base - 23, b.seed) }
+function drawWorkBars(ctx, b) { drawWorkRebar(ctx, b.x + 3, b.base) }
+function drawWorkBarrow(ctx, b) {
+  var x = b.x + 8, y = b.base
+  ctx.fillStyle = WORK_STEEL
+  ctx.fillRect(x + 3, y - 6, 18, 0.5)
+  ctx.fillRect(x + 21, y - 7, 5, 0.5); ctx.fillRect(x + 25, y - 8, 3, 0.5)
+  ctx.fillRect(x + 16, y - 5, 1, 4); ctx.fillRect(x + 14, y - 1, 4, 0.5)
+  ctx.fillStyle = WORK_GREEN
+  ctx.fillRect(x, y - 10, 16, 1.5)
+  ctx.fillRect(x + 2, y - 8.5, 13, 2); ctx.fillRect(x + 4, y - 6.5, 9, 1)
+  ctx.fillStyle = WORK_EDGE
+  ctx.fillRect(x, y - 10, 16, 0.5)
+  ctx.fillStyle = WORK_DARK
+  ctx.fillRect(x + 3, y - 4, 4, 3); ctx.fillRect(x + 4, y - 5, 2, 5)
+  ctx.fillStyle = WORK_EDGE
+  ctx.fillRect(x + 4.5, y - 3, 1, 1)
+}
+function drawWorkHats(ctx, b) {
+  var x = b.x + 7, y = b.base - 12
+  ctx.fillStyle = WORK_STEEL
+  ctx.fillRect(x, y - 12, 1, 22); ctx.fillRect(x, y - 4, 27, 1)
+  ctx.fillRect(x - 2, y + 10, 5, 0.5)
+  for (var i = 0; i < 3; i++) {
+    ctx.fillStyle = WORK_EDGE
+    ctx.fillRect(x + 6 + i * 8, y - 4, 0.5, 3)
+    ctx.fillStyle = WORK_HAT
+    ctx.fillRect(x + 4 + i * 8, y - 1, 4, 2)
+    ctx.fillRect(x + 3 + i * 8, y + 1, 6, 1)
+    ctx.fillStyle = WORK_PAPER
+    ctx.fillRect(x + 4.5 + i * 8, y - 1, 1.5, 0.5)
+  }
+}
+function drawWorkPlywood(ctx, b) {
+  var x = b.x + 10, y = b.base - 17
+  ctx.globalAlpha = 0.45
+  ctx.fillStyle = WORK_WOOD
+  ctx.fillRect(x, y, 21, 16)
+  ctx.fillStyle = WORK_DARK
+  ctx.fillRect(x + 1, y + 4, 16, 0.5); ctx.fillRect(x + 3, y + 12, 17, 0.5)
+  ctx.fillStyle = WORK_EDGE
+  ctx.fillRect(x, y, 0.5, 16)
+  ctx.fillStyle = WORK_SPRAY
+  ctx.globalAlpha = 0.65
+  for (var i = 0; i < 6; i++) {
+    ctx.fillRect(x + 6 + i, y + 3 + i, 1, 1)
+    ctx.fillRect(x + 11 - i, y + 3 + i, 1, 1)
+  }
+  ctx.fillRect(x + 14, y + 10, 3, 1)
+  ctx.fillRect(x + 15, y + 9, 1, 3)
+  ctx.fillRect(x + 5, y + 2, 0.5, 0.5); ctx.fillRect(x + 12, y + 8.5, 0.5, 0.5)
+}
+function drawWorkPallet(ctx, b) {
+  var x = b.x + 8, y = b.base
+  ctx.fillStyle = WORK_WOOD
+  ctx.fillRect(x, y - 2, 25, 1)
+  ctx.fillRect(x + 1, y - 1, 3, 1); ctx.fillRect(x + 21, y - 1, 3, 1)
+  for (var row = 0; row < 3; row++) {
+    ctx.fillRect(x + row % 2, y - 5 - row * 3, 23 - row, 2)
+    ctx.fillStyle = WORK_EDGE
+    ctx.fillRect(x + row % 2, y - 5 - row * 3, 23 - row, 0.5)
+    ctx.fillStyle = WORK_WOOD
+  }
+  ctx.fillStyle = WORK_YELLOW
+  ctx.fillRect(x + 5, y - 11, 1, 10); ctx.fillRect(x + 18, y - 11, 1, 10)
+}
+
 function drawWorkTape(ctx, x, y) {
   ctx.fillStyle = WORK_YELLOW
   ctx.fillRect(x, y, 24, 1.5)
@@ -16624,20 +16726,22 @@ function drawWorkTape(ctx, x, y) {
   }
 }
 function drawWorkJacket(ctx, x, y, seed) {
-  ctx.fillStyle = WORK_STEEL
+  ctx.save()
+  ctx.globalAlpha = 0.85
+  ctx.fillStyle = WORK_EDGE
   ctx.fillRect(x, y - 2, 0.5, 2)
-  ctx.fillRect(x - 2, y, 4.5, 0.5) // wall hook and empty hanger
-  ctx.fillStyle = seed % 2 ? WORK_ORANGE : WORK_YELLOW
-  ctx.fillRect(x - 3, y + 1, 6, 10)
+  ctx.fillRect(x - 2, y, 4.5, 0.5) // bare wall hook and hanger
+  ctx.fillStyle = seed % 2 ? WORK_VIS_ORANGE : WORK_VIS_YELLOW
+  ctx.fillRect(x - 3, y + 1, 6, 9)
   ctx.fillRect(x - 5, y + 2, 2, 4); ctx.fillRect(x + 3, y + 2, 2, 4)
   ctx.fillStyle = WORK_DARK
   ctx.fillRect(x - 1, y + 1, 2, 2)
-  ctx.fillRect(x - 0.5, y + 3, 0.5, 8)
-  ctx.fillStyle = WORK_PAPER
-  ctx.globalAlpha = 0.35
+  ctx.fillRect(x - 0.5, y + 3, 0.5, 7)
+  ctx.fillStyle = WORK_REFLECT
+  ctx.globalAlpha = 0.95
   ctx.fillRect(x - 2, y + 3, 0.5, 3); ctx.fillRect(x + 1.5, y + 3, 0.5, 3)
-  ctx.fillRect(x - 3, y + 6, 6, 0.5); ctx.fillRect(x - 3, y + 8, 6, 0.5)
-  ctx.globalAlpha = 0.4
+  ctx.fillRect(x - 3, y + 6, 6, 1)
+  ctx.restore()
 }
 function drawWorkRebar(ctx, x, base) {
   ctx.fillStyle = WORK_STEEL
