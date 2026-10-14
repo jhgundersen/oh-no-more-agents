@@ -3906,3 +3906,5 @@ the colony's one piece of kit; it would be in the fight. Looked at level 5's
 scuffle at ticks 316–319. Tests 718.
 
 (The cloud test now draws 40 ticks so it reaches the umbrella frames: `drawBrawlBrolly` 90 → 11; nothing over 30.)
+
+**Deployed** after 147 (name="build" content="0d4ef0d5"): heroes in scuffles, the umbrella in the cloud. Browser check clean.
