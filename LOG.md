@@ -6737,3 +6737,13 @@ Terrain is cached in play; these are Node software raster times, not browser FPS
 only; no push or deployment.
 
 Reviewed and merged by the loop (with `npm run compare`). Level 16: a backlit reversed dial, gears, a pendulum and bell ropes; agents readable.
+
+## 228 — 2026-10-15 · The intro stops saying you cannot help
+
+The page's intro said "Nobody is playing — there is no cursor and no way to
+help", which pep talks (204) made untrue. Now: "Nobody is playing. You can tap
+one for a pep talk; it will tell you you're absolutely right and carry on. They
+work it out, or they don't." Checked the rest: Outcome.js and Draw.js make no
+such claim; the Omarchy plugin's README says "no cursor and no way to help",
+which is still true of the panel (pep talks are page-only), so it stays. `npm
+run phone`: all three views still fine with the longer line.
