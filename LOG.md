@@ -4070,3 +4070,5 @@ moment of a throw. Tests 748.
 Two more moments get a line: the first agent through the door ("AGENT 003 IS
 FIRST HOME", or a hero by name) and a Subway train pulling out with riders
 ("THE TRAIN LEAVES WITH 5 AGENTS"). Fingerprint unchanged. Tests 748.
+
+**Deployed** after 154 (name="build" content="39ceba9e"): the ticker. Browser check clean.
