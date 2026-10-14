@@ -499,6 +499,13 @@ landing used the umbrella up, two cliffs on one level ran the stock dry and
 footing (`stepWalk` → `unsupported`): a walker whose floor is blown away
 falls, and opens its umbrella if the drop would kill.
 
+**Cloud Provider** (`provisionBrolly`, the 24th hero) is where umbrellas
+come from without the stock: every `cool` ticks the nearest colleague on its
+floor, within `PROVISION_REACH`, with no umbrella of its own gets one. Its way
+down is a door-wide umbrella (gear `brolly`). Adding a hero re-picks the hero
+on about 155 of 400 levels (`pick(rng, SPECIALS)`), which moves the overall
+numbers by a few tenths either way; compare like with like.
+
 ## Fighting back
 
 The red team (guard posts, `planGuard`: from level 3, `guardChance` 40% rising to 65% by level 100) is the

@@ -2618,6 +2618,7 @@ function drawActorFixtures(ctx, w, pal) {
   if (w.reloadFx) drawReloadTrail(ctx, w, w.reloadFx)
   if (w.debugFx) drawDebugFx(ctx, w, w.debugFx)
   if (w.restockFx) drawRestockFx(ctx, w, pal, w.restockFx)
+  if (w.provisionFx) drawProvisionFx(ctx, w, pal, w.provisionFx)
 
   if (w.biome === "Frost") drawPowderBursts(ctx, w, pal)
 }
@@ -4075,6 +4076,18 @@ function drawCroc(ctx, w, pal, p, px, pw, sy) {
 // Three per special, picked by level number so it is the same line every time
 // you come back to level 42 — the same rule the rest of the level runs on.
 var SPECIAL_FACTS = {
+  cloudprovider: [
+    "provisions an umbrella for every agent. Bills by the drop.",
+    "your umbrella is now a managed service.",
+    "99.9% uptime. The other 0.1% is a cliff.",
+    "it is not raining. It is a regional outage.",
+    "scales horizontally. Falls vertically. Slowly.",
+    "one umbrella each, on demand.",
+    "the cloud is just somebody else's umbrella.",
+    "egress fees apply when you leave the canopy.",
+    "auto-provisioned. Never auto-deprovisioned.",
+    "keeps a spare. Keeps handing it out."
+  ],
   pkgmanager: [
     "ran out of bashers. Ran npm install.",
     "added 1 package, and 1,412 dependencies.",
@@ -6930,6 +6943,26 @@ function drawDebugFx(ctx, w, fx) {
 // Package Manager's delivery (Sim's restockFx): a parcel thrown up off its
 // hands that arcs toward the toolbar end of the sky and is gone, with the
 // tool it installed written under it — "+1 basher" — for a second.
+// Cloud Provider's hand-out (Sim's provisionFx): a furled umbrella thrown in
+// an arc from the hero to the colleague, spinning, landing in its hand.
+var PROVISION_FLIGHT = 22
+function drawProvisionFx(ctx, w, pal, fx) {
+  var age = w.ticks - fx.t, C = w.k.CELL
+  if (age < 0 || age > PROVISION_FLIGHT) return
+  var p = age / PROVISION_FLIGHT
+  var x = Math.round((fx.fromX + (fx.toX - fx.fromX) * p) * C)
+  // Hand height to hand height, the arc kept low enough for a six-row corridor.
+  var y = Math.round((fx.fromY - 2 + (fx.toY - fx.fromY) * p) * C - Math.sin(p * Math.PI) * 5)
+  var spin = Math.floor(age / 3) % 4
+  ctx.fillStyle = (w.specialSpec && w.specialSpec.robe) || pal.umbrella
+  if (spin % 2) ctx.fillRect(x - 3, y, 7, 1)
+  else ctx.fillRect(x, y - 3, 1, 7)
+  ctx.fillStyle = pal.umbrellaStem
+  if (spin === 0) ctx.fillRect(x - 1, y + 3, 2, 1)
+  else if (spin === 2) ctx.fillRect(x, y - 4, 2, 1)
+  else ctx.fillRect(spin === 1 ? x + 3 : x - 4, y - 1, 1, 2)
+}
+
 function drawRestockFx(ctx, w, pal, fx) {
   var age = w.ticks - fx.t, C = w.k.CELL
   if (age > 40) return
@@ -10119,7 +10152,7 @@ var GEAR_DRAW = {
   jetpack: drawGearJetpack, helicopter: drawGearHelicopter,
   cushion: drawGearCushion, conning: drawGearConning, web: drawGearWeb,
   chain: drawGearWeb, balloon: drawGearBalloon, promptchute: drawGearPromptchute,
-  duckfloat: drawGearDuckfloat, crate: drawGearCrate,
+  duckfloat: drawGearDuckfloat, crate: drawGearCrate, brolly: drawGearBrolly,
   extender: drawGearExtender, shieldglider: drawGearShieldglider,
   backoff: drawGearBackoff, glasswing: drawGearGlasswing, tractor: drawGearTractor,
   steps: drawGearSteps, logchute: drawGearLogchute, recoil: drawGearRecoil,
@@ -10216,6 +10249,22 @@ function drawGearWeb(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
 function drawGearBalloon(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
   ctx.fillRect(ox - 2, oy - 11, 12, 8)
   ctx.fillStyle = robe; ctx.fillRect(ox, oy - 4, 1, 6); ctx.fillRect(ox + 7, oy - 4, 1, 6)
+}
+
+// Cloud Provider's way down: under an umbrella twice the width of anybody
+// else's, in its own colour, held high with both hands, swaying as it comes.
+function drawGearBrolly(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  var sway = Math.round(Math.sin((fr.hp || 0) * Math.PI * 4) * 1.4)
+  var top = oy - 12, left = ox - 6 + sway
+  ctx.fillStyle = robe
+  ctx.fillRect(left + 3, top, 14, 2)                     // dome
+  ctx.fillRect(left + 1, top + 2, 18, 2)
+  ctx.fillRect(left, top + 4, 20, 2)
+  ctx.fillStyle = hair
+  ctx.fillRect(left, top + 6, 2, 1); ctx.fillRect(left + 9, top + 6, 2, 1); ctx.fillRect(left + 18, top + 6, 2, 1)   // scallops
+  ctx.fillRect(left + 9, top - 1, 2, 1)                  // finial
+  ctx.fillStyle = pal.umbrellaStem
+  ctx.fillRect(ox + 4 + Math.round(sway / 2), top + 6, 1, 8)   // shaft down to the hands
 }
 
 // Package Manager's way down: stood in an open shipping crate, slats and a

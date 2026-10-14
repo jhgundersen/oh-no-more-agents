@@ -3619,6 +3619,12 @@ var SPECIALS = [
   // colony that was doing everything right still fails: the last basher was
   // spent two walls ago. Its way down is a crate it unpacks itself out of.
   ,{ id: "pkgmanager", name: "Package Manager", act: "restock", height: "crate", cool: 360, robe: "#c43d3d", hair: "#f4f1e8" }
+  // Hands out umbrellas. One umbrella each is the colony's rule (ownBrolly),
+  // and the stock is where they usually come from; this is where they come
+  // from without it. A colleague near it on its floor with no umbrella of its
+  // own gets one, kept for every fall, parry and guard after. Its own way
+  // down is under an umbrella the size of a door.
+  ,{ id: "cloudprovider", name: "Cloud Provider", act: "provision", height: "brolly", cool: 120, robe: "#4f6bd8", hair: "#eef1f8" }
 ]
 
 function specialSpec(id) {
@@ -7711,6 +7717,28 @@ function restockTool(w, ag) {
   return false
 }
 
+// Cloud Provider. The nearest colleague on its floor, within reach, that has
+// no umbrella of its own gets one: free, and kept. Render-only `provisionFx`
+// (the umbrella thrown across) and `provisionFor` (the pose).
+var PROVISION_REACH = 14
+function provisionBrolly(w, ag) {
+  var best = null, bestD = PROVISION_REACH
+  for (var i = 0; i < w.agents.length; i++) {
+    var a = w.agents[i]
+    if (a === ag || a.gone || a.special || a.ownBrolly || a.state === "saved") continue
+    var d = Math.abs(a.x - ag.x)
+    if (Math.abs(a.y - ag.y) <= 2 && d <= bestD) { best = a; bestD = d }
+  }
+  if (!best) return false
+  best.ownBrolly = true
+  ag.cool = specOf(ag).cool
+  ag.provisionFor = 24
+  w.provisionFx = { fromX: ag.x, fromY: ag.y, toX: best.x, toY: best.y, t: w.ticks }
+  w.lastEvent = "umbrella provisioned"
+  feedNote(w, agentTag(w, best) + " · GETS AN UMBRELLA")
+  return true
+}
+
 // Rubber Duck. Within a short walk on the same floor; stuck meaning in a walk
 // and past half its patience, which is where forceEscape is still only a
 // threat. Whatever forceEscape can buy it buys now, and the duck's record of
@@ -10087,7 +10115,7 @@ function agentAtExit(w, ag, e) {
 
 // Every per-agent countdown that only ever runs down. (`cool` and `infected`
 // run in agentReady: one of them can end the agent's turn.)
-var AGENT_COUNTDOWNS = ["blockFor", "coveredFor", "mineCool", "waitFor", "shotFor", "throttleFor", "debugFor", "restockFor",
+var AGENT_COUNTDOWNS = ["blockFor", "coveredFor", "mineCool", "waitFor", "shotFor", "throttleFor", "debugFor", "restockFor", "provisionFor",
   "netFor", "reloadFor", "gunCool", "shoveCool", "hazardGrace", "brollyFor"]
 function tickAgentTimers(w, ag) {
   for (var i = 0; i < AGENT_COUNTDOWNS.length; i++) if (ag[AGENT_COUNTDOWNS[i]] > 0) ag[AGENT_COUNTDOWNS[i]]--
@@ -10124,6 +10152,7 @@ function specialReacts(w, ag) {
   if (sact === "reload" && ag.cool <= 0) reloadColleague(w, ag)
   if (sact === "debug" && ag.cool <= 0) rubberDuck(w, ag)
   if (sact === "restock" && ag.cool <= 0) restockTool(w, ag)
+  if (sact === "provision" && ag.cool <= 0) provisionBrolly(w, ag)
   specialTakesAim(w, ag, sact, seesDanger, seesRed)
 }
 

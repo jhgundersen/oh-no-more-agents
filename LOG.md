@@ -4599,3 +4599,28 @@ small pools of light. A modest gain — the cave has depth now — and nothing
 the first visitor sees got worse.
 
 **Deployed** after 174 (name="build" content="26744b7e"), gated on a passing check (809 tests): the Cavern depth art, three new sounds. Browser check of level 1 clean.
+
+## 175 — 2026-10-14 · Cloud Provider
+
+**Checked, no change:** pacing. Median level 1,186 ticks; after the last
+arrival the median wait is 0 ticks, p90 151; only 4 of 200 levels drag past
+400 ticks. Nothing to cut.
+
+**Change:** a 24th hero and the first built on the umbrella. Cloud Provider
+hands out umbrellas: every 120 ticks the nearest colleague on its floor
+(within 14 cells) with no umbrella of its own gets one, free, kept for every
+fall, parry and guard after (169's one umbrella each). The umbrella is thrown
+across, furled and spinning, in the hero's blue; the ticker says
+"AGENT 012 · GETS AN UMBRELLA". Its own way down is under a door-wide blue
+umbrella with white scallops, swaying. Ten lines for its card ("the cloud is
+just somebody else's umbrella").
+
+**Looked:** level 61 enlarged — the descent reads at once; the first throw
+arced up into the ceiling rock in slate grey, nearly invisible, so the arc
+is now hand height to hand height and in the hero's colour.
+
+**Measured:** ten Cloud Provider levels in 300, about three umbrellas each,
+94.2% home. Over 400 × 2 the total moved 93.53% → 93.35%: adding a hero
+re-picks the hero on 155 of 400 levels, and the one new level under half
+(106) is Fallback where Rate Limiter used to be. Tests 814
+(`test/cloudprovider.test.js`). Nothing over CRAP 30.

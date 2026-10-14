@@ -50,7 +50,7 @@ test("Rate Limiter freezes a fixture and the colony stops treating it as lethal"
 test("every special has its own flight gear, and a trick unless it never does one", () => {
   const D = loadCore("Draw.js")
   // These never enter the `trick` state: they act while walking, or camp.
-  const noTrick = new Set(["ceiling", "camp", "shield", "throttle", "net", "reload", "debug", "restock"])
+  const noTrick = new Set(["ceiling", "camp", "shield", "throttle", "net", "reload", "debug", "restock", "provision"])
   for (const spec of S.SPECIALS) {
     assert.ok(D.GEAR_DRAW[spec.height], spec.name + " has no drawing for " + spec.height)
     if (!noTrick.has(spec.act)) assert.ok(D.TRICK_DRAW[spec.act], spec.name + " has no drawing for " + spec.act)
