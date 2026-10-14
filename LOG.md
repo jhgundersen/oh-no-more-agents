@@ -5348,3 +5348,5 @@ these are Node raster times with the optimized tool, not browser FPS.
 no push or deployment.
 
 Reviewed and merged by the loop. Level 9 at res 2: lit night-city windows behind the floors; agents, desks, stairs and exit all readable. In the merge, `tools/render.js` keeps main's axis-aligned fast path from 194 (it covers fractional edges too and is verified bit-identical) in place of this branch's integer-edge `scaledBounds`/`paintRect`; the branch's pixel-centre test in `png.test.js` now checks main's path.
+
+**Deployed** after 195 (name="build" content="cf7bd9cd"), gated on a passing check (913 tests, 11 s): the Skyscraper art. Level 9 in headless Chromium, no console errors; night-city windows behind the floors.
