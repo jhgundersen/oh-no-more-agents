@@ -17,7 +17,7 @@
   var last = {}            // sound name -> time it last played (ms)
   var seen = null          // what the previous tick looked like
 
-  var GAPS = { whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0 }
+  var GAPS = { chime: 600, zing: 120, whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0 }
 
   function ensure() {
     if (ctx) return ctx
@@ -73,6 +73,8 @@
     boom: function () { noise(0.4, 1, "lowpass", 600); tone("sine", 120, 40, 0.35, 0.8) },
     home: function () { tone("square", 880, 880, 0.06, 0.3); tone("square", 1320, 1320, 0.08, 0.3, 0.06) },
     down: function () { tone("square", 330, 70, 0.18, 0.4) },
+    chime: function () { tone("sine", 659, 659, 0.25, 0.5); tone("sine", 523, 523, 0.35, 0.5, 0.22) },  // doors open
+    zing: function () { tone("sawtooth", 1400, 2600, 0.12, 0.18) },                 // hooked on a line
     whoosh: function () { noise(0.22, 0.6, "bandpass", 900); tone("triangle", 500, 160, 0.22, 0.3) },  // thrown out
     scuffle: function () { noise(0.05, 0.7, "bandpass", 500 + Math.random() * 700) },  // fists in the cloud
     fanfare: function (good) {
@@ -97,7 +99,12 @@
       if (w.enemies[e].shotFor === 8) enemyShots++
       if (w.enemies[e].state === "brawl") brawls++
     }
+    var doors = 0, zips = 0
+    for (var t = 0; w.trains && t < w.trains.length; t++)
+      if (w.trains[t].phase === "wait" || w.trains[t].phase === "drop") doors++
+    for (var z = 0; z < w.agents.length; z++) if (!w.agents[z].gone && w.agents[z].state === "zip") zips++
     return {
+      doors: doors, zips: zips,
       world: w, open: open, shots: shots, enemyShots: enemyShots, brawls: brawls, blasts: w.blasts.length,
       saved: w.saved, lost: w.lost, parries: w.umbrellaSaves || 0, done: w.done
     }
@@ -115,6 +122,8 @@
     if (now.enemyShots) play("bang")
     if (now.blasts > was.blasts) play("boom")
     if (now.brawls) play("scuffle")
+    if (now.doors > was.doors) play("chime")
+    if (now.zips > was.zips) play("zing")
     if (w.lastEvent === "thrown out") play("whoosh")
     if (now.saved > was.saved) play("home")
     if (now.lost > was.lost) play("down")

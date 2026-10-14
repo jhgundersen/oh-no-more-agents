@@ -3992,3 +3992,14 @@ twice the Factory's in the software rasteriser (31.7 vs 15.1 ms), but terrain
 is cached and the actor pass is 2.5 ms. 745 tests pass; nothing over CRAP 30.
 
 **Deployed** after 149 (name="build" content="bf7e9f4d"): the Subway and its train. Browser check clean.
+
+## 150 — 2026-10-14 · Station chime, line zing — and the sound layer under test
+
+The newer mechanisms were silent. With sound on (117): a two-tone station
+chime when the train's doors open (wait or drop), and a rising zing when
+somebody hooks onto a Rooftops line. And `public/agents/sfx.js` had no tests
+at all: `test/sfx.test.js` loads it into a sandbox with a stand-in
+AudioContext and checks that nothing plays while it is off, that each of ten
+changes in a world (home, down, boom, umbrella save, umbrella opening, doors,
+line, throw, scuffle, level over) plays something, and that moving to a new
+world plays nothing for the difference. Tests 747.
