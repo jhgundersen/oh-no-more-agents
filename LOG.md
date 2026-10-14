@@ -4064,3 +4064,9 @@ guards shot down 20, blows landed on a boss or Bouncer 9, drones down 8,
 ricochets 8, Bouncer throws 8, scuffles lost 8, the Moderator down 4. Page
 resolution only (the panel has no room for prose). Looked at level 13 at the
 moment of a throw. Tests 748.
+
+## 154 — 2026-10-14 · More for the ticker
+
+Two more moments get a line: the first agent through the door ("AGENT 003 IS
+FIRST HOME", or a hero by name) and a Subway train pulling out with riders
+("THE TRAIN LEAVES WITH 5 AGENTS"). Fingerprint unchanged. Tests 748.

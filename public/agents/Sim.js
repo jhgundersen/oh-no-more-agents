@@ -2323,7 +2323,10 @@ function stepTrain(w, tr, index) {
 // when full, or when it has waited its time with somebody aboard.
 function trainWait(w, tr, index) {
   trainBoard(w, tr, index)
-  if (tr.riders.length >= TRAIN_CAP || tr.t >= TRAIN_DWELL) { tr.phase = "run"; tr.t = 0 }
+  if (tr.riders.length >= TRAIN_CAP || tr.t >= TRAIN_DWELL) {
+    tr.phase = "run"; tr.t = 0
+    if (tr.riders.length) feedNote(w, "THE TRAIN LEAVES WITH " + tr.riders.length + (tr.riders.length === 1 ? " AGENT" : " AGENTS"))
+  }
 }
 
 // Anybody beside the train going the line's way gets on — at the platform, or
@@ -10009,6 +10012,7 @@ function agentAtExit(w, ag, e) {
   // this event has and the colony has no idea it happened.
   if (ag.infected > 0) { w.carrierHome = true; w.lastEvent = "carrier home" }
   else w.lastEvent = "saved"
+  if (w.saved === 1) feedNote(w, agentTag(w, ag) + " IS FIRST HOME")
   return "home"
 }
 
