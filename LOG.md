@@ -4027,3 +4027,5 @@ the easier ones. `npm run sim`: 100% / 94%, hangs 0. Tests 747.
 
 (Also considered: a colour per agent's tie. Rejected — black suit, black tie
 is the colony's look.)
+
+**Deployed** after 151 (name="build" content="89e81c20"): station chime and line zing, the guard ramp. Browser check clean.
