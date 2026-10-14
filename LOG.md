@@ -4108,3 +4108,5 @@ a Bouncer is usually straight into its next scuffle. Sim stamps `threwAt` and
 `killedAt` for it (bookkeeping; fingerprint unchanged). Looked at level 13:
 "NOT TONIGHT" in red beside the thrown agent's "429". AGENTS.md gains the
 Head Bouncer. Tests 751.
+
+**Deployed** after 157 (name="build" content="b8502088"): quips both ways, the Head Bouncer. Browser check clean.
