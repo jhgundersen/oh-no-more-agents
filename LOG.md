@@ -4760,3 +4760,9 @@ umbrellas the card stacks evenly. Adding the row tipped `drawLevelResults`
 to CRAP 67; it now draws a list of rows (`reportRows`) and is back under,
 with the plate the same height as before for every existing combination.
 Tests 829 (`test/report-brolly.test.js`).
+
+## 181 — 2026-10-14 · Frost art on a branch
+
+Compared Ruins, Frost, Ice Cave, Factory and Desert at res 2: the Frost is the drabbest — near-monochrome grey with a shapeless mass along the bottom. Frost art started on `codex/frost`, the brief carrying both earlier lessons (keep the terrain; additions must read at 1x). Level 130 end in headless Chromium: the card reads "13 UMBRELLA LANDINGS", no console errors.
+
+**Deployed** after 181 (name="build" content="04d80fe9"), gated on a passing check (829 tests): the umbrella line on the report card.
