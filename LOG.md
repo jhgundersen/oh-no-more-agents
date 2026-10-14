@@ -5039,3 +5039,58 @@ Reviewed and merged by the loop. Level 5, tick 400, full frame against main at 1
 ## 189 — 2026-10-14 · Ice Cave art on a branch
 
 Started: Ice Cave art on `codex/icecave` (level 6) — underground glacier ice, distinct from the Frost outdoors: translucent faces, glints, a glowing glacier wall behind; same brief lessons.
+
+## 190 — 2026-10-14 · Glitter deep under the glacier (on a branch)
+
+**Change:** Draw-only, page-resolution Ice Cave additions over the original
+art. Broad blue-green glacier columns, deep crevasses and compressed strata
+make the far wall read at full-frame size. Sparse internal cracks and trapped
+bubbles, broken frosted top edges, pulsing cold light, drifting frost motes
+and short specular crosses give the ice depth and glitter. The original
+terrain colours, grain, checker blocks, rubble, crystals, icicles, frozen
+colleagues, hazards, exit and COLD STORAGE booth keep their recipes. Palette,
+Sim and Outcome are unchanged.
+
+Columns and surface detail use the terrain cache. Live light and glitter run
+before the original drips, event mirrors, fixtures and actors. Light is clipped
+at current terrain-cell boundaries, so Frozen Snapshot's new ground occludes
+it and Breaking Change opens it; glints require surviving ice. Every addition
+is gated on Ice Cave and `(w.res || 1) >= 2`, stays on the half-pixel grid,
+and reads coordinates, level and ticks without world writes or RNG.
+
+**Checked:** `npm run stamp`, `npm run check` and
+`npm run crap -- --threshold 30` pass. Eight new component tests cover
+read-only proxies, forbidden RNG, deterministic pixels, canvas state, the
+half-pixel grid, cached versus live art, animated glints, sparse face coverage,
+terrain occlusion, untouched bridge/steel cells, actor layering, original
+component bytes at both resolutions, and all three Ice Cave event mirrors.
+CRAP: **0** functions at or above 30, maximum **29.0**; new helpers at most
+**7.0**, all with 100% coverage. Used a local copy of the installed CRAP tool
+and the ignored coverage directory; no tooling changes.
+
+Seeded main/new Draw comparison across all nineteen biomes: **1,080 identical
+frames** in the other eighteen (two layouts, ticks 77/240/600, five themes,
+res 1/2). Ice Cave's **60** res-1/unspecified-res frames are also identical;
+all **30** res-2 frames changed. Baseline, harness and results:
+`/tmp/codex-icecave/`.
+
+**Looked:** `node tools/shoot.js level 6 --res 2`; main versus this branch on
+levels 6, 25 and 44 at ticks 77/476, full 800×496 frames at 1× viewing size,
+matching 2× crops and enlarged 4× details in `/tmp/codex-icecave/sheet.png`.
+Also inspected level 63 in all five themes. The glacier faces change the
+full-frame read immediately; enlarged crops retain the old textured blocks,
+icicles and decor. Pale faces, red guards, umbrellas, frozen colleagues,
+booths, hazards and exits remain distinct against the darker far ice.
+
+**Measured:** warmed res-2 software rasteriser at tick 476, median of nine
+batches of forty frames, interleaved old/new, after tests and coverage finished.
+Level 6: actors **1.705 → 2.172 ms**, full terrain + actors
+**14.929 → 22.451 ms**. Level 44: actors **1.908 → 2.272 ms**, full
+**16.045 → 23.810 ms**. Subway control, level 18: actors
+**2.678 → 2.675 ms**, full **31.699 → 31.633 ms**. Terrain is cached in
+ordinary play; these are Node raster times, not browser FPS.
+
+**Next:** ready for Ice Cave art review. Committed on `codex/icecave` only;
+no push or deployment.
+
+Reviewed and merged by the loop. Level 6, tick 400, full frame against main at 1x: teal glacier curtains fill the back wall, glints sparkle across the ice; nothing like the Frost's snow and aurora. The original blocks, icicles and rubble in front; the agents read.
