@@ -685,6 +685,11 @@ Failures that have actually happened here. None produced an error at the time.
   special. Anything one file needs from another travels on the world object (see
   `w.k`, `w.specialSpec`). `tools/check-core-refs.js` enforces this, and also
   catches the mirror-image failure of one name declared in two files.
+- **A period that shares a factor with the biome count skips biomes.** The
+  biome is `(level - 1) % BIOMES.length`, so anything every N levels lands
+  only in the biomes N steps reach. Bosses every 8 with 18 biomes only ever
+  visited the odd nine (iteration 158); `BOSS_EVERY` 7 visits all. Check
+  `gcd(N, BIOMES.length) === 1` whenever either changes.
 - **A second declaration in the same file silently wins.** `check-core-refs`
   catches a name declared in two core files, not twice in one. Splitting
   `stepFall` once named a helper `fallSpeed`, which `stepBomb` already used.
