@@ -16,8 +16,12 @@ import { fileURLToPath } from "node:url"
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 export const AGENTS = path.join(HERE, "..", "public", "agents")
 
-export function loadCore(name) {
-  const file = path.join(AGENTS, name)
+export function loadCore(name) { return loadCoreFrom(AGENTS, name) }
+
+// The same, from another copy of the core files — tools/compare.js renders a
+// git ref's Draw.js beside main's without checking either out.
+export function loadCoreFrom(dir, name) {
+  const file = path.join(dir, name)
   const src = fs.readFileSync(file, "utf8")
   const fns = [...src.matchAll(/^function\s+([A-Za-z0-9_]+)\s*\(/gm)].map(m => m[1])
   const consts = [...src.matchAll(/^var\s+([A-Z][A-Z0-9_]*)\s*=/gm)].map(m => m[1])

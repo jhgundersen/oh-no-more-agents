@@ -6571,3 +6571,20 @@ a `var A = 1, B = 2` declaration, not only the first. Tests reading
 unchanged by it; dark only in its window, banner phases, gentler with reduced
 motion, nothing over the report card, read-only), a cue test in
 `sfx.test.js`. `npm run check` 1051/1051; CRAP under 30.
+
+## 224 — 2026-10-15 · `npm run compare` for art reviews
+
+`npm run compare -- <ref> <level> [--seed N] [--ticks N] [--base REF] [--out FILE]`
+(`tools/compare.js`) renders the base (main by default) and the ref at page
+resolution — same level, colony seed and tick, page randomness seeded the same
+— and writes one PNG: the two full frames side by side, each labelled with
+ref, level, seed and tick, and under each a 2x crop of where the two differ
+(centred on the bounding box of changed pixels; the middle of the board if
+nothing changed). Both sides come out of git objects (`git show
+<ref>:public/agents/…`) into temp dirs and load from there
+(`loadCoreFrom` in tools/load-core.js), so nothing is checked out and the
+working tree does not matter. 0.2 s for a 400-tick frame; prints the size and
+place of the difference or "identical". E.g. across the Library merge on level
+13: "differs in 660x425px at 64,56". Three tests (arguments, diff box and
+window, an end-to-end render of HEAD against itself from git objects).
+`npm run check` 1054/1054; CRAP under 30.
