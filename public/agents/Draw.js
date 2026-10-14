@@ -193,6 +193,7 @@ function drawTerrain(ctx, w, pal) {
   ctx.fillStyle = sky
   ctx.fillRect(0, 0, cols * C, rows * C)
 
+  if (junglePage(w)) drawJungleBackdrop(ctx, w)
   drawTerrainSky(ctx, w, pal)
   if (w.biome === "Harbour") drawHarbourSky(ctx, w, pal)
   if (desertPage(w)) drawDesertSky(ctx, w)
@@ -230,6 +231,7 @@ function drawTerrain(ctx, w, pal) {
   if (frostPage(w)) drawFrostSurfaces(ctx, w)
   if (desertPage(w)) drawDesertSurfaces(ctx, w)
   if (ruinsPage(w)) drawRuinsMasonry(ctx, w, pal)
+  if (junglePage(w)) drawJungleSurfaces(ctx, w)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
   drawSea(ctx, w, pal)
@@ -2592,6 +2594,7 @@ function drawActors(ctx, w, pal, opts) {
   var k = w.k
   clearLayer(ctx, w)
   drawAnimatedLight(ctx, w, pal)
+  if (junglePage(w)) drawJungleLife(ctx, w)
   drawDrips(ctx, w, pal)
   drawMachines(ctx, w, pal)
   drawActiveEventAir(ctx, w, pal)
@@ -14960,4 +14963,253 @@ function drawRuinsFlame(ctx, w, x, y, seed) {
   moteFineRect(ctx, w, x - 0.5, y - 1, 1, 2)
   ctx.globalAlpha = 0.6
   moteFineRect(ctx, w, x + (seed % 3) - 1, y - 6 - flick, 0.5, 1)
+}
+
+// Jungle, page only. The forest sits behind the old leafy blocks and vines;
+// edge plants and narrow roots dress them without replacing their grain.
+// Canopy and surfaces use the terrain cache. Humidity and life use ticks only.
+function junglePage(w) { return w.biome === "Jungle" && (w.res || 1) >= 2 }
+var JUNGLE_FAR = "#203a30"
+var JUNGLE_LEAF = "#315b40"
+var JUNGLE_VEIN = "#48734d"
+var JUNGLE_BARK = "#354333"
+var JUNGLE_ROOT = "#77704c"
+var JUNGLE_FERN = "#547e45"
+var JUNGLE_TIP = "#97ac63"
+var JUNGLE_LIGHT = "#c1d99a"
+var JUNGLE_MIST = "#82aa9b"
+var JUNGLE_WINGS = ["#e2ad5b", "#71c7bb"]
+
+function jungleGrove(w, i, slot) {
+  return { x: 22 + slot * 88 + (w.level * 11 + i * 23 + slot * 17) % 29,
+    y: w.corridors[i].floorY * w.k.CELL, seed: w.level * 17 + i * 31 + slot * 13 }
+}
+
+function drawJungleBackdrop(ctx, w) {
+  if (!junglePage(w)) return
+  ctx.save()
+  var top = w.k.SKY * w.k.CELL, bottom = w.k.ROWS * w.k.CELL
+  for (var t = 0; t < 6; t++) {
+    var x = 15 + t * 72 + (w.level * 7 + t * 17) % 23
+    drawJungleTrunk(ctx, x, top, bottom, t + w.level)
+  }
+  // Leaves droop from overhead boughs, with sky gaps between the crowns.
+  ctx.save()
+  ctx.scale(1, -1)
+  for (var c = 0; c < 7; c++) {
+    var cx = c * 65 + (w.level * 3 + c * 11) % 17
+    ctx.fillStyle = JUNGLE_FAR
+    ctx.fillRect(cx - 12, -4, 47, 4)
+    drawJungleBroadleaf(ctx, cx, -2, -1, JUNGLE_FAR)
+    drawJungleBroadleaf(ctx, cx + 18, -3, 1, JUNGLE_LEAF)
+    drawJungleLeaf(ctx, cx + 9, -4, 1, 21 + c % 3, JUNGLE_LEAF)
+  }
+  ctx.restore()
+  for (var i = 0; i < w.corridors.length; i++) for (var slot = 0; slot < 4; slot++) {
+    var b = jungleGrove(w, i, slot)
+    drawJungleFan(ctx, b.x, b.y - 2, b.seed)
+    drawJungleLiana(ctx, b.x + 30, b.y - 29, b.seed)
+  }
+  ctx.restore()
+}
+
+function drawJungleTrunk(ctx, x, top, bottom, seed) {
+  ctx.fillStyle = JUNGLE_FAR
+  ctx.fillRect(x, top, 11, bottom - top)
+  ctx.fillStyle = JUNGLE_BARK
+  for (var y = top; y < bottom; y += 8) {
+    var lean = Math.floor((y + seed * 7) / 24) % 3
+    ctx.fillRect(x + lean, y, 2, Math.min(8, bottom - y))
+    ctx.fillRect(x + 7, y + 1, 0.5, 5)
+  }
+  // Buttress roots and forked boughs, mostly revealed by deep shafts.
+  ctx.fillStyle = JUNGLE_FAR
+  for (var r = 0; r < 9; r++) {
+    ctx.fillRect(x - r, bottom - 20 + r * 2, 11 + r * 2, 2)
+    ctx.fillRect(x + 6 + r * 2, top + 21 - r, 3, 3)
+  }
+}
+
+function drawJungleLeaf(ctx, x, base, dir, height, colour) {
+  // A lance-shaped banana leaf: a curved midrib, broad belly and torn margins.
+  // Each row is an art pixel, each vein a canvas pixel. No softened edges.
+  for (var r = 0; r < height; r++) {
+    var axis = x + dir * Math.round((height - r) * 0.65 * 2) / 2
+    var half = Math.max(0.5, Math.round(Math.sin((r + 0.5) / height * Math.PI) * height * 0.23 * 2) / 2)
+    var bite = r % 5 === 3 ? Math.min(1.5, half) : 0
+    ctx.fillStyle = colour
+    ctx.fillRect(axis - half + bite, base - height + r, half * 2 - bite, 1)
+    ctx.fillStyle = JUNGLE_VEIN
+    ctx.fillRect(axis, base - height + r, 0.5, 1)
+    if (r % 5 === 1 && half > 2) ctx.fillRect(axis - half + 1, base - height + r, half - 1, 0.5)
+  }
+}
+
+function drawJungleFan(ctx, x, base, seed) {
+  if (seed % 3 === 0) {
+    drawJungleLeaf(ctx, x, base - 2, 1, 27, JUNGLE_FAR)
+    drawJungleBroadleaf(ctx, x - 7, base, -1, JUNGLE_LEAF)
+    drawJungleBroadleaf(ctx, x + 9, base - 5, 1, JUNGLE_FAR)
+    return
+  }
+  drawJungleLeaf(ctx, x - 4, base - 5, -1, 23 + seed % 5, JUNGLE_FAR)
+  drawJungleLeaf(ctx, x + 5, base - 7, 1, 20 + seed % 4, JUNGLE_LEAF)
+  drawJungleLeaf(ctx, x, base, -1, 16, JUNGLE_LEAF)
+  drawJungleLeaf(ctx, x + 2, base, 1, 13, JUNGLE_FAR)
+  drawJungleBroadleaf(ctx, x + (seed % 2 ? 12 : -12), base, seed % 2 ? 1 : -1, JUNGLE_LEAF)
+}
+
+function drawJungleBroadleaf(ctx, x, base, dir, colour) {
+  // Split philodendron leaves: a broad heart, lobes and deep marginal slots.
+  var widths = [2, 6, 10, 13, 15, 17, 18, 18, 16, 15, 13, 11, 9, 7, 4, 2]
+  for (var r = 0; r < widths.length; r++) {
+    var axis = x + dir * Math.floor((16 - r) / 4), half = widths[r] / 2
+    var slit = r > 3 && r % 3 === 1 ? 3 : 0
+    ctx.fillStyle = colour
+    ctx.fillRect(axis - half + slit, base - 16 + r, widths[r] - slit * 2, 1)
+    ctx.fillStyle = JUNGLE_VEIN
+    ctx.fillRect(axis, base - 16 + r, 0.5, 1)
+    if (r > 2 && r % 3 === 0 && half > 1) ctx.fillRect(axis + 1, base - 16 + r, half - 1, 0.5)
+  }
+}
+
+function drawJungleLiana(ctx, x, top, seed) {
+  // A slack loop, rather than a rigid column; original hanging vines go above it.
+  ctx.fillStyle = JUNGLE_VEIN
+  for (var r = 0; r < 23; r++) {
+    var dx = Math.round(Math.sin(r / 22 * Math.PI) * 5 * 2) / 2
+    ctx.fillRect(x + dx, top + r, 0.5, 1)
+    if (r % 6 === seed % 6) {
+      ctx.fillStyle = JUNGLE_LEAF
+      ctx.fillRect(x + dx - 2, top + r, 3, 2)
+      ctx.fillStyle = JUNGLE_VEIN
+      ctx.fillRect(x + dx - 1.5, top + r, 2, 0.5)
+    }
+  }
+}
+
+function drawJungleSurfaces(ctx, w) {
+  if (!junglePage(w)) return
+  ctx.save()
+  var k = w.k, C = k.CELL
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 1; x < k.COLS - 1; x++) {
+    var m = w.terrain[y * k.COLS + x]
+    if (m !== k.DIRT && m !== k.ROCK && m !== k.ORE) continue
+    var seed = (x * 17 + y * 23 + w.level * 13) % 97
+    if (seed < 7 && w.terrain[(y - 1) * k.COLS + x] === k.EMPTY)
+      drawJungleRoot(ctx, w, x, y, seed)
+    if (w.terrain[(y - 1) * k.COLS + x] === k.EMPTY && seed % 7 === 0)
+      drawJungleFern(ctx, w, x * C + 2, y * C, seed)
+    if (w.terrain[(y + 1) * k.COLS + x] === k.EMPTY && seed % 11 === 0)
+      drawJungleTendrils(ctx, w, x * C + 1, (y + 1) * C, seed)
+  }
+  ctx.restore()
+}
+
+function drawJungleRoot(ctx, w, col, row, seed) {
+  // Sparse branching threads: original mottling remains between and under them.
+  ctx.globalAlpha = 0.55
+  ctx.fillStyle = JUNGLE_ROOT
+  var C = w.k.CELL
+  for (var r = 0; r < 12; r++) {
+    var x = col * C + 0.5 + Math.floor((r + seed) / 3) % 3 * 0.5, y = row * C + r
+    var m = w.terrain[Math.floor(y / C) * w.k.COLS + col]
+    if (m !== w.k.DIRT && m !== w.k.ROCK && m !== w.k.ORE) break
+    ctx.fillRect(x, y, 0.5, 1)
+    if (r % 4 === 2) ctx.fillRect(x, y, 1.5, 0.5)
+  }
+}
+
+function drawJungleFern(ctx, w, x, base, seed) {
+  // Three feathered fronds, with lime tips against the broad dark leaves.
+  ctx.globalAlpha = 0.95
+  for (var f = -1; f <= 1; f++) {
+    var height = f === 0 ? 7 + seed % 3 : 5
+    for (var r = 0; r < height; r++) {
+      var xx = x + f * Math.floor(r * 0.8), yy = base - r - 1
+      ctx.fillStyle = r === height - 1 ? JUNGLE_TIP : JUNGLE_FERN
+      moteFineRect(ctx, w, xx, yy, 0.5, 1)
+      if (r % 2 === 0 && r < height - 1) {
+        moteFineRect(ctx, w, xx - 2, yy, 2, 0.5)
+        moteFineRect(ctx, w, xx + 0.5, yy - 0.5, 2, 0.5)
+      }
+    }
+  }
+  ctx.fillStyle = JUNGLE_ROOT
+  ctx.globalAlpha = 0.7
+  moteFineRect(ctx, w, x + 3, base - 1, 2, 0.5) // a fallen ochre leaf
+}
+
+function drawJungleTendrils(ctx, w, x, top, seed) {
+  ctx.globalAlpha = 0.65
+  ctx.fillStyle = JUNGLE_ROOT
+  for (var r = 0; r < 5 + seed % 6; r++) {
+    var dx = Math.floor(r / 3) % 2
+    moteFineRect(ctx, w, x + dx, top + r, 0.5, 1)
+    if (r === 3) moteFineRect(ctx, w, x + dx + 0.5, top + r, 1.5, 0.5)
+  }
+}
+
+function drawJungleLife(ctx, w) {
+  if (!junglePage(w)) return
+  ctx.save()
+  for (var i = 0; i < w.corridors.length; i++) {
+    var b = jungleGrove(w, i, (w.level + i) % 4)
+    drawJungleShaftLight(ctx, w, b)
+    drawJungleHumidity(ctx, w, b)
+    drawJungleButterfly(ctx, w, b)
+  }
+  ctx.restore()
+}
+
+function drawJungleShaftLight(ctx, w, b) {
+  // Posterised shafts of sunlight, clipped cell by cell to the current ground.
+  // Kept above ankle height; no full-board wash over the original earth.
+  ctx.fillStyle = JUNGLE_LIGHT
+  var drift = Math.round(Math.sin(w.ticks / 130 + b.seed) * 2 * 2) / 2
+  for (var r = 0; r < 22; r++) {
+    var x = b.x - 18 + Math.floor(r / 2) + drift, y = b.y - 29 + r
+    ctx.globalAlpha = (0.075 + 0.015 * Math.sin(w.ticks / 90 + b.seed)) * (1 - r / 32)
+    jungleAirRect(ctx, w, x, y, 7 + Math.floor(r / 6), 1)
+    ctx.globalAlpha *= 0.45
+    jungleAirRect(ctx, w, x + 12, y, 3, 1)
+  }
+}
+
+function drawJungleHumidity(ctx, w, b) {
+  ctx.fillStyle = JUNGLE_MIST
+  for (var p = 0; p < 5; p++) {
+    var x = b.x - 24 + p * 16 + Math.floor(w.ticks / 35 + b.seed) % 13
+    var y = b.y - 22 + p % 3 * 2
+    ctx.globalAlpha = 0.065 + 0.025 * Math.sin(w.ticks / 60 + p + b.seed)
+    jungleAirRect(ctx, w, x, y, 18, 1)
+    jungleAirRect(ctx, w, x + 5, y + 1, 10, 0.5)
+  }
+}
+
+function drawJungleButterfly(ctx, w, b) {
+  var x = b.x + 19 + Math.round(Math.sin(w.ticks / 43 + b.seed) * 13 * 2) / 2
+  var y = b.y - 17 + Math.round(Math.sin(w.ticks / 27 + b.seed) * 3 * 2) / 2
+  var flap = Math.floor(w.ticks / 5 + b.seed) % 3, width = flap === 1 ? 0.5 : 2
+  ctx.globalAlpha = 0.9
+  ctx.fillStyle = JUNGLE_WINGS[b.seed % 2]
+  moteFineRect(ctx, w, x - width, y - 1, width, 2)
+  moteFineRect(ctx, w, x + 0.5, y - 1.5, width, 2.5)
+  if (flap === 2) moteFineRect(ctx, w, x - 1, y + 1, 2.5, 1)
+  ctx.fillStyle = JUNGLE_FAR
+  moteFineRect(ctx, w, x, y - 1, 0.5, 3)
+}
+
+function jungleAirRect(ctx, w, x, y, width, height) {
+  // Split broad light/mist strips at cell boundaries; terrain always occludes.
+  var C = w.k.CELL, right = x + width, bottom = y + height
+  for (var yy = y; yy < bottom;) {
+    var nextY = Math.min(bottom, (Math.floor(yy / C) + 1) * C)
+    for (var xx = x; xx < right;) {
+      var nextX = Math.min(right, (Math.floor(xx / C) + 1) * C)
+      if (mechanismAir(w, xx, yy)) ctx.fillRect(xx, yy, nextX - xx, nextY - yy)
+      xx = nextX
+    }
+    yy = nextY
+  }
 }
