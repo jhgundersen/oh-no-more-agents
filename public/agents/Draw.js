@@ -197,6 +197,7 @@ function drawTerrain(ctx, w, pal) {
   if (w.biome === "Harbour") drawHarbourSky(ctx, w, pal)
 
   drawBackdrop(ctx, w, pal)
+  if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
 
   drawTerrainMaterials(ctx, w, pal)
 
@@ -218,6 +219,7 @@ function drawTerrain(ctx, w, pal) {
   ctx.fillStyle = wash
   ctx.fillRect(0, k.SKY * C, cols * C, (rows - k.SKY) * C)
 
+  if (w.biome === "Foundry") drawFoundryMaterials(ctx, w, pal)
   drawTerrainLight(ctx, w, pal)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
@@ -1857,12 +1859,11 @@ function drawMoteFrostFine(ctx, w, pal, x, y, spec) {
 }
 
 function drawMoteFoundryFine(ctx, w, pal, x, y, spec) {
-  ctx.fillStyle = pal.fire
-  moteFineRect(ctx, w, x, y, 0.5, 1) // rising ember's cooler tip
-  ctx.fillStyle = pal[spec.col]
+  ctx.fillStyle = FOUNDRY_HEAT
+  moteFineRect(ctx, w, x, y - 0.5, 0.5, 1.5) // visible orange tail
   moteFineRect(ctx, w, x + 0.5, y + 0.5, 0.5, 0.5)
-  ctx.fillStyle = pal.fireHot
-  moteFineRect(ctx, w, x, y + 0.5, 0.5, 0.5) // hot core
+  ctx.fillStyle = FOUNDRY_HOT
+  moteFineRect(ctx, w, x, y + 0.5, 0.5, 0.5)
   ctx.fillStyle = pal[spec.col]
 }
 
@@ -2037,6 +2038,7 @@ function drawMachines(ctx, w, pal) {
   if (w.biome === "Rooftops") drawRoofMachines(ctx, w, pal)
   if (w.biome === "Subway") drawSubwayMachines(ctx, w, pal)
   if (w.biome === "Harbour") drawHarbourMachines(ctx, w, pal)
+  if (w.biome === "Foundry") drawFoundryHeat(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
   if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
   if (w.updraft) drawUpdrafts(ctx, w, pal)
@@ -7546,6 +7548,222 @@ function drawBoulderImpact(ctx, pal, cx, base, age) {
   for (var d = 0; d < 6; d++) {
     var side = d % 2 ? -1 : 1
     ctx.fillRect(Math.round(cx + side * (3 + age * 0.7 + d)), base - 1 - Math.floor(age / 6) - d % 3, 3, 1)
+  }
+}
+
+// Page-only ironworks. Fixed copper/metal colours, as with the Ruins' boulder:
+// the theme's urgent colour is also the enemy colour, not molten iron.
+var FOUNDRY_HEAT = "#ed792e"
+var FOUNDRY_HOT = "#ffd58a"
+var FOUNDRY_IRON = "#32282c"
+var FOUNDRY_RUST = "#754332"
+
+// The same fixed bays on the cached back wall and the live layer. No world
+// caches: demolition reveals the machinery behind it, never moves it.
+function foundryBay(w, i) {
+  return { x: (26 + (w.level * 7 + i * 29) % 53) * w.k.CELL,
+    y: w.corridors[i].floorY * w.k.CELL, phase: w.level * 11 + i * 73 }
+}
+
+function drawFoundryBackdrop(ctx, w, pal) {
+  if ((w.res || 1) < 2) return
+  ctx.save()
+  // Posterised heat haze, stronger below; retain the original girder silhouettes.
+  ctx.fillStyle = "#81391e"
+  var top = w.k.SKY * w.k.CELL, height = w.k.ROWS * w.k.CELL - top
+  for (var band = 0; band < 8; band++) {
+    ctx.globalAlpha = 0.035 + band * 0.014
+    var y = top + Math.round(height * band / 8 * 2) / 2
+    var end = top + Math.round(height * (band + 1) / 8 * 2) / 2
+    ctx.fillRect(0, y, w.k.COLS * w.k.CELL, end - y)
+  }
+  for (var i = 0; i < w.corridors.length; i++) {
+    var b = foundryBay(w, i)
+    ctx.globalAlpha = 1
+    drawFoundryFurnace(ctx, pal, b.x, b.y)
+    drawFoundryLadle(ctx, pal, b.x - 25, b.y)
+    drawLightPool(ctx, w, FOUNDRY_HEAT, b.x, b.y - 6, 29, 16, 0.13)
+  }
+  ctx.restore()
+}
+
+function drawFoundryFurnace(ctx, pal, x, base) {
+  // Tapered stack, bustle pipe, iron jacket and a recessed tapping arch.
+  ctx.fillStyle = FOUNDRY_IRON
+  ctx.fillRect(x - 6, base - 49, 12, 17)
+  ctx.fillRect(x - 10, base - 32, 20, 7)
+  ctx.fillRect(x - 14, base - 25, 28, 25)
+  ctx.fillRect(x - 18, base - 3, 36, 3)
+  ctx.fillStyle = "#583a36"
+  ctx.fillRect(x - 6, base - 48, 2, 15)
+  ctx.fillRect(x - 13, base - 24, 2, 19)
+  ctx.fillRect(x + 9, base - 24, 2, 19)
+  ctx.fillRect(x - 18, base - 21, 36, 2)
+  ctx.fillRect(x - 12, base - 13, 24, 1)
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(x + 15, base - 33, 3, 14)
+  ctx.fillRect(x + 16, base - 33, 19, 3)
+  ctx.fillStyle = FOUNDRY_RUST
+  for (var r = -10; r <= 10; r += 5) {
+    ctx.fillRect(x + r, base - 20.5, 0.5, 0.5)
+    ctx.fillRect(x + r, base - 12.5, 0.5, 0.5)
+  }
+  ctx.fillStyle = "#16191f"
+  ctx.fillRect(x - 7, base - 9, 14, 8)
+  ctx.fillRect(x - 5, base - 11, 10, 2)
+  ctx.fillStyle = "#75361f"
+  ctx.fillRect(x - 5, base - 8, 10, 6)
+  ctx.fillStyle = FOUNDRY_HEAT
+  ctx.globalAlpha = 0.75
+  ctx.fillRect(x - 4, base - 4, 8, 1.5)
+  ctx.fillStyle = FOUNDRY_HOT
+  ctx.globalAlpha = 0.45
+  ctx.fillRect(x - 4, base - 3, 8, 0.5)
+  ctx.globalAlpha = 1
+  ctx.fillStyle = "#463338"
+  for (var bar = -3; bar <= 3; bar += 3) ctx.fillRect(x + bar, base - 8, 1, 6)
+}
+
+function drawFoundryLadle(ctx, pal, x, base) {
+  ctx.fillStyle = "#393037"
+  ctx.fillRect(x - 17, base - 32, 38, 2) // overhead rail
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(x - 17, base - 31.5, 38, 0.5)
+  ctx.fillRect(x - 7, base - 29, 1, 9)
+  ctx.fillRect(x + 5, base - 29, 1, 9)
+  ctx.fillStyle = FOUNDRY_IRON
+  ctx.fillRect(x - 10, base - 21, 19, 3)
+  ctx.fillRect(x - 8, base - 18, 16, 3)
+  ctx.fillRect(x - 6, base - 15, 12, 2)
+  ctx.fillRect(x + 8, base - 20, 4, 2) // pouring lip
+  ctx.fillStyle = FOUNDRY_RUST
+  ctx.fillRect(x - 9, base - 20.5, 18, 0.5)
+  ctx.fillRect(x - 7.5, base - 18, 0.5, 2)
+  ctx.fillStyle = "#b45c29"
+  ctx.fillRect(x - 7, base - 20, 14, 1)
+  // Ingot moulds stay dark around their orange contents.
+  for (var m = 0; m < 4; m++) {
+    ctx.fillStyle = FOUNDRY_IRON
+    ctx.fillRect(x - 15 + m * 7, base - 4, 6, 3)
+    ctx.fillStyle = "#bf662d"
+    ctx.fillRect(x - 14 + m * 7, base - 3.5, 4, 1)
+  }
+}
+
+function drawFoundryMaterials(ctx, w, pal) {
+  if ((w.res || 1) < 2) return
+  ctx.save()
+  var k = w.k, C = k.CELL
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 0; x < k.COLS; x++) {
+    var m = w.terrain[y * k.COLS + x]
+    if (m === k.EMPTY || m === k.STEEL) continue
+    drawFoundryCell(ctx, w, pal, x, y, m)
+  }
+  for (var p = 0; p < w.pits.length; p++) drawFoundryPoolRim(ctx, w, w.pits[p])
+  for (var i = 0; i < w.corridors.length; i++) {
+    var b = foundryBay(w, i)
+    // Light reaches the near floor as well as the distant machinery.
+    drawLightPool(ctx, w, FOUNDRY_HEAT, b.x - 8, b.y, 28, 10, 0.32)
+  }
+  ctx.restore()
+}
+
+function drawFoundryCell(ctx, w, pal, x, y, m) {
+  var k = w.k, C = k.CELL, px = x * C, py = y * C
+  ctx.fillStyle = m === k.ROCK ? FOUNDRY_RUST : "#9b4826"
+  ctx.globalAlpha = m === k.ROCK ? 0.14 : 0.22
+  ctx.fillRect(px, py, C, C)
+  ctx.fillStyle = FOUNDRY_IRON
+  ctx.globalAlpha = 0.4
+  if (m === k.ROCK) {
+    if (y % 2 === 0) ctx.fillRect(px, py + C - 0.5, C, 0.5)
+    if ((x + Math.floor(y / 2) * 2) % 4 === 0) {
+      ctx.fillRect(px, py, 0.5, C)
+      ctx.fillStyle = pal.steelEdge; ctx.globalAlpha = 0.25
+      ctx.fillRect(px + 1, py + 1, 0.5, 0.5)
+    }
+  } else {
+    ctx.fillRect(px, py + C - 0.5, C, 0.5) // refractory brick courses
+    ctx.fillRect(px + y % 2 * 2, py, 0.5, C - 0.5)
+  }
+  if (w.terrain[(y - 1) * k.COLS + x] !== k.EMPTY) return
+  ctx.fillStyle = FOUNDRY_HEAT
+  ctx.globalAlpha = 0.24 + y / k.ROWS * 0.18
+  ctx.fillRect(px, py, C, 0.5) // warm floor lip, clear of the boots
+  ctx.globalAlpha = 0.08
+  ctx.fillRect(px, py + 0.5, C, 1)
+}
+
+function drawFoundryPoolRim(ctx, w, p) {
+  if (p.liquid !== "lava") return
+  var C = w.k.CELL
+  for (var side = 0; side < 2; side++) {
+    var x = side ? p.x1 + 1 : p.x0 - 1
+    for (var y = Math.max(w.k.SKY, p.surfaceY - 5); y < w.k.ROWS; y++) {
+      if (!w.terrain[y * w.k.COLS + x]) continue
+      ctx.fillStyle = FOUNDRY_HEAT
+      ctx.globalAlpha = Math.max(0.04, 0.28 - Math.abs(y - p.surfaceY) * 0.045)
+      ctx.fillRect(x * C, y * C, C, C)
+      ctx.globalAlpha *= 1.8
+      ctx.fillRect((x + (side ? 0 : 1)) * C - (side ? 0 : 0.5), y * C, 0.5, C)
+    }
+  }
+}
+
+function drawFoundryHeat(ctx, w, pal) {
+  if ((w.res || 1) < 2) return
+  ctx.save()
+  for (var i = 0; i < w.corridors.length; i++) {
+    var b = foundryBay(w, i)
+    drawFoundryPour(ctx, w, b)
+  }
+  drawFoundrySeams(ctx, w)
+  ctx.restore()
+}
+
+function drawFoundryPour(ctx, w, b) {
+  // The distant metal is deliberately dimmer than an agent's face. All live
+  // marks clip against current terrain; sparks never travel through a wall.
+  var cycle = (w.ticks + b.phase) % 210, x = b.x - 14, bottom = b.y - 4
+  ctx.fillStyle = FOUNDRY_HEAT
+  ctx.globalAlpha = 0.22 + 0.04 * Math.sin(w.ticks / 21 + b.phase)
+  moteFineRect(ctx, w, b.x - 4, b.y - 4, 8, 1)
+  if (cycle >= 105) return
+  ctx.globalAlpha = 0.65
+  for (var row = 0; row < 15; row++) {
+    var shift = Math.floor((w.ticks + row * 3) / 7) % 2 * 0.5
+    moteFineRect(ctx, w, x + shift, bottom - 15 + row, 1, 1)
+  }
+  ctx.fillStyle = FOUNDRY_HOT; ctx.globalAlpha = 0.65
+  moteFineRect(ctx, w, x + 0.5, bottom - 13, 0.5, 12)
+  for (var sp = 0; sp < 9; sp++) {
+    var age = (w.ticks + b.phase + sp * 7) % 36
+    var dx = (sp % 2 ? -1 : 1) * age * (0.12 + sp % 3 * 0.06)
+    var dy = -age * 0.42 + age * age * 0.018
+    var sx = Math.round((x + dx) * 2) / 2, sy = Math.round((bottom + dy) * 2) / 2
+    ctx.globalAlpha = 0.55 * (1 - age / 36)
+    ctx.fillStyle = age < 12 ? FOUNDRY_HOT : FOUNDRY_HEAT
+    moteFineRect(ctx, w, sx, sy, 0.5, 0.5)
+  }
+}
+
+// Sparse, connected zigzags in the refractory, not glowing noise in every
+// cell. Thirty lattice candidates cost the same after any amount of digging.
+function drawFoundrySeams(ctx, w) {
+  var C = w.k.CELL
+  for (var i = 0; i < 30; i++) {
+    var x = 6 + (i * 23 + w.level * 7) % (w.k.COLS - 12)
+    var y = w.k.SKY + 3 + (i * 13 + w.level * 3) % (w.k.ROWS - w.k.SKY - 6)
+    var pulse = 0.17 + 0.07 * Math.sin(w.ticks / 32 + x + y)
+    for (var part = 0; part < 3; part++) {
+      var yy = y + part, xx = x, m = w.terrain[yy * w.k.COLS + xx]
+      if (m !== w.k.ROCK && m !== w.k.DIRT && m !== w.k.ORE) continue
+      ctx.fillStyle = FOUNDRY_HEAT; ctx.globalAlpha = pulse * 0.5
+      ctx.fillRect(xx * C, yy * C, 2, C)
+      ctx.globalAlpha = pulse * 2
+      ctx.fillRect(xx * C + 0.5 + part % 2, yy * C, 0.5, C - 0.5)
+      ctx.fillRect(xx * C + 0.5, yy * C + C - 0.5, 1.5, 0.5)
+    }
   }
 }
 
