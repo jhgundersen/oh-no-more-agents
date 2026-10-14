@@ -100,3 +100,27 @@ test("recovery effects expire and a fresh/throttled fixture has no phantom disch
     assert.ok(draw(3, 1, 90).equals(draw(3, 0, 90)), spec.id + " throttling froze a discharge effect")
   }
 })
+
+test("hazard wrapper shows unlit wreckage and paused fixtures without mutating their phases", () => {
+  const w = S.generate(18, 0, 99), pal = P.build(themeOf("tokyo-night").theme, 18)
+  for (const res of [1, 2]) for (const mount of ["floor", "ceiling"]) {
+    w.res = res
+    const h = { ...fixture(S.HAZARDS.find(s => s.id === "grinder"), "fire", 2), mount }
+    const draw = (hazard, opts) => {
+      const img = canvas(400 * res, 248 * res, "#000000")
+      img.ctx.setTransform(res, 0, 0, res, 0, 0)
+      const before = JSON.stringify({ w, hazard })
+      D.drawHazard(img.ctx, w, pal, hazard, opts)
+      assert.equal(JSON.stringify({ w, hazard }), before)
+      return img.buf
+    }
+    const live = draw(h, { labels: true })
+    const wrecked = draw({ ...h, wrecked: true }, {})
+    const paused = draw({ ...h, throttled: 100 }, undefined)
+    assert.notDeepEqual(live, wrecked); assert.notDeepEqual(live, paused)
+    w.hazard = h
+    assert.deepEqual(draw(undefined, {}), draw(h, {}), "legacy single-hazard fallback")
+    delete w.hazard
+    assert.ok(draw(undefined, {}).every(n => n === 0), "absent fixture paints nothing")
+  }
+})

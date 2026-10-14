@@ -3931,3 +3931,54 @@ sim` 100% / 94%; materials inert. Tests: `test/trains.test.js`. Biome wiring
 as for the Rooftops: mission "GET THE COMMUTERS ON THE TRAIN", events Signal
 Failure / Engineering Works / Rush Hour, Palette `% 18` with TILE. The six
 art tests fail until Codex has drawn it.
+
+## 149 — 2026-10-14 · Mind the context gap
+
+The Subway has its station now: glazed green tiles and recessed grout,
+line roundels for Heap Street, adverts and timetables, cable trays, tunnel
+mouths, benches, bins, CCTV and flickering fluorescent tubes. Dust streams
+through the draught. The way out is a signed staircase; the hostile booth
+belongs to the TOKEN INSPECTOR. Signal Failure dims the tubes and shows red
+signals, Rush Hour shows green, and Engineering Works gets a striped SERVICE
+PATCH barrier ahead of the existing collapse. Its two power durations mirror
+Sim's 300/360 ticks.
+
+A cream-and-red metro runs behind the walkers, with lit windows and one
+silhouette per rider, a HOME destination board, sliding door leaves, wheels
+and couplers. There are two cars when both end platforms have room behind
+them, one otherwise. The main doorway is exactly at Sim's boarding/alighting
+point, including pickups on the move. Rails, sleepers, a fine third rail,
+yellow platform markings, brake strokes/sparks and motion trails explain the
+ride. Terrain occludes the car; passengers stay hidden inside. Half-pixel
+work is res-2 only. Draw reads the world; Sim and Palette are untouched.
+
+**Looked at:** actual seeded play on levels 18, 36 and 54, waiting with riders
+(36/283), running (18/450), letting them off (54/500), and a walker stepping
+out (18/482), at res 1 and 2, enlarged. Inspected
+`/tmp/codex-subway/sheet.png` and the enlarged train crops; final `tools/shoot.js`
+shots checked both resolutions as well. Roundels were moved clear of obstacles
+and adverts after the first review.
+
+**Checked:** `npm run check` and `npm test` pass, including the six missing-art
+checks. Seven new component tests cover every train phase and facing, both
+resolutions and the unspecified res, rider counts up to twelve, boarding and
+alighting alignment, door states, terrain occlusion, layer order, fine-detail
+gating, furniture, lamps and event markers, and unchanged world/context state.
+No whole-frame pins. **3,060 identical seeded old/new frame pairs** across the
+other seventeen biomes: three levels each, six moments, both resolutions, all
+five themes, resetting Math.random identically for each renderer.
+
+**CRAP over 30: 5 before, 0 after** with the freshly fetched checker (the
+starting branch's six art failures left incomplete coverage). Split the Factory
+pass out of `drawMachines` without changing its pixels; added hazard-wrapper
+and routing boundary checks for the three remaining coverage gaps. The final
+repository maximum is 29; new Subway functions top out at 14.1. Stamps refreshed.
+
+**Res-2 cost:** warmed Node rasteriser, median of nine rounds of forty frames,
+level 18 at tick 450 against Factory level 8 at the same tick: actor pass
+**2.49 ms vs 1.47 ms** (1,311 vs 1,362 rectangles); a full terrain-plus-actors
+repaint **31.74 ms vs 15.06 ms**. Terrain is cached in normal play; these are
+software raster timings, not browser frame-rate measurements.
+
+**Next:** leave the train's route and rules alone; the station now shows what
+it already does. This branch is committed for review, not pushed or deployed.

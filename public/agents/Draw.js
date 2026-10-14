@@ -204,6 +204,7 @@ function drawTerrain(ctx, w, pal) {
   if (w.biome === "Building Site") drawSiteMaterials(ctx, w, pal)
   if (w.biome === "Clock Tower") drawClockMaterials(ctx, w, pal)
   if (w.biome === "Rooftops") drawRoofMaterials(ctx, w, pal)
+  if (w.biome === "Subway") drawSubwayMaterials(ctx, w, pal)
   if ((w.res || 1) >= 2) drawTerrainFine(ctx, w, pal)
 
   drawFactoryPlates(ctx, w, pal)
@@ -347,7 +348,7 @@ function drawFactoryPlates(ctx, w, pal) {
 // while the colony digs around it.
 // Built places get no grain: on hull plate, office wall and machine housing it
 // read as dirt, and those biomes carry their own pattern (panels, bays, rivets).
-var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true, "Library": true, "Mail Room": true, "Building Site": true, "Clock Tower": true, "Rooftops": true }
+var BUILT = { "Spaceship": true, "Factory": true, "Skyscraper": true, "Data Center": true, "Library": true, "Mail Room": true, "Building Site": true, "Clock Tower": true, "Rooftops": true, "Subway": true }
 
 // One cell's grain: a dark fleck in a quarter of cells, a pale one in an
 // eighth, placed inside the cell by the hash.
@@ -471,7 +472,7 @@ var BACKDROPS = {
   "Foundry": backFoundry, "Jungle": backJungle, "Ice Cave": backIceCave,
   "Spaceship": backSpaceship, "Factory": backFactory, "Trench": backTrench,
   "Desert": backDesert, "Data Center": backDataCenter, "Library": backLibrary, "Mail Room": backMailRoom,
-  "Building Site": backBuildingSite, "Clock Tower": backClockTower, "Rooftops": backRooftops
+  "Building Site": backBuildingSite, "Clock Tower": backClockTower, "Rooftops": backRooftops, "Subway": backSubway
 }
 
 function drawBackdrop(ctx, w, pal) {
@@ -733,7 +734,7 @@ var BACKDROP_FINE = {
   "Spaceship": backSpaceshipFine, "Factory": backFactoryFine,
   "Skyscraper": backSkyscraperFine, "Trench": backTrenchFine,
   "Desert": backDesertFine, "Data Center": backDataCenterFine, "Library": backLibraryFine, "Mail Room": backMailRoomFine,
-  "Building Site": backBuildingSiteFine, "Clock Tower": backClockTowerFine, "Rooftops": backRooftopsFine
+  "Building Site": backBuildingSiteFine, "Clock Tower": backClockTowerFine, "Rooftops": backRooftopsFine, "Subway": backSubwayFine
 }
 
 function drawBackdropFine(ctx, w, pal) {
@@ -993,6 +994,7 @@ function drawDecor(ctx, w, pal) {
                || w.biome === "Factory" || w.biome === "Skyscraper" || w.biome === "Data Center"
     var jungle = w.biome === "Jungle"
     var desert = w.biome === "Desert"
+    if (w.biome === "Subway") { drawSubwayDecor(ctx, w, pal, d, px, py); continue }
     drawDecorShape(ctx, w, pal, d, px, py, ruins, frost, foundry, jungle, desert)
     if ((w.res || 1) >= 2) drawDecorFine(ctx, pal, d, px, py, py + C,
       w.biome === "Rooftops" ? "roof" : w.biome === "Clock Tower" ? "clock" : w.biome === "Building Site" ? "site" : w.biome === "Mail Room" ? "mail" : w.biome === "Library" ? "library" : foundry ? "pipe" : ruins ? "ruins" : desert ? "desert" : jungle ? "jungle" : frost ? "frost" : "cave")
@@ -1248,7 +1250,7 @@ function drawExitBack(ctx, w, pal) {
   drawExitFrameFine(ctx, w, pal, x, y, ww, hh)
 }
 
-var EXIT_FRAMES = { "Library": drawExitLibrary, "Data Center": drawExitDataBack, "Mail Room": drawExitMail, "Building Site": drawExitSite, "Clock Tower": drawExitClock, "Rooftops": drawExitRoof }
+var EXIT_FRAMES = { "Library": drawExitLibrary, "Data Center": drawExitDataBack, "Mail Room": drawExitMail, "Building Site": drawExitSite, "Clock Tower": drawExitClock, "Rooftops": drawExitRoof, "Subway": drawExitSubway }
 function drawExitFrameBase(ctx, w, pal, x, y, ww, hh, cx3) {
   switch (w.biome) {
   case "Ruins":
@@ -1402,7 +1404,7 @@ var EXIT_FINE = {
   "Data Center": drawExitDataFine,
   "Library": drawExitLibraryFine,
   "Mail Room": drawExitMailFine,
-  "Building Site": drawExitSiteFine, "Clock Tower": drawExitClockFine, "Rooftops": drawExitRoofFine
+  "Building Site": drawExitSiteFine, "Clock Tower": drawExitClockFine, "Rooftops": drawExitRoofFine, "Subway": drawExitSubwayFine
 }
 
 function drawExitFrameFine(ctx, w, pal, x, y, ww, hh) {
@@ -1709,6 +1711,7 @@ function drawWaterLife(ctx, w, pal) {
 //   blink  >0: lit only for that share of a cycle (fireflies, glints)
 
 var AMBIENCE = {
+  "Subway": [{ n: 44, vx: 0.23, vy: -0.015, sway: 1, size: 1, col: "dust", alpha: 0.28 }],
   "Rooftops": [{ n: 200, vx: -0.35, vy: 1.4, sway: 0, size: 1, col: "dust", alpha: 0.48 }],
   "Clock Tower": [{ n: 52, vx: 0.018, vy: 0.04, sway: 2, size: 1, col: "dust", alpha: 0.38 },
                   { n: 4, vx: 0.015, vy: 0.35, sway: 1, size: 2, col: "oreEdge", alpha: 0.55 }],
@@ -1817,7 +1820,7 @@ var AMBIENCE_FINE = {
   "Spaceship": drawMoteSpaceshipFine, "Factory": drawMoteFactoryFine,
   "Skyscraper": drawMoteSkyscraperFine, "Trench": drawMoteTrenchFine,
   "Desert": drawMoteDesertFine, "Data Center": drawMoteDataFine, "Library": drawMoteLibraryFine, "Mail Room": drawMoteMailFine,
-  "Building Site": drawMoteSiteFine, "Clock Tower": drawMoteClockFine, "Rooftops": drawMoteRoofFine
+  "Building Site": drawMoteSiteFine, "Clock Tower": drawMoteClockFine, "Rooftops": drawMoteRoofFine, "Subway": drawMoteSubwayFine
 }
 
 // Check the complete half-pixel footprint: the motion can put a corner into
@@ -2028,11 +2031,15 @@ function drawMachines(ctx, w, pal) {
   if (w.biome === "Building Site") drawSiteMachines(ctx, w, pal)
   if (w.biome === "Clock Tower") drawClockMachines(ctx, w, pal)
   if (w.biome === "Rooftops") drawRoofMachines(ctx, w, pal)
+  if (w.biome === "Subway") drawSubwayMachines(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
   if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
   if (w.updraft) drawUpdrafts(ctx, w, pal)
   drawAmbience(ctx, w, pal)
-  if (w.biome !== "Factory") return
+  if (w.biome === "Factory") drawFactoryMachines(ctx, w, pal)
+}
+
+function drawFactoryMachines(ctx, w, pal) {
   var k = w.k
   var C = k.CELL
   for (var i = 0; i < w.decor.length; i++) {
@@ -4545,6 +4552,7 @@ function drawEnemyHatch(ctx, w, pal, opts) {
   else if (biome === "Library") { wall = pal.dirt; roof = pal.dirtShade; edge = pal.oreEdge; sign = "STACK OVERFLOW" }
   else if (biome === "Clock Tower") { wall = pal.dirt; roof = pal.oreShade; edge = pal.oreEdge; sign = "WATCHDOG TIMER" }
   else if (biome === "Building Site") { wall = pal.rock; roof = pal.ore; edge = pal.oreEdge; sign = "BUILD FAILED" }
+  else if (biome === "Subway") { wall = pal.dirt; roof = pal.rigDark; edge = pal.oreEdge; sign = "TOKEN INSPECTOR" }
   else if (biome === "Rooftops") { wall = pal.dirt; roof = pal.oreShade; edge = pal.oreEdge; sign = "LOCAL HOST" }
 
   drawBoothFrame(ctx, pal, opts, biome, x, y, wall, roof, edge, sign)
@@ -4560,6 +4568,8 @@ function drawBoothFrame(ctx, pal, opts, biome, x, y, wall, roof, edge, sign) {
     ctx.fillRect(x - 6, y - 19, 12, 2); ctx.fillRect(x - 9, y - 17, 18, 2)
   } else if (biome === "Jungle") {
     ctx.fillRect(x - 11, y - 19, 22, 3); ctx.fillRect(x - 7, y - 22, 14, 3)
+  } else if (biome === "Subway") {
+    drawSubwayRoundel(ctx, pal.ore, pal.rigDark, x, y - 20)
   } else if (biome === "Rooftops") {
     drawRoofBoothTop(ctx, pal, x, y)
   } else if (biome === "Clock Tower") {
@@ -6766,7 +6776,7 @@ function drawReloadSign(ctx, ag, ox, oy, hair) {
 // These are visual durations only (guarded against EVENTS by the tests), so a
 // direct fireEvent and a scheduled one fade alike without a renderer clock.
 var EVENT_VISUAL_SPANS = {
-  boost: { Ruins: 420, Foundry: 360, Factory: 380, Skyscraper: 400, "Data Center": 300, "Mail Room": 360, "Building Site": 380, "Clock Tower": { 0: 280, 2: 360 }, Rooftops: 300 },
+  boost: { Ruins: 420, Foundry: 360, Factory: 380, Skyscraper: 400, "Data Center": 300, "Mail Room": 360, "Building Site": 380, "Clock Tower": { 0: 280, 2: 360 }, Rooftops: 300, Subway: { 0: 300, 2: 360 } },
   sight: { Cavern: 420, Frost: 480, "Ice Cave": 450, Desert: 460, Library: 420 },
   fall: { Spaceship: 400 }
 }
@@ -6904,6 +6914,7 @@ function eventDimColour(colour, shade, fade) {
 function drawEventHazardStatus(ctx, w, pal, h, fade) {
   if (!(w.eventBoost > 0) || h.wrecked || h.throttled > 0) return
   if (w.biome === "Clock Tower") return drawClockHazardStatus(ctx, w, pal, h, fade)
+  if (w.biome === "Subway") return drawSubwaySignal(ctx, w, pal, h, fade)
   if (w.biome === "Rooftops") return drawRoofPowerStatus(ctx, w, pal, h, fade)
   var C = w.k.CELL, x = Math.round((h.zx0 + h.zx1 + 1) * C / 2)
   var y = h.mount === "ceiling" ? h.zy0 * C + 2 : (h.zy1 + 1) * C - 5
@@ -6946,6 +6957,7 @@ function drawEventSite(ctx, w, pal, fx) {
   if (w.biome === "Building Site") drawSiteEventMarker(ctx, w, pal, fx)
   if (w.biome === "Clock Tower") drawClockEventMarker(ctx, w, pal, fx)
   if (w.biome === "Rooftops") drawRoofEventMarker(ctx, w, pal, fx)
+  if (w.biome === "Subway") drawSubwayWorks(ctx, w, pal, fx)
   if (w.ticks < fx.fireAt) {
     var p = (w.ticks - fx.warnAt) / Math.max(1, fx.fireAt - fx.warnAt)
     if (fx.mech === "growth") drawGrowthWarning(ctx, w, pal, fx, p)
@@ -12567,4 +12579,390 @@ function drawRoofDoorLight(ctx, w, pal) {
   ctx.fillRect((e.x - 1) * C, (e.y + e.h) * C - 1, (e.w + 2) * C, 1)
   drawLightPool(ctx, w, ROOF_LIGHT, (e.x + e.w + 0.75) * C, e.y * C + 4, 9, 7, fade)
   ctx.restore()
+}
+
+// Subway: the station in section. Fixtures belong to the far wall; the train
+// runs behind the walkers. All motion is read from ticks or the train itself.
+var SUBWAY_CREAM = "#b9bda9", SUBWAY_RED = "#854342", SUBWAY_GLASS = "#d4c88e"
+var SUBWAY_INK = "#343c3c", SUBWAY_YELLOW = "#c6a950"
+function backSubway(ctx, r, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x, b.y, b.w, b.h)
+  for (var y = b.y; y < b.y + b.h; y += 5) for (var x = (y % 2) * 5; x < b.w; x += 10) {
+    ctx.fillStyle = pal.back
+    ctx.fillRect(x + 1, y + 1, 9, 4)
+  }
+  var C = b.world.k.CELL, corridors = b.world.corridors
+  for (var i = 0; i < corridors.length; i++) {
+    var c = corridors[i], floor = c.floorY * C, mid = Math.round((c.x0 + c.x1) * C / 2)
+    ctx.fillStyle = pal.backLit
+    ctx.fillRect(c.x0 * C, floor - 17, (c.x1 - c.x0) * C, 2) // line band
+    ctx.fillStyle = pal.backDim
+    ctx.fillRect(c.x0 * C, floor - 22, (c.x1 - c.x0) * C, 1) // cable tray
+    var signX = subwaySignX(b.world, c, mid)
+    drawSubwayRoundel(ctx, pal.oreShade, pal.backDim, signX, floor - 14)
+    if (typeof ctx.fillText === "function") subwayNameSign(ctx, pal, signX, floor - 14)
+    backSubwayTunnel(ctx, pal, (c.dir > 0 ? c.x1 - 5 : c.x0 + 1) * C, floor)
+    for (var a = 0; a < 3; a++) {
+      var advertX = mid - 76 + a * 67
+      if (Math.abs(advertX + 6 - signX) > 25) backSubwayAdvert(ctx, pal, advertX, floor - 20, i + a)
+    }
+  }
+}
+function drawSubwayRoundel(ctx, ring, band, x, y) {
+  ctx.fillStyle = ring
+  ctx.fillRect(x - 4, y - 5, 8, 2); ctx.fillRect(x - 4, y + 3, 8, 2)
+  ctx.fillRect(x - 6, y - 3, 2, 6); ctx.fillRect(x + 4, y - 3, 2, 6)
+  ctx.fillStyle = band
+  ctx.fillRect(x - 10, y - 1, 20, 3)
+  ctx.fillStyle = ring
+  ctx.fillRect(x - 7, y, 14, 1) // station name, readable even without font support
+}
+function backSubwayTunnel(ctx, pal, x, floor) {
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(x + 3, floor - 24, 12, 3)
+  ctx.fillRect(x, floor - 21, 3, 21); ctx.fillRect(x + 15, floor - 21, 3, 21)
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(x + 3, floor - 21, 12, 21)
+  ctx.fillStyle = pal.back
+  ctx.fillRect(x + 5, floor - 18, 8, 1); ctx.fillRect(x + 5, floor - 17, 1, 17)
+}
+function backSubwayAdvert(ctx, pal, x, y, seed) {
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(x, y, 13, 13)
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(x + 1, y + 1, 11, 11)
+  ctx.fillStyle = pal.back
+  ctx.fillRect(x + 3, y + 3, 7, 4)
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(x + 3, y + 9, 5 + seed % 3, 1)
+}
+function backSubwayFine(ctx, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + b.w - 0.5, b.y, 0.5, b.h)
+  if (b.w < 3 || b.h < 3) return
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(b.x + 0.5, b.y + 0.5, b.w - 1, 0.5) // glazed bevel / sign rim
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + 1, b.y + b.h - 0.5, b.w - 1, 0.5)
+}
+function drawSubwayMaterials(ctx, w, pal) {
+  var k = w.k, C = k.CELL, fine = (w.res || 1) >= 2
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 0; x < k.COLS; x++) {
+    var m = w.terrain[y * k.COLS + x]
+    if (m === k.EMPTY || m === k.STEEL) continue
+    drawSubwayTile(ctx, k, pal, m, x * C, y * C, fine)
+  }
+}
+function drawSubwayTile(ctx, k, pal, m, x, y, fine) {
+  ctx.fillStyle = materialShade(k, pal, m)
+  if (m !== k.ROCK) {
+    ctx.fillRect(x, y + 3, 4, 1)
+    ctx.fillRect(x + 3, y, 1, 3)
+  }
+  if (!fine) return
+  ctx.fillStyle = materialEdge(k, pal, m)
+  ctx.globalAlpha = m === k.ROCK ? 0.22 : 0.45
+  ctx.fillRect(x + 0.5, y + 0.5, 3, 0.5)
+  ctx.fillRect(x + 0.5, y + 1, 0.5, 2)
+  ctx.globalAlpha = 1
+  ctx.fillStyle = materialShade(k, pal, m)
+  ctx.fillRect(x + 3.5, y + 1, 0.5, 2.5)
+}
+function drawSubwayDecor(ctx, w, pal, d, x, y) {
+  var base = y + w.k.CELL
+  ctx.save()
+  if (d.kind === "clump") drawSubwayBench(ctx, pal, x, base)
+  else if (d.kind === "spire") drawSubwayPoster(ctx, pal, x, base - 16, d.seed)
+  else if (d.kind === "hang") drawSubwayCamera(ctx, pal, x, y)
+  else drawSubwayBin(ctx, pal, x, base)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = pal.decorLit
+    ctx.fillRect(x + 0.5, d.kind === "hang" ? y + 1.5 : base - 4.5, 2, 0.5)
+  }
+  ctx.restore()
+}
+function drawSubwayBench(ctx, pal, x, base) {
+  ctx.fillStyle = pal.decorDim
+  ctx.fillRect(x - 5, base - 8, 16, 3); ctx.fillRect(x - 5, base - 4, 16, 2)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 3, base - 2, 2, 2); ctx.fillRect(x + 7, base - 2, 2, 2)
+  ctx.fillStyle = pal.decor
+  for (var i = 0; i < 3; i++) ctx.fillRect(x - 3 + i * 5, base - 7, 3, 1)
+}
+function drawSubwayBin(ctx, pal, x, base) {
+  ctx.fillStyle = pal.decorDim
+  ctx.fillRect(x - 1, base - 7, 6, 7)
+  ctx.fillStyle = pal.decor
+  ctx.fillRect(x - 2, base - 8, 8, 2)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x, base - 5, 4, 2)
+}
+function drawSubwayPoster(ctx, pal, x, y, seed) {
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 2, y, 13, 14)
+  ctx.fillStyle = pal.decorDim
+  ctx.fillRect(x - 1, y + 1, 11, 12)
+  ctx.fillStyle = pal.oreEdge
+  ctx.fillRect(x, y + 2, 9, 2)
+  ctx.fillStyle = pal.decorLit
+  if (seed % 2) { // timetable: departures that never quite arrive
+    for (var i = 0; i < 3; i++) { ctx.fillRect(x, y + 6 + i * 2, 4, 1); ctx.fillRect(x + 6, y + 6 + i * 2, 2, 1) }
+  } else {
+    ctx.fillRect(x + 2, y + 5, 5, 4)
+    ctx.fillRect(x + 1, y + 11, 7, 1)
+  }
+  ctx.font = "4px monospace"; ctx.textAlign = "left"
+  ctx.fillText(seed % 2 ? "ETA: TBD" : "TRY CACHE", x - 1, y - 2)
+}
+function drawSubwayCamera(ctx, pal, x, y) {
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 1, y, 2, 5); ctx.fillRect(x + 1, y + 4, 8, 2)
+  ctx.fillStyle = pal.decorDim
+  ctx.fillRect(x + 5, y + 3, 7, 4)
+  ctx.fillStyle = pal.urgent
+  ctx.fillRect(x + 11, y + 4, 1, 1)
+}
+function drawExitSubway(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.dirtEdge
+  ctx.fillRect(x - 3, y - 3, 3, hh + 3); ctx.fillRect(x + ww, y - 3, 3, hh + 3)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 5, y - 9, ww + 10, 6)
+  ctx.fillStyle = pal.exitLight
+  ctx.fillRect(x - 4, y - 8, ww + 8, 4)
+  ctx.fillStyle = pal.rigDark
+  ctx.font = "4px monospace"; ctx.textAlign = "center"
+  ctx.fillText("WAY OUT", x + ww / 2, y - 4)
+  ctx.fillRect(x + ww - 1, y - 7, 1, 2); ctx.fillRect(x + ww - 2, y - 7, 3, 1) // up arrow
+  ctx.fillStyle = pal.exitFrame
+  for (var i = 0; i < 4; i++) ctx.fillRect(x + 1 + i * 2, y + hh - 2 - i * 3, ww - 2 - i * 2, 2)
+}
+function drawExitSubwayFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 2.5, y + 0.5, 0.5, hh - 1)
+  ctx.fillRect(x + ww + 0.5, y + 0.5, 0.5, hh - 1)
+  for (var i = 0; i < 4; i++) ctx.fillRect(x + 1 + i * 2, y + hh - 2 - i * 3, ww - 2 - i * 2, 0.5)
+  ctx.fillStyle = pal.exitFrame
+  ctx.fillRect(x - 4, y - 8, ww + 8, 0.5)
+}
+function drawMoteSubwayFine(ctx, w, pal, x, y) {
+  moteFineRect(ctx, w, x, y, 0.5, 0.5)
+  moteFineRect(ctx, w, x - 1, y + 0.5, 0.5, 0.5) // dust stretched by the tunnel draught
+}
+function drawSubwayMachines(ctx, w, pal) {
+  ctx.save()
+  for (var i = 0; i < w.corridors.length; i++) drawSubwayTube(ctx, w, pal, w.corridors[i], i)
+  for (var t = 0; t < w.trains.length; t++) {
+    drawSubwayTrack(ctx, w, pal, w.trains[t])
+    drawSubwayTrain(ctx, w, pal, w.trains[t])
+  }
+  ctx.restore()
+}
+function drawSubwayTube(ctx, w, pal, c, index) {
+  var C = w.k.CELL, y = c.floorY * C - 23
+  var x = Math.round((c.x0 + c.x1) * C / 2) - 24
+  if (!mechanismAir(w, x, y)) return
+  var flick = (w.ticks + w.level * 17 + index * 71) % 233
+  var stopped = w.eventBoost > 0 && w.eventMult === 0
+  ctx.fillStyle = pal.rigDark
+  moteFineRect(ctx, w, x - 2, y, 24, 2)
+  ctx.fillStyle = stopped || flick < 3 ? pal.decorDim : pal.decorLit
+  moteFineRect(ctx, w, x, y + 1, 20, 1)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = stopped || flick < 3 ? pal.decorDim : pal.dust
+    moteFineRect(ctx, w, x + 1, y + 1, 18, 0.5)
+    if (!stopped && flick >= 3) drawLightPool(ctx, w, pal.decorLit, x + 10, y + 6, 17, 9, 0.05)
+  }
+}
+function drawSubwayTrack(ctx, w, pal, tr) {
+  var C = w.k.CELL, left = Math.min(tr.ax, tr.bx) * C, right = (Math.max(tr.ax, tr.bx) + 1) * C
+  var y = (tr.y + 1) * C
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(left, y - 2, right - left, 2)
+  ctx.fillStyle = pal.steelShade
+  for (var x = left; x < right; x += 6) ctx.fillRect(x, y - 3, 2, 3) // sleepers, including over pits
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(left, y - 3, right - left, 1)
+  ctx.fillStyle = SUBWAY_YELLOW
+  drawSubwayPlatform(ctx, w, tr.ax, y, "BOARD")
+  drawSubwayPlatform(ctx, w, tr.bx, y, "HOME")
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = pal.oreEdge
+    ctx.fillRect(left, y - 1.5, right - left, 0.5) // insulated third rail
+  }
+}
+function drawSubwayPlatform(ctx, w, x, y, label) {
+  var px = (x + 0.5) * w.k.CELL
+  ctx.fillRect(px - 9, y - 1, 18, 1)
+  for (var i = 0; i < 3; i++) ctx.fillRect(px - 7 + i * 6, y - 3, 2, 2)
+  ctx.font = "4px monospace"; ctx.textAlign = "center"
+  ctx.fillText(label, px, y + 6)
+}
+// The front car's doorway sits exactly at (tr.x + .5), Sim's boarding point.
+// A second car is allowed only when there is room behind BOTH end platforms.
+function subwayTrainDrawing(w, tr) {
+  var C = w.k.CELL, size = (w.res || 1) >= 2 ? 0.5 : 1
+  var c = w.corridors.find(function(c) { return c.floorY - 1 === tr.y })
+  var tail = tr.dir > 0 ? Math.min(tr.ax, tr.bx) - c.x0 : c.x1 - Math.max(tr.ax, tr.bx)
+  return { x: Math.round((tr.x + 0.5) * C / size) * size, y: (tr.y + 1) * C,
+    cars: tail * C >= 54 ? 2 : 1, dir: tr.dir, open: tr.phase === "wait" || tr.phase === "drop" || subwayTrainBoarding(w, tr) }
+}
+function drawSubwayTrain(ctx, w, pal, tr) {
+  var g = subwayTrainDrawing(w, tr)
+  ctx.save()
+  // Slice at cell boundaries to keep foreground terrain in front of the train.
+  var ink = { fillStyle: SUBWAY_INK, fillRect: function(x, y, ww, hh) {
+    ctx.fillStyle = this.fillStyle; subwayTrainRect(ctx, w, x, y, ww, hh)
+  } }
+  for (var car = 0; car < g.cars; car++) {
+    var x = g.x - g.dir * car * 38
+    drawSubwayCar(ink, w, pal, tr, x, g.y, g.open, car)
+    drawSubwayPassengers(ink, tr, x, g.y, car, g.cars)
+    if ((w.res || 1) >= 2) drawSubwayCarFine(ink, pal, x, g.y)
+  }
+  ctx.fillStyle = SUBWAY_GLASS; ctx.font = "4px monospace"; ctx.textAlign = "center"
+  if (mechanismAir(w, g.x, g.y - 18)) ctx.fillText("HOME", g.x, g.y - 18)
+  drawSubwayTrainFx(ctx, w, pal, tr, g)
+  ctx.restore()
+}
+function subwayTrainRect(ctx, w, x, y, width, height) {
+  var C = w.k.CELL, bottom = y + height, right = x + width
+  for (var yy = y; yy < bottom;) {
+    var nextY = Math.min(bottom, (Math.floor(yy / C) + 1) * C)
+    for (var xx = x; xx < right;) {
+      var nextX = Math.min(right, (Math.floor(xx / C) + 1) * C)
+      if (mechanismAir(w, xx, yy)) ctx.fillRect(xx, yy, nextX - xx, nextY - yy)
+      xx = nextX
+    }
+    yy = nextY
+  }
+}
+function drawSubwayCar(ctx, w, pal, tr, x, y, open, car) {
+  ctx.fillStyle = SUBWAY_INK
+  ctx.fillRect(x - 18, y - 20, 36, 18)
+  ctx.fillRect(x - 16, y - 22, 32, 2) // rounded roof
+  ctx.fillStyle = SUBWAY_CREAM
+  ctx.fillRect(x - 17, y - 19, 34, 12)
+  ctx.fillRect(x - 15, y - 21, 30, 2)
+  ctx.fillStyle = SUBWAY_RED
+  ctx.fillRect(x - 17, y - 7, 34, 4)
+  ctx.fillStyle = SUBWAY_GLASS
+  ctx.fillRect(x - 14, y - 16, 9, 7); ctx.fillRect(x + 5, y - 16, 9, 7)
+  ctx.fillStyle = SUBWAY_INK
+  ctx.fillRect(x - 6, y - 21, 12, 3) // destination board
+  ctx.fillRect(x - 4, y - 18, 8, 16) // sliding door recess
+  drawSubwayDoors(ctx, x, y, open)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 14, y - 3, 5, 3); ctx.fillRect(x + 9, y - 3, 5, 3)
+  ctx.fillRect(x - 20, y - 4, 2, 1); ctx.fillRect(x + 18, y - 4, 2, 1) // couplers
+  ctx.fillStyle = car ? pal.urgent : SUBWAY_GLASS
+  ctx.fillRect(x + tr.dir * 16, y - 8, 1, 2)
+}
+function drawSubwayDoors(ctx, x, y, open) {
+  ctx.fillStyle = SUBWAY_CREAM
+  var slide = open ? 3 : 0
+  ctx.fillRect(x - 4 - slide, y - 17, 3, 14); ctx.fillRect(x + 1 + slide, y - 17, 3, 14)
+  ctx.fillStyle = SUBWAY_GLASS
+  ctx.fillRect(x - 3 - slide, y - 15, 2, 5); ctx.fillRect(x + 1 + slide, y - 15, 2, 5)
+  ctx.fillStyle = SUBWAY_RED
+  ctx.fillRect(x - 4 - slide, y - 7, 3, 4); ctx.fillRect(x + 1 + slide, y - 7, 3, 4)
+  if (open) {
+    ctx.fillStyle = SUBWAY_GLASS
+    ctx.fillRect(x - 3, y - 2, 6, 1) // lit step where walkers appear and disappear
+  }
+}
+// Twelve seats over the lit windows. Exactly one head per id, including when
+// only one car fits; no agent lookup or renderer-owned passenger state.
+function drawSubwayPassengers(ctx, tr, x, y, car, cars) {
+  ctx.fillStyle = SUBWAY_INK
+  for (var i = car; i < tr.riders.length; i += cars) {
+    var slot = Math.floor(i / cars), side = slot % 2 ? 1 : -1
+    var sx = x + side * (6 + Math.floor(slot / 2) % 6 * 1.4)
+    sx = Math.round(sx) // coarse silhouettes remain whole art pixels
+    ctx.fillRect(sx, y - 14, 1, 2)
+    ctx.fillRect(sx - 1, y - 12, 2, 3)
+  }
+}
+function drawSubwayCarFine(ctx, pal, x, y) {
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x - 14.5, y - 20.5, 29, 0.5)
+  ctx.fillRect(x - 15, y - 8.5, 30, 0.5)
+  ctx.fillStyle = SUBWAY_CREAM
+  for (var i = 0; i < 2; i++) {
+    ctx.fillRect(x - 13.5 + i * 19, y - 15.5, 7, 0.5)
+    ctx.fillRect(x - 10.5 + i * 19, y - 16, 0.5, 7)
+  }
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 13, y - 2.5, 3, 0.5); ctx.fillRect(x + 10, y - 2.5, 3, 0.5)
+}
+function drawSubwayTrainFx(ctx, w, pal, tr, g) {
+  var size = (w.res || 1) >= 2 ? 0.5 : 1, moving = tr.phase === "run" || tr.phase === "back"
+  var dir = tr.phase === "back" ? -tr.dir : tr.dir
+  ctx.fillStyle = pal.dust
+  if (moving && tr.v > 0.15) for (var i = 0; i < 3; i++) {
+    var x = g.x - dir * (21 + i * 3 + w.ticks % 3)
+    moteFineRect(ctx, w, x, g.y - 8 - i * 4, 3 + Math.round(tr.v * 7), size)
+  }
+  if ((g.open && tr.t < 8) || (moving && tr.v > 0 && tr.v < 0.15)) {
+    ctx.fillStyle = SUBWAY_YELLOW
+    var age = w.ticks % 4
+    moteFineRect(ctx, w, g.x + dir * (9 + age * 2), g.y - 3 - age, size, size)
+    ctx.fillStyle = pal.dust
+    for (var j = 0; j < 2; j++) moteFineRect(ctx, w, g.x - 12 - j * 2 - age, g.y - 4 - j * 2, 2, size) // brake squeal strokes
+  }
+}
+function drawSubwaySignal(ctx, w, pal, h, fade) {
+  var C = w.k.CELL, x = Math.round((h.zx0 + h.zx1 + 1) * C / 2), y = h.zy0 * C + 2
+  ctx.save(); ctx.globalAlpha = fade
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 2, y, 5, 8); ctx.fillRect(x, y + 8, 1, 4)
+  ctx.fillStyle = w.eventMult === 0 ? pal.urgent : pal.decorLit
+  ctx.fillRect(x - 1, y + (w.eventMult === 0 ? 1 : 5), 3, 2)
+  if ((w.res || 1) >= 2) {
+    ctx.fillStyle = pal.steelEdge
+    ctx.fillRect(x - 1.5, y + 0.5, 0.5, 7)
+  }
+  ctx.restore()
+}
+function drawSubwayWorks(ctx, w, pal, fx) {
+  if (w.ticks >= fx.fireAt) return
+  var C = w.k.CELL, x = fx.x * C, y = fx.floorY * C - 6
+  ctx.save()
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x - 2, y, fx.span * C + 4, 2)
+  ctx.fillRect(x, y + 2, 1, 4); ctx.fillRect(x + fx.span * C, y + 2, 1, 4)
+  ctx.fillStyle = SUBWAY_YELLOW
+  for (var i = 0; i < fx.span * C; i += 4) ctx.fillRect(x + i, y, 2, 2)
+  ctx.font = "4px monospace"; ctx.textAlign = "center"
+  ctx.fillText("SERVICE PATCH", x + fx.span * C / 2, y - 2)
+  ctx.restore()
+}
+function subwaySignX(w, c, mid) {
+  var y = c.floorY * w.k.CELL - 19
+  for (var distance = 0; distance < 120; distance += 4) {
+    for (var side = -1; side <= 1; side += 2) {
+      var x = mid + distance * side
+      if (mechanismAir(w, x - 10, y) && mechanismAir(w, x + 10, y) && mechanismAir(w, x, y + 10)) return x
+    }
+  }
+  return mid
+}
+function subwayNameSign(ctx, pal, x, y) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(x - 9, y - 1, 18, 3)
+  ctx.fillStyle = pal.backLit
+  ctx.font = "3px monospace"; ctx.textAlign = "center"
+  ctx.fillText("HEAP ST", x, y + 1)
+}
+// Boarding is also permitted on the move. Part the doors for an approaching
+// eligible walker, using the same visible footprint rather than storing a
+// previous frame. The platform phases always keep them fully open.
+function subwayTrainBoarding(w, tr) {
+  if (tr.phase !== "run") return false
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.special || ag.state !== "walk" || ag.dir !== tr.dir) continue
+    if (Math.abs(ag.x - tr.x - 0.5) < 3 && Math.abs(ag.y - tr.y) <= 2) return true
+  }
+  return false
 }
