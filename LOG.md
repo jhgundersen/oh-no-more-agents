@@ -4597,3 +4597,5 @@ main: the rock, ore block and decor are exactly as before; behind them, dark
 mineral curtains and mounds on the back wall, faint strata, a few fungi with
 small pools of light. A modest gain — the cave has depth now — and nothing
 the first visitor sees got worse.
+
+**Deployed** after 174 (name="build" content="26744b7e"), gated on a passing check (809 tests): the Cavern depth art, three new sounds. Browser check of level 1 clean.
