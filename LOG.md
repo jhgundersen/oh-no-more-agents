@@ -5723,3 +5723,100 @@ Terrain is cached in ordinary play; these are Node raster times, not browser FPS
 
 **Next:** ready for Mail Room art review. Commit on `codex/mailroom` only;
 no push or deployment.
+
+## 201 — 2026-10-15 · Workwear on the scaffold (on a branch)
+
+**Why:** the Building Site already had its concrete frame, props and gantry
+rides from 99–100. The page wanted a richer second plane without confusing
+scenery with ground or changing the crane's ride.
+
+**Changed:** `codex/buildingsite`, based on approved `codex/mailroom` at
+`69943b2`, adds a cached far scaffold plane: thin uprights, crossed braces,
+muted diagonal hazard tape, orange/yellow hi-vis jackets on empty
+hangers and hooks, reflective bands, and tied stacks of rebar with curled ends.
+Small orange cement mixers stand in the gaps between bays, rather than under
+jackets where they first read as stationary workers. A raster board checked across its full rectangle
+reads "SITE SAFETY / 0 DAYS SINCE / LAST INCIDENT". It is present on
+level 15, seed 3; a wall or fixture omits the entire board instead of clipping
+its lettering. Scaffold luminance stays below playable concrete in all five
+themes, including matte-black. Original terrain, props, cranes, trolley lamps,
+cables, hooks, hard hats, dangling riders, landing puffs, hazards and exit
+recipes are untouched. No Sim.js or Palette.js edits.
+
+All additions require Building Site and `(w.res || 1) >= 2`. Static scenery
+paints before original terrain; only three small drum glints per surviving
+mixer animate before original machines and actors. Integer tick recipes have
+staggered slow periods and no RNG, world writes or scenery state. Whole-mixer
+clearance checks terrain, support, complete original signs/work lamps and
+fixtures, pits, exit, hazards, and the entire gantry/rider/drop envelope. The
+crane lane reservation uses the sky bound rather than walking the roof again
+per frame, so it stays fixed throughout a ride and costs no extra roof scan.
+Anchors stay put through excavation.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-buildingsite/coverage-safe.sh` pass: **938** tests in check and
+coverage. Eleven new page-art tests cover biome/resolution gates, read-only
+proxies and forbidden RNG, deterministic digests, half-pixel placement and
+canvas restoration, fixed cache anchors, far/near luminance in five themes,
+separated mixer/workwear silhouettes, four drum phases and bounded footprints,
+complete original prop/crane reservations, whole-board lettering, paint order,
+unchanged opaque actor colours including a hooked rider, original component
+digests, and four 600-tick crane playthroughs with complete world digests.
+The existing crane placement, ride, refusal, stall/release, collar alignment,
+roof clearance, landing, prop and event tests also pass. CRAP: **0** functions
+at or above 30, maximum **29.3**; all fourteen new helpers have **100%**
+coverage, maximum **6.0**.
+
+The standing caps remain: Node heap 2048 MB, `ulimit -v 6000000`, one check
+worker/two coverage workers, and a queue before every phase. The check waited
+for another agent's coverage to finish. A later full run started while this
+branch's first coverage was active; stopped only our coverage process tree and
+restarted that phase after the other run. Factory's art test stays excluded.
+Frame assertions use SHA-256 digests, component recording is capped at 20k
+fills, paint-order checks stream markers under 100k fills, and each live
+footprint is within one cell.
+
+**Looked:** level 15, seed 3, tick 400 at **1×**, the actual `shoot.js crop 15`,
+and the paired crop in `/tmp/codex-buildingsite/shoot-crop-pair.png`. Matching
+parent/branch levels 15, 34 and 53 at ticks 77/476 are in `sheet.png`, with
+800×496 frames at 1×, 2× crops and 4× details. Level 72 covers all five themes.
+`rides-sheet.png` pairs the real wait/up/across/down/back poses, including the
+carried colleague, collar joint and landing. `readability-sheet.png` pairs
+open/furled umbrellas and rockfall/geyser/brazier/tesla/fence/crusher/turret in
+idle/charge/fire/rest. Dark suits, pale faces, canopy colours, original yellow
+fixtures and pink hazard tells remain clear against the quieter back wall.
+The 400×248 panel shot also remains unchanged.
+
+Seeded comparison: **1,080 identical frames** across the other eighteen biomes
+and **60** identical Building Site res-1/unspecified-res frames (two layouts,
+ticks 77/240/600, five themes). All **30** Building Site res-2 frames changed.
+Baseline, harnesses, images, logs and comparison results are under
+`/tmp/codex-buildingsite/`.
+
+**Pipeline:** retained the fast rasterizer, single sheet composition, seeded
+single-world crop shots, validation queue, pending logs and completion marker.
+The queue now monitors throughout validation: if another test starts, it
+suspends only its own launcher/children and resumes them after that run exits,
+rather than trusting the gap before launch. The completed check is retained
+when a coverage phase must restart.
+The comparison now uses zero-copy Buffer views instead of allocating two
+whole-frame copies for every pair; the 1,170 comparisons completed in
+**17.58 s**, peak RSS **205.5 MB**. Removed the unused stale hash mode from
+the temporary harness; baseline component hashes have their own exact recipe.
+The prop-footprint test caught the original hanging work lamp's extra lower
+rows and widened its clearance before delivery. No package/tool source edits.
+
+**Measured:** warmed res-2 software rasterizer at tick 476, median of nine
+batches of forty frames, interleaved parent/branch, after tests and coverage.
+Level 15: actors **0.722 → 0.726 ms**, full terrain + actors
+**13.124 → 13.633 ms**.
+Level 53: actors **0.453 → 0.460 ms**, full terrain + actors
+**12.865 → 13.473 ms**.
+Subway control, level 18: actors **1.066 → 1.065 ms**, full terrain + actors
+**15.051 → 15.042 ms**.
+
+Terrain is cached in ordinary play; these are Node raster times, not browser FPS.
+
+**Next:** ready for Building Site art review. Commit on `codex/buildingsite`
+only; no push or deployment.

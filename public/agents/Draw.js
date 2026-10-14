@@ -208,6 +208,7 @@ function drawTerrain(ctx, w, pal) {
   drawDataHall(ctx, w)
   drawReadingHall(ctx, w)
   drawPostalHall(ctx, w)
+  drawWorksite(ctx, w)
   if (desertPage(w)) drawDesertRelics(ctx, w)
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
 
@@ -2613,6 +2614,7 @@ function drawActors(ctx, w, pal, opts) {
   drawDataStatus(ctx, w)
   drawReadingDust(ctx, w)
   drawPostalCycle(ctx, w)
+  drawWorkDrums(ctx, w)
   drawDrips(ctx, w, pal)
   drawMachines(ctx, w, pal)
   drawActiveEventAir(ctx, w, pal)
@@ -16550,6 +16552,182 @@ function drawPostalCycle(ctx, w) {
     ink.fillRect(b.x - 1, b.base - 13 + (phase === 1 ? 2 : 0), 3, 1)
     ink.fillStyle = POST_EDGE
     ink.fillRect(b.x - 1, b.base - 15, 3, 0.5)
+  }
+  ctx.restore()
+}
+
+// Page-only second scaffold plane. Quiet steel and workwear sit behind the
+// playable concrete; only three tiny drum glints repaint on the actor layer.
+function buildingSitePage(w) { return w.biome === "Building Site" && (w.res || 1) >= 2 }
+var WORK_BACK = "#181c20"
+var WORK_STEEL = "#4d585e"
+var WORK_EDGE = "#75817c"
+var WORK_YELLOW = "#9b8b47"
+var WORK_ORANGE = "#ae763f"
+var WORK_DARK = "#303438"
+var WORK_PAPER = "#b0b7a0"
+
+function workBays(w, row) {
+  var c = w.corridors[row], bays = [], C = w.k.CELL
+  for (var x = (c.x0 + 5) * C + row % 2 * 12; x + 40 <= (c.x1 - 4) * C; x += 64)
+    bays.push({ x: x, base: c.floorY * C, seed: w.level * 17 + row * 31 + x })
+  return bays
+}
+function workMixers(w) {
+  var mixers = [], C = w.k.CELL
+  for (var row = 0; row < w.corridors.length; row++) mixers.push({ x: (w.corridors[row].x0 + 16) * C + row % 2 * 12,
+    base: w.corridors[row].floorY * C, seed: w.level * 23 + row * 37, rate: 12 + row * 3 })
+  return mixers
+}
+function drawWorksite(ctx, w) {
+  if (!buildingSitePage(w)) return
+  ctx.save()
+  for (var row = 0; row < w.corridors.length; row++) {
+    var bays = workBays(w, row)
+    for (var i = 0; i < bays.length; i++) drawWorkBay(ctx, bays[i])
+  }
+  var boxes = workReserved(w), mixers = workMixers(w)
+  for (var j = 0; j < mixers.length; j++)
+    if (workMixerClear(w, mixers[j], boxes)) drawWorkMixer(ctx, mixers[j])
+  drawWorkSafety(ctx, w, boxes)
+  ctx.restore()
+}
+function drawWorkBay(ctx, b) {
+  ctx.globalAlpha = 0.85
+  ctx.fillStyle = WORK_BACK
+  ctx.fillRect(b.x, b.base - 24, 40, 24)
+  ctx.globalAlpha = 0.4
+  ctx.fillStyle = WORK_STEEL
+  ctx.fillRect(b.x + 1, b.base - 24, 1, 24); ctx.fillRect(b.x + 38, b.base - 24, 1, 24)
+  ctx.fillRect(b.x, b.base - 23, 40, 1)
+  ctx.fillRect(b.x, b.base - 6, 40, 1.5)
+  for (var step = 0; step < 22; step++) {
+    ctx.fillRect(b.x + 6 + step, b.base - 23 + step, 0.5, 1)
+    ctx.fillRect(b.x + 32 - step, b.base - 23 + step, 0.5, 1)
+  }
+  ctx.fillStyle = WORK_EDGE
+  ctx.fillRect(b.x + 1.5, b.base - 24, 0.5, 24)
+  ctx.fillRect(b.x + 38.5, b.base - 24, 0.5, 24)
+  drawWorkTape(ctx, b.x + 8, b.base - 6)
+  drawWorkJacket(ctx, b.x + 20, b.base - 21, b.seed)
+  drawWorkRebar(ctx, b.x + 3, b.base)
+  ctx.globalAlpha = 1
+}
+function drawWorkTape(ctx, x, y) {
+  ctx.fillStyle = WORK_YELLOW
+  ctx.fillRect(x, y, 24, 1.5)
+  ctx.fillStyle = WORK_DARK
+  for (var stripe = 0; stripe < 6; stripe++) {
+    ctx.fillRect(x + stripe * 4, y, 2, 0.5)
+    ctx.fillRect(x + stripe * 4 + 0.5, y + 0.5, 2, 0.5)
+    ctx.fillRect(x + stripe * 4 + 1, y + 1, 2, 0.5)
+  }
+}
+function drawWorkJacket(ctx, x, y, seed) {
+  ctx.fillStyle = WORK_STEEL
+  ctx.fillRect(x, y - 2, 0.5, 2)
+  ctx.fillRect(x - 2, y, 4.5, 0.5) // wall hook and empty hanger
+  ctx.fillStyle = seed % 2 ? WORK_ORANGE : WORK_YELLOW
+  ctx.fillRect(x - 3, y + 1, 6, 10)
+  ctx.fillRect(x - 5, y + 2, 2, 4); ctx.fillRect(x + 3, y + 2, 2, 4)
+  ctx.fillStyle = WORK_DARK
+  ctx.fillRect(x - 1, y + 1, 2, 2)
+  ctx.fillRect(x - 0.5, y + 3, 0.5, 8)
+  ctx.fillStyle = WORK_PAPER
+  ctx.globalAlpha = 0.35
+  ctx.fillRect(x - 2, y + 3, 0.5, 3); ctx.fillRect(x + 1.5, y + 3, 0.5, 3)
+  ctx.fillRect(x - 3, y + 6, 6, 0.5); ctx.fillRect(x - 3, y + 8, 6, 0.5)
+  ctx.globalAlpha = 0.4
+}
+function drawWorkRebar(ctx, x, base) {
+  ctx.fillStyle = WORK_STEEL
+  for (var row = 0; row < 3; row++) {
+    ctx.fillRect(x + row * 0.5, base - 1.5 - row, 29 - row, 0.5)
+    ctx.fillRect(x + 28, base - 2 - row, 1.5, 0.5) // curled cut ends
+  }
+  ctx.fillStyle = WORK_EDGE
+  ctx.fillRect(x + 6, base - 3.5, 0.5, 3)
+  ctx.fillRect(x + 22, base - 3.5, 0.5, 3)
+}
+function workReserved(w) {
+  var boxes = abyssReserved(w), C = w.k.CELL
+  // Reserve complete original signs and equipment, not only their anchor cell.
+  for (var i = 0; i < w.decor.length; i++) {
+    var d = w.decor[i], x = d.x * C, y = d.y * C
+    if (d.kind === "hang" && siteSignAt(d)) boxes.push({ x: x - 5, y: y, width: 44, height: 18 })
+    else boxes.push({ x: x - 4, y: y - 14, width: 20, height: 24 })
+  }
+  // Keep the whole rail, carried-rider envelope, drop and landing clear at
+  // every phase. The reservation never follows the moving hook's position.
+  for (var j = 0; j < w.cranes.length; j++) {
+    var crane = w.cranes[j], left = Math.min(crane.ax, crane.hx) * C - 10, top = w.k.SKY * C
+    boxes.push({ x: left, y: top, width: (Math.abs(crane.ax - crane.hx) + 1) * C + 20,
+      height: (crane.land + 1) * C - top + 4 })
+  }
+  return boxes
+}
+function workMixerClear(w, b, boxes) {
+  var C = w.k.CELL
+  return mechanismAir(w, b.x, b.base - 1) &&
+    w.terrain[Math.floor(b.base / C) * w.k.COLS + Math.floor((b.x + 4) / C)] !== w.k.EMPTY &&
+    postalBoxClear(w, { x: b.x - 2, y: b.base - 14, width: 20, height: 14 }, boxes)
+}
+function drawWorkMixer(ctx, b) {
+  ctx.globalAlpha = 0.7
+  ctx.fillStyle = WORK_DARK
+  ctx.fillRect(b.x, b.base - 2, 3, 2); ctx.fillRect(b.x + 12, b.base - 2, 3, 2)
+  ctx.fillStyle = WORK_STEEL
+  ctx.fillRect(b.x + 2, b.base - 6, 1, 5); ctx.fillRect(b.x + 12, b.base - 6, 1, 5)
+  ctx.fillRect(b.x + 1, b.base - 4, 14, 0.5)
+  ctx.fillStyle = WORK_ORANGE
+  ctx.fillRect(b.x + 1, b.base - 11, 10, 6)
+  ctx.fillRect(b.x + 2, b.base - 13, 7, 2)
+  ctx.fillRect(b.x + 2, b.base - 5, 7, 1)
+  ctx.fillStyle = WORK_YELLOW
+  ctx.fillRect(b.x + 2, b.base - 12.5, 6, 0.5)
+  ctx.fillRect(b.x + 1, b.base - 11, 0.5, 5)
+  ctx.fillStyle = WORK_BACK
+  ctx.fillRect(b.x + 10, b.base - 11, 2, 5)
+  ctx.fillStyle = WORK_EDGE
+  ctx.fillRect(b.x + 15, b.base - 9, 0.5, 5)
+  ctx.fillRect(b.x + 13, b.base - 8, 4, 0.5)
+  ctx.globalAlpha = 1
+}
+function workSafetyBox(w) {
+  var c = w.corridors[0], C = w.k.CELL
+  return { x: Math.round((c.x0 + c.x1) * C / 2) - 20, y: c.floorY * C - 24, width: 40, height: 17 }
+}
+function drawWorkSafety(ctx, w, boxes) {
+  var b = workSafetyBox(w)
+  if (!postalBoxClear(w, b, boxes)) return
+  ctx.globalAlpha = 0.8
+  ctx.fillStyle = WORK_BACK
+  ctx.fillRect(b.x, b.y, b.width, b.height)
+  ctx.fillStyle = WORK_STEEL
+  ctx.fillRect(b.x, b.y, b.width, 0.5); ctx.fillRect(b.x, b.y, 0.5, b.height)
+  ctx.fillRect(b.x + b.width - 0.5, b.y, 0.5, b.height)
+  ctx.fillStyle = WORK_YELLOW
+  drawTransitionText(ctx, "SITE SAFETY", b.x + 20, b.y + 2, 0.5)
+  ctx.fillStyle = WORK_PAPER
+  drawTransitionText(ctx, "0 DAYS SINCE", b.x + 20, b.y + 6.5, 0.5)
+  drawTransitionText(ctx, "LAST INCIDENT", b.x + 20, b.y + 11, 0.5)
+  ctx.globalAlpha = 1
+}
+function drawWorkDrums(ctx, w) {
+  if (!buildingSitePage(w)) return
+  ctx.save()
+  var mixers = workMixers(w), boxes = workReserved(w)
+  ctx.globalAlpha = 0.65
+  for (var i = 0; i < mixers.length; i++) {
+    var b = mixers[i]
+    if (!workMixerClear(w, b, boxes)) continue
+    var phase = Math.floor((w.ticks + b.seed) / b.rate) % 4
+    var x = b.x + [3, 6, 7, 4][phase], y = b.base + [-10, -11, -8, -7][phase]
+    ctx.fillStyle = WORK_EDGE
+    ctx.fillRect(x, y, 1.5, 0.5)
+    ctx.fillStyle = WORK_DARK
+    ctx.fillRect(x + 0.5, y + 0.5, 1, 1)
+    ctx.fillRect(b.x + 6, b.base - 9, 0.5, 0.5)
   }
   ctx.restore()
 }
