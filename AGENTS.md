@@ -663,7 +663,9 @@ Two `wrangler dev --local` instances coexist; they share the local D1 file,
 which the rescue counter does not mind.
 
 Use `npm run deploy` only when a production deployment is explicitly requested,
-and apply new migrations with `npm run db:remote` first.
+and apply new migrations with `npm run db:remote` first. Gate it on the checks
+in the same command — `npm run check && npm run deploy` — never chain it after
+a check with `;`: iteration 159 shipped with three failing tests that way.
 
 ## What breaks quietly
 
