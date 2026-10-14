@@ -4303,3 +4303,32 @@ needed.
 
 **Deployed** after 165 (name="build" content="903ae7e8"), gated on a passing
 check (780 tests): backup at deeper guard posts.
+
+## 166 — 2026-10-14 · Two steps are one too many
+
+**Survey:** death causes per biome over 380 levels × 2 colonies. The Harbour
+stood out with 29 "boom" deaths (others 1–14), and 28 of them were one level:
+228, a total wipe in both colonies. Every level that fails all three of the
+page's attempts, 1–400: just 20 (10/15, a guard level, fine) and 228 (2/18).
+
+**Cause:** a step costs every agent a climber of its own. 228 has one on the
+top floor, which used all 14 climbers, then another on the exit floor, which
+has no chasm to skip it. The ferry put the colony ashore one cell from that
+second step, and with no climbers they rode back and forth until the stall
+rules bombed them and the timer took the rest.
+
+**Tried and dropped:**
+- Not resetting `idle` on a ferry ride: no change; the rescue only hands out
+  bashers, and the bashers were gone too.
+- Backing off two cells to build a staircase: a staircase rises one row per
+  four to six cells, so it can never top a six-high step. Reverted.
+
+**Change:** the exit floor gets no step if an earlier floor already has one;
+it becomes a wall, which one bash opens for everybody (`stepEarlier`).
+`rng()` burns the step's second draw, so the rest of the level is unchanged.
+Terrain differs on 7 of 400 levels.
+
+**Measured** (400 levels × 2 colonies): home 92.52% → 92.92%; levels under
+half home 10 → 7 (228 and 363 no longer). Level 228 goes 18/18 in four
+colonies where it got 1–4. Tests 782 (`test/steps.test.js`); nothing over
+CRAP 30.

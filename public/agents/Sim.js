@@ -3348,6 +3348,9 @@ function placeObstacles(w, rng, c, index, corridors) {
   for (var n = 1; n <= count; n++) {
     var x = Math.round(lo + slot * n)
     var kind = n === forced ? "chasm" : pick(rng, kinds)
+    // rng() burns the step's second draw, so the rest of the level is as it was.
+    if (kind === "step" && lastOne && stepEarlier(corridors, index)) { kind = "wall"; rng() }
+    if (kind === "step") c.hasStep = true
     // Kept so the level's danger can be put where the traffic is densest and
     // the timing is funniest — see placeHazard().
     c.obstacles.push(x)
@@ -3355,6 +3358,17 @@ function placeObstacles(w, rng, c, index, corridors) {
     var cut = OBSTACLES[kind]
     if (cut) cut(w, rng, c, x, { lo: lo, hi: hi, index: index, corridors: corridors, sealed: sealed, roofLimit: roofLimit })
   }
+}
+
+// A step is paid for once per agent — a climber each — and the exit floor has
+// no chasm to let half the colony skip it. With a step already on the way
+// down, a second one on the exit floor asked for more climbers than the
+// colony carries: level 228 put its survivors ashore at one and they paced the
+// quay until the stall rules bombed them. Make the exit floor's one a wall,
+// which a single bash opens for everybody.
+function stepEarlier(corridors, index) {
+  for (var i = 0; i < index; i++) if (corridors[i].hasStep) return true
+  return false
 }
 
 // One function per obstacle kind, carved at x on corridor c. `o` carries what
