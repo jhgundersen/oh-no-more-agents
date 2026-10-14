@@ -201,6 +201,7 @@ function drawTerrain(ctx, w, pal) {
   if (iceCavePage(w)) drawGlacierBackdrop(ctx, w)
   if (spaceshipPage(w)) drawSpaceshipBackdrop(ctx, w, pal)
   if (ruinsPage(w)) drawRuinsTemple(ctx, w, pal)
+  drawAssemblyBackdrop(ctx, w)
   drawBackdrop(ctx, w, pal)
   if (desertPage(w)) drawDesertRelics(ctx, w)
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
@@ -234,6 +235,7 @@ function drawTerrain(ctx, w, pal) {
   if (ruinsPage(w)) drawRuinsMasonry(ctx, w, pal)
   if (junglePage(w)) drawJungleSurfaces(ctx, w)
   if (iceCavePage(w)) drawGlacierSurfaces(ctx, w)
+  drawAssemblyEdges(ctx, w)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
   drawSea(ctx, w, pal)
@@ -2598,6 +2600,7 @@ function drawActors(ctx, w, pal, opts) {
   drawAnimatedLight(ctx, w, pal)
   if (junglePage(w)) drawJungleLife(ctx, w)
   if (iceCavePage(w)) drawGlacierLife(ctx, w)
+  drawAssemblyLife(ctx, w)
   drawDrips(ctx, w, pal)
   drawMachines(ctx, w, pal)
   drawActiveEventAir(ctx, w, pal)
@@ -15376,4 +15379,273 @@ function drawGlacierGlint(ctx, w, x, y, seed) {
     ctx.fillStyle = GLACIER_TEAL; ctx.globalAlpha = shine * 0.5
     ctx.fillRect(x - 1.5, y - 0.5, 0.5, 0.5)
   }
+}
+
+// The Factory is an assembly floor, not the Foundry's hot metal works.
+// Gantries and line housings are cached behind the original brickwork and
+// terrain. Products and articulated arms run before all original fittings
+// and actors, clipped to current air, including after a Hard Fault.
+function factoryPage(w) {
+  return w.biome === "Factory" && (w.res || 1) >= 2
+}
+
+var ASSEMBLY_DARK = "#1d292c"
+var ASSEMBLY_STEEL = "#35484a"
+var ASSEMBLY_EDGE = "#536968"
+var ASSEMBLY_YELLOW = "#978449"
+var ASSEMBLY_SIGN = "#b8ad72"
+var ASSEMBLY_LIGHT = "#aacbb2"
+var ASSEMBLY_BOX = "#796348"
+var ASSEMBLY_TAPE = "#ad9470"
+var ASSEMBLY_WELD = "#98dcec"
+
+function assemblyBays(w, i) {
+  // Original corridor metadata anchors the bays: carving never moves them.
+  // Two widest spaces between obstacles, with generous clearance at each end.
+  var c = w.corridors[i], ends = [c.x0].concat(c.obstacles, [c.x1]), bays = []
+  for (var j = 0; j < ends.length - 1; j++) {
+    var x = (ends[j] + (j ? 7 : 4)) * w.k.CELL
+    var width = Math.min(100, (ends[j + 1] - 3) * w.k.CELL - x)
+    if (width < 40) continue
+    bays.push({ x: x, y: c.floorY * w.k.CELL, width: width,
+      phase: w.level * 17 + i * 61 + j * 37, dir: c.dir, number: i + 1 })
+  }
+  bays.sort(function(a, b) { return b.width - a.width || a.x - b.x })
+  return bays.slice(0, 2)
+}
+
+function drawAssemblyBackdrop(ctx, w) {
+  if (!factoryPage(w)) return
+  ctx.save()
+  for (var i = 0; i < w.corridors.length; i++) {
+    var y = w.corridors[i].floorY * w.k.CELL - 26
+    // A continuous overhead I-beam, with spaced brackets and a cable tray.
+    ctx.fillStyle = ASSEMBLY_DARK
+    ctx.fillRect(14, y, 372, 5)
+    ctx.fillStyle = ASSEMBLY_STEEL
+    ctx.fillRect(14, y, 372, 1)
+    ctx.fillRect(14, y + 4, 372, 1)
+    for (var x = 24; x < 386; x += 52) {
+      ctx.fillStyle = ASSEMBLY_STEEL
+      ctx.fillRect(x, y - 3, 4, 10)
+      ctx.fillStyle = ASSEMBLY_EDGE
+      ctx.fillRect(x + 1, y + 1, 1, 1)
+      ctx.fillRect(x + 1, y + 5, 1, 1)
+    }
+    var bays = assemblyBays(w, i)
+    for (var j = 0; j < bays.length; j++) drawAssemblyStation(ctx, bays[j])
+  }
+  ctx.restore()
+}
+
+function drawAssemblyStation(ctx, b) {
+  var x = b.x, y = b.y, right = x + b.width
+  // Waist-high back-wall roller conveyor, clearly separate from Sim's belts
+  // at the boots. A recessed return run and angled feet carry its weight.
+  ctx.fillStyle = ASSEMBLY_DARK
+  ctx.fillRect(x, y - 8, b.width, 5)
+  ctx.fillRect(x + 2, y - 3, 3, 3); ctx.fillRect(right - 5, y - 3, 3, 3)
+  ctx.fillStyle = ASSEMBLY_STEEL
+  ctx.fillRect(x, y - 8, b.width, 2)
+  ctx.fillRect(x + 1, y - 4, b.width - 2, 1)
+  ctx.fillStyle = ASSEMBLY_EDGE
+  ctx.fillRect(x + 1, y - 8, b.width - 2, 0.5)
+  for (var r = x + 3; r < right - 2; r += 5) ctx.fillRect(r, y - 6, 2, 1)
+  // Robot pedestal, controller and stack light; the moving joints go live.
+  ctx.fillStyle = ASSEMBLY_DARK
+  ctx.fillRect(x + 9, y - 12, 13, 9)
+  ctx.fillStyle = ASSEMBLY_STEEL
+  ctx.fillRect(x + 10, y - 11, 11, 7)
+  ctx.fillRect(right - 10, y - 18, 9, 10)
+  ctx.fillStyle = ASSEMBLY_EDGE
+  ctx.fillRect(x + 10, y - 11, 11, 1)
+  ctx.fillRect(right - 9, y - 17, 1, 8)
+  ctx.fillStyle = ASSEMBLY_DARK
+  ctx.fillRect(right - 7, y - 22, 3, 4)
+  ctx.fillRect(right - 8, y - 12, 5, 2)
+  // Small hook on the overhead trolley, distinct from the lethal press.
+  ctx.fillStyle = ASSEMBLY_STEEL
+  ctx.fillRect(right - 22, y - 25, 9, 3)
+  ctx.fillRect(right - 18, y - 22, 1, 6)
+  ctx.fillRect(right - 18, y - 16, 4, 1)
+  ctx.fillRect(right - 15, y - 18, 1, 2)
+  // Hanging task lamp and a stepped cone; no full-frame wash over the earth.
+  ctx.fillStyle = ASSEMBLY_STEEL
+  ctx.fillRect(x + 45, y - 25, 1, 5)
+  ctx.fillRect(x + 41, y - 20, 9, 2)
+  ctx.fillStyle = ASSEMBLY_LIGHT
+  ctx.fillRect(x + 42, y - 18, 7, 0.5)
+  ctx.globalAlpha = 0.045
+  for (var row = 0; row < 5; row++) ctx.fillRect(x + 41 - row, y - 17.5 + row * 2, 9 + row * 2, 2)
+  ctx.globalAlpha = 1
+}
+
+function drawAssemblyEdges(ctx, w) {
+  if (!factoryPage(w)) return
+  ctx.save()
+  // Sparse paint on surviving ledge faces: the old brown blocks, seams and
+  // grain remain exposed. Avoid the actual belts, steel and built bridges.
+  var C = w.k.CELL, cols = w.k.COLS
+  for (var i = 0; i < w.corridors.length; i++) {
+    var y = w.corridors[i].floorY
+    for (var x = 5; x < cols - 5; x++) {
+      if (!assemblyPaintCell(w, x, y) || w.terrain[(y - 1) * cols + x]) continue
+      if (w.beltAt[(y - 1) * cols + x]) continue
+      // Short diagonal yellow/black strips alternate with untouched ledge.
+      if ((x + i * 3) % 12 >= 5) continue
+      ctx.globalAlpha = 0.7
+      ctx.fillStyle = ASSEMBLY_DARK
+      ctx.fillRect(x * C, y * C + 1, C, 2)
+      ctx.fillStyle = ASSEMBLY_YELLOW
+      ctx.fillRect(x * C + 1, y * C + 1, 2, 1)
+      ctx.fillRect(x * C, y * C + 2, 2, 1)
+    }
+  }
+  ctx.restore()
+}
+
+function assemblyPaintCell(w, x, y) {
+  var m = w.terrain[y * w.k.COLS + x]
+  return m === w.k.DIRT || m === w.k.ORE || m === w.k.ROCK
+}
+
+function assemblyInk(ctx, w) {
+  // Cell-boundary clipping works in browsers and the software shot tool.
+  var reserved = assemblyReserved(w)
+  return { fillStyle: ASSEMBLY_STEEL, fillRect: function(x, y, width, height) {
+    ctx.fillStyle = this.fillStyle
+    assemblyAirRect(ctx, w, x, y, width, height, reserved)
+  } }
+}
+
+function assemblyReserved(w) {
+  var C = w.k.CELL, e = w.exit
+  // The shutter is cached, unlike its live glow: keep products off its frame
+  // as well as the opening. Original pipes, rubble and cables keep their outline.
+  var boxes = [{ x: (e.x - 2) * C, y: e.y * C - 10,
+    width: (e.w + 4) * C, height: (e.h + 1) * C + 10 }]
+  for (var i = 0; i < w.decor.length; i++) {
+    var d = w.decor[i]
+    if (["spire", "tuft", "clump", "hang"].indexOf(d.kind) < 0) continue
+    if (!lightDecorAlive(w, d)) continue
+    var h = d.kind === "spire" ? 4 + d.size * 3 : d.kind === "clump" ? 4 : 4 + d.size
+    boxes.push({ x: d.x * C - 3, y: d.kind === "hang" ? d.y * C : (d.y + 1) * C - h,
+      width: 11, height: h })
+  }
+  return boxes
+}
+
+function assemblyUnreserved(boxes, x, y, width, height) {
+  return !boxes.some(function(b) {
+    return x < b.x + b.width && x + width > b.x && y < b.y + b.height && y + height > b.y
+  })
+}
+
+function assemblyAirRect(ctx, w, x, y, width, height, reserved) {
+  var C = w.k.CELL, right = x + width, bottom = y + height
+  for (var yy = y; yy < bottom;) {
+    var nextY = Math.min(bottom, (Math.floor(yy / C) + 1) * C)
+    for (var xx = x; xx < right;) {
+      var nextX = Math.min(right, (Math.floor(xx / C) + 1) * C)
+      if (mechanismAir(w, xx, yy) && assemblyUnreserved(reserved, xx, yy, nextX - xx, nextY - yy))
+        ctx.fillRect(xx, yy, nextX - xx, nextY - yy)
+      xx = nextX
+    }
+    yy = nextY
+  }
+}
+
+function drawAssemblyLife(ctx, w) {
+  if (!factoryPage(w)) return
+  ctx.save()
+  var ink = assemblyInk(ctx, w)
+  for (var i = 0; i < w.corridors.length; i++) {
+    var bays = assemblyBays(w, i)
+    for (var j = 0; j < bays.length; j++) {
+      var b = bays[j]
+      drawAssemblyProducts(ink, w, b)
+      drawAssemblyRobot(ink, w, b)
+      // Green operating lamp, with a restrained amber cycle at the top.
+      ink.fillStyle = ASSEMBLY_LIGHT
+      ink.fillRect(b.x + b.width - 7, b.y - 20, 3, 1)
+      ink.fillStyle = (w.ticks + b.phase) % 120 < 30 ? ASSEMBLY_SIGN : ASSEMBLY_YELLOW
+      ink.fillRect(b.x + b.width - 7, b.y - 22, 3, 1)
+    }
+  }
+  ctx.restore()
+}
+
+function drawAssemblyProducts(ctx, w, b) {
+  var travel = Math.floor((w.ticks + b.phase) / 5) * b.dir
+  // Rolling highlights and packages share a direction; agents' belts below
+  // still have their own exact motion, direction and support tests.
+  ctx.fillStyle = ASSEMBLY_EDGE
+  for (var r = 0; r < b.width - 3; r += 5) ctx.fillRect(b.x + r + 1, b.y - 7 + ((travel + r) % 3 === 0 ? 0.5 : 0), 2, 0.5)
+  var span = b.width - 12, count = Math.max(1, Math.floor(span / 24))
+  for (var p = 0; p < count; p++) {
+    var offset = ((Math.floor(p * span / count) + travel) % span + span) % span
+    drawAssemblyCrate(ctx, b.x + offset + 2, b.y - 8, p % 2)
+  }
+}
+
+function drawAssemblyCrate(ctx, x, y, kind) {
+  ctx.fillStyle = ASSEMBLY_DARK
+  ctx.fillRect(x, y - 9, 11, 9)
+  ctx.fillStyle = kind ? ASSEMBLY_STEEL : ASSEMBLY_BOX
+  ctx.fillRect(x + 1, y - 8, 9, 7)
+  ctx.fillStyle = kind ? ASSEMBLY_EDGE : ASSEMBLY_TAPE
+  ctx.fillRect(x + 1, y - 8, 9, 1)
+  ctx.fillRect(x + 5, y - 7, 1, 6)
+  // Shipping label and two barcode marks, not another orange machine decal.
+  ctx.fillStyle = ASSEMBLY_SIGN
+  ctx.fillRect(x + 7, y - 5, 2, 2)
+  ctx.fillStyle = ASSEMBLY_DARK
+  ctx.fillRect(x + 7.5, y - 4.5, 0.5, 1)
+}
+
+function drawAssemblyRobot(ctx, w, b) {
+  var cycle = (w.ticks + b.phase) % 180, swing = Math.sin(cycle * Math.PI / 90)
+  var sx = b.x + 15, sy = b.y - 12
+  var ex = sx + 5 + Math.round(swing * 3 * 2) / 2, ey = sy - 8 - Math.round(swing * 2) / 2
+  var tx = sx + 17 + Math.round(swing * 3 * 2) / 2, ty = sy - 3
+  drawAssemblyLink(ctx, sx, sy, ex, ey)
+  drawAssemblyLink(ctx, ex, ey, tx, ty)
+  drawAssemblyJoint(ctx, sx, sy, 3)
+  drawAssemblyJoint(ctx, ex, ey, 2)
+  ctx.fillStyle = ASSEMBLY_EDGE
+  ctx.fillRect(tx - 1, ty - 1, 4, 2)
+  ctx.fillStyle = ASSEMBLY_DARK
+  ctx.fillRect(tx + 2, ty, 1, 5)
+  // A cold, brief welding spark on the workpiece, never a furnace plume.
+  if (cycle < 144 || cycle > 158) return
+  ctx.fillStyle = ASSEMBLY_WELD
+  ctx.fillRect(tx, ty + 4, 5, 0.5)
+  ctx.fillRect(tx + 2, ty + 2, 0.5, 5)
+  for (var s = 0; s < 4; s++) {
+    var age = (cycle + s * 3) % 9
+    ctx.fillRect(tx - 4 + s * 3, ty + 2 - Math.floor(age / 2), 0.5, 1)
+  }
+}
+
+function drawAssemblyLink(ctx, x0, y0, x1, y1) {
+  var steps = Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)))
+  for (var s = 0; s <= steps; s++) {
+    var x = Math.round((x0 + (x1 - x0) * s / steps) * 2) / 2
+    var y = Math.round((y0 + (y1 - y0) * s / steps) * 2) / 2
+    ctx.fillStyle = ASSEMBLY_DARK
+    ctx.fillRect(x - 2, y - 2, 4, 4)
+    ctx.fillStyle = ASSEMBLY_YELLOW
+    ctx.fillRect(x - 1, y - 1, 2, 2)
+    ctx.fillStyle = ASSEMBLY_SIGN
+    ctx.fillRect(x - 1, y - 1, 1, 0.5)
+  }
+}
+
+function drawAssemblyJoint(ctx, x, y, radius) {
+  ctx.fillStyle = ASSEMBLY_DARK
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2)
+  ctx.fillStyle = ASSEMBLY_EDGE
+  ctx.fillRect(x - radius + 0.5, y - radius + 0.5, radius * 2 - 1, radius * 2 - 1)
+  ctx.fillStyle = ASSEMBLY_DARK
+  ctx.fillRect(x - 0.5, y - 0.5, 1, 1)
 }

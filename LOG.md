@@ -5100,3 +5100,67 @@ Reviewed and merged by the loop. Level 6, tick 400, full frame against main at 1
 ## 191 — 2026-10-14 · Factory art on a branch
 
 Started: Factory art on `codex/factory` (level 8) — a production line distinct from the Foundry: belts, robot arms, gantries, safety stripes, signage; same brief lessons.
+
+## 192 — 2026-10-14 · A working assembly floor (on a branch)
+
+**Change:** Draw-only, page-resolution Factory art added over the original
+factory. Continuous overhead I-beams, brackets, cable trays and small trolley
+hooks frame two production bays per corridor. Back-wall roller conveyors carry
+shipping crates and blue-grey housings; articulated yellow robot arms swing
+between workpieces and briefly weld with cold blue sparks. Painted BAY stencils,
+hanging task lamps, stack lights and sparse yellow/black ledge stripes complete
+the line. The original brown blocks, seams, rivets, brickwork, windows, gear
+decals, motes, pipes, rubble, cables, belts, hazards, roller-shutter exit and guard
+booth keep their recipes. Palette, Sim and Outcome are unchanged.
+
+Rails, conveyor housings, signs, lamps and paint use the terrain cache. Products,
+rollers, arms and stack lights run before the original fittings, event mirrors,
+fixtures and colony. Live art is clipped at current terrain-cell boundaries and
+clears the exit shutter and original decor. Bay positions come from the original
+corridor metadata, so digging and Hard Fault cannot relocate them; short lines
+carry fewer crates so packages never overlap. Every addition is gated on Factory
+and `(w.res || 1) >= 2`, uses the half-pixel grid, and reads coordinates, level
+and ticks without world writes, RNG or new scenery state.
+
+**Checked:** `npm run stamp`, `npm run check` and
+`npm run crap -- --threshold 30` pass. Nine new component tests cover read-only
+proxies, forbidden Math.random, deterministic pixels, canvas state, the
+half-pixel grid, cached versus live art, moving products in both directions,
+crate spacing, articulated joints, intermittent welding, terrain occlusion,
+exit/decor clearance, sparse paint coverage, untouched steel/bridge/belt cells,
+foreground ordering, original component bytes at both resolutions, and Scale Up,
+Technical Debt and Hard Fault with their visual mirrors. CRAP: **0** functions
+at or above 30, maximum **29.0**; new helpers at most **8.0**, all with 100%
+coverage. Used a local copy of the installed CRAP tool and the ignored coverage
+directory; no tooling changes.
+
+Seeded main/new Draw comparison across all nineteen biomes: **1,080 identical
+frames** in the other eighteen (two layouts, ticks 77/240/600, five themes,
+res 1/2). Factory's **60** res-1/unspecified-res frames are also identical;
+all **30** res-2 frames changed. Baseline, harness and results:
+`/tmp/codex-factory/`.
+
+**Looked:** `node tools/shoot.js level 8 --res 2`; main versus this branch on
+levels 8, 27 and 46 at ticks 77/476, full 800×496 frames at 1× viewing size,
+matching 2× crops and enlarged 4× details in `/tmp/codex-factory/sheet.png`.
+Also inspected level 65 in all five themes. The rails, production lines and
+stencils change the full-frame read immediately, without the Foundry's furnaces
+or molten glow. Enlarged crops retain the old terrain, gear wheels and pipes;
+faces, guards, umbrellas, booth, hazards and exit remain distinct. Review cleared
+products off the cached shutter, protected the original decor, put stencils over
+mortar strokes, and reduced package density on short conveyors.
+
+**Measured:** warmed res-2 software rasteriser at tick 476, median of nine
+batches of forty frames, interleaved old/new, after tests and coverage finished.
+Level 8: actors **1.555 → 2.835 ms**, full terrain + actors
+**13.732 → 16.137 ms**. Level 46: actors **2.581 → 3.992 ms**, full
+**16.441 → 19.190 ms**. Subway control, level 18: actors
+**2.659 → 2.660 ms**, full **31.996 → 31.997 ms**. Terrain is cached in
+ordinary play; these are Node raster times, not browser FPS.
+
+**Next:** ready for Factory art review. Committed on `codex/factory` only;
+no push or deployment.
+
+Reviewed and merged by the loop. Level 8, tick 400, full frame against main at 1x: gantry rails, conveyors carrying boxes, robot arms and safety stripes read as a production line, nothing like the Foundry. One fix in review: the "BAY 3" signs read "BA'o 7" at 3x — the ceiling, drawn later, clipped the tops of the letters, and lowering the sign put it under the stations instead. The signs are gone; the line reads without them.
+
+Merge fix: dropping `drawAssemblyLabels` left "cached rails" on `layers.slice(0, 3)`, which now took in the animated `drawAssemblyLife`. The failing `deepEqual` on two raw 800×496 buffers made node build a diff of them and the run reached 22 GB before it was killed. Now `slice(0, 2)`, and `picture()` returns a pixel digest so a failed comparison is a 64-character diff; `footprint` refuses non-finite or larger-than-board rectangles and recording stops at 20k fills. The file runs in 2 s; `npm run check` 881/881.
