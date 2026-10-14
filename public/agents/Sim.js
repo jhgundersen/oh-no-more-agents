@@ -6817,11 +6817,12 @@ function restoreAgi(w, dead, back) {
 // exit, where a crowd is a crowd going home.
 var LIMIT_CROWD = 5       // walkers it takes
 var LIMIT_SPAN = 5        // cells they have to be inside
-var LIMIT_CHANCE = 0.6    // that a first crowd gets the sign at all
+var LIMIT_CHANCE = 0.85   // that a first real queue gets the sign at all
 var LIMIT_EARLIEST = 240  // let the colony out of the hatch first
 var LIMIT_HOLD = 54       // ticks the front of the queue stands still
 var LIMIT_EVERY = 16      // ticks between each agent behind it being let go
 var LIMIT_SIGN = 30       // ticks the sign stays after the last one goes
+var LIMIT_FRESH = 60      // idle ticks: past this a walker is pacing, not queueing
 
 function queued(w, ag) {
   if (!(ag.queueFor > 0)) return false
@@ -6851,7 +6852,11 @@ function stepRateLimit(w) {
 }
 
 // The biggest bunch of ordinary walkers on any one floor, if it is big enough
-// and somewhere it is safe to stand still.
+// and somewhere it is safe to stand still — and if it is a queue: all facing
+// the same way and all getting somewhere. A crowd milling in both directions
+// with no progress is a stuck colony, and holding that one still takes the
+// time the director needs to get it out. The play-test caught it: on level 6
+// a 429 over a stuck bottom floor turned 17 of 19 home into 6.
 function findCrowd(w) {
   var best = null
   for (var i = 0; i < w.agents.length; i++) {
@@ -6860,7 +6865,7 @@ function findCrowd(w) {
     var group = []
     for (var j = 0; j < w.agents.length; j++) {
       var B = w.agents[j]
-      if (limitable(w, B) && Math.floor(B.y) === Math.floor(A.y) && B.x >= A.x && B.x < A.x + LIMIT_SPAN) group.push(B)
+      if (limitable(w, B) && B.dir === A.dir && Math.floor(B.y) === Math.floor(A.y) && B.x >= A.x && B.x < A.x + LIMIT_SPAN) group.push(B)
     }
     if (group.length >= LIMIT_CROWD && (!best || group.length > best.length)) best = group
   }
@@ -6868,7 +6873,7 @@ function findCrowd(w) {
 }
 
 function limitable(w, ag) {
-  if (ag.gone || ag.special || ag.state !== "walk" || unsupported(w, ag)) return false
+  if (ag.gone || ag.special || ag.state !== "walk" || ag.idle > LIMIT_FRESH || unsupported(w, ag)) return false
   var x = Math.floor(ag.x), y = Math.floor(ag.y)
   return eventSafeX(w, x) && !hazardZoneAt(w, x, y, true) && !pitAt(w, x)
 }

@@ -118,7 +118,9 @@ test("played levels: when it fires it drains, and no level hangs", () => {
     assert.ok(longest <= S.LIMIT_HOLD + 40 * S.LIMIT_EVERY)
     if (w.rateLimited) fired++
   }
-  assert.ok(fired >= 3, `crowds form often enough to meet the sign (${fired})`)
+  // Only real queues qualify (same direction, recent progress), so a forced
+  // coin meets one on a couple of levels in thirty.
+  assert.ok(fired >= 1, `crowds form often enough to meet the sign (${fired})`)
 })
 
 test("the sign pops up, blinks, holds, sinks away on whole pixels, and draws read-only", () => {

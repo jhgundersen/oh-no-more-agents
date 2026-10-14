@@ -189,14 +189,16 @@ test("the finished report leaves room for the verdict and rescued row at both re
     w.done = true; w.doneTicks = 10; w.saved = saved; w.toRelease = 18
     w.escortsHome = 2; w.mission.targets = [{ ...t, home: true }, { ...t, home: false }]
     const img = render(w, pal, D.drawLevelTransition)
-    assert.ok(img.calls.some(c => c.height === 78), "taller plate only when there are rescues")
+    // Every card ends with the commit line (12px row and the 4px that closes a
+    // text row), so both plates are 16px taller than when this was written.
+    assert.ok(img.calls.some(c => c.height === 94), "taller plate only when there are rescues")
     // Verdict occupies y136..140, badges y152..159; both inside the plate.
     assert.ok(img.calls.some(c => c.y === 136 && c.height === 1))
     assert.ok(img.calls.some(c => c.y === 154 && c.height === 1))
-    assert.ok(img.calls.every(c => c.y + c.height <= 174))
+    assert.ok(img.calls.every(c => c.y + c.height <= 190))
     w.escortsHome = 0
     const without = render(w, pal, D.drawLevelTransition)
-    assert.ok(without.calls.some(c => c.height === 62), "original card without rescues")
-    assert.ok(without.calls.every(c => c.y + c.height <= 158))
+    assert.ok(without.calls.some(c => c.height === 78), "original card, plus the commit line, without rescues")
+    assert.ok(without.calls.every(c => c.y + c.height <= 174))
   }
 })

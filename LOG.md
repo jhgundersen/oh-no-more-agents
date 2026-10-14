@@ -5384,3 +5384,55 @@ cue plays; the AGI's homecoming replaces the ordinary chirp: exactly six
 oscillators). `npm run check` 925/925 in 11 s; CRAP worst 29.2.
 
 **Deployed** after 196 (name="build" content="8c67a72a"), gated on a passing check (925 tests): the golden AGI, and sounds and quips for the dreamer and the 429 queue. Levels 3, 9 and 14 in headless Chromium, no console errors.
+
+## 197 — 2026-10-14 · A play-test harness, a 429 that only queues queues, and the level as a commit
+
+**Tool: `npm run playtest -- 1-20 [--seeds N] [--json]`** (`tools/playtest.js`).
+Plays every (level, colony) pair headlessly on worker threads — 800 runs of
+levels 1–20 in about 3 s — and reports per level: home %, worst run, hangs,
+runs that ran out the clock, runs ended by the stall cutoff and how many were
+stranded, agents written off as looping, agents still queued at the end, and
+how often the dreamer, the 429 and the AGI (h/l) turned up; then a "worth a
+look" list, worst first. Exits non-zero on a hang or a stuck queue. Colonies
+come from simcheck's `colonySeed` with a salt per run, so any run can be
+replayed.
+
+**Found and fixed — the 429 was causing the worst regression.** Level 6 (Ice
+Cave) fell from 93% to 72% home against the pre-dreamer code, with timeouts and
+24 agents written off as looping. A/B on the same colonies: with the 429 on,
+17/19 home became 6/19, and 12/19 became 1/19. Every crowd it held was a stuck
+colony milling both ways on the bottom floor (idle counts in the hundreds), and
+holding them still took the time the director needed to get them out. A crowd
+now only qualifies if everyone in it faces the same way and has made progress in
+the last 60 ticks (`LIMIT_FRESH`) — a queue, not a jam. With real queues only it
+fires less, so the coin went from 0.6 to 0.85: about 4–6% of runs. Over 40
+colonies a level, 1–20 now match the pre-dreamer code within noise (level 6:
+90% vs 91%; overall 95% vs 95%); `simcheck play 60` unchanged at 881/929.
+
+**Found, not fixed — stragglers at a debris-filled crossing.** The tool's top
+entries are pre-existing and the same on the old code: level 10 (Trench) ends
+on the stall cutoff in 26/40 runs, level 2 in 18/40, level 18 in 13/40, each
+with one or two agents stranded — no hangs, the cutoff ends the level. Traced
+on level 10, salt 3: the bottom crossing (pit x31–42) is part-filled with bridge
+and debris that leaves a one-cell bottomless gap at x39 between solid
+footing either side. The straggler paces x12↔x39 with 22 builders in the
+toolbar and never bridges it: the crossing's far lip is measured from the pit's
+edge (x43, a row lower), not from the debris. A rule that let a diver learn the
+current after three sweeps was tried and reverted — it changed nothing, because
+the current was not what held them. Next for a focused iteration.
+
+**Report card: the level as a commit.** Its last line is now a fake git commit
+in the game's voice, deterministic from the finished world, hash included:
+`D8FBB08 FIX: 17/19 AGENTS WENT HOME; 1 HALLUCINATED AN EXIT`. FEAT when all
+are home ("SHIP ALL 18 AGENTS HOME"), REVERT for none, HOTFIX when the clock
+ran out, FIX otherwise; up to two notes that fit, most interesting first (AGI
+ACHIEVED / POSTPONED, N HALLUCINATED AN EXIT, N LOST IN PROD, N UMBRELLAS, SCOPE
+CHANGED MID-SPRINT), and `(#429)` when a queue happened. At most 64 characters,
+inside the plate. The font gains `: # ( ) , ;`. The plate is 16px taller on
+every card; the escort test's pinned heights moved by exactly that.
+
+**Tests:** `commit-line.test.js` (4), `playtest.test.js` (4: a repeatable run,
+summaries and problem order, arguments, workers end to end and the report's
+verdict). `npm run check` 933/933; CRAP worst 29.2.
+
+Not deployed: deploys are now batched, at most about hourly.

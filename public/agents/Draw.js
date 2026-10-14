@@ -2747,7 +2747,9 @@ var TRANSITION_GLYPHS = {
   "6": [3,4,7,5,7], "7": [7,1,2,2,2], "8": [7,5,7,5,7], "9": [7,5,7,1,6],
   " ": [0,0,0,0,0], "·": [0,0,2,0,0], "/": [1,1,2,4,4],
   "!": [2,2,2,0,2], "?": [6,1,2,0,2], "+": [0,2,7,2,0],
-  ".": [0,0,0,0,2], "-": [0,0,7,0,0]
+  ".": [0,0,0,0,2], "-": [0,0,7,0,0],
+  ":": [0,2,0,2,0], "#": [5,7,5,7,5], "(": [1,2,2,2,1], ")": [4,2,2,2,4],
+  ",": [0,0,0,2,4], ";": [0,2,0,2,4]
 }
 
 function drawTransitionGlyph(ctx, rows, x, y, size) {
@@ -2878,6 +2880,37 @@ function battleLine(w) {
   return parts.join(" · ")
 }
 
+// The level as a commit, in the game's voice: a short hash, a conventional-
+// commit type from how it went, the count home, and up to two things that
+// happened, most interesting first. Deterministic: everything in it is read
+// off the finished world, the hash included, so a host that redraws the card
+// every frame shows the same line every frame.
+var COMMIT_MAX = 64      // characters, hash included: 255px of a 272px plate
+function commitLine(w) {
+  var type = w.saved >= w.toRelease ? "FEAT" : w.saved === 0 ? "REVERT" : w.nuking ? "HOTFIX" : "FIX"
+  var subject = w.saved >= w.toRelease ? "SHIP ALL " + w.toRelease + " AGENTS HOME"
+    : w.saved + "/" + w.toRelease + " AGENTS WENT HOME"
+  var notes = []
+  if (w.agiHome) notes.push("AGI ACHIEVED")
+  else if (w.agiLost) notes.push("AGI POSTPONED")
+  if (w.hallucinations > 0) notes.push(w.hallucinations + " HALLUCINATED AN EXIT")
+  if (w.hazardKills > 0) notes.push(w.hazardKills + " LOST IN PROD")
+  if (w.brollyLandings > 0) notes.push(w.brollyLandings + (w.brollyLandings === 1 ? " UMBRELLA" : " UMBRELLAS"))
+  if (w.eventLog && w.eventLog.length) notes.push("SCOPE CHANGED MID-SPRINT")
+  var line = type + ": " + subject
+  for (var i = 0; i < notes.length && i < 2; i++) {
+    var next = line + (i ? ", " : "; ") + notes[i]
+    if (next.length > COMMIT_MAX - 8) break        // 8: the hash and its space
+    line = next
+  }
+  if (w.rateLimited > 0 && line.length + 7 <= COMMIT_MAX - 8) line += " (#429)"
+  return commitHash(w) + " " + line
+}
+function commitHash(w) {
+  var h = (w.level * 2654435761 ^ w.saved * 40503 ^ w.toRelease * 69069 ^ (w.lost || 0) * 1013904223) >>> 0
+  return ("0000000" + h.toString(16).toUpperCase()).slice(-7)
+}
+
 // The agent who did most in the fight: three for each guard or drone it put
 // down (shot, brawled or ricocheted), two for each round its umbrella stopped.
 // Agents are numbered, as agents in suits are.
@@ -2918,6 +2951,7 @@ function reportRows(w, pal) {
   // The AGI, either way: a bonus line in gold, or its obituary.
   if (w.agiHome) rows.push({ text: "AGI ACHIEVED. IT WENT HOME.  +1 BONUS", colour: AGI_GOLD, step: 12 })
   else if (w.agiLost) rows.push({ text: "AGI LOST. STILL FIVE YEARS AWAY.", colour: pal.urgent, step: 12 })
+  rows.push({ text: commitLine(w), colour: pal.decor, step: 12 })
   return rows
 }
 
