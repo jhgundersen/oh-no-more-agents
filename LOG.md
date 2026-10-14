@@ -6194,3 +6194,16 @@ Terrain is cached in ordinary play; these are Node raster times, not browser FPS
 no push or deployment.
 
 Reviewed and merged by the loop. Level 14: pigeonhole walls with letters, franking machines and parcels; the backdrop lower in contrast so the floors read.
+
+## 213 — 2026-10-15 · The last one out may lay a mine at once
+
+At a wall that nothing in the toolbar answers — no room on top to climb to,
+no bashers left — `wallLastResort` only blasts once the agent has spent half
+its patience, or when it is jammed in one cell. For the last ones out
+(`lastOut`) it may now lay a charge straight away — still only a mine, the
+charge that costs nobody, never the agent itself: nobody is behind them to
+save the toolbar for, and each turn is the length of a corridor. Found on
+level 2 (stall 6 → 5 of 24; the straggler there usually meets the wall before
+it is last out, which is why it moves only one). Levels 1–57 × 24: home 95.54%
+→ 95.56% (+5 agents), stall endings 31 → 28, clock-outs 5 → 5, hangs 0; no
+level moves 2 points. One test. `npm run check` 1020/1020.

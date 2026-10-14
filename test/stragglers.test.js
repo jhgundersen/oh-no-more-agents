@@ -198,3 +198,21 @@ test("a stomper with home on its own floor, last out at a wall toward home, borr
   assert.notEqual(JSON.stringify(w.skills), before)
   assert.equal(ag.dir, 1)
 })
+
+test("the last one out lays a mine at a wall it cannot climb or bash, without waiting out its patience", () => {
+  const w = box(90)
+  for (let y = 20; y <= 25; y++) for (let x = 10; x <= 80; x++) w.terrain[y * w.k.COLS + x] = w.k.ROCK   // a low ceiling
+  for (let y = 27; y <= 29; y++) for (let x = 45; x <= 47; x++) w.terrain[y * w.k.COLS + x] = w.k.DIRT   // no room on top
+  w.exit = { x: 80, y: 25, w: 6, h: 5 }
+  w.skills.basher = 0; w.skills.climber = 0; w.skills.builder = 0
+  const ag = () => Object.assign(S.spawn(w), { x: 44.4, y: 29, dir: 1, state: "walk", idle: 10, still: 0, trait: "steady" })
+  w.released = w.toRelease; w.saved = 0; w.mines = []
+  const busy = ag(); w.agents = [busy]
+  S.hitWall(w, busy)
+  assert.equal(w.mines.length, 0, "mid-level: it waits out its patience first")
+  w.saved = w.toRelease - 1
+  const last = ag(); w.agents = [last]
+  S.hitWall(w, last)
+  assert.equal(w.mines.length, 1, "last out: a mine at once")
+  assert.notEqual(last.state, "bomb", "a mine, never the agent itself")
+})

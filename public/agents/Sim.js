@@ -5539,9 +5539,15 @@ function wallLastResort(w, ag, t) {
   // Early, it may only lay a mine — the charge that costs nobody. Letting it
   // be the bomb itself that soon was a wash: the jams it cleared paid for the
   // agents it spent on obstacles a little patience would have seen through.
+  //
+  // And for the last ones out, at once — still only a mine. Nobody is behind
+  // them to save the toolbar for, and every turn is the length of a corridor:
+  // on level 2 a straggler met a wall it could not climb (no room on top) with
+  // the bashers gone and seven miners in the toolbar, and walked seventy-five
+  // cells back each time until the stall cutoff, in 6 of 24 colonies.
   var patient = ag.idle * 2 > PATIENCE - trait.digBias
   var jammed = ag.still * 2 > STILL_ESCAPE
-  if ((patient || jammed) && blastWall(w, ag, t, !patient)) return
+  if ((patient || jammed || lastOut(w)) && blastWall(w, ag, t, !patient)) return
 
   turnAround(w, ag)
 }
