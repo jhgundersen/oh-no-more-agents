@@ -85,6 +85,7 @@ var WATER = { r: 0.13, g: 0.42, b: 0.52 }
 var SEA = { r: 0.06, g: 0.34, b: 0.40 }
 var SAND = { r: 0.95, g: 0.76, b: 0.48 }
 var TERMINAL = { r: 0.20, g: 0.82, b: 0.66 }
+var BRINE = { r: 0.36, g: 0.50, b: 0.52 }
 var TILE = { r: 0.62, g: 0.74, b: 0.58 }
 var SLATE = { r: 0.42, g: 0.40, b: 0.50 }
 var PARCHMENT = { r: 0.72, g: 0.52, b: 0.32 }
@@ -104,7 +105,7 @@ var VOID = { r: 0, g: 0, b: 0 }
 // number by the same rule, which is how every other per-biome difference in
 // this game stays in step across two files that cannot call each other.
 function poolTint(level) {
-  switch ((level - 1) % 18) {
+  switch ((level - 1) % 19) {
     case 1: return WATER      // Ruins: a flooded cistern
     case 3: return LAVA       // Foundry: what the place is for
     case 4: return WATER      // Jungle: the swamp, and what lives in it
@@ -121,12 +122,13 @@ function poolTint(level) {
     // 15, the Clock Tower, is dry: the weights' shaft, all the way down.
     // 16, the Rooftops, are dry: a light well, and the street at the bottom.
     // 17, the Subway, is dry: a disused shaft under the platforms.
+    case 18: return WATER     // Harbour: the dock itself
     default: return WATER     // dry biomes; unused, but never undefined
   }
 }
 
 function biomeTint(theme, level) {
-  switch ((level - 1) % 18) {
+  switch ((level - 1) % 19) {
     case 0: return theme.accent                              // Cavern
     case 1: return theme.urgent                              // Ruins
     case 2: return lighter(theme.accent, 1.7)                // Frost
@@ -167,7 +169,9 @@ function biomeTint(theme, level) {
     case 16: return toward(theme.muted, SLATE, 0.70)              // Rooftops
     // Station tile under fluorescent light: the line colour runs through it,
     // a clean cream-green nobody else has.
-    default: return toward(theme.accent, TILE, 0.76)              // Subway
+    case 17: return toward(theme.accent, TILE, 0.76)              // Subway
+    // Wet granite and harbour grey-green, colder than the Trench's sea.
+    default: return toward(theme.muted, BRINE, 0.72)              // Harbour
   }
 }
 

@@ -4200,3 +4200,18 @@ vanish. Now it folds: over eight ticks the canopy narrows to a furled point
 on its shaft and is gone (`drawUmbrellaFolding`, page resolution; Sim stamps
 `brollyClosedAt` at the landing — bookkeeping, fingerprint unchanged).
 Looked at level 2's landing at ticks 248–258. Tests 754.
+
+## 162 — 2026-10-14 · The Harbour (on a branch)
+
+A nineteenth biome that reuses a proven mechanism rather than copying an old
+one. Every Harbour crossing is a dock — water up to one row under the quay —
+and a ferry works it: the Subway's train (148), as a `w.trains` entry with
+`boat` set, quay to quay over the one stretch of the route that has no floor.
+Crossings come as often as on the Rooftops (the roll passes at 0.15).
+
+**Measured** (200 Harbour plays): 95.75% home with ferries vs 95.32% without,
+38.3 s a level, no hangs; ferries on 33 of 40 levels, about three riders a
+level (the rest bridge it, as before). 19 biomes: `BOSS_EVERY` 7 is still
+coprime. Biome wiring as before (mission "SEE THE PASSENGERS ASHORE", events
+Sea Fog / High Water / Dock Strike, Palette `% 19` with BRINE, pool tint
+water). Tests `test/ferries.test.js`; the art tests fail until Codex draws it.

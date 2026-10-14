@@ -130,7 +130,7 @@ var SKILL_LABELS = {
 // putting a new one anywhere but the end would re-skin every level above it.
 // Palette.js derives the same index with the same rule and must be kept in
 // step — see the note over poolTint there.
-var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room", "Building Site", "Clock Tower", "Rooftops", "Subway"]
+var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room", "Building Site", "Clock Tower", "Rooftops", "Subway", "Harbour"]
 
 // A small job on the route gives each biome a premise beyond merely reaching
 // the door. These are deliberately one mechanism with different casts: an
@@ -169,6 +169,7 @@ var MISSION_SPECS = {
   "Building Site": { id: "crew",  verb: "SEND THE CREW HOME",    kind: "civilian", count: 3 },
   "Rooftops":      { id: "neighbours", verb: "WALK THE NEIGHBOURS HOME", kind: "civilian", count: 3 },
   "Subway":        { id: "commuters", verb: "GET THE COMMUTERS ON THE TRAIN", kind: "civilian", count: 3 },
+  "Harbour":       { id: "passengers", verb: "SEE THE PASSENGERS ASHORE", kind: "civilian", count: 3 },
   // Up in the works since the last time it was wound. Nobody noticed.
   "Clock Tower": { id: "keepers", verb: "FREE THE CLOCKMAKERS",  kind: "civilian", count: 2 }
 }
@@ -1460,6 +1461,7 @@ var BIOME_MECHANISMS = {
   "Building Site": placeCranes,
   "Rooftops": placeZiplines,
   "Subway": placeTrains,
+  "Harbour": placeFerries,
   "Clock Tower": placeGates
 }
 
@@ -2318,6 +2320,25 @@ function firstHoleAfter(w, c, x, corridors) {
   return end
 }
 
+// The Harbour's own mechanism: a ferry over every crossing. The crossing is
+// water up to the quay (see cutPit), and a ferry waits at the near quay,
+// takes whoever is walking the corridor's way aboard, crosses, and puts them
+// ashore on the far side — the Subway's train, on water, over the one stretch
+// of the route that has no floor at all. It shares the train's whole rule
+// (w.trains, `boat` set so Draw floats it).
+function placeFerries(w, corridors) {
+  for (var i = 0; i < w.pits.length; i++) {
+    var p = w.pits[i], c = corridorWithFeet(corridors, p.floorY - 1)
+    if (!p.crossing || !c) continue
+    var a = padSpot(w, c, c.dir > 0 ? p.x0 - 3 : p.x1 + 3)
+    var b = padSpot(w, c, c.dir > 0 ? p.x1 + 3 : p.x0 - 3)
+    if (a < 0 || b < 0 || (b - a) * c.dir < 6) continue
+    if ((p.x0 - a) * c.dir <= 0 && (p.x1 - a) * c.dir <= 0) continue
+    w.trains.push({ ax: a, bx: b, y: c.floorY - 1, dir: c.dir, x: a, v: 0, boat: true,
+                    pit: i, phase: "wait", t: 0, riders: [], trips: 0 })
+  }
+}
+
 function stepTrains(w) {
   for (var i = 0; i < w.trains.length; i++) stepTrain(w, w.trains[i], i)
 }
@@ -2632,7 +2653,8 @@ var BIOME_SKINS = {
   "Building Site": skinBuildingSite,
   "Clock Tower": skinClockTower,
   "Rooftops": skinRooftops,
-  "Subway": skinSubway
+  "Subway": skinSubway,
+  "Harbour": skinHarbour
 }
 
 function skinSpaceship(w, rng) {
@@ -2955,6 +2977,22 @@ function skinSubway(w, rng) {
       var mat = DIRT
       if (row === 0 || row === 1) mat = ORE
       else if (row % 2 === 0 || (x + (row >> 1) % 2) % 3 === 0) mat = ROCK
+      setCell(w, x, y, mat)
+    }
+}
+
+// A quay wall in section: dressed stone (DIRT) in courses with mortar (ROCK)
+// between, and timber piles (ORE) driven down through it at intervals.
+function skinHarbour(w, rng) {
+  var x, y
+  var pile = irand(rng, 11, 15), ox = irand(rng, 0, pile - 1), oy = irand(rng, 0, 2)
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++) {
+      if (at(w, x, y) === STEEL) continue
+      var mat = DIRT
+      var course = (y + oy) % 3, joint = (x + (Math.floor((y + oy) / 3) % 2) * 3) % 6
+      if (course === 0 || joint === 0) mat = ROCK
+      if ((x + ox) % pile === 0 || (x + ox) % pile === 1) mat = ORE
       setCell(w, x, y, mat)
     }
 }
@@ -4856,7 +4894,7 @@ function carveDescent(w, rng, c, next) {
 
 
 function pitLiquid(biome) {
-  if (biome === "Jungle" || biome === "Ruins") return "water"
+  if (biome === "Jungle" || biome === "Ruins" || biome === "Harbour") return "water"
   if (biome === "Foundry") return "lava"
   if (biome === "Spaceship") return "coolant"
   if (biome === "Factory") return "oil"
@@ -4889,7 +4927,9 @@ function cutPit(w, rng, c, x0, x1, openAbove) {
     liquid: pitLiquid(w.biome),
     // Deep enough to be something at the bottom of a hole rather than a lid on
     // it, and never so deep it falls off the board.
-    surfaceY: Math.min(ROWS - 3, c.floorY + irand(rng, 7, 12)),
+    // A harbour's crossings are full to just under the quay: a dock, not a
+    // well, and the ferry that crosses it floats at the colony's own level.
+    surfaceY: Math.min(ROWS - 3, c.floorY + (w.biome === "Harbour" ? 1 : irand(rng, 7, 12))),
     croc: w.biome === "Jungle",
     seed: irand(rng, 0, 9973),
     ripple: -999
@@ -4909,7 +4949,7 @@ function placeBottomPit(w, rng, c, prev, sealFrom) {
 
   // On the Rooftops nearly every level has one: the gap between two houses,
   // which is what their lines are strung across.
-  var crossing = roll >= (w.biome === "Rooftops" ? 0.15 : 0.52)
+  var crossing = roll >= (w.biome === "Rooftops" || w.biome === "Harbour" ? 0.15 : 0.52)
   if (crossing) crossing = cutCrossing(w, rng, c, landing, sealFrom) !== null
 
   // A shaft on its own on the levels that rolled one, and behind the colony as
@@ -6063,6 +6103,11 @@ var EVENTS = [
   { id: "signalfail", name: "Signal Failure",   biome: "Subway", mech: "blackout", mult: 0, ticks: 300 },
   { id: "engineering", name: "Engineering Works", biome: "Subway", mech: "collapse", at: "floor", span: 6, deep: 2 },
   { id: "rushhour", name: "Rush Hour",         biome: "Subway", mech: "blackout", mult: 2, ticks: 360 },
+
+  // --- Harbour ---
+  { id: "fog", name: "Sea Fog",            biome: "Harbour", mech: "drift", what: "sight", ticks: 420 },
+  { id: "highwater", name: "High Water",   biome: "Harbour", mech: "collapse", at: "floor", span: 6, deep: 2 },
+  { id: "strike", name: "Dock Strike",     biome: "Harbour", mech: "blackout", mult: 0, ticks: 300 },
 
   // --- Clock Tower ---
   { id: "deadlock", name: "Deadlock",         biome: "Clock Tower", mech: "blackout", mult: 0, ticks: 280 },

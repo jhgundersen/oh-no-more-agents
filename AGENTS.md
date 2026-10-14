@@ -559,6 +559,17 @@ walking the same way, and it goes back empty at twice the speed.
   45% of agents walking the stretch ride).
 - Measured +0.25 (93.10% vs 92.85% home, 240 Subway plays), 0.4 s faster.
 
+## The Harbour
+
+The nineteenth biome: a quay wall in section (`skinHarbour`: DIRT dressed
+stone in courses, ROCK mortar, ORE timber piles). Palette `% 19`, BRINE. Its
+crossings are frequent (as on the Rooftops) and full of water to one row
+under the quay (`cutPit`: `surfaceY = floorY + 1`). Its mechanism is a
+**ferry** over each (`placeFerries`): the Subway's train on water — a
+`w.trains` entry with `boat` and `pit` set, quay to quay — so boarding,
+crossing and putting ashore are the train's rules exactly. Measured +0.4
+(95.75% vs 95.32% home, 200 Harbour plays), no hangs.
+
 ## Staying current
 
 A tab is left open for days, so a deploy has to reach it without anyone pressing
