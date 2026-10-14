@@ -3982,3 +3982,11 @@ software raster timings, not browser frame-rate measurements.
 
 **Next:** leave the train's route and rules alone; the station now shows what
 it already does. This branch is committed for review, not pushed or deployed.
+
+Reviewed and merged by the loop. Level 36 at ticks 283, 420 and 446: the
+station reads as a station (grey glazed tile, signs, benches, a way-out
+frame), and the train as a train — two cream-and-oxblood cars on the floor
+behind the walkers, lit windows with riders' silhouettes, doors open at the
+platforms, yellow edge markings at both stops. Its full repaint costs about
+twice the Factory's in the software rasteriser (31.7 vs 15.1 ms), but terrain
+is cached and the actor pass is 2.5 ms. 745 tests pass; nothing over CRAP 30.
