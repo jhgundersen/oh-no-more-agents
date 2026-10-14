@@ -216,3 +216,19 @@ test("the last one out lays a mine at a wall it cannot climb or bash, without wa
   assert.equal(w.mines.length, 1, "last out: a mine at once")
   assert.notEqual(last.state, "bomb", "a mine, never the agent itself")
 })
+
+test("with home below, a hero waits out its cooldown only at the wall on the way home", () => {
+  const w = box(90)
+  w.exit = { x: 10, y: 40, w: 6, h: 5 }                                    // below and to the west
+  w.special = "collapse"; w.specialSpec = S.specialSpec("collapse")
+  const hero = dir => Object.assign(S.spawn(w), { x: 50.5, y: 29, dir, state: "walk", special: "collapse", cool: 50 })
+  assert.equal(S.crossingHelps(w, hero(1)), true, "crossingHelps says yes either way")
+  assert.equal(S.facingHome(w, hero(1)), false)
+  assert.equal(S.facingHome(w, hero(-1)), true)
+  const west = hero(-1); w.agents = [west]
+  S.specialAtWall(w, west)
+  assert.equal(west.dir, -1); assert.ok(west.waitFor > 0, "waits at the wall toward home")
+  const east = hero(1); w.agents = [east]
+  S.specialAtWall(w, east)
+  assert.equal(east.dir, -1, "turns at the other")
+})

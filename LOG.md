@@ -6207,3 +6207,31 @@ level 2 (stall 6 → 5 of 24; the straggler there usually meets the wall before
 it is last out, which is why it moves only one). Levels 1–57 × 24: home 95.54%
 → 95.56% (+5 agents), stall endings 31 → 28, clock-outs 5 → 5, hangs 0; no
 level moves 2 points. One test. `npm run check` 1020/1020.
+
+## 214 — 2026-10-15 · Facing home, not merely crossing toward it
+
+`npm run playtest -- 58-150` (12 colonies each) found two levels much worse than
+anything in 1–57: 92 (stall cutoff 10/12) and 83 (9/12), both the hero. On 92
+the hero was pocketed between two walls with home far below and to the west.
+The 200 rule (wait at a wall toward home when the move is nearly back) asked
+`crossingHelps` — which, rightly for a bridge, says yes in both directions
+whenever home is above or below — so it waited out its cooldown at each wall in
+turn. Now the wait, and the lending of tools in `heroGivesWay`, ask
+`facingHome`: is home on this side, across the board. Levels 1–150 × 12: home
+95.23% → 95.30% (+21 agents), stall endings 75 → 72, clock-outs 6 → 5, hangs
+0. At 24 colonies: 24 89 → 93%, 128 83 → 87%, 27 95 → 96% with its clock-out
+gone (worst run 31% → 77%); 120 96 → 94%; 92 unchanged.
+
+**Tried and taken back out:** a shorter patience for the general rescue
+(`forceEscape` at 200 idle ticks instead of 900) for the last ones out. It
+cleared 83 (9 → 0) and most of 92, and stall endings across 1–150 fell 75 → 46
+— but clock-outs went 6 → 20 (level 67 alone got eight) and levels 104 and
+120 lost five or six points. Worth a narrower version later.
+
+Level 92's hero is in a pocket it cannot leave with its move, has no climbers
+left and a wall fourteen cells thick; ordinary agents dig out. One test.
+`npm run check` 1021/1021; CRAP under 30.
+
+**List after 214:** 92 stall (hero, Model Collapse); 83 stall 9/12 (hero, Chain
+of Thought); level 6 clock-outs (Ice Cave tool budget); 32 stall 6/24; 2 stall
+5/24; 70, 81, 84 stall 3/12; single runs elsewhere.

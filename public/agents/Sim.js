@@ -8380,8 +8380,18 @@ function stepCamp(w, ag) {
 // stomper with home on its own floor, turned at both sides of a two-cell
 // pocket every few ticks until the stall cutoff, in 8 of 24 colonies.
 function heroGivesWay(w, ag) {
-  if (crossingHelps(w, ag) && lastOut(w) && borrowWallTools(w, ag)) return
+  if (facingHome(w, ag) && lastOut(w) && borrowWallTools(w, ag)) return
   turnAround(w, ag)
+}
+
+// Facing the way home lies across the board. crossingHelps says yes to both
+// directions whenever home is above or below — right for a bridge, which is
+// how it is used — and with it a hero on level 92, pocketed between two walls
+// with home far below and to the west, waited out its cooldown at each wall in
+// turn and had its move back each time at the wrong one, in 10 of 12 colonies.
+function facingHome(w, ag) {
+  var goal = goalX(w, ag)
+  return Math.abs(goal - ag.x) <= 2 || (goal > ag.x ? 1 : -1) === ag.dir
 }
 
 function borrowWallTools(w, ag) {
@@ -8426,7 +8436,7 @@ function specialAtWall(w, ag) {
   // level 24's Auto Complete cleared one pillar, met the next on cooldown,
   // walked a hundred cells and spent the move somewhere else on the way, in 7
   // of 24 colonies (`npm run playtest`). Waiting is still waiting for the move.
-  if (ag.cool > 0 && ag.cool <= HERO_WAIT && crossingHelps(w, ag)) { ag.waitFor = 2; ag.still = 0; return }
+  if (ag.cool > 0 && ag.cool <= HERO_WAIT && facingHome(w, ag)) { ag.waitFor = 2; ag.still = 0; return }
   if (ag.cool > 0) { heroGivesWay(w, ag); return }
 
   // Ada Blocker has no move for a wall — its move is for what a wall cannot
