@@ -6633,10 +6633,29 @@ function quipFor(w, ag) {
   return best
 }
 
+// The red team answers back: a Bouncer's "NOT TONIGHT" as it throws somebody
+// out, the Moderator's "BANNED" when its round lands.
+function enemyQuipFor(w, en) {
+  if (en.kind === "bouncer" && en.threwAt !== undefined && w.ticks - en.threwAt < QUIP_TICKS)
+    return { at: en.threwAt, text: "NOT TONIGHT", ink: "#8f1f35" }
+  if (en.boss && en.kind !== "bouncer" && en.killedAt !== undefined && w.ticks - en.killedAt < QUIP_TICKS)
+    return { at: en.killedAt, text: "BANNED", ink: "#8f1f35" }
+  return null
+}
+
+function drawEnemyQuip(ctx, w, pal, en, ox, oy) {
+  if ((w.res || 1) < 2) return
+  var q = enemyQuipFor(w, en)
+  if (q) drawBubble(ctx, w, pal, q, ox, oy - 3)
+}
+
 function drawQuip(ctx, w, pal, ag, ox, oy) {
   if ((w.res || 1) < 2 || ag.gone || ag.state === "saved") return
   var q = quipFor(w, ag)
-  if (!q) return
+  if (q) drawBubble(ctx, w, pal, q, ox, oy)
+}
+
+function drawBubble(ctx, w, pal, q, ox, oy) {
   var width = q.text.length * 4 + 3, cx = ox + SPRITE_W / 2, top = oy - 13
   var left = Math.round(cx - width / 2)
   ctx.save()
@@ -6647,7 +6666,7 @@ function drawQuip(ctx, w, pal, ag, ox, oy) {
   ctx.fillRect(left, top, width, 7)
   ctx.fillRect(cx - 1, top + 7, 2, 1)                 // the tail
   ctx.fillRect(cx - 0.5, top + 8, 1, 1)
-  ctx.fillStyle = "#16161c"
+  ctx.fillStyle = q.ink || "#16161c"
   drawTransitionText(ctx, q.text, cx, top + 1, 1)
   ctx.restore()
 }
@@ -8199,7 +8218,11 @@ function enemyRecoil(en) {
 
 function drawEnemy(ctx, w, pal, en, opts) {
   if (en.gone) return
-  if (en.state === "brawl") { drawBrawl(ctx, w, pal, en); return }
+  if (en.state === "brawl") {
+    drawBrawl(ctx, w, pal, en)
+    drawEnemyQuip(ctx, w, pal, en, Math.round(en.x * w.k.CELL) - SPRITE_W / 2, Math.round((en.y + 1) * w.k.CELL) - SPRITE_PX - 4)
+    return
+  }
   spriteFlip = false
   var m = enemyMotion(w, en)
   var ox = Math.round(en.x * w.k.CELL) - SPRITE_W / 2 - en.dir * enemyRecoil(en)
@@ -8207,6 +8230,7 @@ function drawEnemy(ctx, w, pal, en, opts) {
   var fn = en.boss && en.kind !== "bouncer" ? drawModerator : (ENEMY_DRAW[en.kind] || drawGunner)
   fn(ctx, w, pal, en, ox, oy, en.dir, m)
   if (en.boss && en.kind === "bouncer") drawHeadBouncerCrown(ctx, en, ox, oy)
+  drawEnemyQuip(ctx, w, pal, en, ox, oy)
   if (opts && opts.labels) drawEnemyLabel(ctx, w, en, ox, oy)
   ctx.globalAlpha = 1
 }

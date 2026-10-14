@@ -512,6 +512,9 @@ from stable state (ticks, ids) so none draws on a random stream:
   post is one crowned gunner with `BOSS_HP` 3; any hit — round, scuffle,
   ricochet — only staggers it (`staggerBoss`) until the last. Those levels
   sit near 84% home against 93% overall: the climax, on purpose.
+  Every other boss level (16, 32 …) it is the **Head Bouncer** instead: a
+  Bouncer with `HEAD_BOUNCER_HP` 5, crowned; it kills nobody and holds the
+  door (95% home). `w.bossName` names whichever it is.
 
 The report card's battle line counts guards down and umbrella saves, and
 names the boss when it falls; the MVP line names the agent who did most.

@@ -4098,3 +4098,13 @@ home, down in 16 of 36; Head Bouncer levels 95.0% home, down in 10 of 36 —
 it kills nobody, it holds the door. Two different climaxes: a gunfight to
 survive, and a crowd to push through. Looked at level 16 (Clock Tower).
 Tests 750.
+
+## 157 — 2026-10-14 · The red team answers back
+
+The quips (155) went one way. Now a Bouncer says "NOT TONIGHT" as it throws
+somebody out, and the Moderator "BANNED" when its round lands, in the same
+pixel bubble with red-team lettering — drawn over the fight cloud too, since
+a Bouncer is usually straight into its next scuffle. Sim stamps `threwAt` and
+`killedAt` for it (bookkeeping; fingerprint unchanged). Looked at level 13:
+"NOT TONIGHT" in red beside the thrown agent's "429". AGENTS.md gains the
+Head Bouncer. Tests 751.

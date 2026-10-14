@@ -9084,6 +9084,7 @@ function fireEnemyGun(w, en) {
         // roster the colony did not need to fear: 97.7% home against 94.9%
         // with no enemies at all, 0.08 deaths a level. Lethal: 94.5%, 0.58.
         woundFriendly(w, ag, en.x, true, en)
+        if (ag.gone) en.killedAt = w.ticks     // for Draw: a boss has something to say
         // Parried: the round stops in the canopy, not in the agent behind it.
         if (!ag.gone && ag.brollyFor > 0 && ag.brollyDir) en.lineTo = ag.x + ag.brollyDir * 2
         return
@@ -9173,6 +9174,7 @@ var BOUNCER_EDGE = 20      // percent off the agent's brawl odds against it
 function bouncerThrows(w, en, ag) {
   var back = ag.x >= en.x ? 1 : -1
   ag.thrownFrom = ag.x       // for Draw: where the throw started
+  en.threwAt = w.ticks
   for (var i = 0; i < BOUNCER_THROW * 4; i++) {
     var nx = ag.x + back * 0.25
     if (solid(w, Math.floor(nx), Math.floor(ag.y))) break

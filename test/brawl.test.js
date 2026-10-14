@@ -157,3 +157,11 @@ test("quips: the newest of a won scuffle, a throw or a parry, for a moment, at r
   D.drawQuip(ctx, { ...w, res: 2 }, pal, { wonAt: 95 }, 50, 50)
   assert.ok(calls.length > 5)
 })
+
+test("the red team answers back: NOT TONIGHT from a throwing Bouncer, BANNED from a Moderator that lands one", () => {
+  const w = { ticks: 100 }
+  assert.equal(D.enemyQuipFor(w, { kind: "bouncer", threwAt: 90 }).text, "NOT TONIGHT")
+  assert.equal(D.enemyQuipFor(w, { kind: "gun", boss: true, killedAt: 95 }).text, "BANNED")
+  assert.equal(D.enemyQuipFor(w, { kind: "gun", killedAt: 95 }), null, "only the boss says so")
+  assert.equal(D.enemyQuipFor(w, { kind: "bouncer", threwAt: 100 - D.QUIP_TICKS }), null)
+})
