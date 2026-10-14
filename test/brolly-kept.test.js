@@ -71,10 +71,9 @@ test("a parry or an overhead guard uses the agent's own umbrella when it has one
   const stock = w.skills.floater
   assert.ok(S.brollyInHand(w, ag))
   assert.equal(w.skills.floater, stock)
-  const other = w.agents.find(a => a !== ag) || ag
-  other.ownBrolly = false
+  const other = { ...ag, id: ag.id + 1000, ownBrolly: false }
   assert.ok(S.brollyInHand(w, other))
-  assert.equal(w.skills.floater, stock - (other === ag ? 0 : 1), "the first one comes from the stock")
+  assert.equal(w.skills.floater, stock - 1, "the first one comes from the stock")
   assert.ok(other.ownBrolly, "and is kept")
   w.skills.floater = 0; other.ownBrolly = false
   assert.equal(S.brollyInHand(w, other), false, "no umbrella anywhere")
