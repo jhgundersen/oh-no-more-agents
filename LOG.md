@@ -5033,3 +5033,5 @@ ordinary play; these are Node raster times, not browser FPS.
 no push or deployment.
 
 Reviewed and merged by the loop. Level 5, tick 400, full frame against main at 1x: big leaves and trunks behind, ferns on the ledges, butterflies, a leafy canopy over the sky band; the original terrain in front. Busy, but the agents read.
+
+**Deployed** after 188 (name="build" content="313f8d57"), gated on a passing check (864 tests): the Jungle art. Level 5 in headless Chromium, no console errors.
