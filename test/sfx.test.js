@@ -62,3 +62,16 @@ test("on: each change plays its sound, and a new world resets the memory", () =>
   sfx.observe(world())                                                    // next level
   assert.equal(played.length, before, "no sound for the difference between two levels")
 })
+
+test("named events: a boss hit, backup and a mission each have a cue; an ordinary tick has none", () => {
+  for (const event of ["boss hit", "backup", "mission complete"]) {
+    const { sfx, played } = load()
+    sfx.setOn(true)
+    const w = world()
+    sfx.observe(w)
+    sfx.observe(w)
+    assert.equal(played.length, 0, "quiet tick")
+    w.lastEvent = event; sfx.observe(w)
+    assert.ok(played.length > 0, event)
+  }
+})

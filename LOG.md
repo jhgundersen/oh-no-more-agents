@@ -4497,3 +4497,20 @@ before. One weakness kept for later: the same furnace-and-ladle stamp appears
 three or four times a level, so a long Foundry level repeats itself.
 
 **Deployed** after 172 (name="build" content="eadab782"), gated on a passing check (799 tests): the Foundry art, parries with your own umbrella. Browser check of level 4 clean.
+
+## 173 — 2026-10-14 · Three more sounds; the Cavern on a branch
+
+**Started:** Cavern art on branch `codex/cavern` (Codex). Level 1 is the first
+thing anybody sees, and next to the new Foundry it is flat blue blocks.
+
+**Looked, no change:** level 331, colony 2048, 0/15 home. The exit floor has
+one four-high pillar; by then the colony has spent its 12 climbers and 3
+bashers on the floors above, and nothing else answers a pillar. Same family
+as 228 (166). With 3 of 400 levels under half home and the page moving on
+after three attempts, a level the colony loses now and then is part of the
+game; stopping the hunt here.
+
+**Change (sfx.js):** three events the world names outright now have a cue:
+a boss taking a hit (a metallic clang), backup on its way (radio squelch and
+two beeps, 164), a mission done (three rising notes). Still off by default.
+Tests 800.

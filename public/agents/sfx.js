@@ -17,7 +17,7 @@
   var last = {}            // sound name -> time it last played (ms)
   var seen = null          // what the previous tick looked like
 
-  var GAPS = { chime: 600, zing: 120, whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0 }
+  var GAPS = { chime: 600, zing: 120, whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0, clang: 200, radio: 800, jingle: 600 }
 
   function ensure() {
     if (ctx) return ctx
@@ -77,6 +77,9 @@
     zing: function () { tone("sawtooth", 1400, 2600, 0.12, 0.18) },                 // hooked on a line
     whoosh: function () { noise(0.22, 0.6, "bandpass", 900); tone("triangle", 500, 160, 0.22, 0.3) },  // thrown out
     scuffle: function () { noise(0.05, 0.7, "bandpass", 500 + Math.random() * 700) },  // fists in the cloud
+    clang: function () { tone("triangle", 980, 720, 0.25, 0.6); tone("square", 1470, 1300, 0.08, 0.2); noise(0.06, 0.5, "highpass", 3000) },  // a boss takes a hit
+    radio: function () { noise(0.12, 0.5, "bandpass", 2400); tone("square", 1200, 1200, 0.05, 0.25, 0.13); tone("square", 1200, 1200, 0.05, 0.25, 0.22) },  // backup on the way
+    jingle: function () { tone("square", 784, 784, 0.07, 0.3); tone("square", 988, 988, 0.07, 0.3, 0.08); tone("square", 1319, 1319, 0.12, 0.3, 0.16) },  // mission done
     fanfare: function (good) {
       var notes = good ? [523, 659, 784, 1047] : [392, 330, 262, 196]
       for (var i = 0; i < notes.length; i++) tone("square", notes[i], notes[i], 0.11, 0.35, i * 0.1)
@@ -84,6 +87,9 @@
   }
 
   function play(name, arg) { if (ready(name)) SOUNDS[name](arg) }
+
+  // Events the world names outright, rather than ones read off a difference.
+  var EVENT_SOUNDS = { "boss hit": "clang", "backup": "radio", "mission complete": "jingle" }
 
   function snapshot(w) {
     var open = {}, shots = 0, enemyShots = 0
@@ -125,6 +131,8 @@
     if (now.doors > was.doors) play("chime")
     if (now.zips > was.zips) play("zing")
     if (w.lastEvent === "thrown out") play("whoosh")
+    var cue = EVENT_SOUNDS[w.lastEvent]
+    if (cue) play(cue)
     if (now.saved > was.saved) play("home")
     if (now.lost > was.lost) play("down")
     if (now.done && !was.done) play("fanfare", w.saved * 2 >= w.toRelease)
