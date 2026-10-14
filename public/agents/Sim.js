@@ -7048,6 +7048,7 @@ function stepDuck(w) {
     var x = duckSpot(w, ag)
     if (x < 0) return
     w.duck = { x: x, y: Math.floor(ag.y), at: w.ticks, takenBy: -1, takenAt: -1 }
+    w.duckAppeared = true          // for the page's sightings; nothing reads it here
     feedNote(w, "A RUBBER DUCK APPEARS")
     return
   }

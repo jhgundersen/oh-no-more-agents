@@ -490,6 +490,7 @@
 
     if (world.done && completionLine === "") {
       completionLine = outcomeLine(world)
+      noteSightings(world)
       lifetimeSaved += world.saved
       if (world.saved > 0) levelsCleared += 1
       enqueueGlobalSaves(world.saved)
@@ -707,6 +708,25 @@
   // The live world, read-only, for tools and tests driving the page
   // (tools/phone.js, tools/fps.js, test/pep.test.js). Nothing on the page uses it.
   window.AgentWorld = function () { return world }
+
+  // Sightings (Outcome's sightingsIn, Draw's strip on the report card): what
+  // this viewer has seen, kept in this browser only. Storage that is missing,
+  // full or blocked just means no strip — never an error.
+  var SIGHTINGS_KEY = "oh-no-more-agents-sightings"
+  function loadSightings() {
+    try {
+      var v = JSON.parse(localStorage.getItem(SIGHTINGS_KEY) || "[]")
+      return Array.isArray(v) ? v.filter(function (id) { return typeof id === "string" }) : []
+    } catch (e) { return null }
+  }
+  function noteSightings(w) {
+    var seen = loadSightings()
+    if (seen === null) return
+    var fresh = sightingsIn(w).filter(function (id) { return seen.indexOf(id) < 0 })
+    seen = seen.concat(fresh)
+    try { localStorage.setItem(SIGHTINGS_KEY, JSON.stringify(seen)) } catch (e) { return }
+    w.sightings = { seen: seen, fresh: fresh }
+  }
 
   // "Copy link": this level with this colony (share.js). The toast says
   // whether the clipboard took it; a browser that refuses gets the old

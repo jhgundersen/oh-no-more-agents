@@ -6588,3 +6588,25 @@ place of the difference or "identical". E.g. across the Library merge on level
 13: "differs in 660x425px at 64,56". Three tests (arguments, diff box and
 window, an end-to-end render of HEAD against itself from git objects).
 `npm run check` 1054/1054; CRAP under 30.
+
+## 225 — 2026-10-15 · Sightings
+
+A small collection per viewer of the rare things the game can show: the
+golden AGI, a dreamer's mirage, a 429 queue, a rubber duck, a merge conflict,
+an outage, a community milestone. At the end of each level the page asks
+Outcome's `sightingsIn(w)` what that level showed, adds anything new to a list
+kept in this browser only (`localStorage` key `oh-no-more-agents-sightings`,
+every access in try/catch — blocked or full storage just means no strip), and
+the report card gains a strip: seven little pixel icons, dim until seen and
+bright after, the one first seen on this level ringed in gold, "3/7
+SIGHTINGS", and a line for the new one — "NEW: RUBBER DUCK - IT JUST
+LISTENED", "NEW: OUTAGE - HAVE YOU TRIED IT ON AGAIN?", "NEW: 429 QUEUE - YOUR
+CALL IS IMPORTANT TO US". No network. The names, puns and icons live in Draw.js
+(`SIGHTINGS`; check-core-refs refused the first attempt, which had Draw reading
+Outcome's list — fine in a browser, a ReferenceError in the Omarchy panel); Sim
+only records `duckAppeared`, read by nothing in it.
+
+**Tests:** `sightings.test.js` (3: what a level showed, the strip and its
+lines and glyphs read-only, and in headless Chromium a finished level records
+"agi" and "duck" in this browser while a page with localStorage blocked shows
+no strip and throws nothing). `npm run check` 1057/1057; CRAP under 30.

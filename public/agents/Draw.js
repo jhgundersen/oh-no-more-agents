@@ -3014,6 +3014,53 @@ function commitHash(w) {
   return ("0000000" + h.toString(16).toUpperCase()).slice(-7)
 }
 
+// ---------------------------------------------------------------------------
+// Sightings strip
+// ---------------------------------------------------------------------------
+// Seven little icons on the report card, one per rare thing (Outcome's
+// SIGHTINGS): dim until this viewer has seen one, bright once they have, and
+// the one first seen on this level ringed in gold. Then N/7.
+// The rare things a watcher can collect, in report-card order (ids match
+// Outcome's sightingsIn).
+var SIGHTINGS = [
+  { id: "agi",       name: "GOLDEN AGI",     pun: "FINALLY, SOMETHING GENERAL" },
+  { id: "dreamer",   name: "DREAMER",        pun: "EXIT NOT FOUND (404)" },
+  { id: "queue",     name: "429 QUEUE",      pun: "YOUR CALL IS IMPORTANT TO US" },
+  { id: "duck",      name: "RUBBER DUCK",    pun: "IT JUST LISTENED" },
+  { id: "conflict",  name: "MERGE CONFLICT", pun: "RESOLVED BY WALKING BACK" },
+  { id: "outage",    name: "OUTAGE",         pun: "HAVE YOU TRIED IT ON AGAIN?" },
+  { id: "milestone", name: "MILESTONE",      pun: "THE COMMUNITY SHIPPED" }
+]
+
+var SIGHTING_ICONS = {
+  agi: function (ctx, x, y) { ctx.fillStyle = AGI_GOLD; ctx.fillRect(x + 2, y, 3, 3); ctx.fillRect(x + 1, y + 3, 5, 4) },
+  dreamer: function (ctx, x, y) { ctx.fillStyle = "#9ad0ff"; ctx.fillRect(x + 1, y, 5, 1); ctx.fillRect(x + 1, y, 1, 7); ctx.fillRect(x + 5, y, 1, 7) },
+  queue: function (ctx, x, y) { ctx.fillStyle = "#e0566b"; ctx.fillRect(x, y + 1, 7, 5); ctx.fillStyle = "#ffffff"; ctx.fillRect(x + 1, y + 3, 1, 1); ctx.fillRect(x + 3, y + 3, 1, 1); ctx.fillRect(x + 5, y + 3, 1, 1) },
+  duck: function (ctx, x, y) { ctx.fillStyle = DUCK_YELLOW; ctx.fillRect(x, y + 3, 6, 3); ctx.fillRect(x + 3, y + 1, 3, 2); ctx.fillStyle = DUCK_BEAK; ctx.fillRect(x + 6, y + 2, 1, 1) },
+  conflict: function (ctx, x, y) { ctx.fillStyle = "#f4f4ec"; drawTransitionGlyph(ctx, TRANSITION_GLYPHS["<"], x, y + 1, 1); drawTransitionGlyph(ctx, TRANSITION_GLYPHS[">"], x + 4, y + 1, 1) },
+  outage: function (ctx, x, y) { ctx.fillStyle = "#04050a"; ctx.fillRect(x, y, 7, 7); ctx.fillStyle = "#ffffff"; ctx.fillRect(x + 2, y + 3, 1, 1); ctx.fillRect(x + 4, y + 3, 1, 1) },
+  milestone: function (ctx, x, y) { ctx.fillStyle = PARTY[0]; ctx.fillRect(x + 3, y, 1, 2); ctx.fillRect(x + 2, y + 2, 3, 2); ctx.fillRect(x + 1, y + 4, 5, 3) }
+}
+function sightingLine(id) {
+  for (var i = 0; i < SIGHTINGS.length; i++) if (SIGHTINGS[i].id === id) return SIGHTINGS[i].name + " - " + SIGHTINGS[i].pun
+  return id.toUpperCase()
+}
+function drawSightings(ctx, w, pal, cx, at) {
+  var s = w.sightings, n = SIGHTINGS.length, step = 11
+  var left = Math.round(cx - (n * step + 4 + 44) / 2)
+  for (var i = 0; i < n; i++) {
+    var id = SIGHTINGS[i].id, x = left + i * step, y = at
+    var have = s.seen.indexOf(id) >= 0, fresh = s.fresh.indexOf(id) >= 0
+    if (fresh) { ctx.fillStyle = AGI_GOLD; ctx.fillRect(x - 2, y - 2, 11, 11) ; ctx.fillStyle = pal.cardBack; ctx.fillRect(x - 1, y - 1, 9, 9) }
+    ctx.save()
+    ctx.globalAlpha = have ? 1 : 0.22
+    SIGHTING_ICONS[id](ctx, x, y)
+    ctx.restore()
+  }
+  ctx.fillStyle = pal.label
+  drawTransitionText(ctx, s.seen.length + "/" + n + " SIGHTINGS", left + n * step + 26, at + 1, 1)
+}
+
 // The agent who did most in the fight: three for each guard or drone it put
 // down (shot, brawled or ricocheted), two for each round its umbrella stopped.
 // Agents are numbered, as agents in suits are.
@@ -3055,6 +3102,11 @@ function reportRows(w, pal) {
   if (w.agiHome) rows.push({ text: "AGI ACHIEVED. IT WENT HOME.  +1 BONUS", colour: AGI_GOLD, step: 12 })
   else if (w.agiLost) rows.push({ text: "AGI LOST. STILL FIVE YEARS AWAY.", colour: pal.urgent, step: 12 })
   rows.push({ text: commitLine(w), colour: pal.decor, step: 12 })
+  // The watcher's sightings (the page sets w.sightings at the end of a level).
+  if (w.sightings) {
+    rows.push({ sightings: true, step: 14 })
+    if (w.sightings.fresh.length) rows.push({ text: "NEW: " + sightingLine(w.sightings.fresh[0]), colour: AGI_GOLD, step: 12 })
+  }
   return rows
 }
 
@@ -3077,6 +3129,7 @@ function drawLevelResults(ctx, w, pal) {
   var at = y + 59
   for (var r = 0; r < rows.length; r++) {
     if (rows[r].escort) drawEscortReport(ctx, w, pal, cx, at)
+    else if (rows[r].sightings) drawSightings(ctx, w, pal, cx, at)
     else { ctx.fillStyle = rows[r].colour; drawTransitionText(ctx, rows[r].text, cx, at + 2, 1) }
     at += rows[r].step
   }

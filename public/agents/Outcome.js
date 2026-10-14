@@ -273,3 +273,22 @@ function withCommas(n) {
   return out
 }
 
+// ---------------------------------------------------------------------------
+// Sightings
+// ---------------------------------------------------------------------------
+// Which of the rare things a watcher can collect (Draw's SIGHTINGS has their
+// names and icons) a finished level showed. The page keeps which ones this
+// viewer has seen, in localStorage.
+
+function sightingsIn(w) {
+  var seen = []
+  if (w.agiId >= 0) seen.push("agi")
+  if (w.hallucinations > 0) seen.push("dreamer")
+  if (w.rateLimited > 0) seen.push("queue")
+  if (w.duckAppeared) seen.push("duck")
+  if (w.conflicts > 0) seen.push("conflict")
+  if (w.outage && w.ticks >= w.outage.at) seen.push("outage")
+  if (w.milestone) seen.push("milestone")
+  return seen
+}
+
