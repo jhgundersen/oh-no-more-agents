@@ -5035,3 +5035,7 @@ no push or deployment.
 Reviewed and merged by the loop. Level 5, tick 400, full frame against main at 1x: big leaves and trunks behind, ferns on the ledges, butterflies, a leafy canopy over the sky band; the original terrain in front. Busy, but the agents read.
 
 **Deployed** after 188 (name="build" content="313f8d57"), gated on a passing check (864 tests): the Jungle art. Level 5 in headless Chromium, no console errors.
+
+## 189 — 2026-10-14 · Ice Cave art on a branch
+
+Started: Ice Cave art on `codex/icecave` (level 6) — underground glacier ice, distinct from the Frost outdoors: translucent faces, glints, a glowing glacier wall behind; same brief lessons.
