@@ -4072,3 +4072,14 @@ FIRST HOME", or a hero by name) and a Subway train pulling out with riders
 ("THE TRAIN LEAVES WITH 5 AGENTS"). Fingerprint unchanged. Tests 748.
 
 **Deployed** after 154 (name="build" content="39ceba9e"): the ticker. Browser check clean.
+
+## 155 — 2026-10-14 · Quips
+
+The game talks dev already (hazards called Edge Cases and Memory Leak, a boss
+called The Moderator, a booth sign that says BUILD FAILED). Now the agents do,
+for a moment each: a white pixel speech bubble over the head — "LGTM" up out
+of a won scuffle, "429" thrown out by the Bouncer, "NOPE" as the umbrella
+stops a round. One per agent, the newest, 36 ticks, fading; page resolution
+only; drawn from stamps Sim already keeps (`wonAt`, `thrownAt`, `brollyFor`).
+Looked at level 5 (LGTM), 13 (429) and 24 (NOPE). Over a low ceiling the
+bubble sits over the rock above, like a comic's would. Tests 749.

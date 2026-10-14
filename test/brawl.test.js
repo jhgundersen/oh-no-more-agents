@@ -140,3 +140,20 @@ test("the ticker keeps the last few moments and shows the newest for a while, at
     assert.equal(calls.length > 0, want, `res ${res} tick ${t}`)
   }
 })
+
+test("quips: the newest of a won scuffle, a throw or a parry, for a moment, at res 2", () => {
+  const w = { ticks: 100, k: { BROLLY_HOLD: 24 } }
+  assert.equal(D.quipFor(w, {}), null)
+  assert.equal(D.quipFor(w, { wonAt: 90 }).text, "LGTM")
+  assert.equal(D.quipFor(w, { wonAt: 80, thrownAt: 95 }).text, "429")
+  assert.equal(D.quipFor(w, { brollyDir: 1, brollyFor: 20 }).text, "NOPE")
+  assert.equal(D.quipFor(w, { brollyDir: 0, brollyFor: 20 }), null, "overhead is not a parry")
+  assert.equal(D.quipFor(w, { wonAt: 100 - D.QUIP_TICKS }), null, "gone after its time")
+  const pal = P.build(themeOf("tokyo-night").theme, 5)
+  const calls = []
+  const ctx = { globalAlpha: 1, fillStyle: "", save() {}, restore() {}, fillRect(...a) { calls.push(a) } }
+  D.drawQuip(ctx, { ...w, res: 1 }, pal, { wonAt: 95 }, 50, 50)
+  assert.equal(calls.length, 0)
+  D.drawQuip(ctx, { ...w, res: 2 }, pal, { wonAt: 95 }, 50, 50)
+  assert.ok(calls.length > 5)
+})

@@ -6613,6 +6613,45 @@ function drawThrowLanding(ctx, w, pal, ag) {
   ctx.restore()
 }
 
+// A word over its head at the moments that deserve one, in the dev-speak the
+// rest of the game talks: "LGTM" up out of a won scuffle, "429" thrown out by
+// the Bouncer, "NOPE" as its umbrella stops a round. Page resolution only, and
+// one bubble per agent — the newest.
+var QUIP_TICKS = 36
+function quipFor(w, ag) {
+  var best = null
+  var cands = [
+    [ag.wonAt, "LGTM"],
+    [ag.thrownAt, "429"],
+    [ag.brollyDir && ag.brollyFor > 0 ? w.ticks - ((w.k.BROLLY_HOLD || 24) - ag.brollyFor) : undefined, "NOPE"]
+  ]
+  for (var i = 0; i < cands.length; i++) {
+    var at = cands[i][0]
+    if (at === undefined || w.ticks - at < 0 || w.ticks - at >= QUIP_TICKS) continue
+    if (!best || at > best.at) best = { at: at, text: cands[i][1] }
+  }
+  return best
+}
+
+function drawQuip(ctx, w, pal, ag, ox, oy) {
+  if ((w.res || 1) < 2 || ag.gone || ag.state === "saved") return
+  var q = quipFor(w, ag)
+  if (!q) return
+  var width = q.text.length * 4 + 3, cx = ox + SPRITE_W / 2, top = oy - 13
+  var left = Math.round(cx - width / 2)
+  ctx.save()
+  ctx.globalAlpha = Math.min(1, (QUIP_TICKS - (w.ticks - q.at)) / 8)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(left - 1, top - 1, width + 2, 9)
+  ctx.fillStyle = "#f4f4ec"
+  ctx.fillRect(left, top, width, 7)
+  ctx.fillRect(cx - 1, top + 7, 2, 1)                 // the tail
+  ctx.fillRect(cx - 0.5, top + 8, 1, 1)
+  ctx.fillStyle = "#16161c"
+  drawTransitionText(ctx, q.text, cx, top + 1, 1)
+  ctx.restore()
+}
+
 // Up out of a won scuffle (Sim's brawlTick sets wonAt): the forward fist
 // punched at the sky, pumping twice, with two stars over it — the colony's
 // own colour for a moment it does not get many of.
@@ -10577,6 +10616,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
 
   if (heightBodySaved) ctx.restore()
   drawVictory(ctx, w, ag, ox, oy, dir, robe, skin, st)
+  drawQuip(ctx, w, pal, ag, ox, oy)
 
   drawAgentLabel(ctx, w, pal, ag, ox, oy, st, opts)
 
