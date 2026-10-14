@@ -6758,3 +6758,18 @@ cells along a clear floor) was tried and measured neutral (+3 agents over 3600
 runs) because the door was not visible when it mattered — not kept. The rest:
 clock-outs on 78 (2/24), 61, 92, 101, 118 (1 each); stall endings on 84, 118
 (3/24), 5, 32 (2/24). The Ice Cave is in line with the other biomes since 222.
+
+**Deployed** at 01:46 after 228 (name="build" content="751570d3"), gated on a
+passing check (1074 tests), covering 210–228: the hero rescues and digging,
+merge conflicts, community milestones, the Ice Cave toolbar, outages,
+`npm run compare`, sightings, the consolidation pass, the new intro line, and
+the Mail Room, Building Site and Clock Tower art. Verified on production with a
+read-only check (nothing finished by hand, nothing reported to the counter):
+levels 3, 9, 14, 18 and 92 open from share links on build 751570d3 with no
+console errors; every new feature's code is present; a share link replays the
+same cast; and a share link with an early outage (level 9, seed 40) goes dark
+at its tick with the event warning ("INCOMING · Fire Drill") drawn above the
+dark and the new intro copy on the page. Follow-up seen there: the event
+banner and the outage's status banner share the top of the board, and the
+event banner covers the status one — the status banner should move down while
+an event warning is up.
