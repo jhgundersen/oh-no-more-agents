@@ -63,3 +63,29 @@ test("a hero facing away from home turns at a wall and keeps its move", () => {
   assert.equal(ag.state, "walk", "no trick spent")
   assert.equal(ag.cool, 0, "and no cooldown")
 })
+
+test("a crossing builder knocks a thin scrap of debris out of its way, but not a wall or steel", () => {
+  const w = box(90)
+  w.terrain[27 * w.k.COLS + 45] = w.k.DIRT; w.terrain[28 * w.k.COLS + 45] = w.k.DIRT
+  assert.equal(S.trimOverhang(w, 45, 29), true)
+  assert.ok(!S.solid(w, 45, 27) && !S.solid(w, 45, 28))
+  for (let y = 26; y <= 29; y++) w.terrain[y * w.k.COLS + 50] = w.k.DIRT
+  assert.equal(S.trimOverhang(w, 50, 29), false, "a wall is a wall")
+  w.terrain[28 * w.k.COLS + 55] = w.k.STEEL
+  assert.equal(S.trimOverhang(w, 55, 29), false, "steel stays")
+  assert.equal(S.trimOverhang(w, 60, 29), false, "nothing to trim")
+})
+
+test("a hero on a nearly-done cooldown waits at a wall toward home; far off, or facing away, it turns", () => {
+  const w = box(90)
+  for (let y = 24; y < 30; y++) w.terrain[y * w.k.COLS + 40] = w.k.DIRT      // wall east of the agent
+  w.exit = { x: 70, y: 25, w: 6, h: 5 }
+  w.special = "quarryman"; w.specialSpec = S.specialSpec("quarryman")
+  const hero = (cool, dir) => Object.assign(S.spawn(w), { x: 39.4, y: 29, dir, state: "walk", special: "quarryman", cool, still: 9 })
+  const waiting = hero(S.HERO_WAIT, 1)
+  S.specialAtWall(w, waiting)
+  assert.equal(waiting.dir, 1); assert.ok(waiting.waitFor > 0); assert.equal(waiting.still, 0)
+  const long = hero(S.HERO_WAIT + 1, 1)
+  S.specialAtWall(w, long)
+  assert.equal(long.dir, -1, "too long a wait: walk it off")
+})

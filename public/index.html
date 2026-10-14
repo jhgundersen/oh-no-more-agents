@@ -10,7 +10,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-	<meta name="build" content="198f42dd">
+	<meta name="build" content="8eaef6a7">
 	<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%237aa2f7' d='M2 11h4V7h4V3h4v4h-4v4H6v4H2z'/%3E%3C/svg%3E">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -226,6 +226,32 @@
 			.hud, #toolbar, .controls { max-width: calc(100% - 24px); }
 		}
 		@media (pointer: coarse) { .ctl { min-height: 44px; } .theme { min-height: 36px; } }
+		/* No double-tap zoom on the board (a tap pauses) or the controls. */
+		#board, .ctl, .theme { touch-action: manipulation; }
+		/* A phone on its side has 390px of height: the title and blurb alone
+		   pushed the board below the fold and every control off the screen. So
+		   the game goes side by side — board at 1x on the left, the readout,
+		   skills and controls stacked beside it, all on the first screen. The
+		   rest of the page is still there below for whoever scrolls. */
+		@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+			body { padding: 6px 8px; gap: 10px; }
+			h1, body > .sub:first-of-type { display: none; }
+			#stage {
+				display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto 1fr;
+				column-gap: 10px; row-gap: 6px; align-items: start;
+				min-height: calc(100dvh - 12px); box-sizing: border-box;
+			}
+			#board { grid-column: 1; grid-row: 1 / span 3; align-self: center; }
+			.hud, #toolbar, .controls { grid-column: 2; width: auto; margin: 0; }
+			.hud { grid-row: 1; flex-wrap: wrap; gap: 6px 12px; padding: 7px 10px; }
+			.track { flex-basis: 100%; order: 1; }
+			#toolbar { grid-row: 2; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+			.skill { padding: 4px 2px; gap: 2px; }
+			.skill-count { font-size: 15px; }
+			.controls { grid-row: 3; }
+			.ctl { min-height: 44px; padding: 6px; }
+			.counts { margin-top: 2px; padding-top: 6px; }
+		}
 		@media (prefers-reduced-motion: reduce) {
 			*, *::before, *::after { animation: none !important; transition: none !important; }
 		}
@@ -307,7 +333,7 @@
 		from them exactly as the bar widget does.
 	</p>
 
-	<script src="agents/Sim.js?v=fc234f3d"></script>
+	<script src="agents/Sim.js?v=88089f2c"></script>
 	<script src="agents/Draw.js?v=5b50152a"></script>
 	<script src="agents/Palette.js?v=c102610b"></script>
 	<script src="agents/Outcome.js?v=6f5282f6"></script>

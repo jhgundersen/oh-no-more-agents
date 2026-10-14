@@ -5556,3 +5556,51 @@ home 95.15% → 95.31% (+33 agents), stall-cutoff endings 77 → 63, clock-outs 
 
 Not deployed: 17 minutes since the last deploy (196, 23:40); the next batch
 covers 197–199.
+
+## 200 — 2026-10-15 · Heroes wait for their move, builders trim debris, and the page on a phone
+
+**Stragglers, round two** (`npm run playtest`, levels 1–57 × 24 colonies,
+against 199): home 95.31% → 95.42% (+23 agents), stall-cutoff endings 63 → 48,
+clock-outs 10 → 10, hangs 0.
+- **Heroes wait at a wall toward home** when their move is due back within
+  `HERO_WAIT` (130 ticks), instead of turning. Turning meant a walk to the far
+  end and back, and with two walls in a row each needing the move the hero
+  fell into lock-step: level 24's Auto Complete cleared one pillar, met the
+  next on cooldown, walked a hundred cells and spent the move elsewhere on the
+  way. Level 24: stall endings 8 → 1, home 85% → 89%; level 51: 5 → 1; level
+  2: 11 → 8. Level 32 got slightly worse (stall 5 → 8, home 98% → 97%) and one
+  level-27 colony now runs out the clock — on the list below.
+- **A crossing builder trims a thin scrap of debris** at head height (two
+  cells of the agent's height at most, never steel) rather than abandoning the
+  bridge (`trimOverhang`). Level 10: 88% → 90%, stall 8 → 7, its one clock-out
+  gone.
+- Tried and reverted: not counting a current the diver is already standing in
+  as "ahead". It stops the per-tick flipping inside a charging current, but
+  divers then walked on into it and were swept off the board — level 10 fell
+  from 88% to 83%. The flip is clumsy and safe; it stays.
+Level 10's remaining 7/24 are a mix of debris tangles at the bottom crossing
+(bricks at body height left by earlier bridges) — not one rule.
+
+**Phone.** New tool: `npm run phone` serves `public/` locally, opens it in
+headless Chromium with touch emulation at 390×844 portrait, 844×390 landscape
+and the desktop, saves screenshots, and reports controls under 44px, sideways
+scroll, a board or game below the fold, and hover-only UI. Portrait was
+already fine (44px controls, the whole game on the first screen; the board
+crops its outer edges as designed). Landscape was not: the title and blurb
+pushed the board below the fold and every control off-screen. Phones on their
+side (`pointer: coarse`, landscape, under 500px tall) now get the game side by
+side — board at 1× on the left, the readout, skills and controls stacked on the
+right, all on one screen; title and blurb hidden, the rest of the page still
+below. `touch-action: manipulation` on the board and buttons stops a double
+tap zooming the page. The desktop look is unchanged. There is no skill
+selection or release-rate control to make thumb-sized — nobody plays this
+game; the skills are a readout, and speed and pause are the controls.
+
+**Tests:** two more in `stragglers.test.js` (trim, hero wait), and
+`phone.test.js` (7): the judgement, arguments and report, the local server,
+and one end-to-end Chromium capture (skipped where there is no chromium).
+`npm run check` 953/953 in 12 s; CRAP worst 29.2.
+
+**Still on the list:** level 54 clock-outs 5/24; level 36 stall 7/24; level 32
+stall 8/24; level 10 stall 7/24; level 18 stall; level 2 stall 8/24; one
+level-27 clock-out.

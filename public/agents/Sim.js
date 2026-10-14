@@ -7106,6 +7106,26 @@ function stepClimb(w, ag) {
   if (ag.y < 1) { ag.dir = -ag.dir; startFall(w, ag) }
 }
 
+// A bridge across a crossing that meets a scrap of loose debris at head height
+// knocks it out of the way rather than abandoning the crossing. Only a thin
+// one — two cells of the agent's height at most, nothing steel — so a real
+// wall is still a wall. Events and blasts leave exactly these over pit lips;
+// on level 10 one overhang over the bottom crossing stranded the last agent
+// out in a quarter of the colonies that still stalled after iteration 199.
+var TRIM_MAX = 2
+function trimOverhang(w, x, footY) {
+  var cells = []
+  for (var y = footY - AGENT_H + 1; y <= footY; y++) {
+    if (!solid(w, x, y)) continue
+    if (at(w, x, y) === STEEL) return false
+    cells.push(y)
+  }
+  if (!cells.length || cells.length > TRIM_MAX) return false
+  for (var i = 0; i < cells.length; i++) clearCell(w, x, cells[i])
+  addDust(w, x + 0.5, cells[0], 4)
+  return true
+}
+
 function stepBuild(w, ag) {
   ag.timer++
   if (ag.timer < BUILD_INTERVAL) return
@@ -7166,6 +7186,7 @@ function stepBuild(w, ag) {
     return
   }
 
+  if (ag.buildSpan && trimOverhang(w, Math.floor(nx), Math.floor(ny))) { /* cleared; carry on */ }
   if (solid(w, Math.floor(nx), Math.floor(ny))
       || !headroom(w, Math.floor(nx), Math.floor(ny))) {
     // Blocked at a full stride. Before giving the build up, try a narrower
@@ -8187,6 +8208,7 @@ function stepCamp(w, ag) {
   ag.cool = Math.round(spec.cool / 2)
 }
 
+var HERO_WAIT = 130   // ticks of cooldown a hero will stand out at a wall toward home
 function specialAtWall(w, ag) {
   var spec = specOf(ag)
 
@@ -8203,6 +8225,14 @@ function specialAtWall(w, ag) {
   // Cooling down. It turns at the wall like anybody else and comes back to it,
   // which is the entire point of the cooldown: the move is something you wait
   // for rather than something it does every half second.
+  //
+  // Unless this is the wall between it and home and the move is nearly back:
+  // then it waits at the wall. Turning meant a walk to the far end and back,
+  // and two walls in a row each needing the move put a hero in lock-step —
+  // level 24's Auto Complete cleared one pillar, met the next on cooldown,
+  // walked a hundred cells and spent the move somewhere else on the way, in 7
+  // of 24 colonies (`npm run playtest`). Waiting is still waiting for the move.
+  if (ag.cool > 0 && ag.cool <= HERO_WAIT && crossingHelps(w, ag)) { ag.waitFor = 2; ag.still = 0; return }
   if (ag.cool > 0) { turnAround(w, ag); return }
 
   // Ada Blocker has no move for a wall — its move is for what a wall cannot
