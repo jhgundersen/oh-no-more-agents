@@ -4357,3 +4357,5 @@ umbrellas going up on the quay, no console errors. Tests 785
 (`test/drips.test.js`: only wet biomes and res 2, cracks from the terrain
 alone, up for part of the cycle and only under the crack, read-only, no RNG,
 half-pixel grid). Nothing over CRAP 30.
+
+**Deployed** after 167 (name="build" content="1e9adfad"), gated on a passing check (785 tests): no second step on the exit floor (166) and drips (167). Browser check clean.
