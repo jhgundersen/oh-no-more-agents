@@ -17,7 +17,7 @@
   var last = {}            // sound name -> time it last played (ms)
   var seen = null          // what the previous tick looked like
 
-  var GAPS = { chime: 600, zing: 120, whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0, clang: 200, radio: 800, jingle: 600, dream: 400, wake: 300, busy: 1500, served: 90, agi: 600, agiHome: 0, agiLost: 0, quack: 300, plop: 300, pep: 120 }
+  var GAPS = { chime: 600, zing: 120, whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0, clang: 200, radio: 800, jingle: 600, dream: 400, wake: 300, busy: 1500, served: 90, agi: 600, agiHome: 0, agiLost: 0, quack: 300, plop: 300, pep: 120, murmur: 300 }
 
   function ensure() {
     if (ctx) return ctx
@@ -100,6 +100,8 @@
     plop: function () { tone("sine", 900, 300, 0.09, 0.4) },
     quack: function () { tone("square", 760, 520, 0.08, 0.3); tone("square", 700, 480, 0.09, 0.3, 0.1) },
     pep: function () { tone("square", 1047, 1047, 0.05, 0.25); tone("square", 1568, 1568, 0.08, 0.25, 0.06) },   // you're absolutely right
+    // The standup: a low murmur of voices as each one starts talking.
+    murmur: function () { noise(0.3, 0.25, "lowpass", 500); tone("sine", 180, 150, 0.25, 0.15); tone("sine", 240, 210, 0.2, 0.1, 0.08) },
     fanfare: function (good) {
       var notes = good ? [523, 659, 784, 1047] : [392, 330, 262, 196]
       for (var i = 0; i < notes.length; i++) tone("square", notes[i], notes[i], 0.11, 0.35, i * 0.1)
@@ -187,5 +189,8 @@
   // A saved "on" from a previous visit still needs a gesture to start.
   function wake() { if (on && ensure() && ctx.state !== "running") ctx.resume() }
 
-  window.AgentSfx = { observe: observe, setOn: setOn, isOn: function () { return on }, wake: wake }
+  // For the page's own moments that are not in a world, like the standup.
+  function cue(name) { if (SOUNDS[name]) play(name) }
+
+  window.AgentSfx = { observe: observe, setOn: setOn, isOn: function () { return on }, wake: wake, cue: cue }
 })()

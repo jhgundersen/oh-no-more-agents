@@ -170,3 +170,66 @@ function outcomeLine(w) {
   var pool = facts.length && Math.random() < 0.78 ? facts : outcome
   return pool[Math.floor(Math.random() * pool.length)]
 }
+
+// ---------------------------------------------------------------------------
+// Daily standup
+// ---------------------------------------------------------------------------
+// Every few levels the page holds a standup: the survivors in a circle, each
+// with a three-line status. The lines are about what actually happened over
+// the last few levels, most specific first, and nothing here is random — the
+// same recap gives the same meeting.
+
+// What one finished world contributes to the recap.
+function standupFacts(w) {
+  var used = w.lastUsed || {}
+  // Booleans, counts and missing fields alike, as a number.
+  function n(v) { return v ? Number(v) : 0 }
+  function did(skill) { return n(Object.prototype.hasOwnProperty.call(used, skill)) }
+  return {
+    levels: 1, saved: n(w.saved), lost: n(w.lost),
+    pitDeaths: n(w.pits && w.pits.length && w.lost > 0),
+    hazardKills: n(w.hazardKills), hallucinations: n(w.hallucinations),
+    rateLimited: n(w.rateLimited), ducked: n(w.ducked),
+    agiHome: n(w.agiHome), agiLost: n(w.agiLost), brolly: n(w.brollyLandings),
+    blocker: did("blocker"), builder: did("builder"), events: n(w.eventLog && w.eventLog.length)
+  }
+}
+
+function standupRecap(list) {
+  var r = {}
+  for (var i = 0; i < list.length; i++) for (var k in list[i]) r[k] = (r[k] || 0) + list[i][k]
+  return r
+}
+
+// Yesterday, today, blockers — at most 24 characters a line, for the bubble.
+var STANDUP_TOPICS = [
+  ["agiHome", function (n) { return ["SHIPPED AGI.", "GOING HOME AGAIN.", "NONE. IT'S AGI."] }],
+  ["agiLost", function (n) { return ["LOST THE AGI.", "UPDATING ROADMAP.", "FIVE MORE YEARS."] }],
+  ["hallucinations", function (n) { return ["WALKED TO AN EXIT.", "CHECKING IT EXISTS.", "IT DID NOT EXIST."] }],
+  ["ducked", function (n) { return ["TALKED TO A DUCK.", "SHIPPING THE FIX.", "NONE. ASK THE DUCK."] }],
+  ["rateLimited", function (n) { return ["STOOD IN A QUEUE.", "RETRY WITH BACKOFF.", "429."] }],
+  ["pitDeaths", function (n) { return ["FELL IN A PIT.", "NOT THAT.", "GRAVITY."] }],
+  ["hazardKills", function (n) { return ["LOST " + Math.min(n, 99) + " IN PROD.", "TESTING IN STAGING.", "PROD."] }],
+  ["blocker", function (n) { return ["STOOD IN THE WAY.", "MORE OF THAT.", "THE BLOCKER."] }],
+  ["brolly", function (n) { return ["OPENED " + Math.min(n, 99) + " UMBRELLAS.", "STAYING DRY.", "THE CEILING."] }],
+  ["builder", function (n) { return ["BUILT A BRIDGE.", "MAINTAINING IT.", "TECH DEBT."] }],
+  ["events", function (n) { return ["SCOPE CHANGED.", "NEW SCOPE.", "THE SCOPE."] }]
+]
+var STANDUP_FILLER = [
+  ["WALKED HOME.", "WALK HOME.", "NONE."],
+  ["SHIPPED.", "SHIP AGAIN.", "THIS MEETING."],
+  ["FOLLOWED THE CROWD.", "SAME.", "THE CROWD."],
+  ["READ THE DOCS.", "IGNORE THE DOCS.", "THE DOCS."],
+  ["NOTHING TO REPORT.", "MORE NOTHING.", "NONE."]
+]
+
+function standupLines(recap, speakers) {
+  var out = []
+  for (var i = 0; i < STANDUP_TOPICS.length && out.length < speakers; i++) {
+    var n = recap[STANDUP_TOPICS[i][0]] || 0
+    if (n > 0) out.push(STANDUP_TOPICS[i][1](n))
+  }
+  for (var f = 0; out.length < speakers; f++) out.push(STANDUP_FILLER[f % STANDUP_FILLER.length])
+  return out.map(function (l) { return ["YESTERDAY: " + l[0], "TODAY: " + l[1], "BLOCKERS: " + l[2]] })
+}
+

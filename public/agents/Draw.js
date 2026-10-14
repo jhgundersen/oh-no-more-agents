@@ -3034,6 +3034,86 @@ function drawFeed(ctx, w, pal) {
   ctx.restore()
 }
 
+// ---------------------------------------------------------------------------
+// Daily standup
+// ---------------------------------------------------------------------------
+// The page's intermission every few levels (web.js holds it; Outcome.js writes
+// the lines). The survivors stand in a ring on a plain floor, facing the
+// middle, and take turns: each one's yesterday, today and blockers in a
+// bubble over its head. `s` is { t: ticks since it began, speakers: [{ id,
+// trait, agi, lines: [three strings] }] }. The world is only read for its
+// grid and resolution; nothing is written.
+var STANDUP_INTRO = 12   // ticks before the first one speaks
+var STANDUP_TURN = 34    // ticks each
+function standupLength(n) { return STANDUP_INTRO + n * STANDUP_TURN }
+function drawStandup(ctx, w, pal, s) {
+  var C = w.k.CELL, W = w.k.COLS * C, H = w.k.ROWS * C
+  clearLayer(ctx, w)
+  ctx.fillStyle = pal.hatchMouth
+  ctx.fillRect(0, 0, W, H)
+  var floor = Math.round(H * 0.68)
+  ctx.fillStyle = pal.rockShade
+  ctx.fillRect(0, floor, W, H - floor)
+  ctx.fillStyle = pal.rockEdge
+  ctx.fillRect(0, floor, W, 2)
+  ctx.fillStyle = pal.decorLit
+  drawTransitionText(ctx, "DAILY STANDUP", W / 2, 14, 2)
+  ctx.fillStyle = pal.decorDim
+  drawTransitionText(ctx, "TAP OR CLICK TO SKIP", W / 2, H - 12, 1)
+  drawSprintBoard(ctx, pal, W - 92, floor - 70)
+  var n = s.speakers.length, cx = W / 2 - 30
+  var talking = s.t < STANDUP_INTRO ? -1 : Math.floor((s.t - STANDUP_INTRO) / STANDUP_TURN)
+  // A ring seen from slightly above: round an ellipse, the far side higher up
+  // the floor and drawn first, everyone facing the middle.
+  var spots = []
+  for (var i = 0; i < n; i++) {
+    var a = Math.PI * 2 * i / n + Math.PI / 2
+    spots.push({ i: i, x: cx + Math.cos(a) * 46, y: floor + 14 + Math.sin(a) * 10 })
+  }
+  spots.sort(function (p, q) { return p.y - q.y })
+  var bubble = null
+  for (var k = 0; k < spots.length; k++) {
+    var p = spots[k], sp = s.speakers[p.i]
+    var ag = { id: sp.id, trait: sp.trait, agi: sp.agi, x: p.x / C, y: p.y / C - 1,
+      dir: p.x < cx ? 1 : -1, state: "wait", anim: (s.t + p.i * 7) % 64, still: 0, waitFor: 0 }
+    drawAgent(ctx, { k: w.k, res: w.res, ticks: s.t + p.i * 31, level: w.level, biome: "" }, pal, ag, {})
+    if (p.i === talking) bubble = p
+  }
+  if (bubble) drawStandupBubble(ctx, pal, bubble.x, Math.round(bubble.y) - 22, s.speakers[bubble.i].lines, W)
+}
+
+// The board behind the meeting: three columns of sticky notes, mostly in
+// the last one, because it is that kind of sprint.
+var STICKY = ["#f2d860", "#8fd0f2", "#f29fb8"]
+function drawSprintBoard(ctx, pal, x, y) {
+  ctx.fillStyle = pal.rockEdge
+  ctx.fillRect(x - 1, y - 1, 82, 46)
+  ctx.fillStyle = "#e9e9e2"
+  ctx.fillRect(x, y, 80, 44)
+  ctx.fillStyle = pal.decorDim
+  ctx.fillRect(x + 26, y + 3, 1, 38); ctx.fillRect(x + 53, y + 3, 1, 38)
+  var notes = [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 1], [2, 3]]
+  for (var i = 0; i < notes.length; i++) {
+    ctx.fillStyle = STICKY[i % STICKY.length]
+    ctx.fillRect(x + 4 + notes[i][0] * 27, y + 4 + notes[i][1] * 10, 8, 7)
+  }
+}
+
+function drawStandupBubble(ctx, pal, x, foot, lines, W) {
+  var wide = 0
+  for (var i = 0; i < lines.length; i++) wide = Math.max(wide, lines[i].length * 4 - 1)
+  var bw = wide + 8, bh = lines.length * 8 + 4
+  var left = Math.round(Math.max(4, Math.min(W - bw - 4, x - bw / 2))), top = foot - bh - 4
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(left - 1, top - 1, bw + 2, bh + 2)
+  ctx.fillStyle = "#f4f4ec"
+  ctx.fillRect(left, top, bw, bh)
+  ctx.fillRect(Math.round(x) - 1, top + bh, 3, 2)              // the tail
+  ctx.fillRect(Math.round(x), top + bh + 2, 1, 1)
+  ctx.fillStyle = "#16161c"
+  for (var j = 0; j < lines.length; j++) drawTransitionText(ctx, lines[j], left + bw / 2, top + 3 + j * 8, 1)
+}
+
 function drawLevelTransition(ctx, w, pal) {
   if (!w.done) drawFeed(ctx, w, pal)
   if (w.done) {

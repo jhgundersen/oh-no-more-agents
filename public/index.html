@@ -10,7 +10,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-	<meta name="build" content="ff68d2bd">
+	<meta name="build" content="236e1ff2">
 	<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%237aa2f7' d='M2 11h4V7h4V3h4v4h-4v4H6v4H2z'/%3E%3C/svg%3E">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -104,6 +104,13 @@
 			background: rgba(0, 0, 0, 0.55); text-align: center;
 			transition: opacity 160ms;
 		}
+		#toast {
+			position: absolute; left: 50%; bottom: 10px; z-index: 3; transform: translateX(-50%);
+			padding: 6px 10px; font-size: 10px; letter-spacing: 0.08em; line-height: 1.2;
+			background: var(--ink); color: var(--fg); border: 1px solid var(--accent);
+			box-shadow: 0 2px var(--muted); opacity: 0; transition: opacity 200ms; pointer-events: none;
+		}
+		#toast.on { opacity: 1; }
 		#overlay-title { font-size: 16px; font-weight: 700; letter-spacing: 0.08em; }
 		#overlay-line { max-width: 560px; font-size: 12px; line-height: 1.45; color: #fff; opacity: 0.78; }
 
@@ -287,6 +294,7 @@
 		<div id="board">
 			<canvas id="terrain"></canvas>
 			<canvas id="actors"></canvas>
+			<div id="toast" role="status" aria-live="polite"></div>
 			<div id="overlay" style="display: none">
 				<div id="overlay-title">PAUSED</div>
 				<div id="overlay-line">Space or click to resume</div>
@@ -310,6 +318,7 @@
 			<button class="ctl" id="who"><b>w</b>ho: <span id="whoWord">off</span></button>
 			<button class="ctl" id="c-full"><b>f</b>ullscreen: <span id="fullWord">off</span></button>
 			<button class="ctl" id="sfx" title="Sound effects"><b>m</b> sfx: <span id="sfxWord">off</span></button>
+			<button class="ctl" id="share" title="Copy a link to this level with this colony"><b>c</b>opy link</button>
 			<span class="counts">
 				<span id="lifetime"></span>
 				<span id="global" title="Saved by everyone playing worldwide">worldwide: connecting&hellip;</span>
@@ -334,11 +343,12 @@
 	</p>
 
 	<script src="agents/Sim.js?v=d4a2e729"></script>
-	<script src="agents/Draw.js?v=ee3becdc"></script>
+	<script src="agents/Draw.js?v=31b756fb"></script>
 	<script src="agents/Palette.js?v=c102610b"></script>
-	<script src="agents/Outcome.js?v=693ad958"></script>
-	<script src="agents/sfx.js?v=346a3197"></script>
-	<script src="agents/web.js?v=429949ba"></script>
+	<script src="agents/Outcome.js?v=3963715c"></script>
+	<script src="agents/share.js?v=60eef852"></script>
+	<script src="agents/sfx.js?v=97543aac"></script>
+	<script src="agents/web.js?v=6716d9ec"></script>
 
 </body>
 

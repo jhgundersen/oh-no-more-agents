@@ -179,7 +179,7 @@ test("pixel font handles each glyph, fallback, spaces and alignment without nati
 
 test("page provides the hold at world creation and transition is last in the actor pass", () => {
   const web = fs.readFileSync(new URL("../public/agents/web.js", import.meta.url), "utf8")
-  assert.match(web, /world = generate\(level, 0\)\s+world.res = RES\s+world.doneHold = DONE_HOLD/)
+  assert.match(web, /world = generate\(level, 0, seed\)\s+world.res = RES\s+world.doneHold = DONE_HOLD/)
   const actors = D.drawActors.toString()
   assert.match(actors, /drawLevelTransition\(ctx, w, pal\)\s*}$/)
 })

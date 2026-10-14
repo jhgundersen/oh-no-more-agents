@@ -5990,3 +5990,47 @@ does all of the work on 54.
 **Still on the list:** level 36 stall 6/24 and one clock-out; level 32 stall
 8/24; level 2 stall 8/24; level 18 stall; level 6 clock-outs; level 23 (87%,
 Beam Search camping over the exit).
+
+## 208 — 2026-10-15 · Daily standup, and share this run
+
+**Daily standup.** Every fifth level, between the report card and the next
+level, the colony that just got home holds one: up to five of them in a ring on
+a plain floor in front of a sprint board (three columns of sticky notes, most
+of them in the last), facing the middle, each in turn with a three-line bubble —
+`YESTERDAY: FELL IN A PIT. / TODAY: NOT THAT. / BLOCKERS: GRAVITY.` The lines
+come from what actually happened over the last five levels (Outcome.js
+`standupFacts` / `standupRecap` / `standupLines`), most specific first: AGI
+shipped or lost, hallucinated exits, rubber ducks, 429 queues, pits, deaths in
+prod, blockers, umbrellas, bridges, changed scope; filler after that ("SHIPPED. /
+SHIP AGAIN. / THIS MEETING."). Nothing in it is random. It runs on wall-clock
+time, about five and a half seconds for five speakers whatever the speed, with
+a soft murmur in sfx.js as each one starts (`AgentSfx.cue`), and a tap or
+click anywhere on the board skips it. No survivors, no standup. The intro
+dreamer, AGI and trait looks all carry through — they are the same agents.
+
+**Share this run.** A "copy link" control (and the `c` key) copies the page's
+address with `?level=N&seed=S` — this level, this colony — and shows a small
+LINK COPIED toast (or COPY FAILED, if neither the clipboard API nor the old
+select-and-copy is allowed). Opening such a link plays that level with that
+colony once, then cleans the address bar so a reload or the next level is an
+ordinary one. `public/agents/share.js` parses strictly — level 1–9999 and seed
+0–2147483646 as plain decimal integers, no leading zeros, signs, decimals,
+exponents, hex, whitespace or trailing junk — and ignores anything else.
+Checked that a seed really replays: forty levels played twice under different
+page randomness (`Math.random` only feeds animation phase and particles) end
+identically.
+
+**Tooling.** `check-core-refs` now also sees the second names in a
+`var A = 1, B = 2` declaration, so those collide loudly too (proved with a
+planted duplicate). Two `STANDUP_` constants that were declared that way had
+been invisible to the test loader as well.
+
+**Tests:** `share.test.js` (4: good links, nineteen bad ones, the URL builder
+and round trip, seed replay), `standup.test.js` (4: facts and recap, priority
+and determinism, every line fits and has glyphs, the meeting drawn read-only
+with the bubble passing round), and `page-features.test.js` (2, in headless
+Chromium: a shared link opens that colony and cleans the URL, a malformed one
+is ignored, copy shows the toast; five finished levels lead to a standup that
+holds the next level and a click skips). The pinned `generate(level, 0)` in
+the transitions test now allows the seed. `npm run check` 1004/1004; CRAP
+under 30; `npm run phone` fine on all three views with the new control.

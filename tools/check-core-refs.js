@@ -40,6 +40,9 @@ const defines = {}, uses = {}, twice = []
 for (const name of CORE) {
   const text = strip(fs.readFileSync(path.join(AGENTS, name), "utf8"))
   const top = [...text.matchAll(/^(?:function|var)\s+([A-Za-z_]\w*)/gm)].map(m => m[1])
+  // `var A = 1, B = 2` declares B too, and it collides just the same.
+  for (const line of text.match(/^var [^\n]*/gm) || [])
+    for (const m of line.matchAll(/,\s*([A-Za-z_]\w*)\s*=(?!=)/g)) top.push(m[1])
   defines[name] = new Set(top)
   // And twice in the same file: the later one silently wins. A new
   // DUCK_REACH = 4 for the rubber duck was overwritten by the Debug hero's

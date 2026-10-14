@@ -443,9 +443,9 @@
   // Level lifecycle — Panel.qml's, step for step
   // -------------------------------------------------------------------------
 
-  function newLevel(n) {
+  function newLevel(n, seed) {
     level = Math.max(1, n)
-    world = generate(level, 0)
+    world = generate(level, 0, seed)
     world.res = RES
     world.doneHold = DONE_HOLD
     completionLine = ""
@@ -460,6 +460,7 @@
 
   function tick() {
     if (!world) return
+    if (standup) { stepStandup(); return }
     step(world)
     if (window.AgentSfx) AgentSfx.observe(world)
 
@@ -481,7 +482,48 @@
 
     // Every generated colony gets one story. Success or failure, move on after
     // the result rather than replaying the same ground with a replacement cast.
-    if (world.done && world.doneTicks > DONE_HOLD) { advance(1); applyUpdate() }
+    // Every STANDUP_EVERY levels the survivors hold a standup on the way.
+    if (world.done && world.doneTicks > DONE_HOLD) {
+      recent.push(standupFacts(world))
+      if (recent.length > STANDUP_EVERY) recent.shift()
+      if (++transitions % STANDUP_EVERY === 0 && startStandup()) return
+      advance(1); applyUpdate()
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Daily standup (Draw's drawStandup, Outcome's standupLines)
+  // -------------------------------------------------------------------------
+  // Up to five of the colony that just got home, the last few levels as their
+  // status, about five and a half seconds of wall clock whatever the speed,
+  // and a tap anywhere on the board skips it.
+  var STANDUP_EVERY = 5, STANDUP_MS = 30   // ms per standup tick
+  var recent = [], transitions = 0, standup = null
+
+  function startStandup() {
+    var home = world.agents.filter(function (a) { return a.state === "saved" }).slice(0, 5)
+    if (!home.length) return false
+    var lines = standupLines(standupRecap(recent), home.length)
+    standup = { started: performance.now(), t: 0, said: -1, speakers: home.map(function (a, i) {
+      return { id: a.id, trait: a.trait, agi: !!a.agi, lines: lines[i] }
+    }) }
+    return true
+  }
+
+  function stepStandup() {
+    standup.t = Math.floor((performance.now() - standup.started) / STANDUP_MS)
+    var talking = Math.floor((standup.t - STANDUP_INTRO) / STANDUP_TURN)
+    if (talking >= 0 && talking !== standup.said) {
+      standup.said = talking
+      if (window.AgentSfx && AgentSfx.cue) AgentSfx.cue("murmur")
+    }
+    if (standup.t >= standupLength(standup.speakers.length)) { endStandup(); return }
+    drawStandup(actorCtx, world, palette, standup)
+  }
+
+  function endStandup() {
+    standup = null
+    advance(1); applyUpdate()
   }
 
   // -------------------------------------------------------------------------
@@ -648,6 +690,37 @@
   // (tools/phone.js, tools/fps.js, test/pep.test.js). Nothing on the page uses it.
   window.AgentWorld = function () { return world }
 
+  // "Copy link": this level with this colony (share.js). The toast says
+  // whether the clipboard took it; a browser that refuses gets the old
+  // select-and-copy, and failing that the toast admits it.
+  function copyShareLink() {
+    if (!world || !window.AgentShare) return
+    var link = AgentShare.url(window.location.href, world.level, world.colonySeed)
+    if (!link) return
+    var done = function () { toast("LINK COPIED") }
+    var fallback = function () { toast(copyByHand(link) ? "LINK COPIED" : "COPY FAILED") }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, fallback)
+    else fallback()
+  }
+  function copyByHand(text) {
+    var ta = document.createElement("textarea")
+    ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0"
+    document.body.appendChild(ta); ta.select()
+    var ok = false
+    try { ok = document.execCommand("copy") } catch (e) { ok = false }
+    document.body.removeChild(ta)
+    return ok
+  }
+  var toastTimer = 0
+  function toast(text) {
+    var t = document.getElementById("toast")
+    if (!t) return
+    t.textContent = text
+    t.classList.add("on")
+    clearTimeout(toastTimer)
+    toastTimer = setTimeout(function () { t.classList.remove("on") }, 1600)
+  }
+
   function togglePause() {
     running = !running
     render()
@@ -789,7 +862,14 @@
     })
     el.player.addEventListener("ended", advanceTrack)
 
-    newLevel(level)
+    // A shared run (share.js): that level, that colony, once. The address bar
+    // is cleaned so a reload or the next level is an ordinary one.
+    var shared = window.AgentShare ? AgentShare.parse(window.location.search) : null
+    if (shared) {
+      newLevel(shared.level, shared.seed)
+      saveState()
+      try { history.replaceState(null, "", window.location.pathname) } catch (e) {}
+    } else newLevel(level)
 
     // ?full — the visual half of fullscreen, without asking the browser for
     // the real thing. `faux` is the CSS fallback that already exists for iOS
@@ -820,6 +900,7 @@
     // A tap on an agent is a pep talk (Sim's pepTalk); anywhere else, or
     // while paused, it is pause as it always was.
     el.boardWrap.addEventListener("click", function (ev) {
+      if (standup) { endStandup(); return }
       var ag = running && world ? agentUnder(ev) : null
       if (!ag) { togglePause(); return }
       pepTalk(world, ag)
@@ -834,7 +915,8 @@
       "c-restart": function () { newLevel(level) },
       "speed": cycleSpeed,
       "who": toggleLabels,
-      "c-full": toggleFullscreen
+      "c-full": toggleFullscreen,
+      "share": copyShareLink
     }
     Object.keys(buttons).forEach(function (id) {
       var b = document.getElementById(id)
@@ -854,6 +936,7 @@
       else if (k === "arrowright" || k === "l" || k === "n") advance(1)
       else if (k === "arrowleft" || k === "h" || k === "p") advance(-1)
       else if (k === "r") newLevel(level)
+      else if (k === "c") copyShareLink()
       else if (k === "s") cycleSpeed()
       else if (k === "w") toggleLabels()
       else if (k === "f") toggleFullscreen()
