@@ -5350,3 +5350,35 @@ no push or deployment.
 Reviewed and merged by the loop. Level 9 at res 2: lit night-city windows behind the floors; agents, desks, stairs and exit all readable. In the merge, `tools/render.js` keeps main's axis-aligned fast path from 194 (it covers fractional edges too and is verified bit-identical) in place of this branch's integer-edge `scaledBounds`/`paintRect`; the branch's pixel-centre test in `png.test.js` now checks main's path.
 
 **Deployed** after 195 (name="build" content="cf7bd9cd"), gated on a passing check (913 tests, 11 s): the Skyscraper art. Level 9 in headless Chromium, no console errors; night-city windows behind the floors.
+
+## 196 — 2026-10-14 · AGI achieved (sometimes), and everybody gets a voice
+
+**AGI.** About one colony in eight (`AGI_CHANCE`, from its own `agiRng`, so the
+cast and the level are the same either way) has one agent in gold: the colony's
+suit in `#d9a826` and a few pixels of glitter that twinkle around it, whole
+pixels so the Omarchy panel shows it too. It is otherwise an ordinary agent —
+same trait, same rules, same umbrella — and a hero never wears it (the next one
+through the hatch does). Ticker: AGI DETECTED IN THE COLONY when it drops in;
+AGI ACHIEVED · IT WENT HOME, or AGI LOST · STILL FIVE YEARS AWAY. The report card
+gets a gold "AGI ACHIEVED. IT WENT HOME. +1 BONUS" row or a red obituary. A
+level that ends on the stall cutoffs with the AGI still pacing counts it lost;
+Reload brings the gold back with the agent (AGI RESTORED FROM BACKUP). The
+rescue counts once toward the global total like anybody's — the counter, its
+bounds and its validation are untouched; the bonus is on the card only. Outcome
+gains four lines each way. The pixel font gains "." and "-".
+
+**Voices.** Quips (res 2, the newest wins): a dreamer says EXIT! when it sees
+its mirage and OH. when it arrives; the front of a 429 queue says AFTER YOU and
+each agent let through says 200 OK. sfx.js, synthesised like the rest: a sine
+glissando with a late fifth for a mirage, a soap-bubble pop when it dissolves, a
+two-beat telephone busy signal for 429 and a single blip per 200 OK, a glitter of
+high notes when the AGI appears, a six-note arpeggio when it gets home (in place
+of the ordinary home chirp) and a slipping-roadmap four-note fall when it does
+not (in place of the ordinary down).
+
+**Checked:** 400 colonies: 7–19% have an AGI (test bound), never more than one.
+24 levels with the AGI forced: every one ends home or lost, never both, never
+neither, no hangs. `simcheck play 60` unchanged: 60/60, 881/929, 0 hangs.
+`test/agi.test.js` (8), quip tests in dreamer/ratelimit, two sfx tests (each new
+cue plays; the AGI's homecoming replaces the ordinary chirp: exactly six
+oscillators). `npm run check` 925/925 in 11 s; CRAP worst 29.2.

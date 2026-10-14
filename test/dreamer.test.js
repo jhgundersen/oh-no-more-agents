@@ -129,3 +129,11 @@ test("the end-of-level line can mention the hallucination only when one happened
     assert.ok(hit > 0)
   } finally { Math.random = random }
 })
+
+test("the dreamer says so: EXIT! when it sees the mirage, OH. when it gets there", () => {
+  const w = { ...S.generate(1, 0, 3), ticks: 100 }
+  assert.equal(D.quipFor(w, { dreamtAt: 95 }).text, "EXIT!")
+  assert.equal(D.quipFor(w, { dreamtAt: 60, wokeAt: 98 }).text, "OH.", "the newest wins")
+  assert.equal(D.quipFor(w, { wokeAt: 100 - D.QUIP_TICKS }), null, "and it fades")
+  for (const ch of "EXIT!OH.") assert.ok(D.TRANSITION_GLYPHS[ch], ch)
+})

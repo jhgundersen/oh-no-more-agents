@@ -110,6 +110,20 @@ var EVENT_LINES = {
     "They respected the Retry-After header. A first for any client."
   ],
 
+  // The golden agent, when there was one: home, or not.
+  agiHome: [
+    "AGI achieved. It went home.",
+    "The AGI arrived on schedule, which surprised everyone, including the AGI.",
+    "Artificial general intelligence: generally, it walked to the exit.",
+    "The singularity was a single agent with an umbrella. It is home now."
+  ],
+  agiLost: [
+    "AGI lost. It is still five years away.",
+    "The AGI fell into a pit. The roadmap has been updated.",
+    "General intelligence, specific pit.",
+    "The AGI did not make it. The press release went out anyway."
+  ],
+
   // Only when a carrier actually reached the door still carrying it.
   carrier: [
     "One of them took it home with it. Nobody noticed.",
@@ -142,6 +156,8 @@ function outcomeLine(w) {
   add("carrier", w.carrierHome === true)
   add("mirage", w.hallucinations > 0)
   add("ratelimit", w.rateLimited > 0)
+  add("agiHome", w.agiHome === true)
+  add("agiLost", w.agiLost === true)
   var pool = facts.length && Math.random() < 0.78 ? facts : outcome
   return pool[Math.floor(Math.random() * pool.length)]
 }

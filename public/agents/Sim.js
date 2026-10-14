@@ -988,6 +988,11 @@ function newWorld(level, attempt, colonySeed) {
     mirages: [],       // exits only a dreamer can see; see dreamSteer
     hallucinations: 0,
     limitRng: makeRng(colonySeed + 2750159),
+    agiRng: makeRng(colonySeed + 433494437),
+    agiAt: -2,         // which release is the AGI: -2 undecided, -1 none; see crownAgi
+    agiId: -1,
+    agiHome: false,
+    agiLost: false,
     rateLimit: null,   // the 429 sign and its queue, while one is up; see stepRateLimit
     rateLimited: 0,    // how many were held by it, for the report card
 
@@ -6708,6 +6713,7 @@ function dreamSteer(w, ag) {
   // A mirage on top of the real door is a door.
   if (!eventSafeX(w, x)) return
   ag.dreamt = true
+  ag.dreamtAt = w.ticks       // for Draw's quip
   ag.dir = dir
   w.mirages.push({ x: x, y: y, dir: dir, by: ag.id, born: w.ticks, popped: -1, reached: false })
   w.hallucinations++
@@ -6738,6 +6744,7 @@ function stepMirages(w) {
     var walking = ag && !ag.gone && ag.state === "walk"
     if (walking && Math.floor(ag.y) === m.y && Math.abs(ag.x - (m.x + 0.5)) < 1) {
       m.reached = true
+      ag.wokeAt = w.ticks       // for Draw's quip
       ag.dir = -m.dir
       feedNote(w, agentTag(w, ag) + " · HALLUCINATION DETECTED")
     }
@@ -6746,6 +6753,50 @@ function stepMirages(w) {
     if (m.reached || !walking || ag.dir !== m.dir || Math.floor(ag.y) !== m.y ||
         w.ticks - m.born > MIRAGE_LIFE) m.popped = w.ticks
   }
+}
+
+// ---------------------------------------------------------------------------
+// AGI
+// ---------------------------------------------------------------------------
+// About one colony in eight has one agent in gold. It is an ordinary agent in
+// every way the simulation can see — same rules, same trait, same umbrella —
+// which is the joke: everyone was waiting for it, and it walks into the same
+// pits. Getting it home is a line on the report card and a line in the ticker;
+// losing it is the other line. It counts once toward the rescue total like
+// anybody else: the global counter's bounds and validation are untouched.
+var AGI_CHANCE = 1 / 8
+
+function crownAgi(w, ag) {
+  if (w.agiAt === -2) {
+    // Decided at the first release, when toRelease is known, from the AGI's
+    // own stream so it moves nothing else in the colony.
+    w.agiAt = w.agiRng() < AGI_CHANCE ? 1 + Math.floor(w.agiRng() * w.toRelease) : -1
+  }
+  if (w.released !== w.agiAt || w.agiId >= 0) return
+  // A hero already has a costume; the next one through the hatch gets the gold.
+  if (ag.special) { if (w.agiAt < w.toRelease) w.agiAt++; return }
+  ag.agi = true
+  w.agiId = ag.id
+  feedNote(w, "AGI DETECTED IN THE COLONY")
+}
+
+// A level can also end on the stall cutoffs with the AGI still pacing a
+// ledge. Not home is not home: it goes on the card as lost.
+function stepAgi(w) {
+  if (w.agiId < 0 || w.agiHome || w.agiLost) return
+  var ag = agentById(w, w.agiId)
+  if (!ag) return
+  if (ag.state === "saved") { w.agiHome = true; feedNote(w, "AGI ACHIEVED · IT WENT HOME") }
+  else if (ag.gone || w.done) { w.agiLost = true; feedNote(w, "AGI LOST · STILL FIVE YEARS AWAY") }
+}
+
+// Reload brings the gold back with the agent.
+function restoreAgi(w, dead, back) {
+  if (!dead.agi) return
+  back.agi = true
+  w.agiId = back.id
+  w.agiLost = false
+  feedNote(w, "AGI RESTORED FROM BACKUP")
 }
 
 // ---------------------------------------------------------------------------
@@ -6775,7 +6826,7 @@ var LIMIT_SIGN = 30       // ticks the sign stays after the last one goes
 function queued(w, ag) {
   if (!(ag.queueFor > 0)) return false
   if (ag.state !== "walk" || ag.special || unsupported(w, ag)) { ag.queueFor = 0; return false }
-  ag.queueFor--
+  if (--ag.queueFor === 0) ag.servedAt = w.ticks   // for Draw's quip: 200 OK
   // Facing the sign while it waits; Draw reads queueFor for the pose.
   ag.still = 0
   return true
@@ -6829,6 +6880,7 @@ function queueCrowd(w, crowd) {
   var dir = heading >= 0 ? 1 : -1
   crowd.sort(function (a, b) { return (b.x - a.x) * dir })
   var sum = 0
+  crowd[0].queuedAt = w.ticks    // the front of the queue says something
   for (var n = 0; n < crowd.length; n++) {
     crowd[n].queueFor = LIMIT_HOLD + n * LIMIT_EVERY
     sum += crowd[n].x
@@ -7873,6 +7925,7 @@ function reloadColleague(w, ag) {
   dead.revived = true
   var back = spawn(w)
   back.trait = dead.trait
+  restoreAgi(w, dead, back)
   w.agents.push(back)
   w.lost--
   w.reloads++
@@ -10605,6 +10658,7 @@ function finishWorldStep(w, active, blockers, moving) {
   stepEvents(w)
   stepMirages(w)
   stepRateLimit(w)
+  stepAgi(w)
   stepMission(w)
   stepHazard(w)
   stepMines(w)
@@ -10641,6 +10695,7 @@ function finishWorldStep(w, active, blockers, moving) {
       w.doneTicks = 0
     }
   }
+  if (w.done) stepAgi(w)
 }
 function step(w) {
   w.ticks++
@@ -10652,7 +10707,9 @@ function step(w) {
       w.releaseTimer = 0
       w.released++
       w.lastReleaseAt = w.ticks
-      w.agents.push(spawn(w))
+      var newcomer = spawn(w)
+      w.agents.push(newcomer)
+      crownAgi(w, newcomer)
     }
   }
 

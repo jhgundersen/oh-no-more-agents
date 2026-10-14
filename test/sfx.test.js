@@ -75,3 +75,37 @@ test("named events: a boss hit, backup and a mission each have a cue; an ordinar
     assert.ok(played.length > 0, event)
   }
 })
+
+test("the dreamer, the 429 queue and the AGI each have a cue", () => {
+  const cases = [
+    ["dream", w => { w.hallucinations = 1 }],
+    ["wake", w => { w.agents.push({ wokeAt: w.ticks }) }],
+    ["busy", w => { w.rateLimited = 5 }],
+    ["served", w => { w.agents.push({ servedAt: w.ticks }) }],
+    ["agi", w => { w.agiId = 4 }],
+    ["agi home", w => { w.agiId = 4; w.agiHome = true; w.saved++ }],
+    ["agi lost", w => { w.agiId = 4; w.agiLost = true; w.lost++ }]
+  ]
+  for (const [name, change] of cases) {
+    const { sfx, played } = load()
+    sfx.setOn(true)
+    const w = { ...world(), ticks: 50 }
+    sfx.observe(w); sfx.observe(w)
+    assert.equal(played.length, 0, `${name}: quiet first`)
+    change(w); sfx.observe(w)
+    assert.ok(played.length > 0, name)
+  }
+})
+
+test("the AGI's homecoming replaces the ordinary home chirp rather than adding to it", () => {
+  const count = change => {
+    const { sfx, played } = load()
+    sfx.setOn(true)
+    const w = { ...world(), ticks: 50, agiId: 4 }
+    sfx.observe(w); change(w); sfx.observe(w)
+    return played.length
+  }
+  const ordinary = count(w => { w.saved++ }), golden = count(w => { w.saved++; w.agiHome = true })
+  assert.equal(golden, 6, "six notes of arpeggio and nothing else")
+  assert.equal(ordinary, 2)
+})

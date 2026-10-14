@@ -167,3 +167,17 @@ test("the end-of-level line can mention the queue only when one happened", () =>
     assert.ok(hit > 0)
   } finally { Math.random = random }
 })
+
+test("the front of the queue says AFTER YOU, and each one let through says 200 OK", () => {
+  const { w } = crowd(6)
+  S.queueCrowd(w, S.findCrowd(w))
+  const front = w.agents.filter(a => a.queuedAt === w.ticks)
+  assert.equal(front.length, 1)
+  assert.equal(D.quipFor(w, front[0]).text, "AFTER YOU")
+  const served = new Set()
+  for (let t = 0; t < S.LIMIT_HOLD + 6 * S.LIMIT_EVERY; t++) {
+    w.ticks++
+    for (const ag of w.agents) { S.agentActs(w, ag); if (ag.servedAt === w.ticks) { served.add(ag.id); assert.equal(D.quipFor(w, ag).text, "200 OK") } }
+  }
+  assert.equal(served.size, 6)
+})

@@ -17,7 +17,7 @@
   var last = {}            // sound name -> time it last played (ms)
   var seen = null          // what the previous tick looked like
 
-  var GAPS = { chime: 600, zing: 120, whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0, clang: 200, radio: 800, jingle: 600 }
+  var GAPS = { chime: 600, zing: 120, whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0, clang: 200, radio: 800, jingle: 600, dream: 400, wake: 300, busy: 1500, served: 90, agi: 600, agiHome: 0, agiLost: 0 }
 
   function ensure() {
     if (ctx) return ctx
@@ -80,6 +80,22 @@
     clang: function () { tone("triangle", 980, 720, 0.25, 0.6); tone("square", 1470, 1300, 0.08, 0.2); noise(0.06, 0.5, "highpass", 3000) },  // a boss takes a hit
     radio: function () { noise(0.12, 0.5, "bandpass", 2400); tone("square", 1200, 1200, 0.05, 0.25, 0.13); tone("square", 1200, 1200, 0.05, 0.25, 0.22) },  // backup on the way
     jingle: function () { tone("square", 784, 784, 0.07, 0.3); tone("square", 988, 988, 0.07, 0.3, 0.08); tone("square", 1319, 1319, 0.12, 0.3, 0.16) },  // mission done
+    // A dreamer sees an exit: a soft glissando up, with a second voice a
+    // fifth above coming in late — the heat haze, in sound.
+    dream: function () { tone("sine", 440, 880, 0.35, 0.3); tone("triangle", 660, 1320, 0.3, 0.15, 0.06) },
+    // ...and arrives at it: the door going out like a soap bubble.
+    wake: function () { noise(0.12, 0.35, "lowpass", 900); tone("sine", 700, 260, 0.16, 0.3) },
+    // 429: a telephone busy signal, two beats.
+    busy: function () {
+      for (var b = 0; b < 2; b++) { tone("square", 480, 480, 0.13, 0.22, b * 0.26); tone("square", 620, 620, 0.13, 0.16, b * 0.26) }
+    },
+    served: function () { tone("square", 1568, 1568, 0.03, 0.2) },    // 200 OK: one through the gate
+    // The gold one: a glitter of high notes when it turns up...
+    agi: function () { var n = [1568, 2093, 2637, 3136]; for (var i = 0; i < n.length; i++) tone("triangle", n[i], n[i], 0.06, 0.25, i * 0.05) },
+    // ...a proper arpeggio when it gets home...
+    agiHome: function () { var n = [523, 659, 784, 1047, 1319, 1568]; for (var i = 0; i < n.length; i++) tone("square", n[i], n[i], 0.09, 0.3, i * 0.07) },
+    // ...and the roadmap slipping when it does not.
+    agiLost: function () { var n = [784, 740, 698, 659]; for (var i = 0; i < n.length; i++) tone("triangle", n[i], n[i] * 0.98, 0.16, 0.35, i * 0.15) },
     fanfare: function (good) {
       var notes = good ? [523, 659, 784, 1047] : [392, 330, 262, 196]
       for (var i = 0; i < notes.length; i++) tone("square", notes[i], notes[i], 0.11, 0.35, i * 0.1)
@@ -90,6 +106,13 @@
 
   // Events the world names outright, rather than ones read off a difference.
   var EVENT_SOUNDS = { "boss hit": "clang", "backup": "radio", "mission complete": "jingle" }
+
+  // Agents something happened to on exactly this tick (Sim dates these).
+  function count(w, field) {
+    var n = 0
+    for (var i = 0; i < w.agents.length; i++) if (w.agents[i][field] === w.ticks) n++
+    return n
+  }
 
   function snapshot(w) {
     var open = {}, shots = 0, enemyShots = 0
@@ -112,7 +135,9 @@
     return {
       doors: doors, zips: zips,
       world: w, open: open, shots: shots, enemyShots: enemyShots, brawls: brawls, blasts: w.blasts.length,
-      saved: w.saved, lost: w.lost, parries: w.umbrellaSaves || 0, done: w.done
+      saved: w.saved, lost: w.lost, parries: w.umbrellaSaves || 0, done: w.done,
+      dreams: w.hallucinations || 0, wakes: count(w, "wokeAt"), served: count(w, "servedAt"),
+      limited: w.rateLimited || 0, agi: w.agiId >= 0, agiHome: !!w.agiHome, agiLost: !!w.agiLost
     }
   }
 
@@ -133,8 +158,16 @@
     if (w.lastEvent === "thrown out") play("whoosh")
     var cue = EVENT_SOUNDS[w.lastEvent]
     if (cue) play(cue)
-    if (now.saved > was.saved) play("home")
-    if (now.lost > was.lost) play("down")
+    if (now.dreams > was.dreams) play("dream")
+    if (now.wakes) play("wake")
+    if (now.limited > was.limited) play("busy")
+    if (now.served) play("served")
+    if (now.agi && !was.agi) play("agi")
+    // The AGI's own cue takes the place of the ordinary one for that agent.
+    if (now.agiHome && !was.agiHome) play("agiHome")
+    else if (now.saved > was.saved) play("home")
+    if (now.agiLost && !was.agiLost) play("agiLost")
+    else if (now.lost > was.lost) play("down")
     if (now.done && !was.done) play("fanfare", w.saved * 2 >= w.toRelease)
   }
 

@@ -2746,7 +2746,8 @@ var TRANSITION_GLYPHS = {
   "3": [6,1,2,1,6], "4": [5,5,7,1,1], "5": [7,4,6,1,6],
   "6": [3,4,7,5,7], "7": [7,1,2,2,2], "8": [7,5,7,5,7], "9": [7,5,7,1,6],
   " ": [0,0,0,0,0], "·": [0,0,2,0,0], "/": [1,1,2,4,4],
-  "!": [2,2,2,0,2], "?": [6,1,2,0,2], "+": [0,2,7,2,0]
+  "!": [2,2,2,0,2], "?": [6,1,2,0,2], "+": [0,2,7,2,0],
+  ".": [0,0,0,0,2], "-": [0,0,7,0,0]
 }
 
 function drawTransitionGlyph(ctx, rows, x, y, size) {
@@ -2914,6 +2915,9 @@ function reportRows(w, pal) {
   if (mvp) rows.push({ text: mvp, colour: pal.decorLit, step: 12 })
   var brolly = brollyLine(w)
   if (brolly) rows.push({ text: brolly, colour: pal.umbrellaRim, step: 12 })
+  // The AGI, either way: a bonus line in gold, or its obituary.
+  if (w.agiHome) rows.push({ text: "AGI ACHIEVED. IT WENT HOME.  +1 BONUS", colour: AGI_GOLD, step: 12 })
+  else if (w.agiLost) rows.push({ text: "AGI LOST. STILL FIVE YEARS AWAY.", colour: pal.urgent, step: 12 })
   return rows
 }
 
@@ -6861,7 +6865,11 @@ function quipFor(w, ag) {
   var cands = [
     [ag.wonAt, "LGTM"],
     [ag.thrownAt, "429"],
-    [ag.brollyDir && ag.brollyFor > 0 ? w.ticks - ((w.k.BROLLY_HOLD || 24) - ag.brollyFor) : undefined, "NOPE"]
+    [ag.brollyDir && ag.brollyFor > 0 ? w.ticks - ((w.k.BROLLY_HOLD || 24) - ag.brollyFor) : undefined, "NOPE"],
+    [ag.dreamtAt, "EXIT!"],          // a dreamer sees its mirage
+    [ag.wokeAt, "OH."],              // and arrives at it
+    [ag.queuedAt, "AFTER YOU"],      // the front of a 429 queue
+    [ag.servedAt, "200 OK"]          // each one let through
   ]
   for (var i = 0; i < cands.length; i++) {
     var at = cands[i][0]
@@ -11132,6 +11140,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   var robe = colors.robe, hair = colors.hair, skin = colors.skin
 
   drawAgentEffects(ctx, w, pal, ag, ox, oy, dir, hair, st, C)
+  if (ag.agi) drawAgiSparkle(ctx, w, ag, ox, oy)
 
   drawUmbrella(ctx, w, pal, ag, ox, oy, st)
 
@@ -11226,6 +11235,26 @@ function drawAgent(ctx, w, pal, ag, opts) {
   ctx.globalAlpha = 1
 }
 
+// The AGI: the colony's suit in gold, and a few pixels of glitter that come
+// and go around it — whole pixels, so the panel shows it as well as the page.
+// Each spark is a pure function of the tick and the agent's id.
+var AGI_GOLD = "#d9a826", AGI_SPARK = "#fff3b0"
+var AGI_SPARKS = [[-1, 2], [9, 4], [0, 10], [10, 11], [4, -2], [-2, 7]]
+function drawAgiSparkle(ctx, w, ag, ox, oy) {
+  if (ag.state === "saved" && ag.fade > 10) return
+  ctx.save()
+  ctx.fillStyle = AGI_SPARK
+  for (var i = 0; i < AGI_SPARKS.length; i++) {
+    var phase = (w.ticks + ag.id * 13 + i * 11) % 36
+    if (phase >= 8) continue
+    var sx = ox + AGI_SPARKS[i][0], sy = oy + AGI_SPARKS[i][1]
+    ctx.globalAlpha = phase < 4 ? 1 : 0.5
+    ctx.fillRect(sx, sy, 1, 1)
+    if (phase >= 2 && phase < 6) { ctx.fillRect(sx - 1, sy, 1, 1); ctx.fillRect(sx + 1, sy, 1, 1); ctx.fillRect(sx, sy - 1, 1, 1); ctx.fillRect(sx, sy + 1, 1, 1) }
+  }
+  ctx.restore()
+}
+
 function agentDrawColors(w, pal, ag, st) {
   var robe = pal.robe
   var hair = pal.hair
@@ -11239,7 +11268,7 @@ function agentDrawColors(w, pal, ag, st) {
   if (ag.special) {
     var sp = w.specialSpec
     if (sp) { robe = sp.robe; hair = sp.hair }
-  }
+  } else if (ag.agi) robe = AGI_GOLD
 
   if (st === "bomb") {
     // Flash between the theme's urgent color and white on the last seconds.
