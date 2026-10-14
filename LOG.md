@@ -5096,3 +5096,7 @@ no push or deployment.
 Reviewed and merged by the loop. Level 6, tick 400, full frame against main at 1x: teal glacier curtains fill the back wall, glints sparkle across the ice; nothing like the Frost's snow and aurora. The original blocks, icicles and rubble in front; the agents read.
 
 **Deployed** after 190 (name="build" content="255a6063"), gated on a passing check (872 tests): the Ice Cave art. Level 6 in headless Chromium, no console errors.
+
+## 191 — 2026-10-14 · Factory art on a branch
+
+Started: Factory art on `codex/factory` (level 8) — a production line distinct from the Foundry: belts, robot arms, gantries, safety stripes, signage; same brief lessons.
