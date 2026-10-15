@@ -7315,3 +7315,182 @@ retried.
 - **Patch notes:** the tip and the NEW dot show on a first visit, the panel
   has 7 lines, Esc closes it, and after a reload neither shows.
 - **All views:** build f279cc1a, no page errors.
+
+## 242 — 2026-10-15 · Last light over the container port (on a branch)
+
+**Brief:** Harbour (level 19), page resolution only. `codex/harbour` starts
+at approved Subway `8d38d20` in the art worktree; preserve LOG 162–163's
+quays, ferry crossings and existing harbour pieces.
+
+**Changed:** cached night gradient and five muted container colours, varied
+lengths and stacks, corrugated ribs and complete tiny CTX/RAG/LLM/API/BOT
+stencils. A solid gantry with cabin, cable and bracing stands behind the quay;
+two moored hulls have different mast/rigging positions. Sparse supported
+bollards carry rope coils and occasional perched gulls. The original
+lighthouse stays in its place, with a slow half-pixel cone and soft fringe.
+Deep water glints shimmer below the ferry hull and wake. Only the cone and
+glints animate; geometry is cached by world and terrain version, and all
+motion is derived from ticks. No rendering RNG or simulation fields added.
+
+Container colour/stack/length and boat bays vary between neighbours. Bodies
+are subdued enough for matte-black and hackerman terrain edges to remain the
+stronger plane. Complete stencil bounds reject terrain and original props;
+quay fittings require full clear air and two solid footings. Full nets,
+lanterns, crates, pots, existing ropes, booth, captive containers, pits,
+hazards and exit bounds are reserved. Added beam paint precedes machinery,
+hazards and agents; deep glints follow the opaque sea fill and precede the
+ferry. Original ferry, passenger, gangway, wake, foam, gull, fog, lighthouse,
+water, event and exit recipes remain unchanged. Sim.js and Palette.js are
+untouched. Res 1 and unspecified resolution retain their original pixels.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-harbour-page/coverage-safe.sh` pass with exit 0: **993**
+included tests in check and **993** in coverage. Check took
+164.78 s; coverage 132.43 s (wall time includes host-queue pauses).
+Thirteen bounded page-art tests cover biome/resolution gating, deterministic
+half-pixel paint, no RNG/world writes, canvas restoration, cached fittings and
+invalidation, solid support and complete stencil labels, five container
+colours, distinct masts and perched gulls, bounded live footprints and fresh
+air checks, water/ferry clearance, slow sweep and independent shimmer, exact
+original prop/exit/booth/captive bounds, five-theme contrast, paint order,
+opaque face/shirt/eye/umbrella pixels, original component digests and four
+600-tick playthroughs with identical complete world digests. A completed
+actor-frame pixel check catches deep glints hidden by the original sea fill.
+CRAP: **0** functions at or above 30, maximum **29.3294**.
+14/14 new helpers have 100% coverage; the highest new score is
+**12.0**. Minimum new-helper coverage is **100.0%**.
+
+**Looked:** level 19, seed 3, tick 400 at native 1× and actual `shoot.js crop
+19`. Reviewed levels 19/38/57 at ticks 77/476 in native frame pairs, 2× crops
+and 4× details in `/tmp/codex-harbour-page/sheet.png`; level 76 in all five
+themes. `readability-sheet.png` pairs open/furled umbrellas and seven original
+hazards at idle/charge/fire/rest. `ferries-sheet.png` follows one actual
+102-step trip through waiting, running, drop, alighted and return, with clear
+passengers, intact gangway/dock alignment and wake. Beam and deep-water phase
+crops use one seeded world. Ran and viewed `npm run compare -- codex/harbour
+19 --seed 3 --ticks 400 --out /tmp/codex-harbour-page/compare-main.png`, plus
+`--base codex/subway` into `compare-parent.png`, read-only from main because
+the parent branch predates that command. Both include native full
+frames and automatically selected 2× crops; they took 0.63/0.61 s,
+peak child RSS about 100.4 MB.
+
+Seeded isolation: **1,080** identical other-biome frames, **60** identical
+Harbour res-1/unspecified-res frames and **30** changed Harbour res-2 frames:
+two layouts, ticks 77/240/600, five themes. Took **22.94 s**, peak RSS
+**204.0 MB** with a 256 MB renderer heap (down from 750.1 MB
+with the default heap). Original component digests retain the original recipes.
+
+**Pipeline:** retained fast rasterization, zero-copy frame equality, bounded
+digest assertions and one labelled sheet builder. Capped the isolation
+renderer to avoid its default-heap RSS growth. Improved validation with start
+and end source fingerprints: a pass marker cannot describe edited source.
+Restarted our own validation after the water paint-order correction. Added
+explicit per-phase exit records and repeated check after its launcher was
+terminated despite passing test output. Final
+check and coverage run with heap 2048 MB, `ulimit -v 6000000`, one check
+worker/two coverage workers, and Factory art excluded. The shared host-aware
+queue suspends only our own process tree when another test run starts;
+pending logs and a completion marker prevent stale passes. Native comparison
+is subsecond; no repository tool/package changes.
+
+**Measured:** warmed res-2 Node software rasterizer at tick 476, median of
+nine interleaved parent/branch batches of forty frames after tests/coverage.
+Level 19 (Harbour) actors **0.908 → 0.934 ms**,
+full terrain + actors **8.612 → 9.798 ms**.
+Level 57 (Harbour) actors **0.882 → 0.925 ms**,
+full terrain + actors **8.879 → 10.345 ms**.
+Level 18 (Subway) actors **1.133 → 1.146 ms**,
+full terrain + actors **16.485 → 16.560 ms**.
+Added live work costs about 26–43 microseconds in these Harbour frames.
+Terrain is cached during play; these are Node raster timings, not browser FPS.
+
+**Next:** ready for Harbour art review. Commit on `codex/harbour` only;
+no push or deployment.
+
+
+## 243 — 2026-10-15 · Marked cargo and a visible beacon (on a branch)
+
+**Brief:** one Harbour revision on `codex/harbour`, following review of
+level 19, seed 3, tick 400. Preserve original harbour pieces and make cargo,
+lighthouse and water read at native size; restore the untouched warm sky.
+
+**Changed:** separated dim rust red, faded blue, teal, ochre and muted purple
+container bodies. Whole-art-pixel corrugation ribs, narrow seam highlights,
+double doors and two locking bars with hinges carry the silhouette at 1×;
+complete stencil codes remain reserved against fixtures and terrain. All five
+body colours stay below 80% of the walkable edge luminance in every theme.
+
+The night wash now begins at `SKY * CELL`. Stacks, gantry and hull masts also
+stay below that boundary. The original top sky pixels are restored exactly,
+including its warm band. The fixed old lighthouse lost its lantern behind
+the first corridor ceiling. A cached placement search now fits a complete
+14×20 striped tower and lantern in clear supported space outside original
+pieces, before choosing other new fittings. In the reported frame its box is
+(274, 44). The faint 72-strip beam starts at its lantern and slowly sweeps;
+its fringe is stronger, and fresh air checks still protect foreground cells.
+The original harbour lighthouse/beam recipe remains intact. Deep-pool glints
+are now 4×1 art pixels with a brighter blue-silver tint; they remain below the
+ferry hull and foam, after the opaque water fill and before the ferry.
+Sim.js and Palette.js are untouched. Original agent, umbrella, hazard, ferry,
+exit and shared font recipes remain unchanged. Geometry is cached; no new animation state or per-frame
+placement search.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-harbour-revision/coverage-safe.sh` pass with recorded exit 0:
+**995** included tests in both check and coverage. Check took
+**94.73 s**; coverage **133.58 s**.
+The 15 bounded Harbour page tests now also check distinct hue families,
+whole-pixel ribs and two door bars, complete lantern/beam visibility through
+eight real tick-400 layouts, complete parent sky digests across four layouts,
+four ticks and five themes, and no added paint above the sky boundary over
+24 layouts. Earlier read-only/RNG, terrain/reservation, context, cache,
+footprint budgets, opaque actor pixels, original component digests and four
+600-tick replay checks still pass. CRAP: **0** functions at or above 30; maximum **29.3294**.
+15 of 16 Harbour helpers have 100% coverage. Placement has 87.5% coverage
+and scores 6.1; the highest Harbour score is **13.0**.
+
+**Looked:** native 1× `level-19.png` and actual `shoot.js crop 19`, seed 3,
+tick 400. The tower's lantern and stripe are visible, its beam crosses the
+upper corridor, the containers have distinct colours and door hardware, and
+the pool glints show beneath the ferry. Rebuilt `/tmp/codex-harbour-revision/
+sheet.png` for levels 19/38/57, ticks 77/476, with full pairs, 2× crops and
+4× details. Reviewed level 76 in all five themes; beam/water phases, original
+hazard tells and open/furled umbrellas; and five poses of the same actual
+102-step ferry trip in `ferries-sheet.png`.
+
+Ran and viewed `npm run compare -- codex/harbour 19 --seed 3 --ticks 400`
+with output in `/tmp/codex-harbour-revision/compare-main.png`, plus
+`--base codex/subway` (`compare-parent.png`) and `--base d550c78`
+(`compare-revision.png`). Main and Subway differences start at **(24, 56)**
+canvas pixels, below the original sky band. The previous-pass comparison
+shows the intentional restoration at the top. Each comparison took about
+0.2–0.3 s. Isolation again passed **1,080** other-biome frames and **60** Harbour
+res-1/unspecified-res frames unchanged, with **30** changed Harbour res-2
+frames (two layouts, three ticks, five themes); **30.38 s**, peak RSS
+**203.0 MB** under the 256 MB renderer heap.
+
+**Pipeline:** retained the 256 MB renderer heap, zero-copy frame equality,
+bounded digest recording, single-world phase crops and one bounded ferry
+trip. Test launchers record explicit exit codes; start/end source hashes
+prevent stale success markers. Full check uses one worker and coverage two,
+heap 2048 MB under `ulimit -v 6000000`, with Factory art excluded. The shared
+host-aware queue serializes full runs and suspends only our own tree if
+another run starts. No new slow pipeline step or repository tool changes.
+
+**Measured:** warmed res-2 software rasterizer at tick 476, nine interleaved
+batches of forty frames, comparing first Harbour pass `d550c78` → revision.
+Level 19 (Harbour) actors **0.929 → 0.941 ms**,
+full terrain + actors **9.794 → 9.807 ms**.
+Level 57 (Harbour) actors **0.915 → 0.908 ms**,
+full terrain + actors **10.339 → 10.348 ms**.
+Level 18 (Subway) actors **1.130 → 1.131 ms**,
+full terrain + actors **16.693 → 16.681 ms**.
+Terrain paint remains cached in play; these are Node raster times, not
+browser FPS.
+
+**Next:** ready for Harbour revision review. Commit on `codex/harbour` only;
+no push or deployment.
+
+Reviewed and merged by the loop (with `npm run compare`). Harbour: varied containers, a lighthouse, shimmer on the water and the sky band restored. This completes the page-art pass: all 19 biomes now have their own page art. Patch notes have a line for it.
