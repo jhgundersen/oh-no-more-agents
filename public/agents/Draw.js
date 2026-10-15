@@ -2750,7 +2750,7 @@ function drawActors(ctx, w, pal, opts) {
   if (w.replaying) drawReplayTag(ctx, w, pal)
   // Above the outage, so an event's or a boss's warning is never in the dark.
   drawEventBanner(ctx, w, pal)
-  drawLevelTransition(ctx, w, pal)
+  drawLevelTransition(ctx, w, pal, opts)
 }
 
 // The instant replay (the page re-simulates the level's best moment; see
@@ -3029,6 +3029,77 @@ function drawLevelIntro(ctx, w, pal) {
     ctx.fillStyle = pal.urgent
     drawTransitionText(ctx, "WARNING · " + (w.bossName || "THE MODERATOR") + " HOLDS THIS LEVEL", cx, y + 41, 1)
   }
+}
+
+// Page title cards are painted once to a separate host canvas. Native hosts
+// retain the tick-driven intro above; neither path owns simulation state.
+var LEVEL_TITLE_LINES = {
+  "Cavern": ["Working remotely. Very remotely.", "Please lower your expectations.", "A solid grounding in uncertainty."],
+  "Ruins": ["Legacy infrastructure.", "The previous team left notes. Somewhere.", "Still in better shape than the roadmap."],
+  "Frost": ["Cold start.", "Bring your own warm feelings.", "The forecast is noncommittal."],
+  "Foundry": ["Hotfixes made here.", "Please let the build cool first.", "Everything is in production."],
+  "Jungle": ["The dependencies have grown.", "A natural branching strategy.", "No maintained paths."],
+  "Ice Cave": ["The backlog is frozen.", "Defrost before deploying.", "Some colleagues are still on ice."],
+  "Spaceship": ["Scope has left the atmosphere.", "No rollback beyond this point.", "The launch was not a metaphor."],
+  "Factory": ["Another day on the pipeline.", "Continuous delivery. Literally.", "Please keep hands inside the sprint."],
+  "Skyscraper": ["Vertical integration.", "Your next meeting is downstairs.", "Going up in the organisation."],
+  "Trench": ["We are out of our depth.", "The deep end has no onboarding.", "Please surface your concerns."],
+  "Desert": ["Dry run.", "The cloud budget ran out.", "No shade in the documentation."],
+  "Data Center": ["The servers are listening.", "Uptime is a state of mind.", "Please keep the aisle cold."],
+  "Library": ["Shh.", "Read-only access.", "The silence is well documented."],
+  "Mail Room": ["Reply all at your own risk.", "Your request is in the queue.", "Return to sender. Eventually."],
+  "Building Site": ["Still under construction.", "Hard hats. Soft deadlines.", "The plan is mostly scaffolding."],
+  "Clock Tower": ["Time is a dependency.", "We are on borrowed ticks.", "The deadline has moving parts."],
+  "Rooftops": ["An elevated risk profile.", "Please mind the air gap.", "Forecast: scattered agents."],
+  "Subway": ["Mind the context gap.", "The next service is delayed.", "Please stand behind the yellow line."],
+  "Harbour": ["Ready to ship. Probably.", "Containers all the way down.", "All aboard the release candidate."],
+  "The Cloud": ["It's just someone else's computer.", "On-prem is looking quite nice.", "The forecast includes downtime."]
+}
+
+function levelTitleSubtitle(level, biome) {
+  var lines = LEVEL_TITLE_LINES[biome] || LEVEL_TITLE_LINES.Cavern
+  // Biomes repeat every twenty levels. Cycle the visit, rather than the
+  // biome index, so every biome gets all three lines across the catalogue.
+  var visit = Math.floor((Math.floor(level) - 1) / 20)
+  return lines[Math.abs(visit) % lines.length]
+}
+
+function levelTitleLayout(w) {
+  var width = w.k.COLS * w.k.CELL, height = w.k.ROWS * w.k.CELL
+  var h = w.bossPost ? 68 : 58
+  return { x: 20, y: w.hatch.y * w.k.CELL < height / 2 ? height - h - 24 : 40, width: width - 40, height: h }
+}
+
+function drawLevelTitleCard(ctx, w, pal, icon) {
+  if (w.done || w.replaying) return
+  var r = levelTitleLayout(w), cx = r.x + 218
+  var title = "LEVEL " + w.level + " · " + w.biome.toUpperCase()
+  ctx.save()
+  ctx.fillStyle = pal.hatchMouth
+  ctx.fillRect(r.x + 3, r.y + 3, r.width, r.height)
+  ctx.fillStyle = pal.dirtEdge
+  ctx.fillRect(r.x + 2, r.y, r.width - 4, r.height)
+  ctx.fillRect(r.x, r.y + 2, r.width, r.height - 4)
+  ctx.fillStyle = pal.cardBack
+  ctx.fillRect(r.x + 2, r.y + 2, r.width - 4, r.height - 4)
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(r.x + 8, r.y + 2, r.width - 16, 0.5)
+  ctx.fillStyle = pal.rockEdge
+  ctx.fillRect(r.x + 8, r.y + r.height - 4, r.width - 16, 1)
+  ctx.save()
+  ctx.translate(r.x + 12, r.y + 12)
+  ctx.scale(2, 2)
+  drawTourIcon(ctx, pal, icon)
+  ctx.restore()
+  ctx.fillStyle = pal.label
+  drawTransitionText(ctx, title, cx, r.y + 13, title.length > 33 ? 1.5 : 2)
+  ctx.fillStyle = pal.label
+  drawTransitionText(ctx, levelTitleSubtitle(w.level, w.biome).toUpperCase(), cx, r.y + 33, 1.5)
+  if (w.bossPost) {
+    ctx.fillStyle = pal.urgent
+    drawTransitionText(ctx, "WARNING · " + (w.bossName || "THE MODERATOR"), cx, r.y + 51, 1)
+  }
+  ctx.restore()
 }
 
 function levelVerdict(w) {
@@ -3400,14 +3471,14 @@ function drawStandupBubble(ctx, pal, x, foot, lines, W) {
   for (var j = 0; j < lines.length; j++) drawTransitionText(ctx, lines[j], left + bw / 2, top + 4 + j * 8, 1)
 }
 
-function drawLevelTransition(ctx, w, pal) {
+function drawLevelTransition(ctx, w, pal, opts) {
   if (!w.done) drawFeed(ctx, w, pal)
   if (w.done) {
     ctx.save()
     drawLevelResults(ctx, w, pal)
     drawLevelClosing(ctx, w, pal)
     ctx.restore()
-  } else if (w.ticks >= 0 && w.ticks < LEVEL_INTRO_TICKS + (w.bossPost ? 20 : 0)) {
+  } else if (!(opts && opts.intro === false) && w.ticks >= 0 && w.ticks < LEVEL_INTRO_TICKS + (w.bossPost ? 20 : 0)) {
     ctx.save()
     drawLevelIntro(ctx, w, pal)
     ctx.restore()

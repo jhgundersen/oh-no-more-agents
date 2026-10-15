@@ -5335,3 +5335,64 @@ branch commit is gated on the final green check and CRAP results.
 
 **Next:** ready for header-logo review. Branch commit only; no push,
 deployment or sibling sync.
+
+
+## 277 — 2026-10-15 · A brief introduction to the next mistake (on a branch)
+
+**Brief:** `codex/titlecard`, from approved `codex/logo` (`2bd3f5a`). A short
+level-start card with the new biome icon, pixel title and deterministic dry
+subtitle; leave the hatch opening visible, allow input and tap-to-skip, and
+stay out of replay, standup and results. Branch commit only.
+
+**Art and behaviour:** twenty biome lists, three lines each. The subtitle
+cycles by the biome's visit through the catalogue, so a restart or different
+colony seed keeps the same line and later visits get the other lines. The
+24×16 tour icon is enlarged with hard pixels beside the board's existing ROM
+font. The themed plate goes opposite the hatch, leaving the opening and the
+first falling agent clear; 400 generated layouts cover both hatch orientations.
+Boss cards retain their warning line. There is no full-board dimming.
+
+The page paints a separate res-2 canvas once per level or theme change. Only
+CSS opacity changes afterwards: 1.2 s normally, or a stationary 0.6 s fade with
+reduced motion. A specific reduced-motion rule keeps that requested fade while
+the page's general animation ban still applies elsewhere. Rapid navigation
+flushes the hidden state before starting the next fade. The timer uses wall
+clock, independent of game speed and pause. Board taps dismiss the card and
+continue through the existing bet/pep/pause handler. Replay, report and standup
+clear it immediately. The subtitle joins the existing polite level announcement;
+the canvas is hidden from screen readers to avoid announcing it twice.
+
+The page opts out of the old sliding intro/iris; native hosts retain the exact
+default intro and results path. No Sim.js, palette, level-generation or world
+fields changed. Rendered versus unrendered playthrough digests match at both
+resolutions, with cosmetic spawn/effect jitter pinned per tick.
+
+**Review:** `/tmp/codex-titlecard/review/` contains full desktop 1280×900 and
+phone 390×844 captures at DPR 1 and 2, matching board crops and `metrics.json`.
+Frames show the Cloud at tick 18 with the hatch fully open and the title in
+place. The phone card remains wholly visible within the viewport. All twenty
+icons/titles/subtitles are together in `/tmp/codex-titlecard/all-biomes.png`.
+No image requests, external artwork or dependencies were added.
+
+**Tools:** `tools/titlecard-art.js` reuses one bounded browser and an ephemeral
+server for all four views plus timing/input/lifecycle probes, instead of a
+browser launch per shot. It records actual bounds and preference timings,
+checks zero live title-canvas paints during the fade, and closes the server
+even if browser startup fails. Standup fixtures use complete agents from
+`spawn`, rather than incomplete lookalikes. The five focused checks take
+7.75 s. Pixel assertions use hashes and bounded recordings, never raw buffer
+diffs. Validation runs from an immutable script under the shared FIFO lock;
+one full run emits LCOV and CRAP reuses it.
+
+**Validation:** `npm run stamp` is current (Draw `be25fbd3`, web `2fa60ee2`,
+build `350d989a`). The final capped `npm run check` with coverage passes all
+**1,262 tests**, zero failures/skips, in **244.84 s**. Factory art remains
+explicitly excluded. The wrapper exports a 2,048 MB Node heap, sets
+`ulimit -v 6000000`, and uses two workers and 120 s test timeouts. Shared-lock
+`npm run crap -- --threshold 30 --use-existing-coverage` passes, maximum 30.0;
+the new renderer scores 6.0 and the review helpers at most 10.4. Final browser
+probes have no exceptions; all checked source hashes match. Updated accessibility
+and transition assertions cover the spoken subtitle and host intro option.
+`git diff --check` is clean. The commit is gated on green check and CRAP.
+
+**Next:** ready for title-card review. No push, deployment or sibling sync.
