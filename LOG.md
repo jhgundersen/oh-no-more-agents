@@ -5264,3 +5264,52 @@ match. Conflict-marker and unresolved-merge-file checks are clean, as is
 or sibling sync.
 
 Reviewed and merged by the loop. Recognisable pixel icons for all 20 biomes in the tour, at real size on desktop and phone, and a badge for the colony of the day.
+
+## 276 — 2026-10-15 · Soak
+
+**Asked:** a stability pass after the burst of features. Build a soak tool
+(`npm run soak -- --minutes N`): headless Chromium on a local server, fastest
+speed, levels advancing by themselves for N minutes with storage on and
+counter POSTs blocked. Sample JS heap, DOM nodes, listeners, canvases and frame
+time every 30 s. Fail on console errors, unbounded growth or frame-time creep.
+Run it for 20 minutes, fix any leak, log the curve.
+
+**Tool:** `tools/soak.js`, run through the test lock.
+- **Setup.** It serves `public/`, sets the fastest speed (Brisk), refuses
+  every non-GET to `/api/*`, and turns sound on with a real click so the
+  AudioContext runs.
+- **Probe.** A script injected before the page's own counts live audio nodes
+  (created minus ended) and every frame's interval.
+- **Samples,** every 30 s after a forced GC: heap, DOM nodes, listeners,
+  canvases, localStorage size, live audio nodes, median and 95th-percentile
+  frame time, level.
+- **`judge`.** Compares the last third of the run with the middle third, so
+  the start-up climb isn't counted, with an allowance per measure. It fails
+  on growth that keeps going, frame time creeping, live audio nodes over 120,
+  or any page or console error.
+- **Tests:** `test/soak.test.js` covers the judge and a short real soak.
+
+**The 20-minute curve** (levels 2–41 at Brisk, one sample in four shown):
+
+| Time | Level | Heap (MB) | DOM nodes | Listeners | Canvases | localStorage | Audio nodes made |
+|---|---|---|---|---|---|---|---|
+| 30 s | 2 | 3.38 | 519 | 70 | 22 | 301 | 46 |
+| 270 s | 9 | 5.97 | 535 | 70 | 22 | 483 | 470 |
+| 510 s | 17 | 7.56 | 535 | 70 | 22 | 521 | 1018 |
+| 750 s | 25 | 8.67 | 532 | 70 | 22 | 686 | 1526 |
+| 990 s | 34 | 9.19 | 519 | 70 | 22 | 821 | 2072 |
+| 1200 s | 41 | 9.69 | 532 | 70 | 22 | 883 | 2605 |
+
+Live audio nodes stayed at 0 at every sample. Frame time held at 16.7 ms
+median and 16.7–16.8 ms at the 95th percentile throughout. No page or console
+errors. **Passed.**
+
+**Not yet explained:** the heap still rises slowly. It climbed 0.38 MB a minute
+early on, 0.1 MB a minute by the end, about 0.15 MB a level, and it is
+flattening. Every page-level collection I read is capped: the report queue,
+the standup's recent five, the feed, moments, particles. The Draw caches are
+WeakMaps keyed by the world. A heap-snapshot diff to find what grows (run
+through the test lock) timed out waiting behind Codex's validation and needs
+a second attempt. localStorage grows with sightings, bet and milestone state,
+under 1 KB here. Neither is a problem at this rate, but a tab left open for a
+day would carry several more MB than it needs to; that's the next look.

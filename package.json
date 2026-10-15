@@ -21,6 +21,7 @@
     "playtest": "node tools/playtest.js",
     "phone": "node tools/phone.js",
     "loadtime": "node tools/loadtime.js",
+    "soak": "node tools/testlock.js run -- node tools/soak.js",
     "fps": "node tools/fps.js",
     "compare": "node tools/compare.js",
     "shot": "node tools/shoot.js",
