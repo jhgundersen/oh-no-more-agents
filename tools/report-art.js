@@ -27,7 +27,7 @@ export function setupReport(w,kind){
 }
 function evaluator(b){return async expression=>{const r=await b.cmd('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value}}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms))
-async function prepare(b,ev,base,v){
+async function prepare(b,ev,base,v,paused){
  await b.cmd('Emulation.setDeviceMetricsOverride',{width:v.width,height:v.height,deviceScaleFactor:1,mobile:v.mobile})
  await b.cmd('Emulation.setTouchEmulationEnabled',{enabled:v.mobile})
  await b.cmd('Page.navigate',{url:base+'/?level='+v.level+'&seed=3'+(v.season?'&season='+v.season:'')})
@@ -42,31 +42,33 @@ async function prepare(b,ev,base,v){
  (${setupReport.toString()})(w,${JSON.stringify(v.kind)});
  if(${v.kind==='natural'}){const seen=sightingsIn(w);w.sightings={seen,fresh:seen}}
  document.getElementById('who').click();document.getElementById('who').click();
- document.getElementById('overlay').style.visibility='hidden';document.getElementById('tip').hidden=true;scrollTo(0,0);
+ if(!${paused})document.getElementById('overlay').style.visibility='hidden';document.getElementById('tip').hidden=true;scrollTo(0,0);
  const r=e=>{const b=e.getBoundingClientRect();return{x:b.x,y:b.y,width:b.width,height:b.height}};
  return{level:w.level,saved:w.saved,total:w.toRelease,ticks:w.ticks,title:homeTitle(w),verdict:levelVerdict(w),sourceRows:reportRows(w,{}),
+  pauseVisible:getComputedStyle(document.getElementById('overlay')).display!=='none'&&getComputedStyle(document.getElementById('overlay')).visibility!=='hidden',
+  caption:{...r(document.getElementById('eventCaption')),text:document.getElementById('eventText').textContent,textBox:r(document.getElementById('eventText')),hidden:document.getElementById('eventCaption').getAttribute('aria-hidden')},
   layout:typeof pageReportLayout==='function'?pageReportLayout(w,{}):null,board:r(document.getElementById('board')),stage:r(document.getElementById('stage')),viewport:innerWidth,pageWidth:document.documentElement.scrollWidth}
  })()`)
 }
-export async function captureReports(out,{root,before}={}){
+export async function captureReports(out,{root,before,paused=false}={}){
  fs.mkdirSync(out,{recursive:true});const server=await serve({root}),b=await browser(),ev=evaluator(b),records=[]
  try{
   for(const v of REPORT_VIEWS){
-   const r=await prepare(b,ev,'http://127.0.0.1:'+server.address().port,v)
+   const r=await prepare(b,ev,'http://127.0.0.1:'+server.address().port,v,paused)
    const page=await b.cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(path.join(out,v.name+'.png'),Buffer.from(page.data,'base64'))
    const q=r.board,clip={x:Math.max(0,q.x),y:Math.max(0,q.y),width:Math.min(q.x+q.width,v.width)-Math.max(0,q.x),height:Math.min(q.y+q.height,v.height)-Math.max(0,q.y),scale:1},board=await b.cmd('Page.captureScreenshot',{format:'png',clip,captureBeyondViewport:false});fs.writeFileSync(path.join(out,v.name+'-board.png'),Buffer.from(board.data,'base64'))
    records.push({name:v.name,width:v.width,height:v.height,clip,...r})
   }
-  if(before)await sheet(ev,out,before,records)
+  if(before)await sheet(ev,out,before,records,paused)
   const report={records,errors:b.errors};fs.writeFileSync(path.join(out,'metrics.json'),JSON.stringify(report,null,2));return report
  }finally{await b.close();await new Promise(r=>server.close(r))}
 }
-async function sheet(ev,out,before,records){
+async function sheet(ev,out,before,records,paused){
  const rows=records.map(r=>({name:r.name,width:r.clip.width,height:r.clip.height,png:[before,out].map(d=>'data:image/png;base64,'+fs.readFileSync(path.join(d,r.name+'-board.png')).toString('base64'))}))
  const pages=['phone','small-phone'].map(name=>({name,png:[before,out].map(d=>'data:image/png;base64,'+fs.readFileSync(path.join(d,name+'.png')).toString('base64'))}))
  const result=await ev(`(async()=>{
  const rows=${JSON.stringify(rows)},pages=${JSON.stringify(pages)},c=document.createElement('canvas');c.width=1680;c.height=rows.reduce((n,r)=>n+r.height+42,60)+1700;
- const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.fillStyle='#1a1b26';x.fillRect(0,0,c.width,c.height);x.font='14px monospace';x.fillStyle='#f3ead9';x.fillText('REPORT TYPOGRAPHY · BEFORE / AFTER · native CSS sizes · seed 3',20,25);
+ const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.fillStyle='#1a1b26';x.fillRect(0,0,c.width,c.height);x.font='14px monospace';x.fillStyle='#f3ead9';x.fillText('${paused?'HELD REPORTS':'REPORT TYPOGRAPHY'} · BEFORE / AFTER · native CSS sizes · seed 3',20,25);
  const image=src=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=src});let y=50;
  for(const r of rows){x.fillText(r.name.toUpperCase()+' · BEFORE',20,y);x.fillText('AFTER',860,y);y+=14;for(let j=0;j<2;j++)x.drawImage(await image(r.png[j]),20+840*j,y,r.width,r.height);y+=r.height+28}
  for(const r of pages){x.fillText(r.name.toUpperCase()+' · PAGE CONTEXT',20,y);y+=14;for(let j=0;j<2;j++)x.drawImage(await image(r.png[j]),20+840*j,y);y+=850}
@@ -74,4 +76,8 @@ async function sheet(ev,out,before,records){
  })()`)
  fs.writeFileSync(path.join(out,'contact-sheet.png'),Buffer.from(result,'base64'))
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))captureReports(process.argv[2]||'shots/reports',{root:process.argv[3],before:process.argv[4]}).then(r=>console.log(JSON.stringify(r,null,2))).catch(e=>{console.error(e);process.exitCode=1})
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
+ const args=process.argv.slice(2).filter(a=>a!=='--paused')
+ captureReports(args[0]||'shots/reports',{root:args[1],before:args[2],paused:process.argv.includes('--paused')})
+  .then(r=>console.log(JSON.stringify(r,null,2))).catch(e=>{console.error(e);process.exitCode=1})
+}

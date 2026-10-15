@@ -64,7 +64,7 @@ test('live captions fit desktop/phone/landscape and seasons; wall time, pause, n
   assert.equal(c.first,'AGENT 006 · UMBRELLA SAVE');assert.equal(c.at4900,c.first);assert.equal(c.fastForward,c.first)
   assert.equal(c.expired,'');assert.equal(c.paused,'AGENT 006 · RICOCHET')
   assert.equal(c.season,'AGENT 001 IS HOME FOR THE HOLIDAYS')
-  assert.equal(c.replay,'');assert.equal(c.report,'');assert.equal(c.navigation,'')
+  assert.equal(c.replay,'');assert.equal(c.report,'Report held · Space or tap to resume');assert.equal(c.navigation,'')
   assert.equal(c.rewrites,0);assert.equal(c.readOnly,true);assert.equal(c.longFits,true)
   assert.equal(c.live,'off');assert.equal(c.role,'note')
  }finally{fs.rmSync(out,{recursive:true,force:true})}

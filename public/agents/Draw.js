@@ -3627,7 +3627,7 @@ function drawLevelTransition(ctx, w, pal, opts) {
   if (w.done) {
     ctx.save()
     drawLevelResults(ctx, w, pal)
-    drawLevelClosing(ctx, w, pal)
+    if (!((w.res || 1) >= 2 && opts && opts.heldReport)) drawLevelClosing(ctx, w, pal)
     ctx.restore()
   } else if (!(opts && opts.intro === false) && w.ticks >= 0 && w.ticks < LEVEL_INTRO_TICKS + (w.bossPost ? 20 : 0)) {
     ctx.save()

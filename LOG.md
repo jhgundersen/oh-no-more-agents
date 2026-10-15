@@ -6567,3 +6567,91 @@ and seed 8 had been the only one. With this change seed 8 reaches the cages:
 11 of 15 home, where it used to descope with 8. Across seeds 1–12, seed 11
 goes from 11 to 14 home and seed 12 from 7 to 14, and seed 10 still
 descopes. The test now searches seeds 1–12, with a note why.
+
+## 306 — 2026-10-15 · Read a report at your own pace (on a branch)
+
+**Brief:** another autonomous presentation improvement after the report art
+approval. Chosen first: pausing a report put **PAUSED / Space or click to
+resume** across its facts, dimming exactly what the viewer wanted to read.
+
+**Branch:** `codex/report-hold`, based on main's approved report merge
+`ee2e8fb`. Started from `4ba0b7a` plus the approved report branch; when main
+merged it during validation, moved this branch's base to that merge without
+changing any tested public/source/tool/test bytes. Preserved main's complete
+log, including its deployment and merge entries. Entry 294 retains its corrected
+captions heading.
+
+**Watched first:** fresh eight-second local runs, frames at three/eight seconds:
+phone Ruins at Brisk; desktop Clock Tower at Steady; phone Halloween Cloud at
+Brisk; desktop Christmas Frost at Steady. Seed 3, real clocks; inspected the
+final frames and metrics in `/tmp/codex-watch-hold/`. The existing report art
+captures had to hide the pause veil by hand, making the remaining reading snag
+particularly concrete. The new before captures leave that veil visible.
+
+**Changed:** a paused, finished page report has no central pause veil. Its
+existing caption row says **Report held · Space or tap to resume**, using the
+same 12px copy, reserved height and quiet accessibility policy (`aria-live=off`).
+It clears on resume/navigation. Fullscreen keeps its prior board-first layout
+and existing resume control; it does not grow a caption row or change scale.
+Ordinary gameplay, instant replay and the standup retain their normal pause
+presentation. Existing Space, pause-button and board-tap actions remain.
+
+A held page report also lifts a closing iris already in progress, so pausing
+late still reveals the complete card. Resume repaints the iris at exactly the
+same tick. This is an optional render flag, gated on res 2; native res 1 and
+hosts that omit it keep their original closing pixels. No simulation fields,
+hold durations, storage, rescue reporting or sound logic changed.
+
+**Cheap:** no assets, DOM nodes, listeners or timers added. The caption only
+rewrites when its text changes. Only pause/resume of a finished report adds a
+repaint; no new drawing on ordinary simulation frames. Draw/web/index source
+gzip delta against the approved baseline: **212 bytes**.
+
+**Evidence:** `/tmp/codex-report-hold/after/contact-sheet.png`, paired at actual
+CSS sizes: desktop and 390px phone natural Factory reports; a full-house daily
+Subway report; the same at 360px with Halloween; Christmas Library; zero-home
+Cloud in phone landscape. Full phone-page pairs are included. Inspected the
+sheet and original phone, 360px and landscape shots: the report is clear,
+the hint sits outside the board, and geometry matches before. Original public
+files are in `baseline/public/`, before/after screenshots and metrics beside
+it. Local browser runs report no page errors.
+
+**Pipeline:** extended `tools/report-art.js` with `--paused`, which captures
+actual paused UI instead of manually suppressing its overlay. The original art
+inspection mode remains the default. Both modes reuse the same one-browser,
+bounded seeded setup and measured crops/sheet. Added pause visibility and
+caption bounds to the evidence metrics. Lifecycle checks use complete seeded
+agents for their standup fixture (at most 400 steps), not skeletal mock agents;
+bounded timeout diagnostics include level/clock/pause state and browser errors.
+
+**Focused checks:** **23 passes, zero failures/skips, 11.68 s**. All twenty
+biomes: exact native closing equivalence, complete held page report, unchanged
+world/RNG/context, and no difference before the closing iris. Real browser
+checks: frozen state while held; same-tick Space resume/restore; tap resume;
+no repeated caption writes; navigation cleanup; actual desktop/phone/360px/
+landscape/seasonal hint bounds; fullscreen control; real replay and five-level
+standup exclusion. Existing caption, report, keyboard/accessibility, replay
+and standup tests pass too. `npm run stamp` refreshed Draw/web and page/build
+stamps; `git diff --check` passed.
+
+**Full checks:** `npm run check` with coverage passed: **1,355 tests, zero
+failures/skips, 332.80 s**, Factory art included. CRAP threshold 30 passed
+using that coverage, maximum **30.0**; the changed transition helper is **14.0**
+with 100% coverage. Final evidence, full check/coverage and CRAP ran sequentially
+under one shared FIFO lock reservation; Node heap 2,048 MB, `ulimit -v 6000000`,
+two workers, 120-second test timeouts. Completion was reported immediately.
+The base adjustment changed no validated source bytes (manifest saved beside
+the evidence). `git diff --check` passed. Logs: `/tmp/codex-report-hold/`
+`focused-final.log`, `evidence-final.log`, `check.log`, `crap.log`.
+
+**Next:** review and merge this branch; no push or deployment from this pass.
+
+## 307 — 2026-10-15 · Merged the clear held report
+
+Reviewed and merged by the loop: codex/report-hold (c319ceb, entry 306,
+based on ee2e8fb), `--no-ff`, as approved.
+- **LOG:** Codex's entry is renumbered from 305 to 306, after main's 305.
+- **Stamps:** re-stamped.
+- **No code was lost on either side.** Against the branch, the merged code
+  differs only in main's own 305, the wall-blocker change in Sim.js and the
+  seed list in the mission test.
