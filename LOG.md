@@ -7592,3 +7592,24 @@ differently: the change moves when rescues and cutoffs happen, so single runs
 scatter both ways. Salt 8 went from 16/16 to 12/16 and salt 22 from 10/16 to
 16/16. Over the 17 that differ, the total home goes from 246 to 248. Nothing
 to fix.
+
+## 327 — 2026-10-15 · 319's tower straggler: answered by 323
+
+319's "Next" was level 129, salt 7: a lone agent on the tower floor at row
+40 that the stall cutoff ended at t2297. Replayed on main, it is the same
+agent on the same route:
+- it rides the fire escape up a storey (one per ride, by design);
+- it walks the floor to the other shaft and waits for the car (t2088);
+- it rides to row 28, crosses back to the escape, goes up to row 16, and is
+  home at t2738.
+
+Level 129 now finishes 15 of 16. The route was always there; the cutoff
+used to read the long walk between shafts as a stall, and 323 counts it as
+progress. Nothing more to do here.
+
+Also checked: the new 1/8 stall flag on level 133 (Library), from 323's
+playtest. Over 24 colonies it is 1 stall (salt 8, 14/15), 96% home, nothing
+written off. The straggler is on the exit's floor but walking away from the
+door: a builder's ramp from x48 to x69 rose off that floor across the
+corridor, it went over the top, dropped, and turned back. One colony in 24,
+left for now.
