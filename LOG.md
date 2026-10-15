@@ -6257,3 +6257,120 @@ fails with "board top −17.5".
   although they sit side by side there. That is pessimistic, but harmless
   until a coarse landscape screen is tall enough for 2×, which the
   ≤500 px-high query rules out.
+
+## 299 — 2026-10-15 · A little sense of place (on a branch)
+
+**Chosen (autonomy):** quiet synthesized biome ambience. The fresh watch found
+no visual problem as valuable as giving the polished settings their own sound
+between action cues. Branch `codex/biome-audio`, from current main `39a871e`
+plus the approved skill-icons/captions branch, whose developer merge was pending.
+
+**Watched first:** four more eight-second local runs, frames at three and eight
+seconds: desktop Cloud at Steady, phone Trench at Brisk, desktop Halloween
+Rooftops at Brisk, phone Christmas Library at Steady. Seed 3, real live clocks;
+inspected all four final frames. Existing artwork, captions, inventory and both
+seasons read clearly. Frames and metrics: `/tmp/codex-watch-sound/`.
+
+**Changed:**
+- Twenty procedural beds: cave air/drips, icy wind/creaks, jungle rustle,
+  industrial hum/pulses, submerged rumble/pings, desert wind, server fans,
+  hushed Library room tone, sorting machinery, clock ticks, roof rain,
+  subway ventilation, harbour wash and Cloud rain/low rumble. Shared synthesis,
+  small per-biome recipes, no samples/assets/dependencies.
+- Eight-second mono 12 kHz loops, locally seeded without touching Math.random
+  or world state. Four-ms seam tapers, slow breathing, balanced RMS. The
+  Library uses its indoor voice. Original home/umbrella/duck cues remain
+  conspicuously above the bed: real engine renders are about **−54 dBFS RMS**
+  (**−62 dBFS** in Library), bed peaks below 0.012, cue mix peaks below 0.08.
+- Remains **off by default**, under the existing SFX toggle and gesture policy.
+  Wall-clock playback keeps pitch and rhythm independent of Calm/Steady/Brisk
+  and fast-forward. The existing render and visibility hooks fade beds out
+  for pause, hidden tabs, replay, standup and report; navigation crossfades.
+  No new timers or document listeners. Source `onended` disconnects both nodes.
+- A two-entry LRU buffer cache (**768 KB**, allocated only with SFX enabled),
+  one source/gain in steady play, at most two while fading; rapid navigation
+  stops the previous retiring source immediately. Repeated scene refreshes
+  allocate/paint/synthesize nothing. First build **16.5 ms**, subsequent
+  biome builds **9.4–11.1 ms** in the real browser; no synthesis per frame.
+  Source gzip delta for index/sfx/web: **1,795 bytes**.
+
+**Evidence:** `/tmp/codex-biome-audio/final/review.html` is a local listening
+sheet: six matched before/after pairs with identical home, umbrella and duck
+cues at 2, 4 and 6 seconds, plus isolated beds for all twenty biomes. Nine-second
+WAVs include the eight-second loop seam, at original playback amplitude.
+`comparison.png` / `.svg` show the six pairs and isolated beds (explicit 5×
+vertical scale on the latter); inspected the sheet. Audio balance was checked
+through the real engine and measured waveforms; paired files are supplied for
+listening. `audio.json` records RMS, peak, seam and build timings.
+`live/live.json` records actual browser node counts/lifecycle, with a phone
+Halloween screenshot. Five created bed sources and all five gains were closed
+at the report; no browser errors. `audition-18db.mp3` is an additional six-bed
+montage amplified 18 dB for audition, not the game's playback level.
+
+**Pipeline:** `tools/biome-audio.js <out> [baseline-public] --live` uses one
+bounded local browser for all OfflineAudioContext previews, then one for the
+live page. Its HTML has native audio controls and no autoplay. The first
+render exposed very uneven floor levels, so buffers now normalize once at
+creation rather than doing work in the frame loop. A rapid-navigation test
+uses alternating cached biomes, cutting it from **4.5 s to 0.29 s** while
+preserving the source-bound/cleanup check; distinct generation is covered
+separately for every biome. Waveform export used the dependency-free local
+SVG script `/tmp/codex-biome-audio/draw-sheet-svg.py` and `rsvg-convert`.
+
+**Tests:** **17 focused passes, zero failures/skips, 6.44 s**: all twenty beds
+finite, distinct, quiet, deterministic, RNG-free and seam-safe; exact cached
+loop repetition in real WebAudio; cue headroom; two-buffer reuse and 2,000
+refreshes with zero new nodes; at most two active sources under rapid changes;
+fade/stop/disconnect on mute and scene changes; identical complete gameplay
+digests over 400 ticks in every biome (cosmetic RNG pinned equally); existing
+event/voice tests unchanged. Real-page checks exercise all speeds, pause,
+visibility, mute, navigation and report. An additional real-engine mid-fade
+suspension probe held gain **0.1119271144 → 0.1119271144**, confirming no volume
+jump on early pause (`fade-probe.test.mjs`, `fade-probe.json` in the evidence
+parent directory). `npm run stamp` updated sfx/web and page/build stamps.
+
+**Full checks:** `npm run check` with coverage passed: **1,344 tests, zero
+failures/skips, 326.79 s**, Factory art included. CRAP threshold 30 passed
+using the same coverage, maximum **30.0** (new preview/live helpers **5.4 /
+5.0**). The focused run, final evidence, full check/coverage and CRAP ran
+sequentially under one shared FIFO lock reservation; Node heap 2,048 MB,
+`ulimit -v 6000000`, two workers, 120-second test timeouts. Completion was
+reported immediately to release the developer's testing window.
+`git diff --check` passed. Logs:
+`/tmp/codex-biome-audio/focused-green.log`, `evidence-final.log`, `check.log`,
+`crap.log`. Simulation, art, seasonal rules and counter code are unchanged.
+
+**Next:** review and merge this branch; no push or deployment from this pass.
+
+## 300 — 2026-10-15 · Merged the biome ambience
+
+Reviewed and merged by the loop: codex/biome-audio (a1a37b0, entry 299,
+based on 39a871e), `--no-ff`, as approved.
+
+**Merge:**
+- The branch carried Codex's own copies of the captions (294) and skill-icons
+  entries, with a mangled 294/295 header pair. Those were already in main
+  (294–297), so main's entries are kept and only the ambience entry is
+  appended, as 299.
+- Stamps were re-stamped.
+- Against the branch, the merged code differs only in main's later fixes: the
+  fullscreen caption rule (295), safe centring and safe-area padding (298),
+  and the regression test.
+
+**Review:**
+- `AgentSfx.scene(world, active)` runs from `render` and on visibility
+  changes. `syncBed` returns at once unless the biome or the active state
+  changed, and it does nothing without an AudioContext (sound off).
+- A bed is eight seconds of mono 12 kHz, made once on entering a biome. Only
+  the last two are cached.
+- One looping source plays at a time. The previous one fades for 0.18 s and
+  stops, and `onended` disconnects it. A quick run through the tour stops any
+  bed still fading.
+
+**Soak** (`npm run soak -- --minutes 5`, sound switched on by a real click):
+passed, levels 2–11.
+- Live audio nodes sat at 1, which is the looping bed, peaking at 5 while
+  cues played. They did not grow: 589 made over the run.
+- Nodes, listeners and canvases were flat. Frames held at 16.7 ms.
+- The heap rose from 3.5 to 6.1 MB, the same shape as earlier smokes (the V8
+  plateau from 278).
