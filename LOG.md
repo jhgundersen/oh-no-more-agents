@@ -8186,3 +8186,27 @@ Outcome and share assets remain unchanged. No temporary browsers remain.
 no push, deployment or sibling sync.
 
 Reviewed and merged by the loop. Crisp Santa hats, ribbon-wrapped exits, snow settling on ledges, and candy canopies in all 19 biomes. The branch had rebased the gag and share art onto 250; `main` already had both (with the loop's own conflict resolutions), so the merge takes the branch's `Draw.js` and `season.js`, re-applies `STANDUP_EDGE` from the gag-art merge, and keeps `main`'s `tools/phone.js` (`CMD_TIMEOUT`).
+
+## 255 — 2026-10-15 · The last ones out don't climb away
+
+**Asked:** (from 253) level 2's leftover dead time. In 5 of 24 colonies the
+last agent was left on the stall cutoff with a 20 s tail.
+
+**Found:** that agent had landed on the middle floor facing away from the
+dug-through hole by the exit. It walked east, climbed the wall at the end of
+the floor, then the next one, and ended on the top floor until the cutoff.
+Every tool it spent took it further from a home below and behind it.
+
+**Changed:** `wallTools` spends nothing for the last ones out (`lastOut`)
+when home is below and they aren't facing it (`walkingOffHome`). The wall
+turns them the ordinary way. Facing home, or with the colony still coming,
+the old rules stand.
+
+**Measured:**
+- **Level 2** (48 colonies): median length 42.6 → 37.6 s; colonies ending on
+  a straggler's 20 s tail 5 → 1. First home unchanged (median 20.6 s, worst
+  24.1 s).
+- **Playtest 1-150 × 24** against 253: 51446 → 51450, bad endings 33 → 31,
+  no level moved by 3 or more.
+
+`test/stragglers.test.js` covers it.

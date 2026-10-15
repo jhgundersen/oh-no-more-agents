@@ -355,3 +355,20 @@ test("a dead end at the board's edge a few rows over the exit is dug through, no
   S.hitWall(w, far)
   assert.equal(far.dir, 1, "home is a long walk away: turn as before")
 })
+
+test("the last ones out spend no tool on a wall that leads away from a home below them", () => {
+  const w = box(90), k = w.k
+  for (let y = 22; y < 30; y++) w.terrain[y * k.COLS + 60] = k.DIRT          // a climbable wall, east
+  w.exit = { x: 10, y: 40, w: 6, h: 5 }                                         // home is west and below
+  w.toRelease = 5; w.released = 5; w.saved = 3; w.lost = 0                       // the last two
+  const ag = Object.assign(S.spawn(w), { x: 59.5, y: 29, dir: 1, state: "walk", trait: "steady" })
+  w.agents = [ag]
+  const before = JSON.stringify(w.skills)
+  assert.equal(S.wallTools(w, ag, 8, 1), false)
+  assert.equal(JSON.stringify(w.skills), before, "nothing spent")
+  ag.dir = -1
+  assert.equal(S.walkingOffHome(w, ag), false, "facing home, the wall is on the way")
+  w.saved = 0
+  ag.dir = 1
+  assert.equal(S.walkingOffHome(w, ag), false, "with the colony still coming, the old rules stand")
+})

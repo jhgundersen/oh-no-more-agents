@@ -5665,7 +5665,17 @@ function wallClimbable(w, ag, h, reach) {
 
 // The toolbar, in the order this agent's trait reaches for it. True when a
 // skill was spent and started.
+// The last ones out, with home below and behind them: no wall in front is on
+// the way home, and every tool spent on it takes them further off. Level 2's
+// last agent walked away from the hole by the exit, climbed the wall at the
+// end of the floor and the one above it, and the stall cutoff found it on the
+// top floor twenty seconds later (5 of 24 colonies).
+function walkingOffHome(w, ag) {
+  return lastOut(w) && exitBelow(w, ag) && !facingHome(w, ag)
+}
+
 function wallTools(w, ag, h, t) {
+  if (walkingOffHome(w, ag)) return false
   var trait = traitOf(ag)
   var wantUp = exitAbove(w, ag) && !liftRouted(w)
   var bashFirst = !wantUp && (ag.contrary ? !trait.bashFirst : trait.bashFirst)
