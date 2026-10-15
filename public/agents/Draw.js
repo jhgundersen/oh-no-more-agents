@@ -9460,7 +9460,86 @@ function drawSinkhole(ctx, w, pal, s) {
 // wall, not standing in front of it. When the wall is opened the ice goes in
 // shards, drips and a wisp of mist for a second while they walk off.
 var FROZEN_FX = 30
+// An ice-bound colleague, rather than a colleague behind a window. The
+// pointed cap and shaded shoulders frame the same agent; palms meet the ice.
+var FROZEN_PAGE_EDGE="#c8f3ff", FROZEN_PAGE_BLUE="#81bed7", FROZEN_PAGE_SHADE="#426e91"
+function drawPageFrozen(ctx,w,pal,f) {
+  if(f.thawedAt>=0){drawPageThaw(ctx,w,pal,f,w.ticks-f.thawedAt);return}
+  var cx=(f.x+0.5)*w.k.CELL,base=(f.y+1)*w.k.CELL,top=base-22,alpha=ctx.globalAlpha
+  ctx.save()
+  ctx.fillStyle=FROZEN_PAGE_SHADE;ctx.globalAlpha=alpha*0.65
+  ctx.fillRect(cx-4,top+1,8,20);ctx.fillRect(cx-6,top+5,12,14)
+  ctx.globalAlpha=alpha
+  // This stand-in has no live ID: it cannot own the watcher's gold coin.
+  var portrait=Object.create(w,{bet:{value:null}})
+  drawAgent(ctx,portrait,pal,{x:f.x+0.5,y:f.y,dir:f.dir,state:"wait",anim:0,fade:0},{})
+  ctx.globalAlpha=alpha
+  ctx.fillStyle=pal.robe
+  ctx.fillRect(cx-3.5,base-9,1,4);ctx.fillRect(cx+2.5,base-8,1,3)
+  ctx.fillStyle=pal.skin
+  ctx.fillRect(cx-4,base-10,1.5,2);ctx.fillRect(cx+2.5,base-9,1.5,2)
+  drawFrozenPrism(ctx,cx,top,alpha)
+  // A little fog on the inside: slow opacity only, never a moving body.
+  var breath=w.reducedMotion?0.12:0.08+Math.max(0,24-(w.ticks+f.x*13)%180)/120
+  ctx.fillStyle=FROZEN_PAGE_EDGE;ctx.globalAlpha=alpha*breath
+  ctx.fillRect(cx+f.dir*2-1,base-12,2,1.5)
+  ctx.restore()
+}
+function drawFrozenPrism(ctx,cx,top,alpha) {
+  ctx.fillStyle=FROZEN_PAGE_BLUE;ctx.globalAlpha=alpha*0.16
+  ctx.fillRect(cx-4,top+4,8,16);ctx.fillRect(cx-5,top+7,10,10)
+  ctx.globalAlpha=alpha*0.8;ctx.fillStyle=FROZEN_PAGE_BLUE
+  ctx.fillRect(cx-6,top+5,1,13);ctx.fillRect(cx+5,top+5,1,13)
+  ctx.fillRect(cx-5,top+3,1,3);ctx.fillRect(cx+4,top+3,1,3)
+  ctx.fillRect(cx-4,top+1,2,1);ctx.fillRect(cx+2,top+1,2,1)
+  ctx.fillRect(cx-5,top+18,1,2);ctx.fillRect(cx+4,top+18,1,2)
+  ctx.fillRect(cx-3,top+21,6,0.5)
+  ctx.fillStyle=FROZEN_PAGE_EDGE;ctx.globalAlpha=alpha*0.9
+  ctx.fillRect(cx-2,top,4,1);ctx.fillRect(cx-4,top+2,1,2)
+  ctx.fillRect(cx-5.5,top+6,0.5,6);ctx.fillRect(cx+4.5,top+13,0.5,4)
+  ctx.fillRect(cx-4,top+20,2,0.5);ctx.fillRect(cx+2,top+20,2,0.5)
+  // Short diagonal facets live on the rim, clear of the face and white collar.
+  ctx.globalAlpha=alpha*0.6
+  for(var r=0;r<4;r++)ctx.fillRect(cx-4.5+r*0.5,top+5+r,0.5,1)
+  for(var i=0;i<3;i++)ctx.fillRect(cx+4-i*0.5,top+16+i,0.5,1)
+}
+function drawPageThaw(ctx,w,pal,f,age) {
+  if(age<0||age>=FROZEN_FX)return
+  var cx=(f.x+0.5)*w.k.CELL,base=(f.y+1)*w.k.CELL,alpha=ctx.globalAlpha*(1-age/FROZEN_FX)
+  ctx.save()
+  if(w.reducedMotion)drawFrozenRemnant(ctx,w,cx,base,alpha)
+  else for(var shard=0;shard<6;shard++)drawFrozenShard(ctx,w,cx,base,age,shard,alpha)
+  drawFrozenMelt(ctx,w,cx,base,age,alpha)
+  ctx.restore()
+}
+function drawFrozenShard(ctx,w,cx,base,age,i,alpha) {
+  var vx=((i*5)%7-3)*0.22,lift=0.8+(i%3)*0.3
+  var x=Math.round((cx+vx*age)*2)/2,y=Math.round(Math.min(base-2,base-5-(i%3)*5-age*lift+age*age*0.06)*2)/2
+  ctx.globalAlpha=alpha*0.65;ctx.fillStyle=FROZEN_PAGE_BLUE
+  welcomeAirMark(ctx,w,x,y,2.5,2)
+  ctx.globalAlpha=alpha*0.85;ctx.fillStyle=FROZEN_PAGE_EDGE
+  welcomeAirMark(ctx,w,x,y,1.5,0.5);welcomeAirMark(ctx,w,x,y+0.5,0.5,1)
+}
+function drawFrozenRemnant(ctx,w,cx,base,alpha) {
+  ctx.globalAlpha=alpha*0.55;ctx.fillStyle=FROZEN_PAGE_EDGE
+  for(var side=-1;side<=1;side+=2) {
+    welcomeAirMark(ctx,w,cx+side*1.5-0.5,base-16,1,2)
+    welcomeAirMark(ctx,w,cx+side*1.5-0.5,base-4,1,1.5)
+  }
+}
+function drawFrozenMelt(ctx,w,cx,base,age,alpha) {
+  ctx.fillStyle=FROZEN_PAGE_BLUE;ctx.globalAlpha=alpha*0.6
+  for(var p=0;p<4;p++)welcomeAirMark(ctx,w,cx-4+p*2,base-0.5,2,0.5)
+  if(w.reducedMotion)return
+  ctx.globalAlpha=alpha*0.2;ctx.fillStyle=FROZEN_PAGE_EDGE
+  for(var mist=0;mist<3;mist++) {
+    var y=base-3-Math.floor(age/4)*0.5-mist*1.5
+    welcomeAirMark(ctx,w,cx-3+mist*3,y,2,0.5)
+  }
+}
+
 function drawFrozen(ctx, w, pal, f) {
+  if (w.res === 2) return drawPageFrozen(ctx,w,pal,f)
   if (f.thawedAt >= 0) { drawThaw(ctx, w, pal, f, w.ticks - f.thawedAt); return }
   var C = w.k.CELL
   drawAgent(ctx, w, pal, { x: f.x + 0.5, y: f.y, dir: f.dir, state: "wait", anim: 0, fade: 0 }, {})

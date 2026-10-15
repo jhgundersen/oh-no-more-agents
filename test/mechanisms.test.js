@@ -121,13 +121,19 @@ test("mechanisms animate at res 1 and res 2 without writing simulation state", (
     w.ticks = 36
     assert.notDeepEqual(rope(D.drawChain), chain)
     assert.notDeepEqual(rope(D.drawVine), vine)
-    const f = { x: 20, y: 20, dir: 1, thawedAt: -1 }
-    picture(w, (ctx, pal) => D.drawFrozen(ctx, w, pal, f))
-    f.thawedAt = 0
+    const ice = S.generate(levelWith(S, "Ice Cave", w => w.frozen.length > 0), 0, 3)
+    ice.res = res
+    const f = ice.frozen[0]
+    picture(ice, (ctx, pal) => D.drawFrozen(ctx, ice, pal, f))
+    ice.terrain[(f.y - 3) * S.COLS + f.x] = S.EMPTY
+    S.stepFrozen(ice)
+    assert.equal(f.thawedAt, 0, "the real release opens the ice around the body")
     for (const ticks of [0, 4, 10, 18, 26, 30, 31]) {
-      w.ticks = ticks
-      const img = picture(w, (ctx, pal) => D.drawFrozen(ctx, w, pal, f))
-      assert.equal(img.equals(blank(w)), ticks >= D.FROZEN_FX)
+      ice.ticks = ticks
+      const before = JSON.stringify(ice)
+      const img = picture(ice, (ctx, pal) => D.drawFrozen(ctx, ice, pal, f))
+      assert.equal(img.equals(blank(ice)), ticks >= D.FROZEN_FX, `thaw res ${res}, tick ${ticks}`)
+      assert.equal(JSON.stringify(ice), before, "rendering the thaw is read-only")
     }
   }
 })

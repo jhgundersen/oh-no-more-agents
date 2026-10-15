@@ -9,7 +9,7 @@ import {load,canvas,crop,writePNG,themeOf} from './render.js'
 import {renderer,copyPixels,doublePixels} from './gag-art.js'
 import {sheetLabel} from './art-label.js'
 const S=load('Sim.js'),P=load('Palette.js'),ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),sha=s=>createHash('sha256').update(s).digest('hex')
-export const QUEUE_CASES=[{level:40,seed:3},{level:72,seed:2},{level:6,seed:5}]
+export const QUEUE_CASES=[{level:40,seed:3},{level:72,seed:2},{level:5,seed:5}]
 export function queueScene(level=40,seed=3,res=2){
  const random=Math.random
  try{

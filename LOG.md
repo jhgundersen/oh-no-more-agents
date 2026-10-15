@@ -9969,7 +9969,81 @@ under `/tmp/codex-forecast-art/`.
 
 **Next:** review/merge the branch. No push or deployment.
 
-## 383 — 2026-10-15 · Two to beam down (on a branch)
+## 383 — 2026-10-15 · Merged the forecast plate
+
+Reviewed and merged by the loop: codex/forecast-art (5822e88, entry 382),
+`--no-ff`, as approved. Codex's entry is renumbered and the page is
+re-stamped.
+- **The copy:** the title card's plate draws `Outcome.forecastLines` (374).
+  The branch carried the already-merged umbrella-office commits too; git
+  folded those in cleanly.
+- **Code:** Draw.js and web.js only, no Sim.js or Outcome.js change.
+
+## 384 — 2026-10-15 · The wall before the door gets a mine on the second visit
+
+**Chosen:** 381's next. On level 163, salt 15, why did nothing escalate?
+
+**Traced:** agent 18 reached the 6-thick block before the door at t2955
+with `idle` 7.
+- **Why idle was so low:** reaching that wall is always an agent's closest
+  point yet, so `watchProgress` resets `idle` on arrival.
+- **What that does to the gate:** `wallLastResort`'s mine needs half its
+  patience (idle > 450), which only comes on about the third visit. A colony
+  that arrives late meets the clock first: 3 miners in the toolbar, no
+  bashers or climbers.
+
+**Changed:** `homeWall`. At a wall with the door ahead at its height
+(`doorAhead`, now shared with `tunnelHome`), an agent that has already
+turned once (`turns >= 1`) counts toward the charge. As with `jammed`, it
+may lay a mine only; a bomb still waits for real patience.
+
+**Measured** (24 colonies each):
+
+| Level | Home | Total ticks | Nukes |
+|---|---|---|---|
+| 163 | 417 → 416 | −7% | 3 → 1 |
+| 304 | 294 → 300 | −7% | 2 → 2 |
+| 72, 129 | identical | identical | identical |
+
+- **`npm run sim play`** and the 1–440 playtest (6 colonies): identical to
+  main.
+
+## 385 — 2026-10-15 · Deploy (18:17), and the 163 mine merged after it
+
+**Deployed** build c88604a4 (version 8326af80), replacing b96d79b5. It
+covers 373–383:
+- the 163 void dig;
+- the forecast copy and its plate;
+- `LONG_RUN` 6;
+- the pause panel, page type and umbrella stand.
+
+**Before:** `npm run smoke` on the clean tree passed (3 min, levels 1–7).
+
+**After:**
+- **`npm run verify -- --previous b96d79b5`** passed on the first run
+  (5 counter writes refused).
+- **Font, on production:** `/fonts/vt323-ui-1.woff2` is `font/woff2`,
+  `public, max-age=31536000, immutable`.
+- **Umbrella stand, on production:** a read-only headless check (verify's
+  `readOnly` browser, every counter write refused, no page errors) played
+  level 3 / seed 7 to six home. `umbrellaOfficeLayout` placed the stand
+  beside the exit and the screenshot showed the furled umbrellas there.
+  The title card's forecast plate read "FORECAST: A MEETING AT 3, SCOPE
+  CHANGES POSSIBLE / 40% CHANCE OF SNOW · UMBRELLAS: 18", and the controls
+  were in VT323.
+
+**Branch:** dev/163b (384) was built in a worktree during the deploy window
+and merged after it, through the gate.
+
+Merge note: the first gate failed three of the 429 sign's tests (365). They
+look for natural queues in fixed colonies, and with this mine rule level 6 /
+seed 5 no longer forms one within 5,000 ticks. `QUEUE_CASES` in
+`tools/queue-art.js` now uses level 5 / seed 5 (Jungle, facing right), found
+by searching levels 1–60, so the cases still cover three biomes and both
+directions. The other two cases, and the contact sheet built from the first,
+are unchanged.
+
+## 386 — 2026-10-15 · Two to beam down (on a branch)
 
 **Choice:** the Spaceship's floor strips blended into its console trim. Watched
 real desktop/390px phone runs at Steady and Brisk, plus Christmas Ice Cave and
@@ -10041,3 +10115,33 @@ source proof, matched browser manifests and screenshots are under
 `/tmp/codex-transporter-art/`.
 
 **Next:** review/merge the branch. No push or deployment.
+
+## 387 — 2026-10-15 · Cold storage, parked for a break (on a branch)
+
+WIP on `codex/thaw-art`, from approved transporter `44ef025` merged with main
+`2b2dfd8`. Both histories are retained; the transporter entry is renumbered 386.
+Page-only Ice Cave portraits now have centred faceted ice, palms and a little
+condensation; rescues have clipped shards/meltwater and a stationary reduced-
+motion alternative. The stand-in no longer gets a phantom sweepstake coin.
+Native/default/res 3 pixels are unchanged; Sim/Outcome match that main base.
+
+Before/after animation and actual desktop/390px phone evidence, including both
+seasons: `/tmp/codex-thaw-art/review/index.html`. World digests match. Source
+Draw `d4cde7db`, build `d6037c07`. FPS before/after stayed at 60 with 15 active
+characters. Eight new art checks and the expanded **35-test focused gate pass**.
+The old frozen/mechanism fixtures now perform real releases; the frozen search
+is bounded and large base64 assertions are replaced with hashes.
+
+The first full run was **1,551 passed / 1 failed**: a synthetic thaw inside a
+Ruins wall. That fixture is corrected and included in the passing focused gate.
+The fresh full check/coverage was interrupted at Jon's requested break. Its
+owned service is stopped; partial output/LCOV is archived in
+`/tmp/codex-thaw-art/parked-2026-10-15/` and must not supply a CRAP result.
+Earlier failed results are under `pre-mechanism-fixture/` and `pre-readonly/`.
+Art, tools and stamps are coherent, but this is **not merge-ready**.
+
+**Next:** resume the frozen-source gate at `/tmp/codex-thaw-art/gate.sh`, using
+FIFO testlock, 2GB Node heap, `ulimit -v 6000000`, 3GB service memory and two
+test workers. Require a fresh green full `npm run check` with coverage, then
+CRAP threshold 30 using that complete LCOV; update this note with the results
+before review. No push or deployment. Stopped here for the break.

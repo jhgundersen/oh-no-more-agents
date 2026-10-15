@@ -1,5 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
+import { createHash } from "node:crypto"
 import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf } from "../tools/render.js"
 
@@ -19,10 +20,11 @@ test("frozen colleagues are an Ice Cave thing, and stand in solid wall", () => {
 })
 
 function iced() {
-  for (let lv = 6; ; lv += 12) {
+  for (let lv = 6; lv <= 206; lv += S.BIOMES.length) {
     const w = S.generate(lv, 0, 5)
     if (w.frozen.length) return { w, f: w.frozen[0] }
   }
+  throw Error("No frozen fixture in the bounded Ice Cave search")
 }
 
 test("nothing happens while the wall holds", () => {
@@ -50,15 +52,19 @@ test("opening the wall at the head frees them, feet and all", () => {
 test("frozen and thawing both draw", () => {
   const theme = themeOf("tokyo-night")
   const pal = P.build(theme.theme, 1)
-  const { w, f } = iced()
   for (const res of [1, 2]) for (const thawedAt of [-1, 0]) {
+    const { w, f } = iced()
     w.res = res
+    if (thawedAt === 0) {
+      w.terrain[(f.y - 3) * S.COLS + f.x] = S.EMPTY
+      S.stepFrozen(w)
+    }
     w.ticks = 5
-    f.thawedAt = thawedAt
     const img = canvas(400 * res, 248 * res, theme.background)
     img.ctx.setTransform(res, 0, 0, res, 0, 0)
-    const blank = Buffer.from(img.buf).toString("base64")
+    const digest = () => createHash("sha256").update(img.buf).digest("hex")
+    const blank = digest()
     D.drawFrozen(img.ctx, w, pal, f)
-    assert.notEqual(Buffer.from(img.buf).toString("base64"), blank)
+    assert.notEqual(digest(), blank, `res ${res}, thawed ${thawedAt}`)
   }
 })

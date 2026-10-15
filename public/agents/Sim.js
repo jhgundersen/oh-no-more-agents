@@ -5834,6 +5834,12 @@ function wallTools(w, ag, h, t) {
 // tunnel home. Only after this agent has turned from it once.
 function tunnelHome(w, ag, t, climbable) {
   if (t <= BASH_REACH || (climbable && (w.skills.climber || 0) > 0) || ag.turns < 1) return false
+  return doorAhead(w, ag)
+}
+
+// The door is ahead in the walking direction, with its floor within three
+// rows of this agent's.
+function doorAhead(w, ag) {
   var door = w.exit.x + w.exit.w / 2
   return (door - ag.x) * ag.dir > 0 && Math.abs(exitFloor(w) - 1 - Math.floor(ag.y)) <= 3
 }
@@ -5876,9 +5882,15 @@ function wallLastResort(w, ag, t) {
   // that has already been down a storey and back is patient enough: on level
   // 109 three agents shuttled between two floors of cubicle walls with twelve
   // bombers in the toolbar until the clock (LOG 343).
+  // The wall between it and the door, met a second time: reaching that wall
+  // is always this agent's closest yet, which resets idle, so the patience
+  // gate only opened on a third visit. On level 163 a late colony with no
+  // bashers paced at a six-thick block on the exit floor with three miners
+  // in the toolbar until the clock (LOG 384). Mines only, like jammed.
+  var homeWall = doorAhead(w, ag) && ag.turns >= 1
   var patient = ag.idle * 2 > PATIENCE - trait.digBias || (ag.roundTrips || 0) >= 1
   var jammed = ag.still * 2 > STILL_ESCAPE
-  if ((patient || jammed || lastOut(w)) && blastWall(w, ag, t, !patient)) return
+  if ((patient || jammed || lastOut(w) || homeWall) && blastWall(w, ag, t, !patient)) return
 
   turnAround(w, ag)
 }
