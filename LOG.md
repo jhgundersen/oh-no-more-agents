@@ -10199,3 +10199,26 @@ notices, and this makes each one a joke.
   fixed:
   - a reply had claimed the caption from a fresh "RICOCHET";
   - a reply appeared in a paused capture.
+
+## 390 — 2026-10-15 · Stopped for a break
+
+**State:** main is clean at 99123ed. All of today's work is committed and
+gated; there are no dev/* branches or worktrees and nothing half-merged.
+Production is c88604a4 (18:17).
+
+**Not deployed yet**, waiting for the next deploy (`npm run smoke`, deploy,
+`npm run verify -- --previous c88604a4`):
+- the second-visit mine (384);
+- the transporter coils (386–387);
+- levels without an incident (388);
+- out-of-office replies (389).
+
+**Next, in order:**
+1. That deploy.
+2. Level 225's straggler (Jungle, 1 in 24 colonies): it walks floor 41 away
+   from the door, past the shaft at x94–96 that drops to the exit's floor
+   (369's notes).
+3. Level 295's red-team losses (65% home): tuning, not a bug, if anyone
+   wants it.
+4. For Codex, if wanted: the title card's 1.2 s hold now carries the
+   forecast plate (382); check it reads on phones at Brisk.
