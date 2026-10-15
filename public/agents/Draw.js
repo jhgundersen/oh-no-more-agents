@@ -5448,6 +5448,12 @@ function drawHzLightning(ctx, w, pal, h, geo) {
   var drift = w.reducedMotion ? 0 : Math.floor(w.ticks / 30) % 2              // it idles, a cell's breath
   ctx.fillRect(x0 - 2 + drift, y0, wide + 4, 3)                             // the thundercloud's belly
   ctx.globalAlpha = 1
+  if (geo.winding && geo.progress > 0.35) {                                 // the last second: the column lights up
+    ctx.globalAlpha = 0.10 + 0.22 * (geo.progress - 0.35) / 0.65
+    ctx.fillStyle = BOLT
+    ctx.fillRect(x0, y0 + 3, wide, y1 - y0 - 3)
+    ctx.globalAlpha = 1
+  }
   if (geo.winding && !w.reducedMotion && (h.t % Math.max(2, 9 - Math.floor(geo.progress * 7))) < 2) {
     ctx.fillStyle = BOLT                                                     // crackle, quickening
     ctx.fillRect(cx - 2 + (h.t % 3), y0 + 3, 1, 2)

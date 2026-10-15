@@ -82,3 +82,24 @@ test("drawn at both resolutions without error, with a Cloud tint of its own", ()
   assert.notEqual(P.build(theme, 20).dirt, P.build(theme, 1).dirt)
   assert.equal(P.build(theme, 21).dirt, P.build(theme, 1).dirt, "level 21 is a Cavern again")
 })
+
+test("a strike that takes somebody says so, the first one with why the umbrella didn't help; the column glows before it", () => {
+  let w = null
+  for (const level of CLOUD) { const c = S.generate(level, 0, 1); if (c.hazards.some(h => h.kind === "lightning")) { w = c; break } }
+  const h = w.hazards.find(h => h.kind === "lightning")
+  const one = () => Object.assign(S.spawn(w), { x: h.zx0 + 1.5, y: h.zy1, state: "fall", floater: true, fall: 4 })
+  w.agents = [one()]
+  for (let i = 0; i < 400 && w.agents.some(a => a.state !== "dead"); i++) S.stepHazard(w)
+  assert.match(w.feed[w.feed.length - 1].text, /^STRUCK BY LIGHTNING: AGENT \d{3}\. UMBRELLAS ARE NOT LIGHTNING RODS\.$/)
+  assert.equal(w.agents[0].killedBy, "lightning")
+  // The last second of the wind-up lights the column the bolt will come down.
+  const pal = P.build(themeOf("tokyo-night").theme, w.level)
+  const fills = phase => {
+    const seen = []
+    const ctx = new Proxy(frame(S, D, P, { level: 20, seed: 1, ticks: 0, res: 1, theme: "tokyo-night" }).img.ctx, { get: (t, k) => k === "fillRect" ? ((...a) => { seen.push([t.fillStyle, t.globalAlpha]); return t.fillRect(...a) }) : (typeof t[k] === "function" ? t[k].bind(t) : t[k]), set: (t, k, v) => { t[k] = v; return true } })
+    D.drawHazard(ctx, w, pal, Object.assign({}, h, phase), {})
+    return seen.filter(([c, a]) => c === D.BOLT && a < 1).length
+  }
+  assert.equal(fills({ phase: "charge", t: 5 }), 0, "early in the wind-up, no glow")
+  assert.ok(fills({ phase: "charge", t: 40 }) > 0, "the last second glows")
+})

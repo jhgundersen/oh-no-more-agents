@@ -8671,3 +8671,30 @@ apply: within mine reach, no other charge nearby, the mine cooldown.
 **Measured:** level 109 251 → 274 home of 288. 1–200 × 24: 68109 → 68131 home
 and bad endings 56 → 41; no other level moved by 3 or more.
 `test/stragglers.test.js` covers it; the test fails without the change.
+
+## 267 — 2026-10-15 · Lightning you can see coming, and name
+
+**Asked:** check that a lightning strike is readable: a visible wind-up about
+a second before (flicker or glow at the strike column), and a death cause or
+ticker line that names it.
+
+**Found:** the wind-up already darkened the thundercloud and crackled faster,
+over 46 ticks (1.5 s at normal speed), but nothing marked the column the bolt
+would come down. A lightning death had no line of its own: the Cloud's first
+loss read "YOUR FILES ARE IN THE CLOUD. SO IS AGENT 012." whatever the cause.
+
+**Changed:**
+- **Glow.** In the last second of the wind-up (progress over 0.35, about 30
+  ticks), the strike column itself glows, faint and brightening, in the
+  bolt's colour. It's the same at both resolutions, and steady, so reduced
+  motion keeps it.
+- **Cause.** A lightning kill records `ag.killedBy = "lightning"`.
+- **Ticker.** The first strike each level says "STRUCK BY LIGHTNING: AGENT
+  012. UMBRELLAS ARE NOT LIGHTNING RODS."; later ones say "AGENT 012 · STRUCK
+  BY LIGHTNING". The files-in-the-cloud line is kept for losses of any other
+  kind.
+
+**Tests:** in `test/cloud.test.js`, a strike on a floater gives the named
+first line and the cause, and there's no glow early in the wind-up but there
+is in its last second. The test fails without the change. The sim is
+unchanged apart from the cause field and the ticker line.

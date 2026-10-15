@@ -3313,13 +3313,22 @@ function cloudLining(w) {
       if (solid(w, x, y) && at(w, x, y) !== STEEL && !solid(w, x, y - 1)) setCell(w, x, y, ORE)
 }
 
+// Lightning says what it did: every strike that takes somebody is named on
+// the ticker, and the first one each level says why the umbrella didn't help.
+function struckByLightning(w, ag) {
+  ag.killedBy = "lightning"
+  feedNote(w, w.struck ? agentTag(w, ag) + " · STRUCK BY LIGHTNING"
+    : "STRUCK BY LIGHTNING: " + agentTag(w, ag) + ". UMBRELLAS ARE NOT LIGHTNING RODS.")
+  w.struck = true
+}
+
 // The Cloud on the ticker: once a level each, the first one lost and the
 // first floater an updraft holds up. Read off the world, like the radio.
 function stepCloud(w) {
   if (!w.updraftLift || (w.cloudLost && w.cloudLifted)) return
   for (var i = 0; i < w.agents.length; i++) {
     var ag = w.agents[i]
-    if (!w.cloudLost && ag.state === "dead") {
+    if (!w.cloudLost && ag.state === "dead" && ag.killedBy !== "lightning") {
       w.cloudLost = true
       feedNote(w, "YOUR FILES ARE IN THE CLOUD. SO IS " + agentTag(w, ag) + ".")
       return
@@ -5031,6 +5040,7 @@ function hazardStrike(w, h) {
     w.hazardKills++
     h.kills = (h.kills || 0) + 1
     w.lastEvent = "hazard"
+    if (h.kind === "lightning") struckByLightning(w, ag)
   }
   for (var ei = 0; ei < w.enemies.length; ei++) {
     var en = w.enemies[ei]
