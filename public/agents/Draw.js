@@ -2737,6 +2737,7 @@ function drawActors(ctx, w, pal, opts) {
   drawHatch(ctx, w, pal)
   drawEnemyHatch(ctx, w, pal, opts)
   drawExitGlow(ctx, w, pal)
+  drawExitWelcome(ctx, w, pal)
   drawExitGate(ctx, w, pal)
   drawMission(ctx, w, pal)
 
@@ -5604,6 +5605,172 @@ function drawExitShimmer(ctx, w, pal, x, y, ww, hh) {
   ctx.globalAlpha = 1
 }
 
+// One welcome per doorway, even when a whole queue gets home together. The
+// saved body's existing 15-tick fade is the clock; gone bodies never retrigger.
+var EXIT_WELCOME_LIGHT = [0.35,0.55,0.75,1,1,0.9,0.85,0.75,0.65,0.55,0.45,0.35,0.25,0.15,0.05]
+var EXIT_WELCOME_WARM = "#efd5a1"
+var EXIT_WELCOMES = {
+  "Cavern": ["dust","warm"], "Ruins": ["dust","warm"],
+  "Frost": ["ice","cold"], "Foundry": ["steam","warm"],
+  "Jungle": ["leaves","warm"], "Ice Cave": ["ice","cold"],
+  "Spaceship": ["signal","cold"], "Factory": ["steam","warm"],
+  "Skyscraper": ["signal","warm"], "Trench": ["bubbles","cold"],
+  "Desert": ["dust","warm"], "Data Center": ["signal","cold"],
+  "Library": ["book","warm"], "Mail Room": ["letter","warm"],
+  "Building Site": ["steam","warm"], "Clock Tower": ["clock","warm"],
+  "Rooftops": ["porch","door"], "Subway": ["signal","warm"],
+  "Harbour": ["harbour","warm"], "The Cloud": ["signal","door"]
+}
+function exitWelcomeArrival(w) {
+  if (!w || w.res !== 2 || !w.saved || !w.exit) return null
+  if (w.mission && !w.mission.done) return null
+  var found = null, power = 0, e = w.exit
+  for (var i = 0; i < w.agents.length; i++) {
+    var a = w.agents[i]
+    if (a.gone || a.state !== "saved" || !(a.fade >= 0 && a.fade < 15)) continue
+    if (!(a.x > e.x && a.x < e.x + e.w && a.y > e.y && a.y < e.y + e.h + 1)) continue
+    var light = EXIT_WELCOME_LIGHT[a.fade]
+    if (light > power) { found = a; power = light }
+  }
+  return found
+}
+function drawExitWelcome(ctx, w, pal) {
+  var a = exitWelcomeArrival(w)
+  if (!a) return
+  var e = w.exit, C = w.k.CELL, x = e.x*C, y = e.y*C, ww = e.w*C, hh = e.h*C
+  var spec = Object.prototype.hasOwnProperty.call(EXIT_WELCOMES,w.biome) ? EXIT_WELCOMES[w.biome] : EXIT_WELCOMES.Cavern
+  var power = w.reducedMotion ? 0.55 : EXIT_WELCOME_LIGHT[a.fade]
+  var ink = spec[1] === "cold" ? pal.exitLight : EXIT_WELCOME_WARM
+  ctx.save()
+  drawWelcomeThreshold(ctx, x, y, ww, hh, ink, power)
+  if (w.reducedMotion) { ctx.restore(); return }
+  if (spec[1] === "door") drawWelcomeDoor(ctx, pal, x, y, ww, hh, power)
+  // Accents stay around the frame, behind every body, umbrella and hazard.
+  ctx.globalAlpha = power
+  EXIT_WELCOME_FX[spec[0]](ctx,w,pal,x,y,ww,hh,a.fade)
+  ctx.restore()
+}
+function drawWelcomeThreshold(ctx,x,y,ww,hh,ink,power) {
+  ctx.fillStyle=ink
+  ctx.globalAlpha=power*0.25
+  ctx.fillRect(x+1,y+1,ww-2,hh-1)
+  ctx.globalAlpha=power*0.8
+  ctx.fillRect(x,y+1,0.5,hh-1);ctx.fillRect(x+ww-0.5,y+1,0.5,hh-1)
+  ctx.fillRect(x+1,y+hh-1,ww-2,1)
+  ctx.globalAlpha=power*0.3
+  ctx.fillRect(x-4,y+hh,ww+8,0.5)
+  ctx.globalAlpha=power*0.15
+  ctx.fillRect(x-7,y+hh+0.5,ww+14,0.5)
+}
+function drawWelcomeDoor(ctx,pal,x,y,ww,hh,power) {
+  var open = 3+Math.round((ww-8)*power*2)/2, edge=x+ww-open
+  ctx.globalAlpha=power*0.85;ctx.fillStyle=EXIT_WELCOME_WARM
+  ctx.fillRect(edge,y+1,open-1,hh-2)
+  ctx.globalAlpha=power;ctx.fillStyle=pal.rigDark
+  ctx.fillRect(edge-0.5,y+1,0.5,hh-2)
+  ctx.fillStyle=GAG_PAPER;ctx.fillRect(edge,y+2,0.5,hh-4)
+}
+// Tiny off-frame marks clip against current air, including after carving.
+// Each is at most three pixels, so four corners cover every touched cell.
+function welcomeAirMark(ctx,w,x,y,width,height) {
+  if (mechanismAir(w,x,y) && mechanismAir(w,x+width-0.5,y)
+      && mechanismAir(w,x,y+height-0.5) && mechanismAir(w,x+width-0.5,y+height-0.5))
+    ctx.fillRect(x,y,width,height)
+}
+var EXIT_WELCOME_FX = {
+  dust:drawWelcomeDust,ice:drawWelcomeIce,steam:drawWelcomeSteam,leaves:drawWelcomeLeaves,
+  signal:drawWelcomeSignal,bubbles:drawWelcomeBubbles,book:drawWelcomeBook,letter:drawWelcomeLetter,
+  clock:drawWelcomeClock,porch:drawWelcomePorch,harbour:drawWelcomeHarbour
+}
+function drawWelcomeDust(ctx,w,pal,x,y,ww,hh,age) {
+  ctx.fillStyle=EXIT_WELCOME_WARM
+  var lift=Math.floor(age/3)*0.5,spread=Math.floor(age/4)*0.5
+  for(var side=-1;side<=1;side+=2)for(var i=0;i<3;i++)
+    welcomeAirMark(ctx,w,(side<0?x-2-spread:x+ww+1+spread)+side*i,y+hh-2-i-lift,1,0.5)
+}
+function drawWelcomeIce(ctx,w,pal,x,y,ww,hh,age) {
+  ctx.fillStyle=GAG_PAPER
+  var arm=age<7?1.5:0.5, rise=Math.floor(age/4)*0.5
+  for(var side=-1;side<=1;side+=2){
+    var xx=side<0?x-3:x+ww+3,yy=y+hh-7-rise
+    welcomeAirMark(ctx,w,xx-arm,yy,arm*2,0.5);welcomeAirMark(ctx,w,xx,yy-arm,0.5,arm*2)
+    welcomeAirMark(ctx,w,xx+side*2,yy-5,0.5,0.5)
+  }
+}
+function drawWelcomeSteam(ctx,w,pal,x,y,ww,hh,age) {
+  ctx.fillStyle=GAG_PAPER
+  var rise=Math.floor(age/3)*0.5,drift=Math.floor(age/4)*0.5
+  for(var side=-1;side<=1;side+=2){
+    var xx=side<0?x-4-drift:x+ww+2+drift,yy=y+hh-4-rise
+    welcomeAirMark(ctx,w,xx,yy,2.5,1.5);welcomeAirMark(ctx,w,xx+0.5,yy-0.5,1.5,0.5)
+    welcomeAirMark(ctx,w,xx+side,yy-2,1,0.5)
+  }
+}
+function drawWelcomeLeaves(ctx,w,pal,x,y,ww,hh,age) {
+  var lift=Math.floor(age/3)*0.5
+  ctx.fillStyle=pal.decorLit
+  for(var side=-1;side<=1;side+=2){
+    var xx=side<0?x-4:x+ww+1,yy=y+hh-7-lift
+    welcomeAirMark(ctx,w,xx,yy,3,1);welcomeAirMark(ctx,w,xx+0.5,yy-1,2,1)
+    ctx.fillStyle=GAG_PAPER;welcomeAirMark(ctx,w,xx+0.5,yy,2,0.5);ctx.fillStyle=pal.decorLit
+  }
+}
+function drawWelcomeSignal(ctx,w,pal,x,y,ww,hh,age) {
+  ctx.fillStyle="#9ece6a"
+  var count=Math.min(4,1+Math.floor(age/2))
+  for(var i=0;i<count;i++){
+    ctx.fillRect(x-1.5,y+hh-4-i*3,1,1)
+    ctx.fillRect(x+ww+0.5,y+hh-4-i*3,1,1)
+  }
+  ctx.fillStyle=GAG_PAPER
+  ctx.fillRect(x+ww+0.5,y+hh-4-(count-1)*3,0.5,0.5)
+}
+function drawWelcomeBubbles(ctx,w,pal,x,y,ww,hh,age) {
+  ctx.fillStyle=GAG_PAPER
+  var rise=Math.floor(age/2)*0.5
+  for(var side=-1;side<=1;side+=2){
+    var xx=side<0?x-3:x+ww+2,yy=y+hh-5-rise
+    welcomeAirMark(ctx,w,xx,yy,2,0.5);welcomeAirMark(ctx,w,xx-0.5,yy+0.5,0.5,1)
+    welcomeAirMark(ctx,w,xx+2,yy+0.5,0.5,1);welcomeAirMark(ctx,w,xx,yy+1.5,2,0.5)
+    welcomeAirMark(ctx,w,xx+side,yy-3,0.5,0.5)
+  }
+}
+function drawWelcomeBook(ctx,w,pal,x,y,ww,hh,age) {
+  var half=age<4?1+age*0.5:age<10?3:Math.max(1,3-(age-10)*0.5),cx=x+ww/2,yy=y+1
+  ctx.fillStyle=pal.decorLit;ctx.fillRect(cx-half-0.5,yy+0.5,half*2+1,3.5)
+  ctx.fillStyle=GAG_PAPER;ctx.fillRect(cx-half,yy,half,3);ctx.fillRect(cx+0.5,yy,half,3)
+  ctx.fillStyle=pal.rigDark;ctx.fillRect(cx,yy+0.5,0.5,3)
+  ctx.fillStyle=EXIT_WELCOME_WARM;ctx.fillRect(cx-half+0.5,yy+1,Math.max(0.5,half-0.5),0.5)
+}
+function drawWelcomeLetter(ctx,w,pal,x,y,ww,hh,age) {
+  var xx=x+ww/2-3,yy=y+2-Math.floor(age/2)
+  ctx.fillStyle=POST_FOLD;ctx.fillRect(xx-0.5,yy-0.5,7,4)
+  ctx.fillStyle=GAG_PAPER;ctx.fillRect(xx,yy,6,3)
+  ctx.fillStyle=POST_FOLD
+  ctx.fillRect(xx+1,yy+0.5,1,0.5);ctx.fillRect(xx+2,yy+1,2,0.5);ctx.fillRect(xx+4,yy+0.5,1,0.5)
+  ctx.fillStyle=POST_STAMP;ctx.fillRect(xx+4.5,yy+1.5,1,1)
+}
+function drawWelcomeClock(ctx,w,pal,x,y,ww,hh,age) {
+  ctx.fillStyle=EXIT_WELCOME_WARM;clockRing(ctx,x+ww/2,y-5,4,1)
+  var spread=age<7?0:1
+  ctx.fillRect(x+ww/2-7-spread,y-6,1.5,0.5);ctx.fillRect(x+ww/2+6+spread,y-6,1.5,0.5)
+}
+function drawWelcomePorch(ctx,w,pal,x,y,ww,hh,age) {
+  ctx.fillStyle=EXIT_WELCOME_WARM
+  ctx.fillRect(x+ww+2.5,y+3,2,3)
+  ctx.fillStyle=GAG_PAPER
+  var drop=Math.floor(age/3)*0.5
+  welcomeAirMark(ctx,w,x-3,y+hh-5+drop,0.5,1)
+  welcomeAirMark(ctx,w,x+ww+3,y+hh-7+drop,0.5,1)
+}
+function drawWelcomeHarbour(ctx,w,pal,x,y,ww,hh,age) {
+  drawHarbourRing(ctx,x+ww+6,y+hh/2,HARBOUR_RED)
+  ctx.fillStyle=EXIT_WELCOME_WARM
+  var spread=age<7?0:1
+  welcomeAirMark(ctx,w,x+ww+10+spread,y+hh/2-1,1,0.5)
+  welcomeAirMark(ctx,w,x+ww+6,y+hh/2-5-spread,0.5,1)
+}
+
 function drawExitGate(ctx, w, pal) {
   var m = w.mission
   if (!m) return
@@ -7363,6 +7530,7 @@ function drawPoseSwim(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
 
 // The umbrella, drawn behind nothing and above everything.
 function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
+  if (st === "saved" && drawHomeUmbrella(ctx, w, pal, ag, ox, oy)) return
   // Swung at a gun, the umbrella faces the gun — falling too (Sim lets a
   // floater parry), for the moment it takes before it is overhead again.
   if (ag.brollyFor > 0 && (st !== "fall" || ag.floater)) { drawUmbrellaShield(ctx, w, pal, ag, ox, oy); return }
@@ -7453,6 +7621,16 @@ function drawFurledBrolly(ctx, w, pal, ag, ox, oy) {
   blitFine(ctx, ox, oy, d, 7, 9.5, 0.5, 1.5)               // furled canopy
   blitFine(ctx, ox, oy, d, 7 + tap / 2, 11, 1, 2.5)
   blitFine(ctx, ox, oy, d, 7 + tap, 13.5, 0.5, 1.5)
+}
+
+// Do not leave the umbrella outside. Only a canopy still in use folds;
+// an already furled umbrella stays in hand through the existing home fade.
+function drawHomeUmbrella(ctx,w,pal,ag,x,y) {
+  if (!pageMotionAgent(w,ag) || ag.state !== "saved" || !ag.ownBrolly) return false
+  var wet = (ag.floater && ag.fall > 2) || dripOver(w,ag,true)
+  if (wet && !w.reducedMotion) drawPageFold(ctx,w,pal,ag,x,y,Math.min(BROLLY_FOLD-1,ag.fade),ctx.globalAlpha)
+  else drawFurledBrolly(ctx,w,pal,ag,x,y)
+  return true
 }
 
 function drawUmbrellaFolding(ctx, w, pal, ag, ox, oy) {
@@ -7835,7 +8013,9 @@ function drawAgentHome(ctx, w, pal, ag, ox, oy, dir, robe, skin) {
 // in two-tone panels with the ribs running out to the tips, a lit rim, a
 // ferrule on top. `flex` lifts the crown the way the
 // coarse canopy's centre lifts, so it still breathes.
-function drawUmbrellaFine(ctx, pal, ox, oy, flex, brolly, spread, noStem) {
+function drawUmbrellaFine(ctx, pal, ox, oy, flex, brolly, spread, noStem, opacity) {
+  // Only the home fold opts into inherited opacity; older callers retain their pixels.
+  var alpha = opacity === undefined ? 1 : opacity
   spread = spread === undefined ? 1 : spread
   var cx = ox + 4.5, top = oy - 11 - flex * 0.5 + Math.round((1 - spread) * 6) / 2, base = oy - 7
   var radius = Math.round(6.5 * spread * 2) / 2
@@ -7845,12 +8025,12 @@ function drawUmbrellaFine(ctx, pal, ox, oy, flex, brolly, spread, noStem) {
     var half = Math.round(radius * Math.sqrt(1 - (1 - q) * (1 - q)) * 2) / 2
     ctx.fillStyle = brolly
     ctx.fillRect(cx - half, y, half * 2, 0.5)
-    ctx.globalAlpha = 0.28                                  // every other panel in shade
+    ctx.globalAlpha = alpha * 0.28                                  // every other panel in shade
     ctx.fillStyle = "#000000"
     var panel = Math.round(half) / 2
     ctx.fillRect(cx - panel, y, panel, 0.5)
     ctx.fillRect(cx + panel, y, half - panel, 0.5)
-    ctx.globalAlpha = 1
+    ctx.globalAlpha = alpha
   }
   ctx.fillStyle = pal.umbrellaRim
   ctx.fillRect(cx - radius, base, radius * 2, 0.5)                     // the rim
@@ -15220,8 +15400,8 @@ function dripFallTime(d, row) {
 // drop lands on the canopy as soon as it lets go.
 function canopyRow(ag) { return ag.y + 1 - 26 / 4 }
 
-function underDrip(d, ag) {
-  return ag.state === "walk" && !ag.gone && Math.abs(d.x + 0.5 - ag.x) <= 1.4
+function underDrip(d, ag, arriving) {
+  return (ag.state === "walk" || (arriving === true && ag.state === "saved")) && !ag.gone && Math.abs(d.x + 0.5 - ag.x) <= 1.4
     && canopyRow(ag) > d.top - 2 && ag.y <= d.floor
 }
 
@@ -15234,12 +15414,13 @@ function dripStop(w, d) {
 }
 
 // Up from just before the drop lets go until its splash is over.
-function dripOver(w, ag) {
+function dripOver(w, ag, arriving) {
   var spots = dripSpots(w)
   for (var i = 0; i < spots.length; i++) {
     var d = spots[i]
-    if (!underDrip(d, ag)) continue
-    var age = dripAge(w, d)
+    if (!underDrip(d, ag, arriving)) continue
+    // A home animation keeps the canopy decision made at the threshold.
+    var age = arriving ? (w.ticks - ag.fade + d.phase) % d.period - DRIP_GATHER : dripAge(w, d)
     if (age > -8 && age < dripFallTime(d, canopyRow(ag)) + 10) return true
   }
   return false
@@ -19728,7 +19909,7 @@ function drawPageFloat(ctx,w,pal,ag,x,y,brolly) {
   drawWorkHandle(ctx,pal,x,y,1,4+sway,-6.5,grip,8,pal.umbrellaStem)
   ctx.restore()
 }
-function drawPageFold(ctx,w,pal,ag,x,y,age) {
+function drawPageFold(ctx,w,pal,ag,x,y,age,opacity) {
   if (age===BROLLY_FOLD-1) { drawFurledBrolly(ctx,w,pal,ag,x,y); return }
   var t=age/(BROLLY_FOLD-1),ease=t*t*(3-2*t)
   var spread=Math.max(0.125,Math.round((1-ease)*8)/8)
@@ -19737,7 +19918,7 @@ function drawPageFold(ctx,w,pal,ag,x,y,age) {
   var back=Math.max(0,(ease-0.85)/0.15)
   var side=Math.round((outer*Math.min(1,ease*3)+(inner-outer)*back)*2)/2
   ctx.save()
-  drawUmbrellaFine(ctx,pal,x+side,y+down,0,brollyColour(w,pal,ag),spread,true)
+  drawUmbrellaFine(ctx,pal,x+side,y+down,0,brollyColour(w,pal,ag),spread,true,opacity)
   drawWorkHandle(ctx,pal,x,y,1,4+side,-6.5+down,ag.dir>0?7:1,9,pal.umbrellaStem)
   ctx.restore()
 }
@@ -19756,10 +19937,14 @@ function drawPageHome(ctx,w,pal,ag,x,y,d,robe) {
   ctx.fillStyle=robe
   blitFine(ctx,x,y,d,1,7,6,6)
   blitFine(ctx,x,y,d,2+stride,13,2,3);blitFine(ctx,x,y,d,4-stride,13,2,3)
-  blitFine(ctx,x,y,d,0,9,1.5,3)
+  // Wave with the free hand; the other keeps the umbrella's hooked handle.
+  var carrying=!!ag.ownBrolly
+  blitFine(ctx,x,y,d,carrying?6:0,9,1.5,3)
   var wave=AGENT_HOME_WAVE[Math.floor(ag.fade/2)%4]
-  blitFine(ctx,x,y,d,6,4,1.5,5)
-  ctx.fillStyle=pal.skin;blitFine(ctx,x,y,d,7+wave,2.5,1,1.5)
+  blitFine(ctx,x,y,d,carrying?0:6,4,1.5,5)
+  ctx.fillStyle=pal.skin
+  blitFine(ctx,x,y,d,carrying?-wave:7+wave,2.5,1,1.5)
+  if(carrying)blitFine(ctx,x,y,d,7,9,1,1)
   ctx.fillStyle=pal.shirt;blitFine(ctx,x,y,d,3,7,2,1.5)
   ctx.fillStyle=pal.eye;blitFine(ctx,x,y,d,3.5,8,0.5,2)
   ctx.fillStyle=pal.lapel;blitFine(ctx,x,y,d,1,7,1,0.5);blitFine(ctx,x,y,d,6,7,1,0.5)

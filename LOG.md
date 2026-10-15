@@ -7260,3 +7260,139 @@ stashed: its CRAP gate failed (see 322).
 **After:** `npm run verify -- --previous 1e1a7406` passed: shipped files,
 build agreement, the open tab reloading, level 20, `?daily&full=1`, Next
 during a standup, and the patch notes by keyboard (5 counter writes refused).
+
+## 321 — 2026-10-15 · A little reception at every exit (on a branch)
+
+**Brief:** follow the approved hatch recoil with a bolder moment at the other
+end: agents arriving home, with a cheap, retro welcome suited to the biome.
+Branch `codex/exit-welcome`, from main `884981c` (hero intros and hatch included).
+
+**Watched:** real first arrivals and the following groups in Rooftops (phone,
+Steady), Mail Room (desktop, Brisk), Trench (phone, Brisk), Cloud (desktop,
+Steady), Christmas Library (phone) and Halloween Harbour (phone, Brisk).
+Bounded stepping finds the actual first rescue, then the live page runs again.
+The doors glowed but did not answer arrivals; owned umbrellas disappeared when
+the state changed to saved. Frames/state: `/tmp/codex-watch-home/`. No extension
+browser was connected, so the repository's local headless Chromium helper and
+throwaway profile were used; no production API was involved.
+
+**Change:** res-2 exits now welcome a colleague during the existing 15-tick
+home fade. The frame brightens and a narrow pool of light pulses along the
+sill. Rooftops and ON-PREM open a wider, warm doorway; their lamp/status lights
+answer too. Other entrances have small, appropriate flourishes:
+
+- Cavern, Ruins and Desert: warm drifting motes; Frost/Ice Cave: icy glints.
+- Foundry, Factory and Building Site: paired little steam puffs; Jungle: leaves.
+- Spaceship, Skyscraper, Data Center, Subway and Cloud: green status lights.
+- Trench: rising hollow bubbles; Harbour: a life-ring glint.
+- Library: a little book opens; Mail Room: an envelope rises toward the slot.
+- Clock Tower: the dial gives a brief golden ring; Rooftops: porch-light/drips.
+
+A crowd shares the strongest current welcome rather than multiplying effects
+or restarting at the darkest phase. The final colleague is welcomed too; gone,
+old, future and off-door saved bodies cannot leave the light stuck on. Closed
+mission gates suppress it. The response paints before gates, hazards and all
+bodies, so those stay in front. No terrain edit/repaint, simulation change,
+emitter, world flag, timer, listener or new public asset.
+
+**Umbrellas:** an owned umbrella now stays with an ordinary agent through the
+home fade. A still-open canopy folds using the existing folding poses; one
+already furled stays furled. The free hand waves while the other keeps the
+handle. For ceiling drips, the canopy decision reads the arrival tick, so a
+changing drip cycle cannot make it reopen midway through entering. The existing
+walking drip queries retain their boolean result and behaviour. Heroes, divers
+and native poses keep their previous path.
+
+**Reduced motion:** six fixed threshold-light rectangles, with no travelling
+flourish or expanding doorway; the umbrella is carried closed. The existing
+walk-in/fade remains. Native res 1 stays pixel-identical: one compact hash covers
+all 20 biomes and four arrival phases, including owned umbrellas.
+
+**Review evidence:** `/tmp/codex-exit-welcome/strips/index.html` animates before/
+after for every biome; `contact-sheet.png` pairs all 20, and each numbered
+`*-frames.png` includes native and page-resolution strips. All start at the
+actual first rescue of seed 3. An extra `float-frames.png` explicitly stages a
+floating entrant through the real save handler and then real simulation steps,
+showing the canopy fold that a dry first arrival does not exercise.
+
+`/tmp/codex-exit-welcome/page-sheet.png` has actual-CSS-size boards and 3x crops;
+full originals are in `before/` and `after/`. Eight pairs: desktop Cloud, Mail
+Room and Data Center; phone Rooftops, Trench, Halloween Harbour, Christmas
+Library and reduced-motion Mail Room. Both sides are frozen four ticks after
+the same first rescue. Page/stage geometry matches, there is no horizontal
+overflow, and all changed board pixels stay around the exit; the images and
+bounds are in `pages.json` / `presentation-check.json`.
+
+**Pipeline/cost:** new `tools/exit-welcome.js` finds real arrivals with a
+12,000-tick bound, caches terrain until its version changes and paints actors
+directly into small translated crops. Tests compare those pixels with full-
+frame crops. This avoids hundreds of full-board raster passes: the complete
+640-frame, all-biome comparison takes **2.49 s / 209.5 MB peak RSS**. Browser
+comparisons reuse one browser for all 16 views, with bounded startup/font waits;
+the sheet derives its height from the captured image sizes and reuses PNGs.
+The game adds a single scan of the existing cast, a 15-number light table and
+at most **28 tiny rectangles per active doorway** (six with reduced motion).
+Umbrella drawing reuses the existing poses. No new filter, canvas or image.
+Draw.js adds **2,558 gzip bytes** before shipping's comment stripping.
+
+**Measured:** `npm run fps -- 17 20 --from-tick 400 --seconds 5 --speed 2 --json`
+against the saved baseline and final page roots. These windows include the
+actual arrivals, not just the opening: ticks about 400–632, up to **14 cast
+members** in Rooftops and **13** in Cloud. Both before and after: **60 FPS median
+and p5, 17 ms worst, zero long-task time**. CPU: Rooftops **11% / 11%**;
+Cloud **13% / 11%**. Short headless samples show no measured regression, not a
+claimed speedup. Logs: `fps-before.log` / `fps-after.log` under the evidence root.
+
+**Focused checks:** **62/62 passed in 13.60 s** across arrival, exit, agent,
+drip, Christmas and gag art. New tests cover native pixels, grouped/final
+arrivals and expiration, all-biome finite half-pixel paint bounds, read-only
+RNG-free rendering in five palettes, steady reduced-motion ink/opacity,
+current-air clipping, umbrella ownership/open-close/native/diver/hero cases,
+the saved drip clock and direct-crop equivalence/cache invalidation. The full
+capped check/coverage and CRAP result follow below.
+
+**Opacity follow-up:** the first full gate passed **1,375 tests / 333.69 s**
+and CRAP 30, but a review of the reused canopy painter found an untested state
+assumption: `drawUmbrellaFine` resets its panel/handle opacity to one. The fold
+wrapper already saves/restores the following body's opacity; the canopy and
+handle could still stay opaque during a saved agent's fade. Added an explicit
+opacity option passed only by the new home fold, preserving existing callers'
+pixels. The regression inspects every painted panel/handle and the context left
+for the body over six fade phases. A local comparison reproduces **1.0** paint
+opacity on the earlier path against a **0.5** fade, and **0.5** after correction;
+the body's inherited opacity stays **0.5** on both. Proof: `opacity-proof.json`.
+
+Native hashes still match. Refreshed all strips, floating-entry preview,
+desktop/phone sheets and final active-arrival FPS; the focused 62 checks passed
+again in **13.60 s**. The first gate is retained as `check-first.log` /
+`crap-first.log`; the unchanged corrected source is queued for the complete
+check/coverage and CRAP gate again. Both gates use the FIFO lock, a persistent
+3 GB systemd job, 2,048 MB Node heap, `ulimit -v 6000000`, two workers and
+120-second timeouts. CRAP reuses each gate's LCOV, so coverage runs once per
+source version. No concurrent full runs.
+
+**Final full gate:** the corrected source passed **1,375 tests, zero failures or
+skips, 331.55 s**, with coverage and Factory art included. CRAP threshold **30**
+passed using that same coverage, maximum **30.0**. `exitWelcomeArrival` is
+**17.0**, `drawExitWelcome` **7.0**, `drawHomeUmbrella` **8.0** and `drawPageFold`
+**5.0**, all at 100% coverage; the comparison generator is **14.0**, also 100%.
+Final completion was reported immediately and the shared lock released.
+Final logs: `/tmp/codex-exit-welcome/check.log`, `crap.log`, `queue.log`.
+`npm run stamp` and `git diff --check` pass; Sim.js is byte-identical to the
+branch's main base. All evidence was refreshed after the opacity correction.
+
+**Next:** review and merge this branch. No push or deployment from this pass.
+
+## 322 — 2026-10-15 · Merged the exit welcome
+
+Reviewed and merged by the loop: codex/exit-welcome (e2ae87f, entry 321),
+`--no-ff`, as approved. Codex's entry is renumbered 321 and the page is
+re-stamped.
+- **Draw.js only,** and only at the page's resolution
+  (`exitWelcome` returns null unless `res === 2`). The res-1 Omarchy panel is
+  untouched.
+- **Reduced motion:** a steady, dimmer glow and no fold.
+- **Read-only drawing:** no RNG and no writes to the world.
+
+It rides the next deploy: the 11:44 one had gone out by the time it was
+merged.
