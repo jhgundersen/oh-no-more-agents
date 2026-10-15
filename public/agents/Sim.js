@@ -7470,7 +7470,11 @@ function stepRateLimit(w) {
   var rl = w.rateLimit
   if (rl) {
     var waiting = 0
-    for (var i = 0; i < w.agents.length; i++) if (w.agents[i].queueFor > 0) waiting++
+    for (var i = 0; i < w.agents.length; i++) {
+      var ag = w.agents[i]
+      // Gone members never act again, so their old hold cannot drain itself.
+      if (!ag.gone && ag.state === "walk" && ag.queueFor > 0) waiting++
+    }
     if (waiting > 0) rl.clearAt = -1
     else if (rl.clearAt < 0) rl.clearAt = w.ticks
     else if (w.ticks - rl.clearAt > LIMIT_SIGN) w.rateLimit = null

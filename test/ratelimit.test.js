@@ -74,6 +74,40 @@ test("a queued agent stands still and is invisible to the stuck watchers, and no
   assert.equal(w.rateLimit, null, "the sign comes down")
 })
 
+test("a queued infection cannot keep the sign up after the living queue drains", () => {
+  const { w } = crowd(6)
+  S.queueCrowd(w, S.findCrowd(w))
+  const infected = w.agents[0]
+  infected.infected = 1
+  S.stepAgents(w)                          // the real infection/death path
+  assert.equal(infected.gone, true)
+  assert.equal(infected.state, "dead")
+  assert.ok(infected.queueFor > 0, "the departed member still has a hold")
+  S.stepRateLimit(w)
+  assert.equal(w.rateLimit.clearAt, -1, "living members are still waiting")
+  const longest = Math.max(...w.agents.map(a => a.queueFor))
+  for (let t = 0; t < longest + S.LIMIT_SIGN + 3; t++) {
+    w.ticks++; S.stepAgents(w); S.stepRateLimit(w)
+  }
+  assert.ok(w.agents.filter(a => !a.gone).every(a => a.queueFor === 0))
+  assert.equal(w.rateLimit, null, "the dead member cannot keep the sign up")
+})
+
+test("gone, saved and non-walking members do not delay the sign's full exit grace", () => {
+  const { w } = crowd(6)
+  S.queueCrowd(w, S.findCrowd(w))
+  w.agents.forEach((a, i) => {
+    if (i < 2) a.gone = true              // includes a gone walker (e.g. splat)
+    else a.state = i < 4 ? "saved" : "fall"
+  })
+  S.stepRateLimit(w)
+  assert.equal(w.rateLimit.clearAt, w.ticks)
+  for (let t = 0; t < S.LIMIT_SIGN; t++) { w.ticks++; S.stepRateLimit(w) }
+  assert.ok(w.rateLimit, "the sign still gets its complete departure animation")
+  w.ticks++; S.stepRateLimit(w)
+  assert.equal(w.rateLimit, null)
+})
+
 test("anything that changes an agent's situation ends its turn in the queue", () => {
   const { w } = crowd(6)
   S.queueCrowd(w, S.findCrowd(w))

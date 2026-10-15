@@ -5703,3 +5703,47 @@ real-time gaps per sound, so 4× steps don't mean 4× noise.
 **Tests:** in `test/fastforward.test.js` (fails without the fix), level 109's
 stalled colony is driven on the page through `fastForward` with the observer
 wrapped. All 4904 ticks are observed, and it did fast-forward.
+
+## 286 — 2026-10-15 · Review fixes: patch-notes focus and the departed queue (on a branch)
+
+**Requested:** fix findings 2 and 4 from the second-model review, on
+`codex/review-fixes` from main `280657c`. The developer owns the other three
+findings; `web.js` is unchanged here.
+
+**Changed:**
+- Patch notes use a native modal `dialog` and a real, named Close button.
+  Opening focuses Close; Tab and Shift+Tab stay there (the notes' only
+  control). Native modality makes the background inert, and capture keeps
+  game shortcuts out of the notes. Escape, Enter/Space on Close, and tapping
+  the backdrop dismiss and restore focus to “what's new”. Reading/tapping the
+  notes themselves leaves them open. The card scrolls within short viewports.
+- The 429 sign counts only living, walking members with a positive hold.
+  Dead/gone, saved and non-walking members cannot keep `clearAt` at -1 after
+  the real queue drains. Holds, release cadence and the complete departure
+  grace/animation are unchanged; no random draws or movement rules changed.
+
+**Regression tests:** the keyboard test failed before the fix with focus
+still on `news-open`. Both queue tests failed before the fix (a real
+infection/turn left a dead member holding the sign; a fully departed crowd
+never started the grace). They now pass. The browser test covers keyboard
+opening, repeated Tab/Shift+Tab, inert background focus, blocked game keys,
+Escape, Enter/Space, backdrop close and focus restoration. Queue tests cover
+an infected member alongside a draining live queue and a fully departed mix
+of gone/saved/falling members, including the complete sign grace.
+
+**Checks:** the focused 25 tests passed in 2.46 s, including all nine repaired
+Factory art tests (now included in every run). `npm run stamp` updated the
+Sim/news and build stamps. The same bounded browser regression can emit its
+desktop/phone screenshots with `REVIEW_FIX_SHOTS=<directory>`, avoiding a
+separate screenshot harness; inspected `/tmp/codex-review-fixes/desktop.png`
+and `phone.png`. The modal, notes and focused Close fit at 390 px.
+Full `npm run check` with coverage passed: **1,275 tests, zero failures/skips,
+248.99 s**, with every test file included. Both it and
+`npm run crap -- --threshold 30 --use-existing-coverage` (maximum **30.0**)
+ran sequentially under the shared test lock, Node heap 2,048 MB,
+`ulimit -v 6000000`, two workers and 120-second test timeouts. Logs:
+`/tmp/codex-review-fixes/check.log` and `crap.log`. `git diff --check` passed.
+
+**Next:** review and merge this branch; no push or deployment from this pass.
+
+Reviewed and merged by the loop. Finding 2: the patch notes are a native modal `<dialog>` with a Close button, and focus moves in, is contained and is restored. Finding 4: the 429 sign counts only live, walking members, so a gone one can't hold it up. Checked while merging: `queued()` runs for every live agent every tick and clears `queueFor` the moment a member isn't walking, so the walking-only count can't drop the sign early.

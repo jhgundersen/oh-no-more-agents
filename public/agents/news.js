@@ -38,18 +38,29 @@
 
   function mount(doc) {
     var open = doc.getElementById("news-open"), panel = doc.getElementById("news")
-    if (!open || !panel) return
+    var close = doc.getElementById("news-close")
+    if (!open || !panel || !close) return
     var list = panel.querySelector("ol")
     NEWS.forEach(function (n) { var li = doc.createElement("li"); li.textContent = n.text; list.appendChild(li) })
     open.classList.toggle("new", unseen(store()))
-    function show() { panel.hidden = false; markSeen(store()); open.classList.remove("new") }
-    function hide() { panel.hidden = true; open.focus() }
+    function show() {
+      if (panel.open) return
+      panel.showModal()                     // background controls are inert
+      close.focus()
+      markSeen(store()); open.classList.remove("new")
+    }
+    function hide() { panel.close() }
     open.addEventListener("click", show)
-    panel.addEventListener("click", hide)
-    // Capture, so Escape closes the notes and nothing else hears it.
+    close.addEventListener("click", hide)
+    panel.addEventListener("close", function () { open.focus() })
+    panel.addEventListener("click", function (e) { if (e.target === panel) hide() })
+    // Capture before the game's shortcuts. The notes have one control: both
+    // Tab directions stay on Close; native modality also blocks pointer/focus
+    // access to the page behind them. Enter/Space retain button activation.
     doc.addEventListener("keydown", function (e) {
-      if (panel.hidden) return
-      if (e.key === "Escape") hide()
+      if (!panel.open) return
+      if (e.key === "Escape") { e.preventDefault(); hide() }
+      else if (e.key === "Tab") { e.preventDefault(); close.focus() }
       e.stopPropagation()
     }, true)
 
