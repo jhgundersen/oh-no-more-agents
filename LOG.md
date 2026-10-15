@@ -7964,3 +7964,76 @@ merged main. No temporary browsers remain.
 deployment or sibling sync.
 
 Reviewed and merged by the loop (with `npm run compare`). The mirage EXIT is crisp, the 429 bubble says AFTER YOU, the standup has a kanban board, the conflict and pep bubbles are drawn in whole pixels, and the Halloween pieces are tidied. `tools/phone.js` conflicted with 247: the branch's harness already settles every CDP command (a timeout counted in active time, and a rejection when the socket closes) and adds a memory-capped Chromium launch under the test runner's address-space cap. The merge keeps the branch's version, with 247's `CMD_TIMEOUT` constant naming its 10 s timeout. 247's per-test and global timeouts stay as they were. `season.js` keeps Christmas (250) alongside the branch's Halloween changes. Standup bubbles on a 390 px phone (headless, 4 speakers): none is clipped. They are clamped 4 px inside the board, though, and the board overhangs the screen by 5 px a side there, so `STANDUP_EDGE` is now 8.
+
+## 252 — 2026-10-15 · A shared link with an umbrella (on a branch)
+
+**Brief:** a 1200×630 social preview from our own renderer, numbered PNGs,
+Open Graph/Twitter cards and crisp 16/32/180 pixel icons. `codex/share-art`
+started from local main; at the supervisor's direction it now sits directly
+on approved `codex/gag-art` (`36a8ba3`), ahead of that branch's merge. No game
+or simulation code changed.
+
+**Changed:** `public/share-1.png` combines the rainy Rooftops frame with the
+game's own whole-pixel title glyphs: blue OH NO!, pale MORE AGENTS, the page's
+hard shadow and "NO SUPERVISOR. NO PLAN. ONE UMBRELLA EACH." Seventeen actual
+agent sprites walk supported roofs or descend beneath three open umbrellas.
+A dreamer walks toward the approved mirage's readable false EXIT. This is a
+static promotional composition over the real level-17/seed-3 terrain, not a
+new game state or a new client-side render pass.
+
+`favicon-1-16.png`, `favicon-1-32.png` and `apple-touch-icon-1.png` use an
+optical 16-pixel silhouette: blue canopy, stem, dark hat, pale face/eye, white
+collar and suit. Integer scaling preserves crisp edges at 32 and 180; the
+large icon has a solid background and ten-pixel inset. Explicit PNG size
+links replace the old data-URL staircase icon; no manifest. Social tags carry
+the title, "No supervisor. No plan. One umbrella each. They'll work it out.
+Or they won't.", absolute HTTPS image/canonical URLs, dimensions, MIME type
+and matching accessible image descriptions. Normal page loading does not
+fetch the social image.
+
+**Cache promise:** all four PNGs have new numbered filenames. `_headers`
+gives these numbered image families the same one-year immutable treatment as
+other versioned assets. A future revision needs new filenames and links.
+The reproduction test will require a new share-art version if later renderer
+changes alter this frame; published images stay frozen.
+`tools/share-art.js --out DIR --number N` reproduces the artwork and refuses
+to overwrite any existing numbered output before writing anything. The
+pre-rebase, unpublished draft was archived under `/tmp/codex-share-art/`;
+no previously committed or published image was replaced.
+
+**Weight and pipeline:** share PNG **28,332 bytes**; the three icons together
+**1,177 bytes** (243 / 273 / 661). The new tags add only **165 bytes** to
+the page at Brotli quality 5. `tools/render.js` has an opt-in lossless
+Sub/Up row predictor and maximum zlib compression. It saves **13.1%** against
+the ordinary 32,610-byte PNG, with **zero changed RGB pixels**, independently
+checked with ImageMagick. Default screenshot writing retains its existing
+fast path and PNG output. All four assets render in about **0.14 s** under a
+256 MB Node heap, with no external image/font assets or package additions.
+The decoder regression independently reconstructs PNG rows and hashes their
+RGB bytes, including integer scaling; assertions never diff raw frame buffers.
+
+**Looked:** full-size PNG, 600×315 social thumbnail, native icons and nearest-
+neighbour enlarged icon sheet. Preview artifacts and the local-page DOM/
+resource report live in `/tmp/codex-share-art/`. The isolated browser sees
+the correct tags and all PNGs return 200/image/png; no page exceptions and
+no automatic share-image request. It uses the approved gag branch's bounded
+browser helper, with a 512 MB resident limit and temporary profile.
+
+**Validation:** focused share/PNG tests pass **6/6** in **0.34 s**.
+`npm run stamp` and capped `npm run check` pass **1,142 tests**, zero failures
+or skips, **210.88 s** including shared-host pauses. Threshold-30 coverage
+passes **1,142 tests**, zero failures/skips, **178.99 s**.
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-share-art/coverage-safe.sh` passes: highest score **30.0**; new
+PNG filter **10.0** (93.3% branch coverage), share-art helpers at most **4.0**.
+Default PNG bytes also match the approved parent writer exactly. Start/end
+source and image hashes match; all `public/agents/` files are byte-identical
+to the approved gag base. Browser services are closed.
+Factory art remains excluded; Node heap 2048 MB, `ulimit -v 6000000`, one
+worker for check and two for coverage. The host-aware launcher serializes
+full runs and pauses only our own Node/browser tree when another starts.
+
+**Next:** ready for shared-link art review. Commit on `codex/share-art` only;
+no push, deployment or sibling sync.
+
+Reviewed and merged by the loop. A 1200×630 share card, og and twitter tags, umbrella favicons (16, 32 and a 180 px apple-touch icon) and `_headers` for them. `index.html` conflicted on the build stamp and the old SVG favicon; the merge keeps the build line and the branch's icon links.
