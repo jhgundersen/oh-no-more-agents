@@ -25,7 +25,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="6e03b295">
+<meta name="build" content="565f9cf9">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
@@ -136,9 +136,22 @@
 		#overlay {
 			position: absolute; inset: 0; z-index: 2;
 			display: flex; align-items: center; justify-content: center;
-			flex-direction: column; gap: 10px; padding: 24px;
-			background: rgba(0, 0, 0, 0.55); text-align: center;
-			transition: opacity 160ms;
+			padding: 20px; box-sizing: border-box;
+			background: rgba(0, 0, 0, 0.48); text-align: center;
+		}
+		.pause-card {
+			width: 284px; max-width: 100%; box-sizing: border-box; padding: 10px 12px 12px;
+			background: var(--panel); border: 2px solid var(--accent);
+			box-shadow: 0 0 0 2px var(--ink), 0 5px 0 2px var(--muted), inset 0 2px var(--edge);
+		}
+		#board #pauseArt { position: static; display: block; width: 256px; max-width: 100%; height: auto; margin: 0 auto 8px; }
+		#overlay-line {
+			display: block; width: 100%; min-height: 44px; padding: 8px 6px; box-sizing: border-box;
+			font: 13px/1.4 ui-monospace, monospace; color: var(--fg); background: var(--ink);
+			border: 1px solid var(--edge); box-shadow: inset 0 1px var(--muted), 0 2px var(--bg); cursor: pointer;
+		}
+		#overlay-line:hover { border-color: var(--accent); }
+		#overlay-line:active { transform: translateY(1px); box-shadow: inset 0 2px var(--bg);
 		}
 		#toast {
 			position: absolute; left: 50%; bottom: 10px; z-index: 3; transform: translateX(-50%);
@@ -197,8 +210,6 @@
 			display: block; margin: 10px 0 0 auto; padding: 7px 10px; font: inherit; font-size: 10px; letter-spacing: 0.1em;
 			color: var(--fg); background: var(--ink); border: 1px solid var(--accent); cursor: pointer;
 		}
-		#overlay-title { font-size: 16px; font-weight: 700; letter-spacing: 0.08em; }
-		#overlay-line { max-width: 560px; font-size: 12px; line-height: 1.45; color: #fff; opacity: 0.78; }
 
 		.hud, #toolbar, .controls, #themes { width: var(--board-w); max-width: 100%; box-sizing: border-box; }
 		.hud {
@@ -415,9 +426,12 @@
 			<div id="toast" role="status" aria-live="polite"></div>
 			<div id="announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 			<div id="tip" hidden>Tip: tap an agent. <span aria-hidden="true">&times;</span></div>
-			<div id="overlay" style="display: none">
-				<div id="overlay-title">PAUSED</div>
-				<div id="overlay-line">Space or click to resume</div>
+			<div id="overlay" role="group" aria-labelledby="overlay-title" style="display: none">
+				<div class="pause-card">
+					<div id="overlay-title" class="sr-only">PAUSED</div>
+					<canvas id="pauseArt" width="256" height="64" aria-hidden="true"></canvas>
+					<button id="overlay-line" type="button">Space or click to resume</button>
+				</div>
 			</div>
 		</div>
 
@@ -483,7 +497,7 @@
 	<script src="agents/sfx.js?v=443464e2"></script>
 	<script src="agents/season.js?v=30ab2597"></script>
 	<script src="agents/news.js?v=30824986"></script>
-	<script src="agents/web.js?v=1d6dad36"></script>
+	<script src="agents/web.js?v=d5e5059a"></script>
 
 </body>
 

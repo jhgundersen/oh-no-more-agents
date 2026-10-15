@@ -9485,3 +9485,45 @@ rows under the verdict.
 - floats count a quarter.
 
 `test/a11y.test.js` accepts the optional sentence.
+
+## 370 — 2026-10-15 · Everybody takes a break (on a branch)
+
+**Chosen:** audit item 3, first of two presentation commits on
+`codex/page-panels`, from then-current main `164457d`.
+
+**Changed:** the pause overlay is a compact, theme-coloured panel with a ROM-font
+PAUSED heading, an agent on a break, a recessed resume button and the report/
+standup panels' pixel frame. The board remains visible around it. Coarse-pointer
+clients get **“Tap to resume”**; desktop gets **“Space or click to resume”**.
+The heading remains in the DOM, the canvas is decorative, and resume is a real
+44px button. Enter/Space activate it once and restore focus to the pause control;
+click/tap elsewhere on the board still resumes. Held reports stay clear.
+No pause animation, timer or simulation changes. The small drawing caches by
+theme/DPR, refreshes on paused theme changes and resize, and borrows the existing
+cached blocker canvas, independent of the inventory's spent opacity.
+
+**Evidence:** `/tmp/codex-page-panels/pause-review/index.html`, current sheet
+`contact-sheet-6e2f985c.png`; canonical copy has the same SHA-256
+`1880dec92342647fff53da727cac8dd11b073874841e10f7aecb29e0002cff9e`.
+Seven before/after pairs cover desktop, 390px phone, DPR2 detail, phone landscape,
+reduced motion in two more palettes, and 720p fullscreen. World digests and board
+rectangles/scales match in every pair. Browser errors: none. The new bounded
+`tools/page-panels.js` reuses a browser per batch, waits for fonts/world readiness,
+records source/image hashes and rejects mismatched scenes; tests prove canonical
+sheets refresh and validate ROM labels. All nine palettes retain at least 4.5:1
+DOM text contrast while paused. Actual keyboard, button, board-resume and held-
+report checks pass, including unchanged world bytes while waiting.
+
+**Validation:** targeted pause/inventory checks **6/6**. A first full run exposed
+an extra sprite repaint during theme changes; the fix reuses the cached image,
+rather than changing the old cache assertion. That unsuccessful result is saved
+under `pre-cache-fix/`. The corrected frozen-source full check and coverage pass:
+**1,509 passed, 0 failed**, **383.14 s**, including Factory art. CRAP **30** passes
+from the same LCOV (maximum 30); new evidence helpers score 4.6–6.0. Source proof,
+`npm run stamp`, stamp check and `git diff --check` pass. Completion was reported
+immediately. Persistent FIFO testlock run: 3 GB service cap, 2,048 MB Node heap,
+`ulimit -v 6000000`, two workers, 120-second test timeouts; **792.7 MiB peak**.
+Logs/evidence and source hashes are under `/tmp/codex-page-panels/`.
+
+**Next:** the separately committed controls/footer typography pass, then the
+queued lost-umbrella office at biome exits. No push or deployment.

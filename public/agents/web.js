@@ -908,9 +908,7 @@
     // overlay used to print the same count and a line of prose on top of it,
     // and the two were unreadable through each other. Hold a finished report
     // without covering it; its resume hint uses the existing caption space.
-    el.overlay.style.display = running || reportHeld() ? "none" : ""
-    el.overlayTitle.textContent = "PAUSED"
-    el.overlayLine.textContent = "Space or click to resume"
+    renderPausePanel()
 
     // Same rule as the bar's toolbar: flash for two thirds of a second after
     // an agent takes one, so you can catch which skill just went out.
@@ -1070,6 +1068,40 @@
     toastTimer = setTimeout(function () { t.classList.remove("on") }, 1600)
   }
 
+  // A static pause plate; redraw the small ROM title only when its palette
+  // or pixel density changes. No animation or clock while the colony waits.
+  function renderPausePanel() {
+    var held = !running && !reportHeld()
+    el.overlay.style.display = held ? "" : "none"
+    if (!held) return
+    var touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches
+    var hint = touch ? "Tap to resume" : "Space or click to resume"
+    if (el.overlayLine.textContent !== hint) el.overlayLine.textContent = hint
+    var factor = Math.max(2, Math.ceil(2 * (window.devicePixelRatio || 1)))
+    var key = themeName + ":" + factor
+    if (el.pauseArt.dataset.paint === key) return
+    el.pauseArt.dataset.paint = key
+    paintPauseArt(factor)
+  }
+
+  function paintPauseArt(factor) {
+    var c = el.pauseArt, t = THEMES[themeName]
+    c.width = 128 * factor; c.height = 32 * factor
+    var ctx = c.getContext("2d")
+    ctx.setTransform(factor, 0, 0, factor, 0, 0)
+    ctx.fillStyle = t.muted; ctx.fillRect(3, 3, 26, 26)
+    ctx.fillStyle = t.background; ctx.fillRect(4, 4, 24, 24)
+    // Borrow the already-cached toolbar sprite, independent of spent opacity.
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(el.skillNodes.blocker.cell.querySelector("canvas"), 8, 9)
+    ctx.fillStyle = t.accent
+    ctx.fillRect(8, 5, 3, 2); ctx.fillRect(14, 5, 3, 2)
+    ctx.fillStyle = t.foreground
+    drawTransitionText(ctx, "PAUSED", 80, 7, 2)
+    ctx.fillStyle = t.accent
+    drawTransitionText(ctx, "ON A BREAK", 80, 23, 1)
+  }
+
   function togglePause() {
     running = !running
     // A held report also lifts an in-progress closing wipe. Repaint on resume
@@ -1088,6 +1120,7 @@
     paintTour()
     repaintLogo()
     paintLevelTitle()
+    renderPausePanel()
     Array.prototype.forEach.call(el.themes.children, function (b) {
       b.classList.toggle("on", b.dataset.theme === name)
       b.setAttribute("aria-pressed", b.dataset.theme === name ? "true" : "false")
@@ -1229,6 +1262,12 @@
     el.overlay = document.getElementById("overlay")
     el.overlayTitle = document.getElementById("overlay-title")
     el.overlayLine = document.getElementById("overlay-line")
+    el.pauseArt = document.getElementById("pauseArt")
+    el.overlayLine.addEventListener("click", function (ev) {
+      ev.stopPropagation()
+      togglePause()
+      document.getElementById("c-pause").focus({ preventScroll: true })
+    })
     el.lifetime = document.getElementById("lifetime")
     el.global = document.getElementById("global")
     el.themes = document.getElementById("themes")
@@ -1319,7 +1358,7 @@
     restartClock()
     loadGlobalStats()
 
-    window.addEventListener("resize", fitBoard)
+    window.addEventListener("resize", function () { fitBoard(); renderPausePanel() })
     // visualViewport catches toolbar and pinch-zoom changes missed by resize.
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", fitBoard)
