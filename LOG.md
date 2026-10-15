@@ -8219,3 +8219,13 @@ the old rules stand.
 has seen at least one. On a first visit's first card, "0/7 SIGHTINGS" and
 seven grey icons said nothing; the strip appears with the first sighting,
 which is gold and named. `test/sightings.test.js` covers it.
+
+## 257 — 2026-10-15 · The ticker clear of a phone's edge
+
+**Asked:** next from the first-impressions list (249).
+
+**Changed:** the ticker's plate starts `STANDUP_EDGE` (8 px) in from the
+board's left, instead of 4. On a 390 px phone the board overhangs the screen
+by 5 px a side, so the ticker sat flush against the glass. Now it has the same
+margin as the standup bubbles (251). The longest ticker lines (about 60
+characters, 250 px with the plate) still fit the 400 px board.

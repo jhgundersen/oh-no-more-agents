@@ -3292,9 +3292,9 @@ function drawFeed(ctx, w, pal) {
   ctx.save()
   ctx.globalAlpha = Math.min(1, (FEED_SHOW - age) / FEED_FADE)
   ctx.fillStyle = pal.rigDark
-  ctx.fillRect(4, y - 1, width + 6, 7)
+  ctx.fillRect(STANDUP_EDGE, y - 1, width + 6, 7)          // clear of a phone's edge, as the standup is
   ctx.fillStyle = age < 6 ? "#ffffff" : pal.label
-  drawTransitionText(ctx, f.text, 7 + width / 2, y, 1)
+  drawTransitionText(ctx, f.text, STANDUP_EDGE + 3 + width / 2, y, 1)
   ctx.restore()
 }
 
