@@ -15,7 +15,7 @@ async function page(b, url) {
   return async expr => (await b.cmd("Runtime.evaluate", { expression: expr, returnByValue: true, awaitPromise: true })).result.value
 }
 
-test("a shared link opens that level with that colony, once, and copying makes a toast", { skip: !chromium && "no chromium" }, async () => {
+test("a shared link opens that level with that colony, once, and copying makes a toast", { skip: !chromium && "no chromium", timeout: 60000 }, async () => {
   const server = await serve(), b = await browser(), base = `http://127.0.0.1:${server.address().port}/`
   try {
     let ev = await page(b, base + "?level=7&seed=12345")
@@ -29,7 +29,7 @@ test("a shared link opens that level with that colony, once, and copying makes a
   } finally { await b.close(); server.close() }
 })
 
-test("every fifth level ends in a standup, which a tap skips", { skip: !chromium && "no chromium" }, async () => {
+test("every fifth level ends in a standup, which a tap skips", { skip: !chromium && "no chromium", timeout: 60000 }, async () => {
   const server = await serve(), b = await browser(), base = `http://127.0.0.1:${server.address().port}/`
   try {
     const ev = await page(b, base + "?level=3&seed=42")

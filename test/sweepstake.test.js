@@ -50,7 +50,7 @@ test("the card shows the pick in gold when called; the coin marks the pick until
 })
 
 const chromium = (() => { try { execSync("command -v chromium", { stdio: "ignore" }); return true } catch { return false } })()
-test("on the page: the first tap is the pick (no nudge), later taps are pep talks, and the result is tallied", { skip: !chromium && "no chromium" }, async () => {
+test("on the page: the first tap is the pick (no nudge), later taps are pep talks, and the result is tallied", { skip: !chromium && "no chromium", timeout: 60000 }, async () => {
   const server = await serve(), b = await browser(), sleep = ms => new Promise(r => setTimeout(r, ms))
   const ev = async e => (await b.cmd("Runtime.evaluate", { expression: e, returnByValue: true })).result.value
   try {

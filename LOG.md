@@ -7671,3 +7671,30 @@ placement, the shush and its rules, falling while shushed, and the drawing.
 Because the librarian changes level 13's colonies, `test/bouncer-art.test.js`
 moves to seed 103011, one where the Bouncer is still put down; the test asks
 for exactly that.
+
+## 247 — 2026-10-15 · No test can hang a run
+
+**Asked (supervisor):** `test/sightings.test.js` hung the full run in the main
+worktree. The worker sat idle for about 3.5 min at 0% CPU with no Chromium
+alive, until the supervisor killed it. Make it bounded: a per-test timeout,
+always closing the browser in a finally, and a default test timeout for
+`npm test`.
+
+**Found:** the browser tests already close Chromium in a `finally`. The hang
+was in the shared helper, `tools/phone.js` `browser()`. Each CDP command was a
+promise that settled only when Chromium answered, so when Chromium died
+mid-test (the same run also lost a replay check) the `await` never returned.
+The `finally` was never reached either.
+
+**Changed:**
+- **Every command settles.** With its answer, after 20 s ("chromium did not
+  answer Runtime.evaluate in 20000 ms"), or as soon as the socket closes, when
+  every pending command is rejected. A later command on a closed connection
+  fails at once.
+- **`npm test`** is `node --test --test-timeout=120000`.
+- **Every test that opens Chromium** has its own `timeout`: 30 s for the
+  sightings test, 60 s for the others.
+- **The replay page test** waits up to 15 s (was 6) for the replay to start,
+  because under the full parallel run it didn't always get there in time.
+
+**Measured:** full check 1159/1159 green in 24 s.

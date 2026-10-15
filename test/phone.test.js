@@ -60,7 +60,7 @@ import os from "node:os"
 import path from "node:path"
 const chromium = (() => { try { execSync("command -v chromium", { stdio: "ignore" }); return true } catch { return false } })()
 
-test("end to end in Chromium: a phone view is captured and measured", { skip: !chromium && "no chromium" }, async () => {
+test("end to end in Chromium: a phone view is captured and measured", { skip: !chromium && "no chromium", timeout: 60000 }, async () => {
   const { serve, browser, capture, VIEWS } = await import("../tools/phone.js")
   const server = await serve(), b = await browser(), out = fs.mkdtempSync(path.join(os.tmpdir(), "phone-test-"))
   try {

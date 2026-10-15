@@ -29,6 +29,7 @@ export const VIEWS = [
   { name: "desktop", width: 1280, height: 900, mobile: false }
 ]
 const TARGET = 44
+const CMD_TIMEOUT = 20000
 
 // root: another copy of the page (tools/ship.js's dist/). brotli: compress
 // text as Cloudflare does on the fly (about quality 5), for load timings.
@@ -67,11 +68,25 @@ export async function browser() {
   const api = { errors, onEvent: null }
   ws.onmessage = m => {
     const d = JSON.parse(m.data)
-    if (d.id && pending.has(d.id)) { pending.get(d.id)(d.result || {}); pending.delete(d.id) }
+    if (d.id && pending.has(d.id)) { pending.get(d.id).resolve(d.result || {}); pending.delete(d.id) }
     if (d.method === "Runtime.exceptionThrown") errors.push(d.params.exceptionDetails.text)
     if (d.method && api.onEvent) api.onEvent(d)     // e.g. Fetch.requestPaused, for tests that mock the API
   }
-  const cmd = (method, params = {}) => new Promise(r => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })) })
+  // Every command settles: with its answer, after CMD_TIMEOUT, or as soon as
+  // the socket closes. A Chromium that died mid-test used to leave the await
+  // hanging forever, and the test run with it (sightings, 3.5 min idle).
+  let closed = false
+  const cmd = (method, params = {}) => new Promise((resolve, reject) => {
+    if (closed) { reject(new Error(`chromium is gone (${method})`)); return }
+    const i = ++id
+    const timer = setTimeout(() => { pending.delete(i); reject(new Error(`chromium did not answer ${method} in ${CMD_TIMEOUT} ms`)) }, CMD_TIMEOUT)
+    pending.set(i, { resolve: v => { clearTimeout(timer); resolve(v) }, reject: e => { clearTimeout(timer); reject(e) } })
+    ws.send(JSON.stringify({ id: i, method, params }))
+  })
+  ws.onclose = () => {
+    closed = true
+    for (const [i, p] of pending) { pending.delete(i); p.reject(new Error("chromium closed the connection")) }
+  }
   await cmd("Runtime.enable"); await cmd("Page.enable")
   // Chromium keeps writing its profile for a moment after the kill; removing it
   // straight away failed with ENOTEMPTY and took the report down with it.

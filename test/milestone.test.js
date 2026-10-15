@@ -50,7 +50,7 @@ test("hats on the colony and confetti at the first release, only with a mileston
 })
 
 const chromium = (() => { try { execSync("command -v chromium", { stdio: "ignore" }); return true } catch { return false } })()
-test("on the page: a fresh milestone in the stats puts hats and a ticker line on the colony; offline, nothing", { skip: !chromium && "no chromium" }, async () => {
+test("on the page: a fresh milestone in the stats puts hats and a ticker line on the colony; offline, nothing", { skip: !chromium && "no chromium", timeout: 60000 }, async () => {
   for (const total of [490050, null]) {
     const server = await serve(), b = await browser(), sleep = ms => new Promise(r => setTimeout(r, ms))
     try {

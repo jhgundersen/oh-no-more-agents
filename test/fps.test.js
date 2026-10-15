@@ -18,7 +18,7 @@ test("arguments: levels, seconds, speed, json; the busy levels by default", () =
 })
 
 const chromium = (() => { try { execSync("command -v chromium", { stdio: "ignore" }); return true } catch { return false } })()
-test("one second of level 3 in Chromium", { skip: !chromium && "no chromium" }, async () => {
+test("one second of level 3 in Chromium", { skip: !chromium && "no chromium", timeout: 60000 }, async () => {
   const server = await serve(), b = await browser()
   try {
     const r = await measure(b, `http://127.0.0.1:${server.address().port}/`, 3, 1, 0)

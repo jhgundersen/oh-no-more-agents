@@ -36,7 +36,7 @@ test("the strip on the report card: N/7, the new one in gold with its pun; every
 })
 
 const chromium = (() => { try { execSync("command -v chromium", { stdio: "ignore" }); return true } catch { return false } })()
-test("on the page: a finished level records its sightings in this browser; with storage blocked, nothing breaks", { skip: !chromium && "no chromium" }, async () => {
+test("on the page: a finished level records its sightings in this browser; with storage blocked, nothing breaks", { skip: !chromium && "no chromium", timeout: 30000 }, async () => {
   for (const blocked of [false, true]) {
     const server = await serve(), b = await browser(), sleep = ms => new Promise(r => setTimeout(r, ms))
     try {

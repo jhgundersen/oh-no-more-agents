@@ -72,7 +72,7 @@ test("nobody tapping: a played level is the same level", () => {
 })
 
 const chromium = (() => { try { execSync("command -v chromium", { stdio: "ignore" }); return true } catch { return false } })()
-test("on the page, with touch: a tap on an agent is a pep talk, a tap on empty board pauses", { skip: !chromium && "no chromium" }, async () => {
+test("on the page, with touch: a tap on an agent is a pep talk, a tap on empty board pauses", { skip: !chromium && "no chromium", timeout: 60000 }, async () => {
   const server = await serve(), b = await browser(), sleep = ms => new Promise(r => setTimeout(r, ms))
   try {
     await b.cmd("Emulation.setDeviceMetricsOverride", { width: 844, height: 390, deviceScaleFactor: 2, mobile: true })
