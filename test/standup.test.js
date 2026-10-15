@@ -40,18 +40,18 @@ test("the meeting: everyone drawn, the speaker's bubble in turn, read-only and d
   const w = S.generate(6, 0, 3), pal = P.build(themeOf("tokyo-night").theme, 6)
   const speakers = ["steady", "dreamer", "brave"].map((trait, i) => ({ id: i + 1, trait, agi: i === 1, lines: O.standupLines({}, 3)[i] }))
   const frame = (t, res = 2) => {
-    const img = canvas(400 * res, 248 * res), inks = []
+    const img = canvas(400 * res, 248 * res), inks = []; let bubble = false
     const fill = img.ctx.fillRect.bind(img.ctx)
-    img.ctx.fillRect = (...a) => { inks.push(img.ctx.fillStyle); fill(...a) }
+    img.ctx.fillRect = (...a) => { assert.ok(inks.length < 10000); inks.push(img.ctx.fillStyle); if (img.ctx.fillStyle === D.GAG_PAPER && a[2] > 100 && a[3] > 10) bubble = true; fill(...a) }
     const world = { ...w, res }, before = JSON.stringify({ speakers })
     D.drawStandup(img.ctx, world, pal, { t, speakers })
     assert.equal(JSON.stringify({ speakers }), before)
-    return { inks, hash: createHash("sha256").update(img.buf).digest("hex") }
+    return { inks, bubble, hash: createHash("sha256").update(img.buf).digest("hex") }
   }
   assert.equal(frame(30).hash, frame(30).hash)
-  const intro = frame(1), first = frame(D.STANDUP_INTRO + 1), second = frame(D.STANDUP_INTRO + D.STANDUP_TURN + 1)
-  assert.ok(!intro.inks.includes("#f4f4ec"), "nobody talks during the intro")
-  assert.ok(first.inks.includes("#f4f4ec"), "a bubble")
+  const intro = frame(1), first = frame(D.STANDUP_INTRO + 1), second = frame(D.STANDUP_INTRO + D.standupTurn(2) + 1)
+  assert.ok(!intro.bubble, "nobody talks during the intro")
+  assert.ok(first.bubble, "a bubble")
   assert.notEqual(first.hash, second.hash, "the turn passes")
   assert.ok(first.inks.includes(D.AGI_GOLD), "the gold one is there too")
   frame(40, 1)

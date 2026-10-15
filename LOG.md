@@ -6709,3 +6709,121 @@ band, which is the cautious side.
 **Next:** on level 72 the colony drops off floor 37 into the Hot Aisle's
 reach at x66–69. An agent at an edge could time its drop to the fan's rest,
 the way walkers already wait at a current.
+
+## 309 — 2026-10-15 · A standup you can read (on a branch)
+
+**Brief / choice:** another autonomous presentation improvement after report-hold
+approval. The standup's three-line jokes were five pixels high on a phone, with
+just 1.02 seconds per speaker. Chosen first: larger pixel speech bubbles, a
+clear speaker label and enough time to read each update.
+
+**Branch:** `codex/standup-art`, based on current main's approved report-hold
+merge `1081c49`. Started with main plus the approved report-hold branch, then
+fast-forwarded when main merged it. Kept main's wall-blocker correction and
+complete log. The only autostash conflicts were generated stamps, regenerated
+against the actual files. No simulation changes from this art pass.
+
+**Watched first:** fresh eight-second local runs, frames at three/eight seconds:
+phone Harbour at Steady; desktop Jungle at Brisk; phone Christmas Clock Tower
+at Brisk; desktop Halloween Subway at Steady. Seed 3, real clocks, inspected
+all four final views. Then watched the actual five-level standup on phone and
+desktop, with frames at 0.45/1.70 seconds. `/tmp/codex-watch-next/` has the
+originals and run metrics. The phone speech was conspicuously smaller than
+the report and captions beside it. No browser extension surfaces were
+available, so used the repository's bounded local Chromium helper.
+
+**Changed (res 2):**
+- Speech copy and the speaker label use 2px font pixels: **10px high at phone
+  CSS size**, twice the old body height. The label names the agent and turn
+  (`AGENT 003 · 3/5`); the original three lines and their meaning are unchanged.
+- Larger paper bubbles stay at least 24 art pixels inside the cropped board,
+  above every agent's head, and left of the kanban board. Their pointers still
+  connect to the speaker. The clock, meeting room, agents and sticky notes keep
+  their existing art. The heading is 15px high; the skip hint is 10px and uses
+  the bubble's brighter paper ink. All copy/heading/hint contrast clears 4.5:1
+  in all nine page themes; the bubble's ink/paper pair clears 7:1.
+- Each update gets **2.4 seconds of wall time**, independent of Calm/Steady/
+  Brisk: a full five-agent meeting is **12.36 seconds**, including its intro.
+  One tap still skips it, and all navigation remains available. This is a
+  deliberate reading-time increase from 5.46 seconds for five agents.
+- Renderer and host share the turn/index helpers so the bubble and murmur
+  move together. Check the meeting end before cueing, avoiding a phantom
+  extra murmur after the last speaker. Simulation ticks stay frozen during
+  the intermission, as before. Native/unspecified res keeps exact original
+  pixels and its original 34-tick turn/default duration.
+
+**Cheap:** no assets, fonts, dependencies, timers or listeners added. The
+ordinary play frame has no extra work. During the intermission the same glyph
+rectangles grow; the new agent label and divider add **99–118 fills** per frame.
+Five specimen counts: **1,171→1,276; 1,205→1,304; 1,195→1,313; 1,113→1,218;
+1,121→1,224**, under 10% extra drawing commands for this small scene. Bounded
+measurement: `/tmp/codex-standup-art/fill-cost.json`. Draw/web source gzip
+increase against the approved baseline: **471 bytes**.
+
+**Evidence:** `/tmp/codex-standup-art/after/contact-sheet.png`, before/after at
+actual CSS sizes: desktop, 390px phone, 360px phone with the widest joke,
+landscape, Nord with reduced motion, and a single speaker. Full 390/360 phone
+page pairs are included. Inspected the sheet and original phone, 360px and
+desktop crops: all five agents and the kanban board stay visible. Original
+public files are in `baseline/public/`, screenshots and metrics in `before/`
+and `after/`. Before/after casts and copy match exactly. No browser errors.
+
+**Pipeline:** `tools/standup-art.js <out> [public-root] [before-out] --checks`
+uses one browser for six views and lifecycle checks. It reaches real host
+standups via five bounded seeded completion fixtures, freezes only the test
+presentation clock and records actual draw calls. It jumps directly to the
+same speaker/phase in each copy; no twelve-second wait per capture. Fonts get
+a bounded wait; decorative HUD CSS transitions settle without sleeps. Crops
+use actual visible board bounds. The assertions cap polling and draw-call
+recording, compare digests instead of raw frames, and close browser/server.
+
+The existing navigation test spent **22.94 seconds** waiting for two releases
+on each of ten levels. Its fixture now advances at most 400 ordinary simulation
+steps to obtain those same two real agents, preserving real host transitions,
+keyboard and pointer inputs. It took **4.41 seconds** in the final focused run.
+The old standup assertion now detects a speech panel instead of assuming the
+paper colour can appear nowhere else (the brighter skip hint uses it too).
+Its second-speaker frame uses the page's actual turn length.
+
+**Focused checks:** **19 passes, zero failures/skips, 14.84 s**. Exact native
+snapshots at four phases and both default/res 1; precise first/last tick of
+every turn; all topic/filler copy and five speaker positions; half-pixel grid,
+canvas context preservation and no RNG; read-only drawing in all twenty biomes;
+all nine theme contrasts. Real browser: larger copy and labels, whole bubbles
+at each viewport, actual host intro/turn/end boundaries, speed independence,
+frozen world digest, exactly one murmur for one speaker, no extra end murmur,
+and tap skip. Existing navigation, report-hold, standup and title-card checks
+pass. `npm run stamp` refreshed Draw/web/page/build stamps. `git diff --check`
+passed.
+
+**Full checks:** `npm run check` with coverage passed: **1,359 tests, zero
+failures/skips, 326.57 s**, Factory art included. CRAP threshold 30 passed
+using the same coverage, maximum **30.0**. The changed standup renderer is
+**18.0** at 100% coverage; new pure standup helpers are **1.0–3.0**, also fully
+covered. Draw-command measurement, full check/coverage and CRAP ran sequentially
+under one shared FIFO lock reservation; Node heap 2,048 MB, `ulimit -v 6000000`,
+two workers, 120-second test timeouts. Completion was reported immediately to
+release the developer's testing window. `git diff --check` and stamp verification
+passed. Logs: `/tmp/codex-standup-art/focused-green.log`, `evidence-final.log`,
+`check.log`, `crap.log`; command-count output is in `fill-cost.json`.
+
+**Next:** review and merge this branch; no push or deployment from this pass.
+
+## 310 — 2026-10-15 · Merged the readable standup
+
+Reviewed and merged by the loop: codex/standup-art (b727a37, entry 309,
+based on 1081c49), `--no-ff`, as approved. Codex's entry is renumbered from
+308 to 309, after main's 308, and the page is re-stamped.
+
+**Reading time, as asked:**
+- On the page (res 2) each speaker now holds the floor for `standupTurn` = 80
+  standup ticks of `STANDUP_MS` (30 ms), which is 2.4 s, up from 1.0 s
+  (34 ticks). That clears the ~1.5 s asked for.
+- The standup clock is wall time (`performance.now() - started`), not world
+  ticks. Steady, Brisk and fast-forward all give the same 2.4 s, and calling
+  `stepStandup` more often cannot advance it.
+- Five speakers make a 12.4 s meeting. A tap still skips it.
+- The panel (res 1) keeps its 34-tick cadence.
+
+**Merge check:** against the branch, the merged code differs only in main's
+own 305 and 308 (Sim.js) and the mission test's seeds.

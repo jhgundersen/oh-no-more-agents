@@ -3551,7 +3551,10 @@ function drawFeed(ctx, w, pal) {
 // grid and resolution; nothing is written.
 var STANDUP_INTRO = 12   // ticks before the first one speaks
 var STANDUP_TURN = 34    // ticks each
-function standupLength(n) { return STANDUP_INTRO + n * STANDUP_TURN }
+// The page's three-line update needs reading time; the panel keeps its cadence.
+function standupTurn(res) { return (res || 1) >= 2 ? 80 : STANDUP_TURN }
+function standupLength(n, res) { return STANDUP_INTRO + n * standupTurn(res) }
+function standupSpeaker(t, res) { return t < STANDUP_INTRO ? -1 : Math.floor((t - STANDUP_INTRO) / standupTurn(res)) }
 function drawStandup(ctx, w, pal, s) {
   var C = w.k.CELL, W = w.k.COLS * C, H = w.k.ROWS * C
   clearLayer(ctx, w)
@@ -3562,14 +3565,14 @@ function drawStandup(ctx, w, pal, s) {
   ctx.fillRect(0, floor, W, H - floor)
   ctx.fillStyle = pal.rockEdge
   ctx.fillRect(0, floor, W, 2)
-  ctx.fillStyle = pal.decorLit
-  drawTransitionText(ctx, "DAILY STANDUP", W / 2, 14, 2)
-  ctx.fillStyle = pal.label        // decorDim all but vanished on the floor colour
-  drawTransitionText(ctx, "TAP OR CLICK TO SKIP", W / 2, H - 12, 1)
+  ctx.fillStyle = (w.res || 1) >= 2 ? pal.label : pal.decorLit
+  drawTransitionText(ctx, "DAILY STANDUP", W / 2, 14, (w.res || 1) >= 2 ? 3 : 2)
+  ctx.fillStyle = (w.res || 1) >= 2 ? GAG_PAPER : pal.label
+  drawTransitionText(ctx, "TAP OR CLICK TO SKIP", W / 2, H - ((w.res || 1) >= 2 ? 18 : 12), (w.res || 1) >= 2 ? 2 : 1)
   drawStandupRoom(ctx, pal, floor)
   drawSprintBoard(ctx, pal, W - 92, floor - 70)
   var n = s.speakers.length, cx = W / 2 - 30
-  var talking = s.t < STANDUP_INTRO ? -1 : Math.floor((s.t - STANDUP_INTRO) / STANDUP_TURN)
+  var talking = standupSpeaker(s.t, w.res)
   // A ring seen from slightly above: round an ellipse, the far side higher up
   // the floor and drawn first, everyone facing the middle.
   var spots = []
@@ -3587,7 +3590,11 @@ function drawStandup(ctx, w, pal, s) {
     drawAgent(ctx, { k: w.k, res: w.res, ticks: s.t + p.i * 31, level: w.level, biome: "" }, pal, ag, {})
     if (p.i === talking) bubble = p
   }
-  if (bubble) drawStandupBubble(ctx, pal, bubble.x, Math.round(bubble.y) - 22, s.speakers[bubble.i].lines, W)
+  if (bubble) {
+    var speaker = s.speakers[bubble.i], foot = Math.round(bubble.y) - 22
+    if ((w.res || 1) >= 2) drawPageStandupBubble(ctx, pal, bubble.x, foot, speaker.lines, W, speaker.id, bubble.i, n, floor)
+    else drawStandupBubble(ctx, pal, bubble.x, foot, speaker.lines, W)
+  }
 }
 
 // The board behind the meeting: three columns of sticky notes, mostly in
@@ -3620,6 +3627,29 @@ function drawStandupBubble(ctx, pal, x, foot, lines, W) {
   ctx.fillStyle = GAG_PAPER; ctx.fillRect(Math.round(x), top + bh - 1, 1, 3)
   ctx.fillStyle = GAG_INK
   for (var j = 0; j < lines.length; j++) drawTransitionText(ctx, lines[j], left + bw / 2, top + 4 + j * 8, 1)
+}
+
+// Ten-pixel copy at a phone's 1x CSS scale; keep 24px clear on each side
+// for the page's 360px viewport crop, and leave the kanban board at right clear.
+function pageStandupBubbleLayout(x, foot, lines, W, floor) {
+  var wide = 0
+  for (var i = 0; i < lines.length; i++) wide = Math.max(wide, lines[i].length * 8 - 2)
+  var width = Math.max(150, wide + 16), height = 28 + lines.length * 14
+  return { x: Math.round(Math.max(24, Math.min(W - width - 96, x - width / 2))),
+    y: Math.min(foot - 4, floor - 28) - height, width: width, height: height }
+}
+function drawPageStandupBubble(ctx, pal, x, foot, lines, W, id, position, total, floor) {
+  ctx.save()
+  var alpha = ctx.globalAlpha
+  var b = pageStandupBubbleLayout(x, foot, lines, W, floor), cx = b.x + b.width / 2, tail = foot - b.y - b.height
+  drawGagPanel(ctx, b.x, b.y, b.width, b.height, pal.rigDark, GAG_PAPER)
+  ctx.fillStyle = pal.rigDark; ctx.fillRect(Math.round(x) - 1, b.y + b.height - 1, 3, tail)
+  ctx.fillStyle = GAG_PAPER; ctx.fillRect(Math.round(x), b.y + b.height - 1, 1, tail - 1)
+  ctx.fillStyle = GAG_INK
+  drawTransitionText(ctx, "AGENT " + ("00" + id).slice(-3) + " · " + (position + 1) + "/" + total, cx, b.y + 6, 2)
+  ctx.globalAlpha = alpha * 0.25; ctx.fillRect(b.x + 8, b.y + 19, b.width - 16, 0.5); ctx.globalAlpha = alpha
+  for (var i = 0; i < lines.length; i++) drawTransitionText(ctx, lines[i], cx, b.y + 24 + i * 14, 2)
+  ctx.restore()
 }
 
 function drawLevelTransition(ctx, w, pal, opts) {
