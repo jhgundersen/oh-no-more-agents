@@ -9898,3 +9898,83 @@ until the reset is understood.
 **Next:** find what resets `markD` for pacing agents on 163 (log
 `goalMark` changes); a mirage that moves the goal every few hundred ticks
 would also explain other long pacing.
+
+## 382 — 2026-10-15 · A chance of scattered contractors (on a branch)
+
+**Brief:** `codex/forecast-art` continues approved umbrella/presentation work
+`5ce3368` and merges main `554d4e5`, which supplies the developer's
+`Outcome.forecastLines` (`3d4994e`) and the descent fix. Both log histories are
+retained and stamps regenerated. Sim.js and Outcome.js stay identical to that
+merged main base.
+
+**Changed:** the compact biome title, icon and dry subtitle retain their exact
+pixels. A second translucent plate shows the helper's two forecast lines, with
+the same six-pixel character advance but taller ten-pixel letters for phones.
+Normal forecasts use two rows / 36px height; longer no-umbrella copy wraps at
+word boundaries without dropping text. A local percentage glyph leaves the old
+ROM and other hosts' flavour text unchanged. No assets or dependencies.
+
+Up to 32 bounded candidates place the forecast outside the title, hatch opening,
+first drop and exit, scoring route overlap and proximity to the title. Portal-
+edge candidates fix a case caught at level 329 when the taller type touched the
+hatch reservation. The top 48 pixels stay clear for tips/notices. Tests check
+400 levels with normal and zero umbrella stocks, five themes, unbroken words,
+half-pixel bounds and inherited alpha, plus unchanged live-world digests at both
+resolutions.
+
+The existing single canvas caches both plates at level creation; theme repaints
+reuse the opening forecast even after stock changes. No extra timer, listener,
+per-frame paint or layout. Normal hold is **3.2s**, reduced motion **2.4s**, both
+stationary with the final 20% fading. The original tap-skip still passes the tap
+through; fast navigation clears old timers. Replay, report and standup exclusions
+remain. Screen readers receive the same forecast in the opening announcement.
+
+**Evidence:** `/tmp/codex-forecast-art/review/index.html`, actual desktop and
+390px phone before/after boards plus 3× forecast details. The six paired world
+digests match, including DPR2, Library 13, Cloud 20 and Skyscraper 29. Browser
+errors/exceptions: none. All **30 scene/detail PNG hashes** and canonical/stamped
+sheet copies verify. Current sheet `contact-sheet-3483bdcd.png`, SHA-256
+`d18c3043b82ecb07f412c5e836ef72815d56a0bba902153c7f458ad13a9d2605`.
+Draw `ed6619bf`, web `09358f4b`, build `cf6c5e62`. Viewed at actual phone size,
+desktop and enlarged detail; the whole board is in the phone shots.
+
+**Tools/process:** `tools/titlecard-art.js` now pins scene seeds, records world/
+source/image hashes, exports a source-stamped phone sheet and accepts a baseline
+root. Its shots-only mode avoids rerunning the 13-second wall-clock/input checks
+for every before/after batch; one disposable browser handles each six-view batch
+in about **3.1s**. The existing DPR-normalised contact exporter checks scene
+identity. Cached-paint/layout counters, stock-change snapshot checks and exact
+announcement assertions guard the host boundary. Shipped growth: **2,059 Draw
+bytes / 745 gzip**, **330 web bytes / 76 gzip**. The build scanner classifies both
+files safely. No ongoing frame cost was added.
+
+**Validation:** an unwrapped two-file focused run was allowed to close its own
+browser, archived under `pre-lock/`, then rerun through FIFO testlock. The first
+full gate caught the old accessibility test expecting only the old opening
+sentence. That run was stopped before editing; no orphan browser remained, and
+its incomplete output/LCOV is under `pre-announcement/`. The corrected assertion
+checks the complete level/subtitle plus the exact supplied fresh-world forecast;
+it is also in the focused gate now.
+
+Final locked focused checks **15/15**, **17.62s**. The corrected, frozen-source
+full `npm run check` with coverage passes: **1,536 passed, 0 failed**, **396.77s**,
+including Factory. CRAP **threshold 30 passed** using that same LCOV; maximum
+30.0, including the expanded capture orchestrator (CC12 / 50% coverage). New
+runtime forecast helpers score **1.0–9.0**, with 100% coverage except the glyph
+helper's 87.5%. Completion was reported immediately. Source proof, stamp and
+diff checks pass. Persistent FIFO service: two workers, 120-second test timeouts,
+2,048MB Node heap, `ulimit -v 6000000`, 3GB memory cap; **805.4MiB peak**,
+**7m57s wall time including queueing**. Logs and exact source/image proofs live
+under `/tmp/codex-forecast-art/`.
+
+**Next:** review/merge the branch. No push or deployment.
+
+## 383 — 2026-10-15 · Merged the forecast plate
+
+Reviewed and merged by the loop: codex/forecast-art (5822e88, entry 382),
+`--no-ff`, as approved. Codex's entry is renumbered and the page is
+re-stamped.
+- **The copy:** the title card's plate draws `Outcome.forecastLines` (374).
+  The branch carried the already-merged umbrella-office commits too; git
+  folded those in cleanly.
+- **Code:** Draw.js and web.js only, no Sim.js or Outcome.js change.

@@ -4,8 +4,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
+import {createHash} from 'node:crypto'
 import {serve,browser} from './phone.js'
-const sleep=ms=>new Promise(r=>setTimeout(r,ms))
+const sleep=ms=>new Promise(r=>setTimeout(r,ms)),sha=x=>createHash('sha256').update(x).digest('hex'),ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..')
 function evaluator(b){
  return async expression=>{
   const r=await b.cmd('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true})
@@ -27,7 +28,7 @@ async function titleView(b,ev,out,url,mobile,dpr,phoneShots){
  await navigate(b,ev,url)
  await ev('Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,1000))])')
  const metrics=await ev(`(()=>{
-  document.getElementById('c-pause').click();document.getElementById('c-restart').click();
+  document.getElementById('c-pause').click();const gen=generate,random=Math.random;try{Math.random=()=>.25;generate=(l,a,seed)=>gen(l,a,seed===undefined?3:seed);document.getElementById('c-restart').click()}finally{generate=gen;Math.random=random}
   const w=AgentWorld(),layout=levelTitleLayout(w);while(w.ticks<18)step(w);
   document.querySelector('#themes .theme.on').click();
   document.getElementById('overlay').style.visibility='hidden';
@@ -35,7 +36,7 @@ async function titleView(b,ev,out,url,mobile,dpr,phoneShots){
   if(innerWidth<600)scrollTo(0,scrollY+board.getBoundingClientRect().top-32);
   const r=board.getBoundingClientRect();
   for(const a of c.getAnimations()){a.pause();a.currentTime=300}
-  return{viewport:innerWidth,scrollY,viewportHeight:innerHeight,pageWidth:document.documentElement.scrollWidth,hidden:c.hidden,canvas:{width:c.width,height:c.height},board:{x:r.x,y:r.y,width:r.width,height:r.height},layout,hatch:{x:w.hatch.x*4,y:w.hatch.y*4},level:w.level,biome:w.biome,ticks:w.ticks,subtitle:levelTitleSubtitle(w.level,w.biome)}
+  return{viewport:innerWidth,scrollY,viewportHeight:innerHeight,pageWidth:document.documentElement.scrollWidth,hidden:c.hidden,canvas:{width:c.width,height:c.height},board:{x:r.x,y:r.y,width:r.width,height:r.height},layout,hatch:{x:w.hatch.x*4,y:w.hatch.y*4},level:w.level,biome:w.biome,ticks:w.ticks,subtitle:levelTitleSubtitle(w.level,w.biome),digest:JSON.stringify(w),forecast:typeof levelForecastCopy==='function'?levelForecastCopy(forecastLines(w)):null,forecastLayout:typeof levelForecastLayout==='function'?levelForecastLayout(w,levelForecastCopy(forecastLines(w)),layout):null}
  })()`)
  const name=`${mobile?'phone':'desktop'}-dpr${dpr}${metrics.level===20?'':'-level'+metrics.level}`
  const shot=await b.cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})
@@ -45,30 +46,32 @@ async function titleView(b,ev,out,url,mobile,dpr,phoneShots){
  const crop=await b.cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip:{x,y:r.y+metrics.scrollY,width,height:r.height,scale:1}})
  fs.writeFileSync(path.join(out,name+'-board.png'),Buffer.from(crop.data,'base64'))
  if(mobile&&dpr===1)phoneShots.push({level:metrics.level,biome:metrics.biome,png:crop.data})
- return{mobile,dpr,...metrics}
+ const images=Object.fromEntries(['','-board'].map(suffix=>[name+suffix+'.png',sha(fs.readFileSync(path.join(out,name+suffix+'.png')))]))
+ return{mobile,dpr,name,...metrics,width:metrics.viewport,height:metrics.viewportHeight,pageHeight:metrics.viewportHeight,digest:sha(metrics.digest),images}
 }
 async function timingChecks(b,ev){
- const normal=await ev(`(()=>{document.getElementById('c-restart').click();const c=document.getElementById('levelTitle'),ctx=c.getContext('2d'),fill=ctx.fillRect;window.titleLivePaints=0;window.titleSelections=0;const choose=levelTitleLayout;levelTitleLayout=function(w){window.titleSelections++;return choose(w)};ctx.fillRect=function(...r){window.titleLivePaints++;return fill.apply(this,r)};return{duration:getComputedStyle(c).animationDuration,pointerEvents:getComputedStyle(c).pointerEvents,hidden:c.hidden,ariaHidden:c.getAttribute('aria-hidden')}})()`)
- await sleep(850)
+ const normal=await ev(`(()=>{document.getElementById('c-restart').click();const c=document.getElementById('levelTitle'),ctx=c.getContext('2d'),fill=ctx.fillRect;window.titleLivePaints=0;window.titleSelections=0;window.forecastSelections=0;const forecastChoose=levelForecastLayout;levelForecastLayout=function(...args){window.forecastSelections++;return forecastChoose(...args)};const choose=levelTitleLayout;levelTitleLayout=function(w){window.titleSelections++;return choose(w)};ctx.fillRect=function(...r){window.titleLivePaints++;return fill.apply(this,r)};return{duration:getComputedStyle(c).animationDuration,pointerEvents:getComputedStyle(c).pointerEvents,hidden:c.hidden,ariaHidden:c.getAttribute('aria-hidden')}})()`)
+ await sleep(2700)
  const fading=await ev('Number(getComputedStyle(document.getElementById("levelTitle")).opacity)')
- const cached=await ev('window.titleLivePaints===0&&window.titleSelections===0')
- await sleep(450)
+ const cached=await ev('window.titleLivePaints===0&&window.titleSelections===0&&window.forecastSelections===0')
+ await sleep(650)
  const expired=await ev('document.getElementById("levelTitle").hidden')
  // A theme repaint must neither change the world nor restart the fade.
  const pure=await ev(`(()=>{document.getElementById('c-pause').click();document.getElementById('c-restart').click();const a=JSON.stringify(AgentWorld());window.titleSelections=0;document.querySelector('#themes .theme.on').click();return a===JSON.stringify(AgentWorld())&&window.titleSelections===0})()`)
  await b.cmd('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]})
  const reduced=await ev(`(()=>{document.getElementById('c-restart').click();return getComputedStyle(document.getElementById('levelTitle')).animationDuration})()`)
- await sleep(700)
+ await sleep(2500)
  const reducedExpired=await ev('document.getElementById("levelTitle").hidden')
  await b.cmd('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]})
- await ev('document.getElementById("c-restart").click()');await sleep(650)
+ await ev('document.getElementById("c-restart").click()');await sleep(2800)
  await ev('document.getElementById("c-next").click()');await sleep(650)
  const reset=await ev('!document.getElementById("levelTitle").hidden')
- return{normal,fading,cached,expired,pure,reduced,reducedExpired,reset}
+ const snapshot=await ev(`(()=>{document.getElementById('c-restart').click();const w=AgentWorld(),before=JSON.stringify(w),expected=levelForecastCopy(forecastLines(w)).rows,stock=w.skills.floater,line=drawLevelForecastLine,calls=[];drawLevelForecastLine=function(ctx,text,...args){calls.push(text);return line(ctx,text,...args)};try{w.skills.floater=0;document.querySelector('#themes .theme.on').click()}finally{w.skills.floater=stock;drawLevelForecastLine=line}return JSON.stringify(calls)===JSON.stringify(expected)&&before===JSON.stringify(w)&&document.getElementById('announce').textContent.includes(forecastLines(w).join(' '))})()`)
+ return{normal,fading,cached,expired,pure,reduced,reducedExpired,reset,snapshot}
 }
 async function inputChecks(b,ev){
  // The timing check leaves the game paused. A real tap both skips and resumes.
- await ev('document.getElementById("c-restart").click()')
+ await ev('if(document.getElementById("overlay").style.display==="none")document.getElementById("c-pause").click();document.getElementById("c-restart").click()')
  const r=await ev('(()=>{const r=document.getElementById("board").getBoundingClientRect();return{x:r.x+20,y:r.y+20}})()')
  await b.cmd('Input.dispatchMouseEvent',{type:'mousePressed',...r,button:'left',clickCount:1})
  await b.cmd('Input.dispatchMouseEvent',{type:'mouseReleased',...r,button:'left',clickCount:1})
@@ -104,11 +107,11 @@ async function phoneSheet(ev,out,shots){
  })()`)
  fs.writeFileSync(path.join(out,'phone-sheet.png'),Buffer.from(png,'base64'))
 }
-export async function captureTitleCards(out){
+export async function captureTitleCards(out,{root=path.join(ROOT,'public'),checks=true}={}){
  fs.mkdirSync(out,{recursive:true})
- const server=await serve(),records=[],exceptions=[],phoneShots=[]
+ const started=performance.now(),server=await serve({root}),records=[],exceptions=[],phoneShots=[]
  let b
- const url=`http://127.0.0.1:${server.address().port}/?level=20&seed=3`
+ const url=`http://127.0.0.1:${server.address().port}/?level=20&seed=3&season=none`
  try{
   b=await browser()
   const ev=evaluator(b)
@@ -118,12 +121,15 @@ export async function captureTitleCards(out){
   for(const level of[13,29])records.push(await titleView(b,ev,out,url.replace('level=20','level='+level),true,1,phoneShots))
   await phoneSheet(ev,out,phoneShots)
   await navigate(b,ev,url)
-  const timing=await timingChecks(b,ev),input=await inputChecks(b,ev),exclusions=await exclusionChecks(ev)
-  const result={records,timing,input,exclusions,errors:b.errors,exceptions}
+  const timing=checks?await timingChecks(b,ev):null,input=checks?await inputChecks(b,ev):null,exclusions=checks?await exclusionChecks(ev):null
+  const sourceSHA256=sha(fs.readFileSync(path.join(root,'index.html'))),drawSHA256=sha(fs.readFileSync(path.join(root,'agents/Draw.js'))),webSHA256=sha(fs.readFileSync(path.join(root,'agents/web.js'))),sheet='phone-sheet-'+sha(sourceSHA256+drawSHA256+webSHA256+fs.readFileSync(fileURLToPath(import.meta.url))).slice(0,8)+'.png'
+  fs.copyFileSync(path.join(out,'phone-sheet.png'),path.join(out,sheet))
+  const result={sourceSHA256,drawSHA256,webSHA256,contactSheet:sheet,contactSHA256:sha(fs.readFileSync(path.join(out,sheet))),records,timing,input,exclusions,errors:b.errors,exceptions,seconds:+((performance.now()-started)/1000).toFixed(2)}
   fs.writeFileSync(path.join(out,'metrics.json'),JSON.stringify(result,null,2))
+  fs.writeFileSync(path.join(out,'manifest.json'),JSON.stringify(result,null,2))
   return result
  }finally{if(b)await b.close();server.close()}
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
- captureTitleCards(process.argv[2]||'shots/titlecard-art').then(r=>console.log(JSON.stringify(r,null,2))).catch(e=>{console.error(e);process.exitCode=1})
+ captureTitleCards(process.argv[2]||'shots/titlecard-art',{root:process.argv[3]&&!process.argv[3].startsWith('--')?path.resolve(process.argv[3]):undefined,checks:!process.argv.includes('--shots-only')}).then(r=>console.log(JSON.stringify(r,null,2))).catch(e=>{console.error(e);process.exitCode=1})
 }

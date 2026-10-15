@@ -100,9 +100,12 @@ test('page title card fades on wall clock, skips without consuming a tap, exclud
   const r=await captureTitleCards(out)
   assert.deepEqual(r.errors,[],r.exceptions.join("\n"))
   for(const v of r.records){assert.equal(v.hidden,false);assert.equal(v.pageWidth,v.viewport);assert.equal(v.canvas.width,800);assert.equal(v.canvas.height,496);const scale=v.board.width/400,left=v.board.x+v.layout.x*scale;assert.ok(left>=0&&left+(v.layout.width+3)*scale<=v.viewport);assert.equal(v.ticks,18);assert.equal(v.biome,S.BIOMES[(v.level-1)%20]);if(v.mobile){assert.ok(v.board.y>=0&&v.board.y+v.board.height<=v.viewportHeight);assert.ok(v.scrollY>0)}}
-  assert.equal(r.records.length,6);const sheet=fs.readFileSync(path.join(out,'phone-sheet.png'));assert.equal(sheet.readUInt32BE(16),414);assert.equal(sheet.readUInt32BE(20),876)
-  assert.equal(r.timing.normal.duration,'1.2s');assert.equal(r.timing.normal.pointerEvents,'none');assert.equal(r.timing.normal.ariaHidden,'true');assert.equal(r.timing.normal.hidden,false)
-  assert.ok(r.timing.fading>0&&r.timing.fading<1);assert.equal(r.timing.cached,true);assert.equal(r.timing.expired,true);assert.equal(r.timing.pure,true);assert.equal(r.timing.reduced,'0.6s');assert.equal(r.timing.reducedExpired,true);assert.equal(r.timing.reset,true)
+  assert.equal(r.records.length,6);
+  assert.equal(hash(fs.readFileSync(path.join(out,r.contactSheet))),r.contactSHA256);assert.equal(hash(fs.readFileSync(path.join(out,'phone-sheet.png'))),r.contactSHA256)
+  for(const v of r.records){assert.ok(v.forecastLayout);for(const box of [v.layout,...D.levelTitleKeepClear(S.generate(v.level,0,3))])assert.equal(D.levelTitleOverlap(v.forecastLayout,box),0);assert.ok(v.forecast.rows.length>=2);for(const[file,digest]of Object.entries(v.images))assert.equal(hash(fs.readFileSync(path.join(out,file))),digest)}
+  const sheet=fs.readFileSync(path.join(out,'phone-sheet.png'));assert.equal(sheet.readUInt32BE(16),414);assert.equal(sheet.readUInt32BE(20),876)
+  assert.equal(r.timing.normal.duration,'3.2s');assert.equal(r.timing.normal.pointerEvents,'none');assert.equal(r.timing.normal.ariaHidden,'true');assert.equal(r.timing.normal.hidden,false)
+  assert.ok(r.timing.fading>0&&r.timing.fading<1);assert.equal(r.timing.cached,true);assert.equal(r.timing.expired,true);assert.equal(r.timing.pure,true);assert.equal(r.timing.snapshot,true);assert.equal(r.timing.reduced,'2.4s');assert.equal(r.timing.reducedExpired,true);assert.equal(r.timing.reset,true)
   assert.deepEqual(r.input,{skipped:true,resumed:true});assert.deepEqual(r.exclusions.replay,{hidden:true,active:true});assert.equal(r.exclusions.report,true);assert.equal(r.exclusions.meeting.hidden,true);assert.equal(r.exclusions.meeting.done,true);assert.equal(r.exclusions.next,true)
  }finally{fs.rmSync(out,{recursive:true,force:true})}
 })
