@@ -59,6 +59,16 @@ test("on the page: the first tap is the pick (no nudge), later taps are pep talk
     let where = null
     for (let i = 0; i < 40 && !where; i++, await sleep(150)) where = await ev(`(() => { const w = AgentWorld(), a = w.agents.find(a => !a.gone && a.state === "walk" && a.y > 4); if (!a) return null; const r = document.getElementById("board").getBoundingClientRect(), s = r.width / (w.k.COLS * w.k.CELL); return { id: a.id, x: r.left + a.x * w.k.CELL * s, y: r.top + ((a.y + 1) * w.k.CELL - 7) * s } })()`)
     assert.ok(where)
+    // A first visit: the board's tip says "tap an agent", so the ticker does not
+    // say it too (log 249). A returning visitor gets the ticker line.
+    assert.equal(await ev(`!document.getElementById("tip").hidden`), true)
+    assert.ok(!(await ev(`AgentWorld().feed.map(f => f.text).join("|")`)).includes("WHO GETS HOME FIRST"))
+    await ev(`localStorage.setItem("oh-no-more-agents-tip", "1")`)
+    await b.cmd("Page.navigate", { url: `http://127.0.0.1:${server.address().port}/?level=3&seed=5` })
+    where = null
+    for (let i = 0; i < 40 && !where; i++, await sleep(150)) where = await ev(`(() => { const w = AgentWorld(), a = w.agents.find(a => !a.gone && a.state === "walk" && a.y > 4); if (!a) return null; const r = document.getElementById("board").getBoundingClientRect(), s = r.width / (w.k.COLS * w.k.CELL); return { id: a.id, x: r.left + a.x * w.k.CELL * s, y: r.top + ((a.y + 1) * w.k.CELL - 7) * s } })()`)
+    assert.ok(where)
+    assert.equal(await ev(`!document.getElementById("tip").hidden`), false)
     assert.ok((await ev(`AgentWorld().feed.map(f => f.text).join("|")`)).includes("WHO GETS HOME FIRST"))
     const click = async (x, y) => { await b.cmd("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 }); await b.cmd("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 }); await sleep(100) }
     for (let i = 0; i < 6 && (await ev(`AgentWorld().bet`)) == null; i++) {

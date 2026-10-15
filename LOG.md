@@ -7777,3 +7777,11 @@ arrives at about 85 s on the desktop.
   sighting.
 - **The intro paragraph** is five lines on a phone, so the board starts
   halfway down the first screen.
+
+**Fix after 249:** 249 was committed with the full check red. The sweepstake
+page test still expected the ticker hint on a first visit, and fps and phone
+failed once under load (both pass on a rerun). My commit command ran after the
+check without checking its result. The sweepstake test now asserts both
+cases: on a first visit the tip shows and the ticker stays quiet; on a return
+visit the ticker gives the hint. From here on, commits go through a gate that
+only commits when `npm run check` exits 0.
