@@ -6,6 +6,7 @@ import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
 const phases = [0, 77, 240]
+const digest = buf => createHash("sha256").update(buf).digest("hex")
 
 // The per-biome half of backdrops.test.js, sharded so the biomes run in two
 // processes: this file was the critical path of `npm run coverage`.
@@ -46,7 +47,7 @@ for (let level = from; level <= to; level++) {
         const coarse = image(w, theme.background, 2), fine = image(w, theme.background, 2)
         w.res = 1; draw(coarse.ctx, w, pal)
         w.res = 2; draw(fine.ctx, w, pal)
-        assert.notDeepEqual(fine.buf, coarse.buf, `missing visible ${kind}, ${name}, tick ${ticks}`)
+        assert.notEqual(digest(fine.buf), digest(coarse.buf), `missing visible ${kind}, ${name}, tick ${ticks}`)
         assert.equal(fine.ctx.globalAlpha, coarse.ctx.globalAlpha, "preserve canvas alpha")
         assert.equal(fine.ctx.fillStyle, coarse.ctx.fillStyle, "preserve canvas colour")
       }
