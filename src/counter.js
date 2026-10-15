@@ -5,6 +5,31 @@
 // rather than per level.
 export const MAX_SAVED_PER_REPORT = 90
 export const MAX_REPORTS_PER_MINUTE = 8
+// A report is about seventy bytes of JSON. Anything near this is not one.
+export const MAX_BODY_BYTES = 4096
+
+// The body as text, or null if it is longer than `limit` bytes. A declared
+// length over the limit is refused without reading; otherwise the stream is
+// counted as it arrives and cancelled the moment it passes the limit, so a
+// missing or false Content-Length cannot make the Worker hold a large body.
+export async function readCappedBody(request, limit = MAX_BODY_BYTES) {
+  const declared = Number(request.headers.get("content-length"))
+  if (declared > limit) return null
+  if (!request.body) return ""
+  const reader = request.body.getReader(), parts = []
+  let size = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > limit) { await reader.cancel().catch(() => {}); return null }
+    parts.push(value)
+  }
+  const all = new Uint8Array(size)
+  let at = 0
+  for (const p of parts) { all.set(p, at); at += p.byteLength }
+  return new TextDecoder().decode(all)
+}
 
 export function parseSaveReport(value) {
   if (!value || typeof value !== "object") return null

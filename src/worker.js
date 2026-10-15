@@ -1,4 +1,4 @@
-import { MAX_REPORTS_PER_MINUTE, MAX_SAVED_PER_REPORT, clientHash, json, parseSaveReport } from "./counter.js"
+import { MAX_BODY_BYTES, MAX_REPORTS_PER_MINUTE, MAX_SAVED_PER_REPORT, clientHash, json, parseSaveReport, readCappedBody } from "./counter.js"
 import { BUILD } from "./version.js"
 
 async function readStats(env) {
@@ -29,17 +29,23 @@ async function enforceRateLimit(request, env) {
 }
 
 async function recordSaves(request, env) {
+  // Bounded before anything else: the body is read to at most MAX_BODY_BYTES
+  // and the caller's quota is charged before any parsing, so neither a huge
+  // body nor a caller already over its limit costs more than that (server
+  // review 2026-10-15, finding 1).
+  const text = await readCappedBody(request, MAX_BODY_BYTES)
+  if (text === null) return json({ error: `report too large (over ${MAX_BODY_BYTES} bytes)` }, 413)
+  if (!(await enforceRateLimit(request, env))) {
+    return json({ error: "too many rescue reports; try again shortly" }, 429, { "retry-after": "60" })
+  }
   let body
   try {
-    body = await request.json()
+    body = JSON.parse(text)
   } catch {
     return json({ error: "invalid JSON" }, 400)
   }
   const report = parseSaveReport(body)
   if (!report) return json({ error: `expected an eventId and 1–${MAX_SAVED_PER_REPORT} saved agents` }, 400)
-  if (!(await enforceRateLimit(request, env))) {
-    return json({ error: "too many rescue reports; try again shortly" }, 429, { "retry-after": "60" })
-  }
 
   // D1 batches execute as one transaction. The applied flag makes this safe
   // to retry: an existing event contributes zero on every subsequent batch.

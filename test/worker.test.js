@@ -77,3 +77,45 @@ test("unknown API paths are 404 and everything else is a static asset", async ()
   assert.equal((await worker.fetch(new Request("https://x/api/stats", { method: "DELETE" }), env(fakeDB()))).status, 404)
   assert.equal(await (await worker.fetch(get("/"), env(fakeDB()))).text(), "asset")
 })
+
+// A body handed over in chunks, with no Content-Length, that counts what is
+// pulled from it and whether it was cancelled.
+function streamed(chunks) {
+  const enc = new TextEncoder(), state = { pulled: 0, cancelled: false }
+  let i = 0
+  const body = new ReadableStream({
+    pull(c) { if (i < chunks.length) { const b = enc.encode(chunks[i++]); state.pulled += b.byteLength; c.enqueue(b) } else c.close() },
+    cancel() { state.cancelled = true }
+  })
+  return { state, request: new Request("https://oh-no-more-agents.com/api/saves", { method: "POST", body, duplex: "half", headers: { "CF-Connecting-IP": "1.2.3.4" } }) }
+}
+
+test("a report body is capped at MAX_BODY_BYTES: small ones pass, big ones are 413 without being read to the end", async () => {
+  const { MAX_BODY_BYTES } = await import("../src/counter.js")
+  assert.equal(MAX_BODY_BYTES, 4096)
+  const ok = await worker.fetch(post("/api/saves", { eventId: "level_42_abcdefghijkl", saved: 3, pad: "x".repeat(3500) }), env(fakeDB()))
+  assert.equal(ok.status, 200, "a padded but small report still goes through")
+  const db = fakeDB()
+  const big = await worker.fetch(post("/api/saves", { eventId: "level_42_abcdefghijkl", saved: 3, pad: "x".repeat(2 * 1024 * 1024) }), env(db))
+  assert.equal(big.status, 413)
+  assert.equal(db.log.length, 0, "refused before the quota or anything else")
+  // Chunked, no Content-Length: read only until the cap, then cancelled.
+  const s = streamed(Array.from({ length: 512 }, () => "x".repeat(4096)))
+  const res = await worker.fetch(s.request, env(fakeDB()))
+  assert.equal(res.status, 413)
+  assert.ok(s.state.pulled <= 4096 * 3, `pulled ${s.state.pulled} bytes of 2 MiB`)
+  assert.equal(s.state.cancelled, true)
+  // A declared length over the cap is refused without reading the body at all.
+  const d = streamed(["{}"])
+  const declared = new Request(d.request, { headers: { "content-length": "999999", "CF-Connecting-IP": "1.2.3.4" } })
+  assert.equal((await worker.fetch(declared, env(fakeDB()))).status, 413)
+})
+
+test("over the quota, an oversized body is still refused at the cap, and a bad one is charged to the quota first", async () => {
+  const db = fakeDB({ submissions: MAX_REPORTS_PER_MINUTE + 1 })
+  const s = streamed(Array.from({ length: 512 }, () => "x".repeat(4096)))
+  assert.equal((await worker.fetch(s.request, env(db))).status, 413)
+  assert.ok(s.state.pulled <= 4096 * 3)
+  const over = fakeDB({ submissions: MAX_REPORTS_PER_MINUTE + 1 })
+  assert.equal((await worker.fetch(post("/api/saves", "{not json"), env(over))).status, 429, "the quota is checked before parsing")
+})

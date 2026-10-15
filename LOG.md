@@ -5787,3 +5787,48 @@ AGENTS.md's deploy rule now ends with it.
 
 The production-only parts are split into functions small enough for the CRAP
 gate without a deploy to cover them.
+
+## 288 — 2026-10-15 · Capped report bodies (server review finding 1)
+
+**Asked:** Codex's server review (docs/review-2026-10-15-server.md, finding 1,
+P2). `POST /api/saves` read and parsed the whole body before validating it or
+checking the caller's quota, so 2 MiB of padding was buffered every time,
+including from a caller already over its limit. Cap bodies (count the
+streamed bytes, cancel at a small ceiling such as 4 KB, answer 413), check the
+quota before parsing if that's cheap, and add the tests the review suggests.
+
+**Changed:**
+- **`readCappedBody` (`src/counter.js`).** It returns the body as text, or
+  null past `MAX_BODY_BYTES` (4096; a real report is about seventy bytes). A
+  declared `Content-Length` over the cap is refused without reading.
+  Otherwise the stream is counted as it arrives and cancelled the moment it
+  passes the cap, so a missing or false length can't make the Worker hold a
+  large body.
+- **`recordSaves` order:** read the capped body (413 past the cap), then charge
+  the quota (429), then parse and validate (400), then write.
+- **Behaviour changes:** a caller over its limit now costs at most 4 KB of
+  reading and no parsing. A malformed report now counts against the quota. A
+  small padded report still goes through.
+
+**Tests** (`test/worker.test.js`):
+- a 3.5 KB padded report is 200;
+- a 2 MiB report is 413 with nothing asked of the database;
+- a chunked 2 MiB stream with no Content-Length is 413 after pulling at most
+  three chunks, and the stream is cancelled;
+- a declared oversize length is 413;
+- over the quota, an oversized body is still refused at the cap;
+- a malformed body over the quota is 429, so the quota is checked before
+  parsing.
+
+**Checked locally** with `wrangler dev --local`, as asked:
+- **Small report:** 200, and it counted.
+- **2 MiB report with a declared length:** 413.
+- **The same report sent chunked:** the Worker reaches the cap and cancels.
+  Wrangler's local ProxyWorker then reports "Network connection lost" and
+  returns 500, and the dev server goes down after it. That's the dev proxy
+  failing when a Worker answers before the upload finishes; production has no
+  such proxy, and the unit tests show the Worker's own behaviour.
+- **Miniflare without wrangler:** I tried to drive the Worker directly, but
+  this Miniflare version wants a different configuration and I stopped there.
+  Not yet seen on production; a single oversized chunked POST would show it,
+  and would write nothing, because it's refused before the quota.
