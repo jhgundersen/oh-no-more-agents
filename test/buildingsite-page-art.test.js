@@ -258,9 +258,9 @@ test("worksite background preserves opaque faces, shirts, eyes and umbrellas", (
     assert.ok(checked >= (state === "hooked" ? 8 : 30), "real opaque actor pixels compared")
   }
 })
-test("original Building Site ground, fixtures, cranes, pits, hazards and exit retain bytes", () => {
+test("Building Site native components retain bytes and page components match the reviewed hoist", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "eec79298331243f3fc1f36d4125c23959a1cf0289a30555d240ef9d18dfa85e3"], [[2], "a7430a15cffc503e26406311826a6d3ee6bf9f7debb9a5a359c4a1042b7c2dfb"]
+    [[undefined, 1], "eec79298331243f3fc1f36d4125c23959a1cf0289a30555d240ef9d18dfa85e3"], [[2], "a5308eab0a9193b4cf48e5f12e58907df5a305fb7bd633e9093e02235b2ea632"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)

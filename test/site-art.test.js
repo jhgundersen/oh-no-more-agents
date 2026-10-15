@@ -1,5 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
+import { createHash } from "node:crypto"
 import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
@@ -18,10 +19,10 @@ function picture(res, draw) {
     assert.equal(typeof img.ctx.fillStyle, "string")
     for (const n of [x, y, width, height]) assert.ok(Number.isFinite(n) && n * 2 === Math.round(n * 2), "pixel grid")
     assert.ok(width > 0 && height > 0)
-    calls.push({ x, y, width, height, colour: img.ctx.fillStyle }); fill(x, y, width, height)
+    assert.ok(calls.length < 25000, "bounded paint recording"); calls.push({ x, y, width, height, colour: img.ctx.fillStyle }); fill(x, y, width, height)
   }
   draw(img.ctx)
-  return { ...img, calls }
+  return { ...img, buf: createHash("sha256").update(img.buf).digest("hex"), calls }
 }
 function pickup(w) {
   const crane = w.cranes[0], ag = S.spawn(w)
@@ -47,7 +48,7 @@ test("cranes draw every phase at both resolutions without writing world state", 
         const before = JSON.stringify(w)
         const draw = ctx => { D.drawCrane(ctx, w, pal, crane); D.drawAgent(ctx, w, pal, ag, {}) }
         const a = picture(res || 1, draw), b = picture(res || 1, draw)
-        assert.deepEqual(a.buf, b.buf)
+        assert.equal(a.buf, b.buf)
         assert.equal(JSON.stringify(w), before)
         assert.equal(a.ctx.globalAlpha, 1)
         assert.equal(a.calls.some(c => c.width === 0.5 || c.height === 0.5), res === 2)
@@ -100,11 +101,11 @@ test("hook meets the rider's collar and the lowering cable grows down the hole",
     assert.ok(long.calls.at(-1).y + 1 <= low.tipY - 3 + 1)
     const pose = picture(res, ctx => D.drawAgent(ctx, w, pal, ag, {}))
     picture(res, ctx => D.drawAgent(ctx, w, pal, { ...ag, state: "ceil" }, {}))
-    assert.deepEqual(picture(res, ctx => D.drawAgent(ctx, w, pal, ag, {})).buf, pose.buf, "a ceiling walker cannot flip the next rider")
+    assert.equal(picture(res, ctx => D.drawAgent(ctx, w, pal, ag, {})).buf, pose.buf, "a ceiling walker cannot flip the next rider")
     assert.ok(pose.calls.some(c => c.height === 5 && c.width === 1), "raised arms")
     assert.ok(pose.calls.some(c => c.height === 4 && c.width === 1), "dangling legs")
     const walk = picture(res, ctx => D.drawAgent(ctx, w, pal, { ...ag, state: "walk" }, {}))
-    assert.notDeepEqual(pose.buf, walk.buf)
+    assert.notEqual(pose.buf, walk.buf)
     const sway = [100, 108, 116].map(t => { w.ticks = t; return D.craneDrawing(w, { ...crane, phase: "across" }).tipX })
     assert.ok(new Set(sway).size > 1)
     assert.ok(sway.every(x => Math.abs(x - low.x) <= 1))
@@ -148,7 +149,7 @@ test("site props, sparks and build-failed booth have their own art at both resol
     const fine = picture(2, ctx => {
       D.drawSiteDecor(ctx, pal, d, 40, 40, 4); D.drawDecorFine(ctx, pal, d, 40, 40, 44, "site")
     })
-    assert.notDeepEqual(coarse.buf, fine.buf)
+    assert.notEqual(coarse.buf, fine.buf)
   }
   w.enemyHatch = { x: 30, y: 20, biome: w.biome }
   const labels = [], img = canvas(400, 248)
