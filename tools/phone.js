@@ -87,7 +87,7 @@ function startupLog(proc) {
 }
 async function browserTargets(profile, proc) {
   var spent = 0, last = Date.now()
-  for (let i = 0; i < 60 && spent < 10000; i++) {
+  for (let i = 0; i < 150 && spent < 25000; i++) {
     spent += Math.min(600, Date.now() - last); last = Date.now()
     if (proc.launchError || proc.exitCode !== null || proc.signalCode) throw Error("Headless browser exited at startup: " + (proc.launchError || proc.signalCode || proc.exitCode) + startupLog(proc))
     const port = activePort(profile)

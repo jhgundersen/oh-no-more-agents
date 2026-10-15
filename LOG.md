@@ -10237,3 +10237,19 @@ unprivileged user namespaces through AppArmor, so Chromium's sandbox aborts.
 
 Local gate: 1549/1549, CRAP green. Not proven on the runner until the next
 push; the workflow is unpushed, like everything else.
+
+## 392 — 2026-10-15 · The check workflow, second pass
+After 391, run 38790281962 took 4 minutes, not 22: 1456 passed and 14
+failed. Chromium starts now, so the sandbox fix held. What was left:
+- Art tests diff against older reference commits with `git show`. The runner
+  checks out with depth 1, so those commits weren't there. The workflow now
+  fetches the full history.
+- One browser (in a11y) missed the 10 s discovery window while many test
+  files launched at once. The window is now 25 s; a healthy local browser
+  still answers in about one.
+- A hero-intros caption's text box measured taller than its box. A web font
+  loads only once text first uses it, so a caption shown after
+  `fonts.ready` could be measured in the fallback font. The caption harness
+  now loads every declared face up front, capped at 5 s.
+
+Local gate: 1549/1549, CRAP green.
