@@ -10781,7 +10781,17 @@ function stepOneAgent(w, ag) {
 function tallyAgent(w, counts, ag) {
   counts.active++
   if (ag.state === "block" || ag.state === "camp") counts.blockers++
-  if (ag.state !== "walk" || ag.idle < 300 || homeStretch(w, ag)) counts.moving++
+  if (ag.state !== "walk" || ag.idle < 300 || homeStretch(w, ag) || longWayHome(w, ag)) counts.moving++
+}
+
+// A walker on a long straight run towards the door is going home, however
+// far it wandered first. Its best distance was set before the detour, so idle
+// had long passed 300 and the stall cutoff ended level 138 with the last agent
+// half way back along the ledge, walking at the exit.
+var LONG_RUN = 12
+function longWayHome(w, ag) {
+  if (ag.runDir !== ag.dir) { ag.runDir = ag.dir; ag.runFrom = ag.x }
+  return facingHome(w, ag) && Math.abs(ag.x - ag.runFrom) >= LONG_RUN
 }
 
 // Before it acts: out of a pit it should be falling in, and through its

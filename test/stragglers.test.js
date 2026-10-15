@@ -326,3 +326,15 @@ test("a builder whose stairs meet a roof over walkable ground stops building and
   S.stepBuild(w, ag)
   assert.equal(ag.dir, -1, "a wall still turns it")
 })
+
+test("a walker on a long straight run towards the door counts as moving, however long since its best", () => {
+  const w = box(90), k = w.k
+  w.exit = { x: 80, y: 15, w: 6, h: 5 }                                   // up a level, so not the home stretch
+  const ag = Object.assign(S.spawn(w), { x: 20.5, y: 29, dir: 1, state: "walk", idle: 900 })
+  const moving = () => { const c = { active: 0, blockers: 0, moving: 0 }; S.tallyAgent(w, c, ag); return c.moving }
+  assert.equal(moving(), 0, "just set off")
+  ag.x = 35.5
+  assert.equal(moving(), 1, "fifteen cells on, facing home")
+  ag.dir = -1; moving(); ag.x = 10.5
+  assert.equal(moving(), 0, "a long run away from the door is not going home")
+})

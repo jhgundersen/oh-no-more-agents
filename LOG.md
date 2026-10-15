@@ -7193,3 +7193,26 @@ Level 81's stall endings (4/24) are off the list. 66 304 → 308, 123 355 → 36
 and 142 306 → 309. 68 261 → 257 now runs out the clock once in 24.
 
 **Next:** 138's stalls, then 68's clock-out.
+
+## 239 — 2026-10-15 · The long way home counts as moving
+
+**Asked:** keep going down the play-test list (level 138).
+
+**Found:** most of level 138's remaining stall endings had the last agent
+walking steadily east along the ledge towards the exit when the cutoff fired.
+It had landed near the door early on, facing the wrong way, and wandered off.
+Its best distance came from before that detour, so `idle` had long passed 300,
+and it wasn't on the exit's own floor, so `homeStretch` didn't count it.
+
+**Changed:** `longWayHome` in the stall tally. A walker facing home that has
+gone `LONG_RUN` (12) cells since it last changed direction counts as moving.
+An agent shuttling between two walls still counts as stuck on its away legs
+and on short legs. If it loops on a long one, the 600-tick no-progress cutoff
+still ends the level. Test in `test/stragglers.test.js`.
+
+**Measured:** playtest 1-150 × 24 against 238: 51435 → 51445 home. Level 138
+went 320 → 323 and its stall endings went from 7 to 4 of 24. Mean level
+length is unchanged (1179 ticks) and nothing hangs.
+
+**Next:** 10's stalls (3/24), and 68's one clock-out. That one is a pillared
+corridor with no bashers or climbers left, so it may just be a hard level.
