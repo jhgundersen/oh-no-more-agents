@@ -2984,24 +2984,25 @@ function drawTransitionText(ctx, text, cx, y, size) {
   }
 }
 
-function drawTransitionPlate(ctx, w, pal, x, y, height) {
+function drawTransitionPlate(ctx, w, pal, x, y, height, width) {
+  width = width || 272
   ctx.fillStyle = pal.hatchMouth
-  ctx.fillRect(x + 3, y + 3, 272, height)
+  ctx.fillRect(x + 3, y + 3, width, height)
   ctx.fillStyle = pal.dirtEdge
-  ctx.fillRect(x + 3, y, 266, height)
-  ctx.fillRect(x, y + 3, 272, height - 6)
+  ctx.fillRect(x + 3, y, width - 6, height)
+  ctx.fillRect(x, y + 3, width, height - 6)
   ctx.fillStyle = pal.cardBack
-  ctx.fillRect(x + 3, y + 3, 266, height - 6)
+  ctx.fillRect(x + 3, y + 3, width - 6, height - 6)
   ctx.fillStyle = pal.rockEdge
-  ctx.fillRect(x + 6, y + height - 4, 260, 1)
+  ctx.fillRect(x + 6, y + height - 4, width - 12, 1)
   ctx.fillStyle = pal.label
   ctx.fillRect(x + 5, y + 5, 1, 1)
-  ctx.fillRect(x + 266, y + 5, 1, 1)
+  ctx.fillRect(x + width - 6, y + 5, 1, 1)
   ctx.fillRect(x + 5, y + height - 6, 1, 1)
-  ctx.fillRect(x + 266, y + height - 6, 1, 1)
+  ctx.fillRect(x + width - 6, y + height - 6, 1, 1)
   if ((w.res || 1) >= 2) {
     ctx.fillStyle = pal.decorLit
-    ctx.fillRect(x + 6, y + 1, 260, 0.5)
+    ctx.fillRect(x + 6, y + 1, width - 12, 0.5)
     ctx.fillRect(x + 1, y + 6, 0.5, height - 12)
   }
 }
@@ -3407,6 +3408,7 @@ function reportHeading(w) {
 }
 
 function drawLevelResults(ctx, w, pal) {
+  if ((w.res || 1) >= 2) { drawPageLevelResults(ctx, w, pal); return }
   var cx = Math.round(w.k.COLS * w.k.CELL / 2)
   var rows = reportRows(w, pal), extra = 0, padded = false
   // Text rows close with 4px of plate below them; the badge row has its own.
@@ -3428,6 +3430,81 @@ function drawLevelResults(ctx, w, pal) {
     else if (rows[r].sightings) drawSightings(ctx, w, pal, cx, at)
     else { ctx.fillStyle = rows[r].colour; drawTransitionText(ctx, rows[r].text, cx, at + 2, 1) }
     at += rows[r].step
+  }
+}
+
+// The page gets roomier typography; the panel keeps its original report.
+function wrapReportText(text, limit) {
+  var words = text.split(/\s+/), lines = [], line = ""
+  for (var i = 0; i < words.length; i++) {
+    var word = words[i]
+    if (line && line.length + word.length + 1 > limit) { lines.push(line); line = "" }
+    while (word.length > limit) { lines.push(word.slice(0, limit)); word = word.slice(limit) }
+    if (word) line += (line ? " " : "") + word
+  }
+  if (line) lines.push(line)
+  return lines
+}
+
+function pageReportRows(rows, width, size) {
+  var out = [], height = 0, lineStep = Math.ceil(size * 5 + 3)
+  var limit = Math.floor(((width - 24) / size + 1) / 4)
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i], lines = r.text ? wrapReportText(r.text, limit) : []
+    var step = r.sightings ? 26 : r.escort ? 22 : lines.length * lineStep
+    out.push({ lines: lines, colour: r.colour, escort: r.escort, sightings: r.sightings, step: step })
+    height += step
+  }
+  return { rows: out, height: height, lineStep: lineStep }
+}
+
+function pageReportLayout(w, pal) {
+  var width = Math.min(352, w.k.COLS * w.k.CELL - 48), source = reportRows(w, pal), size = 2
+  var body = pageReportRows(source, width, size)
+  // The full house keeps its complete facts and badges, at 1.5px font pixels.
+  if (body.height + 78 > w.k.ROWS * w.k.CELL - 8) { size = 1.5; body = pageReportRows(source, width, size) }
+  var height = body.height + 78, centreY = Math.round((w.k.ROWS * w.k.CELL - height) / 2)
+  var y = Math.min(w.k.ROWS * w.k.CELL - height - 4, centreY + Math.max(0, 10 - w.doneTicks) * 2)
+  var titleSize = Math.min(3, Math.floor((width - 24) / (homeTitle(w).length * 4 - 1) * 2) / 2)
+  return { width: width, height: height, y: y, size: size, rows: body.rows, lineStep: body.lineStep, titleY: y + 24, titleHeight: 5 * titleSize, titleSize: titleSize }
+}
+
+function pageReportInk(pal, ink) {
+  if (ink === pal.decor || ink === pal.decorLit) return pal.label
+  if (ink === pal.warn || ink === pal.urgent) return pal.fireHot
+  if (ink === pal.umbrellaRim) return pal.exitLight
+  if (ink === AGI_GOLD) return AGI_SPARK
+  return ink
+}
+
+function drawPageReportRow(ctx, w, pal, row, cx, y, layout) {
+  if (row.escort || row.sightings) {
+    ctx.save()
+    ctx.translate(cx, y + (row.sightings ? 4 : 2)); ctx.scale(2, 2)
+    if (row.escort) drawEscortReport(ctx, w, pal, 0, 0)
+    else drawSightings(ctx, w, pal, 0, 0)
+    ctx.restore()
+  } else {
+    ctx.fillStyle = pageReportInk(pal, row.colour)
+    for (var j = 0; j < row.lines.length; j++) drawTransitionText(ctx, row.lines[j], cx, y + j * layout.lineStep, layout.size)
+  }
+}
+
+function drawPageLevelResults(ctx, w, pal) {
+  var cx = Math.round(w.k.COLS * w.k.CELL / 2), l = pageReportLayout(w, pal), y = l.y
+  drawTransitionPlate(ctx, w, pal, cx - l.width / 2, y, l.height, l.width)
+  ctx.fillStyle = pal.label
+  drawTransitionText(ctx, reportHeading(w), cx, y + 9, 1.5)
+  ctx.fillStyle = pal.label
+  drawTransitionText(ctx, homeTitle(w), cx, l.titleY, l.titleSize)
+  ctx.fillStyle = w.saved === 0 ? pal.fireHot : pal.exitLight
+  drawTransitionText(ctx, levelVerdict(w), cx, y + 46, 2)
+  ctx.fillStyle = pal.rockEdge
+  ctx.fillRect(cx - l.width / 2 + 12, y + 63, l.width - 24, .5)
+  var at = y + 70
+  for (var i = 0; i < l.rows.length; i++) {
+    drawPageReportRow(ctx, w, pal, l.rows[i], cx, at, l)
+    at += l.rows[i].step
   }
 }
 

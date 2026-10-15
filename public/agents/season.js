@@ -110,6 +110,8 @@
   function paint(ctx, w) {
     if (!name || !w || !w.season) return
     observe(w)
+    // The page report owns the foreground; lanterns/ghosts must not cover its copy.
+    if ((w.res || 1) >= 2 && w.done) return
     // Christmas weather/wrapping sits out report plates and blackout overlays.
     if (name === "christmas" && (w.done || (w.outage && w.ticks >= w.outage.at && w.ticks < w.outage.at + w.outage.len))) return
     var s = SEASONS[name], c = w.k.CELL, unit = (w.res || 1) >= 2 ? 0.5 : 1

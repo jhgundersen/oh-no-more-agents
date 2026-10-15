@@ -189,16 +189,28 @@ test("the finished report leaves room for the verdict and rescued row at both re
     w.done = true; w.doneTicks = 10; w.saved = saved; w.toRelease = 18
     w.escortsHome = 2; w.mission.targets = [{ ...t, home: true }, { ...t, home: false }]
     const img = render(w, pal, D.drawLevelTransition)
-    // Every card ends with the commit line (12px row and the 4px that closes a
-    // text row), so both plates are 16px taller than when this was written.
-    assert.ok(img.calls.some(c => c.height === 94), "taller plate only when there are rescues")
-    // Verdict occupies y136..140, badges y152..159; both inside the plate.
-    assert.ok(img.calls.some(c => c.y === 136 && c.height === 1))
-    assert.ok(img.calls.some(c => c.y === 154 && c.height === 1))
-    assert.ok(img.calls.every(c => c.y + c.height <= 190))
-    w.escortsHome = 0
-    const without = render(w, pal, D.drawLevelTransition)
-    assert.ok(without.calls.some(c => c.height === 78), "original card, plus the commit line, without rescues")
-    assert.ok(without.calls.every(c => c.y + c.height <= 174))
+    if (res >= 2) {
+      const withRescues = D.pageReportLayout(w, pal)
+      assert.ok(withRescues.rows.some(row => row.escort), "rescued badges retained")
+      assert.ok(img.calls.some(c => c.height === withRescues.height), "roomy page plate")
+      assert.ok(withRescues.y >= 4 && withRescues.y + withRescues.height + 3 <= 248)
+      w.escortsHome = 0
+      const withoutRescues = D.pageReportLayout(w, pal)
+      assert.ok(!withoutRescues.rows.some(row => row.escort))
+      assert.ok(withoutRescues.height < withRescues.height, "the page grows for rescued colleagues")
+      render(w, pal, D.drawLevelTransition)
+    } else {
+      // Every card ends with the commit line (12px row and the 4px that closes a
+      // text row), so both plates are 16px taller than when this was written.
+      assert.ok(img.calls.some(c => c.height === 94), "taller plate only when there are rescues")
+      // Verdict occupies y136..140, badges y152..159; both inside the plate.
+      assert.ok(img.calls.some(c => c.y === 136 && c.height === 1))
+      assert.ok(img.calls.some(c => c.y === 154 && c.height === 1))
+      assert.ok(img.calls.every(c => c.y + c.height <= 190))
+      w.escortsHome = 0
+      const without = render(w, pal, D.drawLevelTransition)
+      assert.ok(without.calls.some(c => c.height === 78), "original card, plus the commit line, without rescues")
+      assert.ok(without.calls.every(c => c.y + c.height <= 174))
+    }
   }
 })

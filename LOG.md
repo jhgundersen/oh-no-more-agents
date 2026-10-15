@@ -6014,7 +6014,7 @@ than its 4 s poll while the full parallel run competed with Codex's caption
 validation for the machine. This change cannot reach that test, so it was a
 flake. The poll now waits up to 10 s, as the replay wait did earlier.
 
-## 294 — 2026-10-15 · Let the colony be heard (on a branch)
+## 294 — 2026-10-15 · Readable colony event captions (on a branch)
 
 **Chosen (autonomy):** make the event ticker readable outside the board. On
 phones its five-pixel lettering hid the game's explanations and jokes, even
@@ -6399,3 +6399,125 @@ throwaway profile, and `browserTargets` reads it from there (`activePort`,
 exported). Six browsers launched at once each answered with their own page
 id. A unit test covers reading the file. The longer polls stay; they cost
 nothing when the page is quick.
+
+## 302 — 2026-10-15 · Deploy (09:43); the Omarchy copy is three days behind
+
+**Deployed** build f45a1cb9 (version c7f3f911), replacing 7ee3fc5c. It
+covers 294–301:
+- the readable captions, with fullscreen keeping its ticker;
+- the skill icons;
+- fullscreen on short screens and safe areas;
+- the biome ambience;
+- test browsers on their own ports.
+
+**Before:** the gate (1,349 tests), then `npm run smoke`, which passed
+(3 min, levels 1–7).
+
+**After:** `npm run verify -- --previous 7ee3fc5c` passed: shipped files,
+build agreement, the open tab reloading, level 20, `?daily&full=1`, Next
+during a standup, and the patch notes by keyboard (5 counter writes refused).
+
+**`npm run sync:check`:** all four core files differ in the Omarchy plugin
+copy. Sim.js and Draw.js there match 3a401ab (12 Oct, the Rubber Duck),
+Palette.js matches 54fdd87 (9 Oct) and Outcome.js matches 2f8ada0 (19 Aug),
+so the panel lacks The Cloud and everything since. Not synced: this task
+did not include the sibling, and writing there while the screen is locked
+kills the lock screen. It is reported to the supervisor; `npm run sync` does
+it when it's wanted, with the screen unlocked.
+
+## 303 — 2026-10-15 · Readable report cards at phone size (on a branch)
+
+**Chosen (autonomy):** enlarge the page report's pixel typography and wrap long
+rows. At native phone size its verdict and commit joke were only five pixels
+tall, even though the scenery, captions and stock read clearly. Branch
+`codex/report-art`, from current main `93bb853` plus approved `codex/biome-audio`
+while that merge was pending. Kept main's new short-screen fullscreen/safe-area
+fix. Renamed entry 294's heading to **Readable colony event captions**, matching
+its actual content as requested.
+
+**Watched first:** another four eight-second local runs, frames at three/eight
+seconds: phone Factory at Steady, desktop Data Center at Brisk, phone Halloween
+Harbour at Brisk, desktop Christmas Mail Room at Steady. Seed 3, live clocks;
+inspected all four final frames (`/tmp/codex-watch-brief/`). The initial native
+Factory report render (`tools/shoot.js level 8 --seed 3 --ticks 6000 --res 1
+--scale 1`) made the tiny verdict/commit lettering clear. It is in
+`/tmp/codex-watch-report/native/`; later exploratory report frames are beside it.
+
+**Changed:**
+- Res-2 reports use a 352-art-pixel plate: 2px font pixels for ordinary copy,
+  a 3px-pixel count, larger heading and verdict, and 2× escort/sighting badges.
+  Long rows wrap at words; the full house uses 1.5px font pixels to retain
+  every fact. Halloween's longer greeting fits at 2.5px. No missing rows or
+  ellipses, and no new text/meaning in the report.
+- Copy uses brighter existing palette inks: foreground for dim scenery tones,
+  the hot warning colour for warnings, exit light for umbrellas, and the AGI's
+  existing cream highlight for gold copy. All report text clears **4.5:1** on
+  its backing in all nine page themes. Original semantic colours remain in
+  the native report.
+- The plate centres on its measured height, and the entrance slide stops at
+  the board edge on a crowded card. The existing closing wipe stays last.
+  Native/unspecified-res reports retain exact pixels; the shared plate helper
+  now accepts an optional width, with its original default of 272.
+- Halloween's late lantern/ghost pass no longer paints over page report words,
+  matching Christmas's existing report policy. Greetings and tinted frames
+  remain. Native Halloween retains its original path. No simulation, input,
+  hold timing, storage, counter or sound changes in this pass.
+
+**Cheap:** wrapping is only used for finished page reports, over their small
+fixed set of rows. Larger font pixels scale the same rectangles: the zero /
+all-home / full-house fixtures issue **637 / 685 / 2,808** fills against
+**636 / 684 / 2,807** before — one added divider, no extra glyph detail. Bounded
+measurement: `/tmp/codex-report-art/fill-cost.json`. No assets/dependencies;
+Draw/season/index source gzip delta from the approved baseline: **1,014 bytes**.
+
+**Evidence:** `/tmp/codex-report-art/after/contact-sheet.png`, paired at actual
+CSS sizes: desktop and 390px phone natural Factory reports; a crowded daily
+report; the same full house at 360px with Halloween; Christmas Library; and a
+zero-home Cloud report in phone landscape. Full phone-page context is included.
+Inspected the sheet and original phone/small-phone/landscape shots. Every field,
+count and badge fits the plate; page/board geometry matches before exactly.
+At 360×800 the stage bottom measures 840.7px in both copies; the whole report is
+visible. At 390×844 and landscape the controls also fit. Before files are in
+`before/`, original public files in `baseline/public/`, final metrics/originals
+in `after/`. Paused art captures suppress the existing pause veil to inspect
+report typography; control behaviour is unchanged.
+
+**Pipeline:** `tools/report-art.js <out> [public-root] [before-out]` reuses one
+bounded browser for all six views. It waits for a fresh world and fonts,
+advances a pinned colony at most 10,000 steps while paused, then adds explicit
+stress fixtures for the crowded/seasonal cases. Crops use the visible viewport
+intersection (so overhanging 400px boards are captured at their true 390/360px
+size). The sheet sizes itself from measured board heights. Existing number-row
+verification now reads the correct host layout and compares digests instead of
+raw pixel arrays, avoiding expensive failure diffs.
+
+**Tests:** **36 focused passes, zero failures/skips, 6.67 s**. Original native
+hashes for zero/all/busy cards; complete wrapping and bounded long tokens;
+all row content retained across seasons and entrance ages; physical ink bounds,
+half-pixel grid, state/RNG/context preservation in all twenty biomes and nine
+page themes; 4.5:1 copy contrast; seasonal foreground exclusion with native
+Halloween retained; actual desktop/phone/360px/landscape report visibility.
+Existing transition, escort, commit, sightings and season tests pass too.
+`npm run stamp` refreshed Draw/season and page/build stamps. Browser evidence
+has no errors. `git diff --check` passed.
+
+**Full checks:** `npm run check` with coverage passed: **1,351 tests, zero
+failures/skips, 330.06 s**, Factory art included. CRAP threshold 30 passed
+using that coverage, maximum **30.0**; new report helpers top out at **8.0**.
+Focused tests, refreshed evidence, full check/coverage and CRAP ran sequentially
+under one shared FIFO lock reservation; Node heap 2,048 MB, `ulimit -v 6000000`,
+two workers, 120-second test timeouts. Completion was reported immediately to
+release the developer's testing window. `git diff --check` passed. Logs:
+`/tmp/codex-report-art/focused-final.log`, `evidence-final.log`, `check.log`,
+`crap.log`.
+
+**Next:** review and merge this branch; no push or deployment from this pass.
+
+## 304 — 2026-10-15 · Merged the readable report card
+
+Reviewed and merged by the loop: codex/report-art (6462617, entry 303,
+based on 93bb853 plus the ambience), `--no-ff`, as approved.
+- **LOG:** Codex's entry is renumbered from 300 to 303, after main's 300–302.
+- **Stamps:** re-stamped.
+- **No code was lost on either side.** Against the branch, the merged code
+  differs only in main's later change, the DevTools port fix (301).
