@@ -7172,3 +7172,24 @@ last clock-out is gone, so 138 has the only one left (1/24). 118 375 → 382 and
 47 299 → 304. 7 and 142 lost 3 and 4, which is within noise.
 
 **Next:** 138's remaining stalls, then 81.
+
+## 238 — 2026-10-15 · Ask the edge question at the lip
+
+**Asked:** keep going down the play-test list (level 81's stall endings).
+
+**Found:** a side effect of 235. When a crawlway ends at a lip, 235 handed the
+agent back to walking. But a walker's stride is shorter than a slider's, so it
+landed short of the lip, still under the same low roof, and slid again. On
+level 81 one agent flickered between slide and walk every tick on the same
+cell until the stall cutoff.
+
+**Changed:** the slide now asks the walk's edge question itself, at the lip
+(`edgeAhead` with the slider's own next position). A drop it would take, it
+takes. One it wouldn't, it turns from, as before. The 235 test now expects the
+fall.
+
+**Measured:** playtest 1-150 × 24 against 237: 51408 → 51435 home (+27).
+Level 81's stall endings (4/24) are off the list. 66 304 → 308, 123 355 → 361
+and 142 306 → 309. 68 261 → 257 now runs out the clock once in 24.
+
+**Next:** 138's stalls, then 68's clock-out.

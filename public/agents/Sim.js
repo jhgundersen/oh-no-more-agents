@@ -9259,13 +9259,16 @@ function stepSlide(w, ag) {
     return
   }
 
-  // The floor ending under a low roof is an edge, not a wall: stand up and let
-  // the walk's edge rule decide whether to drop. Level 84 has a crawlway that
-  // ends three cells above the floor on the way home, and its slide turned
-  // back at the lip every time until the clock ran out.
+  // The floor ending under a low roof is an edge, not a wall: put the walk's
+  // edge question here, at the lip. Level 84 has a crawlway that ends three
+  // cells above the floor on the way home, and its slide turned back at the
+  // lip every time until the clock ran out. (Only handing back to walking
+  // was not enough: a walker's shorter stride lands short of the lip, under
+  // the same roof, and slides again — level 81 flickered like that for good.)
   if (!solid(w, cx, footY) && !solid(w, cx, footY + 1)) {
     ag.state = "walk"
     ag.timer = 0
+    edgeAhead(w, ag, nx)
     return
   }
 
