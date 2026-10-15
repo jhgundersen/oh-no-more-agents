@@ -5477,3 +5477,18 @@ the Sim):
 
 Headless screenshot: the tag shows at top left during a real fast-forward on
 level 109. No page errors.
+
+**Deployed** at 07:46 after 279 (name="build" content="84496cb6"), after a
+green full check and a passing `npm run smoke` (levels 1–8, heap 5.4 MB, 524
+nodes, 73 listeners, frame time 16.7 ms, no errors). It covers 277–279: the
+pixel logo, the heap explanation with the smoke step, and fast-forward
+through dead time.
+
+Verified on production, read-only:
+- **`dist/` and the build:** scripts byte-identical to `dist/`. The build
+  agrees on page, repo and API (84496cb6). A tab from a256d64d reloaded into
+  it. The share card and icons are correct. No console or page errors.
+- **Level 20:** The Cloud at desktop and phone size.
+- **`?daily=2026-10-15`:** level 13, colony 188139894, with the badge and the
+  date.
+- No counter writes attempted.
