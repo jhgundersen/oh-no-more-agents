@@ -8229,3 +8229,21 @@ board's left, instead of 4. On a 390 px phone the board overhangs the screen
 by 5 px a side, so the ticker sat flush against the glass. Now it has the same
 margin as the standup bubbles (251). The longest ticker lines (about 60
 characters, 250 px with the plate) still fit the 400 px board.
+
+## 258 — 2026-10-15 · A tighter blurb on phones
+
+**Asked:** the last item on the first-impressions list (249).
+
+**Changed:** at 599 px wide and below, the intro blurb is 10 px with 1.55
+line height (was 11 px and 1.8). On a 390×844 phone (`npm run phone`) the
+board's top moves from 244 to 223 px and its bottom from 492 to 471. It stays
+five lines and readable. A correction to 249: the board was always entirely on
+the first screen. "Halfway down" was my reading of a 2× screenshot; the board
+starts about a quarter of the way down.
+
+**The first-impressions list is done:**
+- 249: the tip leaves after its first level; no duplicate hint; "1 level".
+- 253 and 255: level 2's dead time.
+- 256: no empty sightings strip.
+- 257: the ticker clears a phone's edge.
+- 258: this.
