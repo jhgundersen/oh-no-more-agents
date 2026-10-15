@@ -3181,6 +3181,7 @@ function drawColonyAsides(ctx, w, pal) {
 // Whole art pixels, the colony's debugging duck's own colours.
 var RUBBER_DROP = 10
 function drawFloorDuck(ctx, w, d) {
+  if (w.res === 2) { drawPageFloorDuck(ctx, w, d); return }
   var C = w.k.CELL, age = w.ticks - d.at
   var foot = (d.y + 1) * C, x = Math.round((d.x + 0.5) * C) - 3
   var lift = w.reducedMotion ? 0 : (age < RUBBER_DROP ? Math.round((RUBBER_DROP - age) * 1.6) : (age < RUBBER_DROP + 4 ? 1 : (age >> 4) % 2))
@@ -8596,7 +8597,8 @@ function drawReloadTrail(ctx, w, fx) {
 var DUCK_YELLOW = "#ffd23f", DUCK_BEAK = "#ff8a1f"
 // The Debug hero's own duck, or the level's rubber duck while somebody is
 // explaining the problem to it.
-function drawHeldDuck(ctx, ag, ox, oy, dir, res) {
+function drawHeldDuck(ctx, ag, ox, oy, dir, res, w) {
+  if (res === 2 && w) { drawPageHeldDuck(ctx, w, ag, ox, oy, dir); return }
   if (ag.debugFor > 0) drawDuck(ctx, ag, ox, oy, dir, res)
   else if (ag.explainFor > 0) drawDuck(ctx, { debugFor: ag.explainFor }, ox, oy, dir, res)
 }
@@ -12754,7 +12756,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   drawReleaseRing(ctx, pal, ag, ox, oy, w.ticks)
   if (ag.netFor > 0) drawNetThrow(ctx, w, ag, ox, oy, dir, hair)
   if (ag.reloadFor > 0) drawReloadSign(ctx, ag, ox, oy, hair)
-  drawHeldDuck(ctx, ag, ox, oy, dir, w.res)
+  drawHeldDuck(ctx, ag, ox, oy, dir, w.res, w)
   drawCampShot(ctx, w, pal, ag, ox, oy, dir, st, w.k.CELL)
 
   // No special borrows the colony's umbrella. At a lethal height each carries
@@ -21558,5 +21560,66 @@ function drawLogoUmbrella(ctx,colours,phase) {
   ctx.fillStyle=colours.accent;ctx.fillRect(x-3,40,6,1);ctx.fillRect(x-6,41,12,1);ctx.fillRect(x-9,42,18,2)
   ctx.fillRect(x-9,44,4,2);ctx.fillRect(x-2,44,5,2);ctx.fillRect(x+6,44,3,2)
   ctx.fillStyle="#e9edf7";ctx.fillRect(x-3,40,4,1);ctx.fillRect(x-6,41,2,1);ctx.fillRect(x-1,41,1,3)
+  ctx.restore()
+}
+
+// The page toy listens: its beak faces the speaker, not the wall ahead.
+// Six art pixels square, like the original. No new particles or world state.
+function duckFloorFacing(w, d) {
+  var closest = 7, dir = 1
+  for (var i = 0; i < w.agents.length; i++) {
+    var a = w.agents[i], dx = a.x - (d.x + 0.5)
+    if (a.gone || a.special || a.state !== "walk" || Math.floor(a.y) !== d.y || Math.abs(dx) >= closest) continue
+    closest = Math.abs(dx); dir = dx < 0 ? -1 : 1
+  }
+  return dir
+}
+function drawPageFloorDuck(ctx, w, d) {
+  var age = w.ticks - d.at, lift = 0
+  if (!w.reducedMotion) lift = age < RUBBER_DROP ? Math.round((RUBBER_DROP - age) * 1.6) : age < RUBBER_DROP + 4 ? 0.5 : 0
+  drawListeningDuck(ctx, Math.round((d.x + 0.5) * w.k.CELL) - 3,
+    (d.y + 1) * w.k.CELL - 6 - lift, duckFloorFacing(w, d), age, !!w.reducedMotion, false)
+}
+function drawPageHeldDuck(ctx, w, ag, ox, oy, dir) {
+  var left = ag.debugFor > 0 ? ag.debugFor : ag.explainFor
+  if (!(left > 0)) return
+  var age = (ag.debugFor > 0 ? 30 : 48) - left, still = !!w.reducedMotion
+  var bob = still ? 0 : Math.floor(age / 8) % 4 === 1 ? 0.5 : 0
+  var nod = !still && age >= (ag.debugFor > 0 ? 18 : 30) && age < (ag.debugFor > 0 ? 26 : 38)
+  drawListeningDuck(ctx, dir > 0 ? ox + 8 : ox - 6, oy + 2 - bob, -dir, age, still, nod)
+}
+function duckToyRect(ctx, x, y, dir, dx, dy, width, height) {
+  ctx.fillRect(x + (dir > 0 ? dx : 6 - dx - width), y + dy, width, height)
+}
+function drawListeningDuck(ctx, x, y, dir, age, still, nod) {
+  ctx.save()
+  // A tucked tail, round belly, crescent wing and dark gold seam underneath.
+  ctx.fillStyle = "#ac7022"
+  duckToyRect(ctx,x,y,dir,1,5,4,1)
+  duckToyRect(ctx,x,y,dir,0.5,3,5,2)
+  ctx.fillStyle = DUCK_YELLOW
+  duckToyRect(ctx,x,y,dir,0,2,1,1.5)
+  duckToyRect(ctx,x,y,dir,0.5,2.5,4.5,2.5)
+  duckToyRect(ctx,x,y,dir,1,4.5,3.5,1)
+  ctx.fillStyle = "#e9a52b"
+  duckToyRect(ctx,x,y,dir,1.5,3.5,2,1)
+  duckToyRect(ctx,x,y,dir,2,4.5,1,0.5)
+  ctx.fillStyle = "#fff0a1"
+  duckToyRect(ctx,x,y,dir,1,3,2,0.5)
+  duckToyRect(ctx,x,y,dir,1.5,3.5,0.5,0.5)
+  var dip = nod ? 0.5 : 0
+  ctx.fillStyle = "#e9a52b"
+  duckToyRect(ctx,x,y,dir,2.5,0.5+dip,3,2)
+  ctx.fillStyle = DUCK_YELLOW
+  duckToyRect(ctx,x,y,dir,3,dip,2,2.5)
+  ctx.fillStyle = "#fff0a1"
+  duckToyRect(ctx,x,y,dir,3.5,0.5+dip,1,0.5)
+  ctx.fillStyle = DUCK_BEAK
+  duckToyRect(ctx,x,y,dir,5,1.5+dip,1,1)
+  ctx.fillStyle = "#b66b25"
+  duckToyRect(ctx,x,y,dir,5,2+dip,1,0.5)
+  ctx.fillStyle = GAG_INK
+  var blink = !still && age % 32 >= 22 && age % 32 < 24
+  duckToyRect(ctx,x,y,dir,4,1+dip,0.5,blink ? 0.5 : 1)
   ctx.restore()
 }
