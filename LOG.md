@@ -7613,3 +7613,14 @@ written off. The straggler is on the exit's floor but walking away from the
 door: a builder's ramp from x48 to x69 rose off that floor across the
 corridor, it went over the top, dropped, and turned back. One colony in 24,
 left for now.
+
+## 328 — 2026-10-15 · Fresh gameplay baselines in docs/checking.md
+
+The baselines there dated from iteration 93, with fourteen biomes. They now
+give today's numbers, measured during 305–323:
+- `sim play`: 200/200 cleared, 2,976/3,129 home, 208 attempts, average
+  attempt 40 s, no hangs;
+- the 1–200 playtest: 95% home, flags only single stall-cutoff stragglers;
+- `sim hazards`: 0.14 kills per placement.
+
+The old figures are kept alongside for comparison.

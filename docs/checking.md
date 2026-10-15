@@ -111,9 +111,14 @@ and returns what it found; `test/simcheck.test.js` runs `heights` and the
 ladder checks in full and the rest on a level or two, so `npm test` would
 catch a special that lost its height device or a ladder left in mid air.
 
-Baselines, 200 levels (as of iteration 93, October 2026 — fourteen biomes,
-patience 900 / 8 passes): **99% of levels cleared, 94% of agents home,
-no hangs.** As of iteration 70 it was 97 / 90 / 47s; before the sidearm
+Baselines, 200 levels (as of iteration 327, 15 October 2026 — twenty
+biomes): **100% of levels cleared, 2,976 of 3,129 agents home (95%) in 208
+attempts, average attempt 40 s, no hangs.** `npm run playtest -- 1-200
+--seeds 8` was then 95% home with no level flagged for loops or for under
+70% home; what it still flags is single stragglers ending on the stall
+cutoff. `npm run sim hazards` was 0.14 kills per placement over 440 levels,
+the Hot Aisle highest at 0.73. Iteration 93 (fourteen biomes, patience 900 /
+8 passes) was 99% cleared, 94% home. As of iteration 70 it was 97 / 90 / 47s; before the sidearm
 change 96 / 88 / 46s.
 Earlier, as of the twelve-biome catalogue: 95% cleared, 89% home, 44s. The
 pinned 200 are a small sample: adding the twelfth biome moved them from 99% to
