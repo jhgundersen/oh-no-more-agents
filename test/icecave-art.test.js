@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [6, 25, 44, 63]
+const levels = [6, 26, 46, 66]
 const layers = [D.drawGlacierBackdrop, D.drawGlacierSurfaces, D.drawGlacierLife]
 function sample(level = 6, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -163,11 +163,11 @@ test("large glacier faces precede original crystals; live light precedes drips a
 
 test("original ice back art, terrain, decor, motes, drips, exit and booth keep component bytes", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "62d2e30468627a6c76be9c7189c3591ad9ba3b566f14d4b898db4214b736db6f"],
-    [[2], "a548bfecf5254926fa61c4afb794dbe41417468526023efb423f6665fd10b90f"]
+    [[undefined, 1], "eb82e72b8a63a714e6804f4a78f9ac8c9f50bc6138248a1219f5072e968db4d8"],
+    [[2], "6e788e8942c825c9ae6cca30285060aadf2c94c414c9870d44949d25a856b30d"]
   ]) {
     const hash = createHash("sha256")
-    for (const name of Object.keys(THEMES)) for (const level of [6, 25, 44])
+    for (const name of Object.keys(THEMES)) for (const level of [6, 26, 46])
       for (const res of resolutions) for (const ticks of [0, 77, 240]) {
         const { w, pal } = sample(level, name); w.res = res; w.ticks = ticks
         const img = canvas(400, 248, themeOf(name).background)

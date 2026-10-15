@@ -132,7 +132,7 @@ var SKILL_LABELS = {
 // putting a new one anywhere but the end would re-skin every level above it.
 // Palette.js derives the same index with the same rule and must be kept in
 // step — see the note over poolTint there.
-var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room", "Building Site", "Clock Tower", "Rooftops", "Subway", "Harbour"]
+var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room", "Building Site", "Clock Tower", "Rooftops", "Subway", "Harbour", "The Cloud"]
 
 // A small job on the route gives each biome a premise beyond merely reaching
 // the door. These are deliberately one mechanism with different casts: an
@@ -172,6 +172,7 @@ var MISSION_SPECS = {
   "Rooftops":      { id: "neighbours", verb: "WALK THE NEIGHBOURS HOME", kind: "civilian", count: 3 },
   "Subway":        { id: "commuters", verb: "GET THE COMMUTERS ON THE TRAIN", kind: "civilian", count: 3 },
   "Harbour":       { id: "passengers", verb: "SEE THE PASSENGERS ASHORE", kind: "civilian", count: 3 },
+  "The Cloud":     { id: "sysadmins",  verb: "BRING THE SYSADMINS ON-PREM", kind: "civilian", count: 2 },
   // Up in the works since the last time it was wound. Nobody noticed.
   "Clock Tower": { id: "keepers", verb: "FREE THE CLOCKMAKERS",  kind: "civilian", count: 2 }
 }
@@ -1257,6 +1258,7 @@ function placePits(w, rng, corridors, last, hx, sealFrom, tower) {
   for (var rf = 0; rf < corridors.length; rf++) roughFloor(w, corridors[rf], rng, w.biome)
 }
 
+var CLOUD_STORMY = 0.85     // the share of Cloud levels with lightning
 function placeLevelHazards(w, rng, corridors, hazardCorridors) {
   placeDecor(w, rng, corridors)
   for (var hpi = 0; hpi < hazardCorridors.length; hpi++) {
@@ -1269,7 +1271,7 @@ function placeLevelHazards(w, rng, corridors, hazardCorridors) {
   // shark in the same stretch of corridor is not two problems, it is one
   // problem you cannot read.
   var weather = hazardsWeather(w.biome)
-  if (weather.length && rng() < 0.55) {
+  if (weather.length && rng() < (w.biome === "The Cloud" ? CLOUD_STORMY : 0.55)) {
     var wcorr = pick(rng, corridors.map(function (_, ix) { return ix }).filter(function (ix) {
       for (var hz = 0; hz < w.hazards.length; hz++) if (w.hazards[hz].corridor === ix) return false
       return true
@@ -1551,6 +1553,7 @@ var BIOME_MECHANISMS = {
   "Rooftops": placeZiplines,
   "Subway": placeTrains,
   "Harbour": placeFerries,
+  "The Cloud": cloudLining,
   "Clock Tower": placeGates
 }
 
@@ -2870,7 +2873,8 @@ var BIOME_SKINS = {
   "Clock Tower": skinClockTower,
   "Rooftops": skinRooftops,
   "Subway": skinSubway,
-  "Harbour": skinHarbour
+  "Harbour": skinHarbour,
+  "The Cloud": skinCloud
 }
 
 function skinSpaceship(w, rng) {
@@ -3271,6 +3275,61 @@ function skinDataCenter(w, rng) {
   // so they always stand beside one, and from no further draw on `rng`.
   w.updraft = new Uint8Array(COLS)
   for (x = 3; x < COLS - 3; x++) if ((x + offset) % pitch === 2) w.updraft[x] = 1
+}
+
+// The Cloud: banks of vapour, soft all the way through. Everything is DIRT,
+// with the lit top of each bank ORE (the silver lining) and a ROCK core where
+// a bank is thick, so a bash or a dig goes through like anywhere soft. Shape
+// is left exactly as generated: rounder banks are the drawing's business, and
+// a skin that moved floors would have to re-prove every route.
+//
+// The updrafts are the one place on the board where umbrellas are the point:
+// rising columns of air that hold a floater up (half its usual fall) and do
+// nothing at all for anyone without one — unlike the Data Center's, which
+// carry everybody. Pitch and offset come from the level number, not `rng`.
+var CLOUD_DRAFT_PITCH = 17
+var CLOUD_LIFT = 0.5        // a floater in a Cloud updraft falls at half umbrella speed
+function skinCloud(w, rng) {
+  var x, y
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++) {
+      if (at(w, x, y) === STEEL || !solid(w, x, y)) continue
+      var lining = !solid(w, x, y - 1)
+      var core = solid(w, x, y - 2) && solid(w, x, y + 2) && solid(w, x - 2, y) && solid(w, x + 2, y)
+      setCell(w, x, y, lining ? ORE : (core ? ROCK : DIRT))
+    }
+  w.updraft = new Uint8Array(COLS)
+  w.updraftLift = true
+  var offset = (w.level * 7) % CLOUD_DRAFT_PITCH
+  for (x = 4; x < COLS - 4; x++) if ((x + offset) % CLOUD_DRAFT_PITCH < 2) w.updraft[x] = 1
+}
+
+// The silver lining, laid once the level's shape is final (a mechanism runs
+// after carving and roughening; the skin runs before them, so its own lining
+// only caught a third of the tops). Material only: nothing moves.
+function cloudLining(w) {
+  for (var y = SKY; y < ROWS - 2; y++)
+    for (var x = 3; x < COLS - 3; x++)
+      if (solid(w, x, y) && at(w, x, y) !== STEEL && !solid(w, x, y - 1)) setCell(w, x, y, ORE)
+}
+
+// The Cloud on the ticker: once a level each, the first one lost and the
+// first floater an updraft holds up. Read off the world, like the radio.
+function stepCloud(w) {
+  if (!w.updraftLift || (w.cloudLost && w.cloudLifted)) return
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (!w.cloudLost && ag.state === "dead") {
+      w.cloudLost = true
+      feedNote(w, "YOUR FILES ARE IN THE CLOUD. SO IS " + agentTag(w, ag) + ".")
+      return
+    }
+    if (!w.cloudLifted && ag.drafted && ag.floater && ag.state === "fall") {
+      w.cloudLifted = true
+      feedNote(w, agentTag(w, ag) + " HAS GONE SERVERLESS")
+      return
+    }
+  }
 }
 
 // Sandstone laid down by wind: long gentle bands that rise and fall across the
@@ -4415,7 +4474,13 @@ var HAZARDS = [
 
   // An old wreck venting what is left in its tanks. `cycle` and vertical,
   // so it reads as the one place in the level where the water is going up.
-  { id: "vent",     name: "Memory Pressure", mech: "cycle", mount: "floor", reach: 0, charge: 28, fire: 26, rest: 62, w: 4, h: 6, only: ["Trench"] }
+  { id: "vent",     name: "Memory Pressure", mech: "cycle", mount: "floor", reach: 0, charge: 28, fire: 26, rest: 62, w: 4, h: 6, only: ["Trench"] },
+  // The Cloud's weather: lightning. A long, visible build-up (the cloud above
+  // darkens and crackles), a strike too quick to outrun, and a long rest. An
+  // umbrella is no help — umbrellas are not lightning rods, and nothing in
+  // the hazard rules lets one parry a cycle. Weather, so it comes on top of
+  // the level's ordinary hazard rather than instead of it.
+  { id: "lightning", name: "Flash Storage", mech: "cycle", mount: "ceiling", reach: 0, charge: 46, fire: 6, rest: 170, w: 3, h: 7, only: ["The Cloud"], weather: true }
 ]
 
 // Open flame and steam have no business in an ice cave, and the industrial
@@ -5920,7 +5985,7 @@ function edgeDrop(w, ag, nx, depth, far) {
 
   // A drop in a Data Center updraft is no drop at all (see stepFall): the
   // colony steps off and lets the cold aisle carry it, and keeps its umbrella.
-  var drafted = w.updraft && w.updraft[Math.floor(nx)]
+  var drafted = w.updraft && w.updraft[Math.floor(nx)] && !w.updraftLift
   var wantsChute = !drafted && depth > killingFall(w) - trait.fallMargin
 
   if (!wantsChute) { ag.x = nx; startFall(w, ag); return }
@@ -6437,6 +6502,9 @@ var EVENTS = [
   { id: "fog", name: "Sea Fog",            biome: "Harbour", mech: "drift", what: "sight", ticks: 420 },
   { id: "highwater", name: "High Water",   biome: "Harbour", mech: "collapse", at: "floor", span: 6, deep: 2 },
   { id: "strike", name: "Dock Strike",     biome: "Harbour", mech: "blackout", mult: 0, ticks: 300 },
+  { id: "regiondown", name: "Region Outage", biome: "The Cloud", mech: "blackout", mult: 0, ticks: 300 },
+  { id: "condense", name: "Eventual Consistency", biome: "The Cloud", mech: "growth", span: 12, high: 2 },
+  { id: "evaporate", name: "Scale to Zero", biome: "The Cloud", mech: "collapse", at: "floor", span: 6, deep: 2 },
 
   // --- Clock Tower ---
   { id: "deadlock", name: "Deadlock",         biome: "Clock Tower", mech: "blackout", mult: 0, ticks: 280 },
@@ -7482,7 +7550,9 @@ function descentSpeed(w, ag, cx) {
   // column of rising air comes down at umbrella speed and lands like it had
   // one, without spending one. The Desert's wind and the Trench's water follow
   // the same rule — one field, read in one place.
-  if (w.updraft && w.updraft[cx]) { speed = Math.min(speed, FLOAT_SPEED); ag.drafted = true }
+  if (w.updraft && w.updraft[cx] && !w.updraftLift) { speed = Math.min(speed, FLOAT_SPEED); ag.drafted = true }
+  // The Cloud's lift only holds up an open umbrella, and holds it up well.
+  if (w.updraft && w.updraft[cx] && w.updraftLift && ag.floater) { speed = Math.min(speed, FLOAT_SPEED * CLOUD_LIFT); ag.drafted = true }
   return speed
 }
 
@@ -11397,6 +11467,7 @@ function finishWorldStep(w, active, blockers, moving) {
   stepConflicts(w)
   stepAisles(w)
   stepLibrarians(w)
+  stepCloud(w)
   stepAgi(w)
   stepRadio(w)
   stepMission(w)

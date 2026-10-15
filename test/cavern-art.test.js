@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [1, 20, 39]
+const levels = [1, 21, 41]
 function sample(level = 1, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
   w.res = 2; w.ticks = 77
@@ -42,7 +42,7 @@ const layers = [D.drawCavernBackdrop, D.drawCavernMaterials, D.drawCavernLife, (
 }]
 
 test("Cavern additions draw nothing at panel resolution or in other biomes", () => {
-  for (const level of [1, 20, 39, 4, 19]) for (const res of [undefined, 1, 2]) {
+  for (const level of [1, 21, 41, 4, 19]) for (const res of [undefined, 1, 2]) {
     const { w, pal } = sample(level); w.res = res
     if (w.biome === "Cavern" && res === 2) continue
     for (const draw of layers) {
@@ -153,7 +153,7 @@ test("grit falls only briefly and clips to open air; existing drips keep their s
 })
 
 test("Cavern light draws behind the colony, umbrellas, guards and exit", () => {
-  const { w, pal } = sample(39)
+  const { w, pal } = sample(41)
   for (let i = 0; i < 160; i++) S.step(w)
   const ag = S.spawn(w)
   Object.assign(ag, { x: 70, y: 16, state: "fall", floater: true, fall: 9 })
@@ -180,7 +180,7 @@ test("Cavern page keeps every original decor drawing command", () => {
     }
     D.drawDecor(img.ctx, w, pal); hash.update(JSON.stringify(calls))
   }
-  assert.equal(hash.digest("hex"), "492edf57b256676a2d58e87026459184471f27f023571c1119a1fe64ad57732d")
+  assert.equal(hash.digest("hex"), "f087268867e3ca95ee696733fa7f8628bd120b4fd3ce4a1b8cb7808b5f25e5ef")
 })
 
 test("Cavern panel backdrop, earth, decor, motes, exit and booth keep their bytes", () => {
@@ -195,5 +195,5 @@ test("Cavern panel backdrop, earth, decor, motes, exit and booth keep their byte
       D.drawExitBack(img.ctx, w, pal); D.drawEnemyHatch(img.ctx, w, pal, {})
       hash.update(img.buf)
     }
-  assert.equal(hash.digest("hex"), "6a6262548f647708916b09fce43909900139d509ed728db2a2305c6a44425feb")
+  assert.equal(hash.digest("hex"), "caba324490e3cd0de9e625e8339f977a42ce20f386972aaf1ebb10e331344d2e")
 })

@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [7, 26, 45]
+const levels = [7, 27, 47]
 const layers = [D.drawSpaceshipBackdrop, D.drawSpaceshipMaterials, D.drawSpaceshipInstruments]
 function sample(level = 7, name = "tokyo-night", res = 2) {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -166,7 +166,7 @@ test("original portholes, hull, decor, motes, exit and booth retain panel compon
       D.drawExitBack(img.ctx, w, pal); D.drawEnemyHatch(img.ctx, w, pal, {})
       hash.update(img.buf)
     }
-  assert.equal(hash.digest("hex"), "ac3647955217bd0cc7d7a972040cbe53ed49857a9f139a0a04bd226a33e7c73a")
+  assert.equal(hash.digest("hex"), "7bfc4de56ae33870e6d22160138dd9628f427782dd08b6593c6631c41dd681b3")
 })
 
 test("page consoles preserve every original viewport and stay put after a breach", () => {

@@ -59,6 +59,7 @@ function toward(c, hue, t) { return mix(c, hue, t) }
 var JUNGLE = { r: 0.24, g: 0.52, b: 0.20 }
 var GLACIER = { r: 0.55, g: 0.78, b: 0.92 }
 var HULL = { r: 0.46, g: 0.52, b: 0.60 }
+var CLOUD = { r: 0.82, g: 0.88, b: 0.97 }
 
 // Copper rather than the yellower brass it started as: redder, and further
 // from the Ruins' urgent red only because that biome is pink-red where this
@@ -105,7 +106,7 @@ var VOID = { r: 0, g: 0, b: 0 }
 // number by the same rule, which is how every other per-biome difference in
 // this game stays in step across two files that cannot call each other.
 function poolTint(level) {
-  switch ((level - 1) % 19) {
+  switch ((level - 1) % 20) {
     case 1: return WATER      // Ruins: a flooded cistern
     case 3: return LAVA       // Foundry: what the place is for
     case 4: return WATER      // Jungle: the swamp, and what lives in it
@@ -123,12 +124,13 @@ function poolTint(level) {
     // 16, the Rooftops, are dry: a light well, and the street at the bottom.
     // 17, the Subway, is dry: a disused shaft under the platforms.
     case 18: return WATER     // Harbour: the dock itself
+    // 19, The Cloud, is dry: the hole is just more sky.
     default: return WATER     // dry biomes; unused, but never undefined
   }
 }
 
 function biomeTint(theme, level) {
-  switch ((level - 1) % 19) {
+  switch ((level - 1) % 20) {
     case 0: return theme.accent                              // Cavern
     case 1: return theme.urgent                              // Ruins
     case 2: return lighter(theme.accent, 1.7)                // Frost
@@ -171,6 +173,9 @@ function biomeTint(theme, level) {
     // a clean cream-green nobody else has.
     case 17: return toward(theme.accent, TILE, 0.76)              // Subway
     // Wet granite and harbour grey-green, colder than the Trench's sea.
+    // Cloud white with the sky's blue in it: lighter than anything on the
+    // board, so the banks read as vapour and the agents stand out dark on them.
+    case 19: return toward(lighter(theme.foreground, 1.1), CLOUD, 0.70)  // The Cloud
     default: return toward(theme.muted, BRINE, 0.72)              // Harbour
   }
 }

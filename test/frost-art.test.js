@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [3, 22, 41]
+const levels = [3, 23, 43]
 const layers = [D.drawFrostSurfaces, D.drawFrostWeather]
 function sample(level = 3, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -168,7 +168,7 @@ test("breath puffs move out of the mouth, fade and stop for absent or nonwalking
 })
 
 test("Frost weather precedes faces, umbrellas, guards' booth and the exit", () => {
-  const { w, pal } = sample(22)
+  const { w, pal } = sample(23)
   for (let i = 0; i < 160; i++) S.step(w)
   const ag = S.spawn(w)
   Object.assign(ag, { x: 70, y: 16, state: "fall", floater: true, fall: 9 })
@@ -185,8 +185,8 @@ test("Frost weather precedes faces, umbrellas, guards' booth and the exit", () =
 test("original Frost ridge, terrain, icicles, motes, exit and booth retain component bytes", () => {
   // Captured from main before this pass. Separate components, no whole-frame pin.
   for (const [resolutions, expected] of [
-    [[undefined, 1], "dba513cf35d23b184dc7b0d2ee3d456ba4284edfe09a6c926e07bebb86adfa80"],
-    [[2], "d8d9051824782eb4e6b21697af4ca9adc6566f8f879a4089187c84ed563b77e5"]
+    [[undefined, 1], "d6d616cd2b3af7022d7d0432d009a24facfa711241cef8a4318913f24f1258ca"],
+    [[2], "a374c9f146a51f258b54395cb7ccc19e5e9d16ac7c88da32ea0a756bfaa0fdec"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)

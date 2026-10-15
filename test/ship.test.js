@@ -66,7 +66,7 @@ test("every page script scans cleanly to the end and keeps the same exported nam
 
 test("the shipped Sim plays out exactly like the source", () => {
   const A = source("Sim.js"), B = shipped("Sim.js")
-  for (const level of [1, 6, 9, 14, 21, 38, 57, 84, 101, 138]) {
+  for (const level of [1, 6, 9, 14, 22, 39, 59, 88, 106, 145]) {
     const a = A.generate(level, 0, level * 7919), b = B.generate(level, 0, level * 7919)
     while (!a.done && a.ticks < 6000) A.step(a)
     while (!b.done && b.ticks < 6000) B.step(b)
@@ -81,7 +81,7 @@ test("the shipped Draw paints the same bytes in every biome", () => {
     const biome = S.generate(level, 0, 1).biome
     if (!seen.has(biome)) { seen.add(biome); levels.push(level) }
   }
-  assert.equal(levels.length, 19, "one level per biome")
+  assert.equal(levels.length, S.BIOMES.length, "one level per biome")
   const hash = img => crypto.createHash("sha1").update(img.data || img.buf || img.pixels).digest("hex")
   for (const level of levels) {
     const opts = { level, seed: 4242, ticks: 300 }

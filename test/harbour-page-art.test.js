@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [19, 38, 57, 76], layers = [D.drawPortNight, D.drawPortQuay, D.drawPortLife, D.drawPortWater]
+const levels = [19, 39, 59, 79], layers = [D.drawPortNight, D.drawPortQuay, D.drawPortLife, D.drawPortWater]
 const MAX_CALLS = 20000
 function sample(level = 19, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -237,7 +237,7 @@ test("harbour beam preserves opaque faces, shirts, eyes and umbrellas", () => {
 })
 test("original Harbour ground, nets, lamps, sea, ferries, hazards and exit retain bytes", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "a31ef40b535e630222b4d5eb6f8d16dac6887922ee55a52a78727071e2c08812"], [[2], "1ca2f57228fe882f88ca902b637487166bcf85723817a09d5ba64fcb2aa00130"]
+    [[undefined, 1], "c94428a91fb2b4c8fa623cfc3eac8eaf3ae3a57aaf65cd54779942ddb879ee59"], [[2], "3ce0bed508104068a955a653e1a3e56839d7432d8aeae3c0e0a00f507464d327"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)
@@ -304,7 +304,7 @@ test("deep-water shimmer remains visible after the original sea fill and beneath
 })
 
 test("complete lighthouse and attached faint beam survive typical layouts including the reported frame", () => {
-  for (const level of [19, 38, 57, 76, 95, 114, 133, 152]) {
+  for (const level of [19, 39, 59, 79, 99, 119, 139, 159]) {
     const w = S.generate(level, 0, 3); w.res = 2
     for (let tick = 0; tick < 400; tick++) S.step(w)
     const layout = D.portLayout(w), b = layout.lighthouse
@@ -340,7 +340,7 @@ test("all new paint stays below the original warm sky and complete parent sky pi
     hash.update(img.buf.subarray(0, 800 * 56 * 3))
   }
   // Captured from the approved Subway parent, before either Harbour page pass.
-  assert.equal(hash.digest("hex"), "f410cc98ff3f9cc043f8d75dba8093fc54151297acbba2b0c60f24a41e2d68c8")
+  assert.equal(hash.digest("hex"), "5df80f1f8efddc8ddffe8426c219c56d2925dea9d99dcd03094275f308fd3a0b")
   for (let level = 19; level <= 19 * 24; level += 19) {
     const { w } = sample(level)
     for (const layer of layers) {

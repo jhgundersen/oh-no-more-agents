@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [18, 37, 56, 75], layers = [D.drawStationHall, D.drawStationPanels, D.drawStationEdge, D.drawStationPulse]
+const levels = [18, 38, 58, 78], layers = [D.drawStationHall, D.drawStationPanels, D.drawStationEdge, D.drawStationPulse]
 const MAX_CALLS = 20000
 function sample(level = 18, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -256,7 +256,7 @@ test("station glow preserves opaque faces, shirts, eyes and umbrellas", () => {
 })
 test("original Subway ground, fixtures, lights, rails and trains, pits, hazards and exit retain bytes", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "923045468b1d4035fa30f19f8235ec32f34e1790419a2e92ef1e23ecd3e8e2c4"], [[2], "c481c45fbfe3c46917ce02f096cb49fe19644e2d9b28b9893c622956f26ba0c1"]
+    [[undefined, 1], "00e80542611f9583b00e297eb0720c95b9006cf6b7db2f099b19da817ae2786f"], [[2], "b308153995c2ab7b71a544bdc0f6232bf5154844830edad092daa1764958635a"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)

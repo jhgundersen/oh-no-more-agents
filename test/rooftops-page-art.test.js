@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [17, 36, 55, 74], layers = [D.drawNightCity, D.drawNightFixtures, D.drawNightSigns, D.drawNightSheen, D.drawNightWisps]
+const levels = [17, 37, 57, 77], layers = [D.drawNightCity, D.drawNightFixtures, D.drawNightSigns, D.drawNightSheen, D.drawNightWisps]
 const MAX_CALLS = 20000
 function sample(level = 17, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -300,7 +300,7 @@ test("rainy city preserves opaque faces, shirts, eyes and umbrellas", () => {
 })
 test("original Rooftops ground, fixtures, rain, washing, ziplines, pits, hazards and exit retain bytes", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "bdd0fd0b43c1285a9d6c913bc36c36ea03ea8d3701407f9a3ca11e36ee6c5c56"], [[2], "0e8002a1921846fafb04232dc82053c2d695d0b48a3b005661d3f26e2bf7f64f"]
+    [[undefined, 1], "347f75442b58cb0f1fd065aeb45810c1bb6897fe1645bbcc0c2823a42c2c11e2"], [[2], "41f69eda661472423d8fae799fc249b0dee0e77651696cf254f8e782d91b7354"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)

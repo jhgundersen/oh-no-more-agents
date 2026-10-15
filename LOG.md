@@ -8472,3 +8472,107 @@ changes slipped in.
 deployment or sibling sync.
 
 Reviewed and merged by the loop. The red team, Moderator, Bouncer, Backup and Cloud Provider have clearer silhouettes and tells at page resolution; resolution 1 is unchanged.
+
+## 263 — 2026-10-15 · The Cloud
+
+**Asked:** a twentieth biome, The Cloud, "the one place where umbrellas are the
+point":
+- platforms that are drifting cloud banks;
+- constant rain;
+- telegraphed lightning (flash and rumble, scorches a cell; umbrellas don't
+  protect);
+- updrafts that lift floaters;
+- an ON-PREM exit door;
+- agent puns on the ticker.
+
+Appended to the end of `BIOMES`, as AGENTS.md requires. Sim, plain art,
+palette, tests and a play-test across its levels, never a soft-lock. Page-res
+art is left to Codex.
+
+**Re-skin (read this first):** biomes are picked by level number, so with 20
+of them every level from 20 up is now a different biome than before. Level 20
+is The Cloud, level 21 a Cavern again, and so on, and every old share link to
+a level above 19 opens a different-looking level with a different colony
+outcome. Levels 1–19 are unchanged. `Palette.js`'s `poolTint`/`biomeTint` rule
+moves from `% 19` to `% 20` in the same commit, and AGENTS.md's note says
+`% 20` now.
+
+**Changed (Sim):**
+- **The biome.** `BIOMES` gains "The Cloud" at the end. Its mission is "BRING
+  THE SYSADMINS ON-PREM" (2 civilians), and it has three events: Region Outage
+  (blackout), Eventual Consistency (growth), Scale to Zero (floor collapse).
+- **`skinCloud`.** Banks are DIRT with a ROCK core where thick. Shape is left
+  exactly as generated (rounder banks are drawing's business), so every route
+  stays proven.
+- **`cloudLining`.** The Cloud's mechanism lays ORE on every exposed top once
+  the level is final (the silver lining). Material only.
+- **Updrafts.** Columns at a fixed pitch (17, offset by level) with
+  `w.updraftLift`. In them a floater falls at half umbrella speed
+  (`CLOUD_LIFT`); anyone without one gets nothing. The Data Center's updraft,
+  which carries everyone, is unchanged.
+- **Lightning.** "Flash Storage", a ceiling cycle hazard: a 46-tick visible
+  wind-up, a 6-tick strike, a 170-tick rest. It's marked `weather`, so it
+  comes on top of the level's ordinary hazard, as the Trench current does, on
+  85% of Cloud levels. Nothing in the hazard rules lets an umbrella parry a
+  cycle: umbrellas are not lightning rods.
+- **Ticker** (`stepCloud`, once a level each): "YOUR FILES ARE IN THE CLOUD. SO
+  IS AGENT 012." for the first one lost, and "AGENT 003 HAS GONE SERVERLESS"
+  for the first floater an updraft holds up.
+- **The hole** at the bottom is dry: just more sky.
+
+**Changed (plain art, Draw and Palette):**
+- `backCloud`: rows of distant rounded banks.
+- Rain: the Rooftops' rain motes, denser.
+- `drawExitCloud`: a grey door with rack lights and an "ON-PREM" sign.
+- `drawHzLightning`: the thundercloud darkens and crackles faster through the
+  wind-up; the strike is a white flash and a zigzag bolt; a scorch mark fades
+  after.
+- The updraft columns use the existing `drawUpdrafts`.
+- Palette: a cloud tint (case 19), pale and blue.
+
+Page-resolution art falls back to the plain art for Codex to replace.
+
+**Measured:**
+- **The Cloud** (7 levels × 48 colonies, levels 20–140): 95% home, no hangs,
+  no stall endings or clock-outs. Level 20 is the hardest at 83%, level 100
+  at 88%.
+- **All 150 levels × 24:** 95.75% → 94.33% home and bad endings 20 → 45,
+  because of the re-skin, not the Cloud: the Cloud's own levels are at 94.2%,
+  mid-pack. The new trouble spots are re-skinned levels:
+  - 109, now a Skyscraper: its hero is left last at a sealed wall with no
+    tools; heroes are barred from the toolbar (15/24 stall endings, 6
+    clock-outs);
+  - 101, now a Cavern mission level: nobody home in 3/24, fixed in 264;
+  - 45: 2 clock-outs.
+
+`test/cloud.test.js` covers:
+- the biome's place and that levels 1–19 keep theirs;
+- the lining and updraft columns;
+- an updraft holding up a floater and nobody else;
+- lightning winding up, striking and killing a floater under it;
+- both ticker lines;
+- drawing at both resolutions;
+- the tint (level 21 a Cavern again).
+
+**What re-skinning cost the tests.** About 80 failures across 29 files, all
+from level numbers that meant a biome under `% 19`:
+- **Pinned levels.** Levels pinned in `generate(N)`, `level: N`, `sample(N)`
+  and per-biome level arrays were mapped to the same biome's same occurrence
+  under `% 20`.
+- **Stored digests.** 38 stored render digests of those levels were
+  re-baselined from the new output. No existing biome's drawing code changed;
+  only The Cloud's paths and the rain branch were added.
+- **Tests that needed a particular layout** got a new level by search: a
+  Jungle level with a red-team hatch (5), a Library level where Deprecation
+  Notice and Reindexing still cut terrain (33), a Foundry level with a guard
+  on screen at page resolution (84), and a Cavern sniper that reaches its post
+  (by predicate).
+- **The rate-limit page test** plays levels 1–50 (was 1–30) to meet a queue.
+- **Fixed rather than re-baselined:** the ship test now expects
+  `BIOMES.length` biomes.
+- **Lightning's drawing** follows the rules every fixture keeps: still a
+  little alive at idle (the thundercloud drifts a cell), and its scorch fits
+  the shared recovery window.
+- **The Cloud's exit** got a minimal page-resolution pass so every biome has
+  one; the real one is Codex's.
+- **The event-duration mirror** knows Region Outage (300 ticks).

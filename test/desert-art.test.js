@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [11, 30, 49]
+const levels = [11, 31, 51]
 const layers = [D.drawDesertSky, D.drawDesertRelics, D.drawDesertSurfaces, D.drawDesertHeat]
 function sample(level = 11, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -143,7 +143,7 @@ test("relic placement avoids the original sun and heat precedes actors and fixtu
     const sun = 40 + Math.floor(D.backRng(w)() * 320)
     for (let i = 0; i < w.corridors.length; i++) assert.ok(Math.abs(D.desertRelic(w, i).x - sun) >= 48)
   }
-  const { w, pal } = sample(30)
+  const { w, pal } = sample(31)
   for (let i = 0; i < 160; i++) S.step(w)
   const ag = S.spawn(w)
   Object.assign(ag, { x: 70, y: 16, state: "fall", floater: true, fall: 9 })
@@ -160,8 +160,8 @@ test("relic placement avoids the original sun and heat precedes actors and fixtu
 test("original Desert terrain, dunes, sun, cactus, motes, exit and booth retain component bytes", () => {
   // Captured from main. Separate unchanged recipes, never a whole-frame pin.
   for (const [resolutions, expected] of [
-    [[undefined, 1], "4a3327111148c19c3a734750fea0575ae8d24236c0974d995c43c34c0868399a"],
-    [[2], "4825d2d6b79b6837090be905aeba1b405a419a0cd9503acf337773f9902b35d1"]
+    [[undefined, 1], "79ab2b98406e9f36afffbb9cb54b0aac240e61238507bd11a7b4615e080fbad5"],
+    [[2], "9096ba61aa30c626b28f39568751bf99920f6b1944c8d46f636de1e99d27fb47"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)

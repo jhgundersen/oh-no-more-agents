@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [8, 27, 46, 65]
+const levels = [8, 28, 48, 68]
 const MAX_CALLS = 20000
 const layers = [D.drawAssemblyBackdrop, D.drawAssemblyEdges, D.drawAssemblyLife]
 function sample(level = 8, name = "tokyo-night") {
@@ -182,7 +182,7 @@ test("safety paint leaves most texture visible and avoids actual belts and new b
 })
 
 test("assembly animation precedes cogs, pipes, agents, umbrellas, guards, booth and exit", () => {
-  const { w, pal } = sample(27)
+  const { w, pal } = sample(28)
   for (let i = 0; i < 240; i++) S.step(w)
   const ag = S.spawn(w)
   Object.assign(ag, { x: 70, y: 16, state: "fall", floater: true, fall: 9 })
@@ -201,11 +201,11 @@ test("assembly animation precedes cogs, pipes, agents, umbrellas, guards, booth 
 test("original Factory backdrop, materials, decor, cogs, belts, motes, shutter, booth and hazards retain bytes", () => {
   // Component hashes from main, rather than whole-frame pins.
   for (const [resolutions, expected] of [
-    [[undefined, 1], "0c02ef0e5dc5287529946a4f284db3ab9a1a79dcb1938665c2d9ce9f4038976f"],
-    [[2], "29e456a71038174ba1ec8c587d65c1d600700ae0b7dba739ca2978b80b15ad88"]
+    [[undefined, 1], "1dd2ada3b21eb08b9cca374b2c5af87af512cfdda7ba44db880d0760d45bef41"],
+    [[2], "1649b28c78a59d0894f95dcc9767d4d4290dfe6d9892692d1ca8dc41d5cbf395"]
   ]) {
     const hash = createHash("sha256")
-    for (const name of Object.keys(THEMES)) for (const level of [8, 27, 46])
+    for (const name of Object.keys(THEMES)) for (const level of [8, 28, 48])
       for (const res of resolutions) for (const ticks of [0, 77, 240]) {
         const { w, pal } = sample(level, name); w.res = res; w.ticks = ticks
         const img = canvas(400, 248, themeOf(name).background)

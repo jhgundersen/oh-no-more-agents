@@ -26,7 +26,7 @@ function picture(w, draw) {
 // No whole-frame pins: geometry, passenger visibility and layering are the
 // contract. All phases use generated quays and both directions of crossing.
 test("ferries draw all phases at both resolutions, read only and on the sea surface", () => {
-  for (const res of [undefined, 1, 2]) for (const level of [19, 57]) for (const name of Object.keys(THEMES)) {
+  for (const res of [undefined, 1, 2]) for (const level of [19, 59]) for (const name of Object.keys(THEMES)) {
     const { w, tr, pal } = sample(res, level, name)
     for (const phase of ["wait", "run", "drop", "back"]) {
       Object.assign(tr, { phase, riders: phase === "back" ? [] : [1, 2, 3], v: 0.35,
@@ -146,5 +146,5 @@ test("metro car art retains its seeded component bytes in every phase and resolu
       hash.update(picture(w, ctx => D.drawSubwayTrain(ctx, w, pal, tr)).buf)
     }
   }
-  assert.equal(hash.digest("hex"), "44e0210996abc189c4d287efdc22cba88b27defb85152578eb7d53d755e46bad")
+  assert.equal(hash.digest("hex"), "0fa73ded5eabdb2d820599f5512c83eda31503edaa203e620246f8e5872e0f52")
 })

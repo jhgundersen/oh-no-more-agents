@@ -6,7 +6,7 @@ import { canvas } from "../tools/render.js"
 // The Data Center's hot and cold aisles (Sim's placeAisles): pace only, both
 // ways, on its own stream; nothing else in any level moves.
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const DC = [12, 31, 50, 69, 88]
+const DC = [12, 32, 52, 72, 92]
 
 test("Data Center levels get aisle pairs on corridor floors; no other biome has any", () => {
   let pairs = 0
