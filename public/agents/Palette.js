@@ -59,7 +59,7 @@ function toward(c, hue, t) { return mix(c, hue, t) }
 var JUNGLE = { r: 0.24, g: 0.52, b: 0.20 }
 var GLACIER = { r: 0.55, g: 0.78, b: 0.92 }
 var HULL = { r: 0.46, g: 0.52, b: 0.60 }
-var CLOUD = { r: 0.82, g: 0.88, b: 0.97 }
+var CLOUD = { r: 0.78, g: 0.74, b: 0.96 }       // dusk: pale lilac with the sky's blue in it
 
 // Copper rather than the yellower brass it started as: redder, and further
 // from the Ruins' urgent red only because that biome is pink-red where this
@@ -173,9 +173,9 @@ function biomeTint(theme, level) {
     // a clean cream-green nobody else has.
     case 17: return toward(theme.accent, TILE, 0.76)              // Subway
     // Wet granite and harbour grey-green, colder than the Trench's sea.
-    // Cloud white with the sky's blue in it: lighter than anything on the
-    // board, so the banks read as vapour and the agents stand out dark on them.
-    case 19: return toward(lighter(theme.foreground, 1.1), CLOUD, 0.70)  // The Cloud
+    // Dusky cloud: pale lilac lit from the theme's own accent, so the banks
+    // read as vapour at evening and the biome is not one flat grey.
+    case 19: return toward(lighter(theme.accent, 1.3), CLOUD, 0.72)     // The Cloud
     default: return toward(theme.muted, BRINE, 0.72)              // Harbour
   }
 }

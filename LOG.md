@@ -8608,3 +8608,32 @@ The rule applies to every mission level, not just re-skinned ones.
 `test/stragglers.test.js` covers it: a colony meets the unreachable mission,
 it gets descoped, agents still get home, the cages stay shut, and a waiting
 agent isn't condemned. The test fails without the change.
+
+## 265 — 2026-10-15 · Banks that read as cloud
+
+**Asked (supervisor, from level 20, seed 3, res 2, tick 500):** the ON-PREM
+door and the rain read, but the walkable terrain looks like ordinary grey
+stone slabs. At resolution 1 the platforms should read as cloud banks:
+- a puffy, scalloped top edge;
+- a lighter sunlit top and a darker damp underside;
+- slightly soft, dithered edges.
+
+Terrain drawing only, no sim change. And give the biome a palette with some
+sky colour in it (dusky blue/lilac) so it doesn't look unfinished.
+
+**Changed:**
+- **`drawCloudBanks`** paints over the ordinary materials on Cloud levels,
+  shading each solid cell by depth: sunlit (`dirtEdge`) where air is just
+  above, lit (`decorLit`) one row down, then the pale body (`dirt`) with soft
+  horizontal wisps, and damp (`dirtShade`) where air is just below.
+- **Crowns** (`drawCloudCrown`): every 4 cells a round crown three pixels
+  high, spanning two cells and easing in at the shoulders, rises into the air
+  above the walking line.
+- **Undersides** (`drawCloudUnderside`) hang in shallow darker scallops, with
+  the bottom row dithered. The sides are dithered too, so no edge is a slab.
+- **Palette:** the Cloud tint moves from near-white to dusk, a pale lilac
+  (`CLOUD` 0.78/0.74/0.96) pulled from the theme's accent. Sky, back wall and
+  banks now share an evening colour instead of one flat grey.
+
+Draw and Palette only; the cells are the same cells. Page resolution draws the
+same pass until Codex's art replaces it.

@@ -217,6 +217,7 @@ function drawTerrain(ctx, w, pal) {
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
 
   drawTerrainMaterials(ctx, w, pal)
+  if (w.biome === "The Cloud") drawCloudBanks(ctx, w, pal)
 
   if (w.biome === "Library") drawLibraryStacks(ctx, w, pal)
   if (w.biome === "Mail Room") drawMailSlots(ctx, w, pal)
@@ -13641,6 +13642,54 @@ function fineRoofPigeon(ctx, pal, d, x, base) {
   ctx.fillRect(x + 4.5, base - 5.5, 0.5, 0.5)
   ctx.fillRect(x, base - 2.5, 2.5, 0.5) // wing
 }
+// The Cloud's banks, over the ordinary materials. Shaded by depth: sunlit
+// where air is just above, a pale body with soft horizontal wisps, and damp
+// and darker where air is just below; puffy scalloped crowns rise into the air
+// above the walking line, softer scallops hang below, and the sides are
+// dithered so no edge is a hard slab. Drawing only — the cells are the same.
+var CLOUD_PUFF = 4                              // cells between puff crowns
+function drawCloudBanks(ctx, w, pal) {
+  var k = w.k, C = k.CELL, cols = k.COLS, T = w.terrain
+  var air = function (x, y) { return x < 0 || x >= cols || y < 0 || y >= k.ROWS || T[y * cols + x] === k.EMPTY }
+  for (var y = k.SKY; y < k.ROWS - 2; y++)
+    for (var x = 3; x < cols - 3; x++) {
+      var c = T[y * cols + x]
+      if (c === k.EMPTY || c === k.STEEL) continue
+      var px = x * C, py = y * C
+      var top = air(x, y - 1) ? 0 : air(x, y - 2) ? 1 : 2
+      var under = air(x, y + 1)
+      ctx.fillStyle = top === 0 ? pal.dirtEdge : top === 1 ? pal.decorLit : under ? pal.dirtShade : pal.dirt
+      ctx.fillRect(px, py, C, C)
+      if (top === 2 && !under && (y * 5 + Math.floor(x / 3)) % 7 === 0) {      // a wisp
+        ctx.fillStyle = pal.decorLit
+        ctx.fillRect(px, py + 1, C, 1)
+      }
+      if (under) drawCloudUnderside(ctx, pal, px, py, C, x)
+      if (air(x - 1, y)) for (var dl = (y % 2); dl < C; dl += 2) ctx.clearRect(px, py + dl, 1, 1)
+      if (air(x + 1, y)) for (var dr = ((y + 1) % 2); dr < C; dr += 2) ctx.clearRect(px + C - 1, py + dr, 1, 1)
+      if (top === 0) drawCloudCrown(ctx, pal, px, py, C, x)
+    }
+}
+
+// The top of a bank: every CLOUD_PUFF cells a round crown three pixels high
+// spanning two cells, with shoulders easing into it.
+function drawCloudCrown(ctx, pal, px, py, C, x) {
+  var phase = x % CLOUD_PUFF
+  ctx.fillStyle = pal.dirtEdge
+  if (phase === 1) { ctx.fillRect(px, py - 2, C, 2); ctx.fillRect(px + 1, py - 3, C - 1, 1) }
+  else if (phase === 2) { ctx.fillRect(px, py - 2, C, 2); ctx.fillRect(px, py - 3, C - 1, 1) }
+  else if (phase === 0) ctx.fillRect(px + 2, py - 1, C - 2, 1)
+  else ctx.fillRect(px, py - 1, C - 2, 1)
+}
+
+// The underside: darker, hanging in shallow scallops, the bottom row dithered.
+function drawCloudUnderside(ctx, pal, px, py, C, x) {
+  ctx.fillStyle = pal.dirtShade
+  ctx.fillRect(px, py + C - 2, C, 2)
+  if (x % CLOUD_PUFF === 2) ctx.fillRect(px + 1, py + C, C - 2, 1)
+  for (var d = (x % 2); d < C; d += 2) ctx.clearRect(px + d, py + C - 1, 1, 1)
+}
+
 // The Cloud's way out is a door back to the data centre: ON-PREM, on a
 // sign over a plain grey door with a server-light strip beside it.
 var ONPREM_LIGHT = "#9ece6a"
