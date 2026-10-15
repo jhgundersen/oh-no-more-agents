@@ -235,9 +235,9 @@ test("harbour beam preserves opaque faces, shirts, eyes and umbrellas", () => {
     assert.ok(checked >= 30, "real opaque actor pixels compared")
   }
 })
-test("Harbour native components retain bytes and page components match the reviewed steamer", () => {
+test("Harbour native components retain bytes and page components match the reviewed steamer and water", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "c94428a91fb2b4c8fa623cfc3eac8eaf3ae3a57aaf65cd54779942ddb879ee59"], [[2], "0194ef5d2ff28e2c40239d1a4005718a2b18baa4dfdc5eecb065118e42ddbd84"]
+    [[undefined, 1], "c94428a91fb2b4c8fa623cfc3eac8eaf3ae3a57aaf65cd54779942ddb879ee59"], [[2], "ccd36e523f057a8ec3fb5794addb34a6d21091051e3dd1e56af9f6019ac2d599"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)

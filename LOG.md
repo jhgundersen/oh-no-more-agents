@@ -8168,3 +8168,101 @@ stands up. At 3 it is handed back to walking, as before, where
 The write-offs rise because agents sealed in the pocket are now seen and
 cleared, where before they rocked until the nuke. The level loses about as
 many, sooner.
+
+## 340 — 2026-10-15 · A sump is a liquid (on a branch)
+
+**Why:** watched seeded Jungle, Factory, Harbour and Foundry play locally,
+including desktop/phone, Steady/Brisk and Halloween/Christmas. The Factory's
+almost black sump read as an empty shaft at the phone's one CSS pixel per art
+pixel. Liquid pits were the next surface that looked unfinished beside the
+polished machinery and terrain.
+
+**Change:** `codex/pool-art`, from then-current main `e114230`. At page
+resolution only, oil carries short violet/green/amber interference streaks;
+lava has drifting dark crust with bright molten seams and two sparse embers;
+coolant has small rising outlined bubbles; water has broken, softly changing
+reflection ribbons. Existing biome palettes, waterline, body/depth fill,
+crocodile, Harbour reflections/fish and ferry wake remain in place. New
+strokes are split on cell boundaries and admitted only through current air in
+the existing wet mask. A surviving brick stays clear even inside a connected
+side chamber.
+
+Entry rings use the existing sink/death coordinates rather than the middle of
+the pit. Their small crown clears actual terrain above the surface, and the
+rings cannot expand across the quay. Event-only ripples without a victim keep
+the centre fallback. Both colony and red-team sinks are recognised. No new
+simulation fields, writes, RNG, timers or assets. Sim.js is byte-identical to
+the base. Native/default res 1 and share res 3 retain their original pixels.
+
+Reduced motion fixes the new material textures to a still pose, omits molten
+embers and splash crowns, and uses a short static entry mark. The ordinary
+page waterline also settles; the Harbour's existing swell remains its own
+shared boat/sea geometry.
+
+**Evidence:** `/tmp/codex-pool-art/strips/index.html` is an animated before/after
+review, with a reduced-motion fallback. `strips/contact-sheet.png` covers
+Ruins 2, Foundry 24, Jungle 25, Spaceship 7, Factory 8 and Harbour 39, native
+and page resolution. Each has eight six-tick ambient frames from ordinary
+seed-3 play, plus eight explicitly staged entry frames using the unchanged
+`sink`/`noteDeaths` functions. Entry staging registers the spawned agent in the
+world, so the left-edge splash and rings are checked together.
+
+`page-sheet.png` shows actual CSS-size boards and 3x crops: phone oil, desktop
+lava, phone Jungle, desktop coolant, Halloween Harbour, Christmas Ruins and
+reduced-motion oil. The phone captures include the board. World digests,
+board/stage dimensions and scroll widths agree before/after. The changed
+pixels stay around liquid pits; the comparison reservation includes the old
+renderer’s unclipped oil streaks, which the new wet-mask clipping removes.
+Preferred Chromium had no enabled browser surface, so used the repository's
+capped local Chromium helper. Captures and measurements use the final game
+source; the corrected entry fixture requires no browser recapture.
+
+**Pipeline:** `tools/pool-art.js` generates each seeded scene once, bounds its
+advance at 400 ticks, caches terrain by version/resolution/palette and draws
+actors straight into translated 96x64 crops. Ambient and entry scenes are
+labelled separately. All 384 native/page before/after frames take **1.44 s / 187.4 MB peak RSS**.
+Browser composition reuses the fourteen saved views rather than launching or
+capturing again for a corrected sheet check. Paint recorders are bounded;
+pixel comparisons use SHA-256, never raw-buffer diffs. Harness scripts are
+syntax-checked before entering the FIFO.
+
+`native-proof.json` verifies the original liquid-pit aggregate **dd865be3…**
+across six biomes, five themes, native/default/share resolution and both motion
+preferences. `component-proof.json` reconstructs Harbour's original component
+pins: native **c94428a9…** stays exact; the old page **0194ef5d…** becomes the
+reviewed water **ccd36e52…**. Only the page expectation changes.
+
+**Cost:** Draw.js adds **5,892 source bytes / 1,632 gzip bytes** before shipping's
+comment strip. At most **67** primitive rectangles per sampled pool, short
+cell-sliced strokes, and no additional canvas or retained particle objects.
+Only an active entry effect scans the existing cast for its origin.
+
+Real-page five-second Brisk FPS runs, baseline/final: Spaceship 7 from tick
+400 and Factory 8 from tick 400. All four held **60 median / 60 p5 FPS,
+17 ms worst and zero long-task time**. CPU was **11% / 12%** on Spaceship
+(up to 14 cast members), **14% / 13%** on Factory (up to 16). No speedup
+claimed. Logs: `fps-before-7.log`, `fps-after-7.log`, `fps-before-8.log`,
+`fps-after-8.log`.
+
+**Focused:** **43/43 pass, 5.24 s**. Covers unchanged native/share paint; read-only,
+RNG-free material poses in every palette; exact wet-mask and terrain clipping;
+carved side chambers and board edges; all four moving/still materials; actual
+sink coordinates for agents/enemies and flood fallback; impact expiry and
+reduced-motion geometry; rendered/unrendered live simulation digests;
+crop/cache equivalence through a rising sump; and complete comparison output.
+Factory, Jungle and Harbour art guards pass, including opaque agents,
+umbrellas, event floods and ferry play.
+
+**Full gate:** **1,425 passed, zero failures/cancellations/skips, 342.80 s**. Coverage and Factory art included. CRAP threshold **30**
+passed from that same LCOV, maximum **30.0**. All new runtime helpers have **100% coverage**,
+maximum **9.0**. The extended existing `drawPool` is **29.0 / 100%**;
+comparison orchestration is **13.0 / 100%**, scene discovery **5.0 / 100%**,
+and `poolFrame` **3.1 / 75%**.
+Completion was reported immediately. The persistent FIFO run used a 3 GB
+service cap, 2,048 MB Node heap, `ulimit -v 6000000`, two workers and
+120-second test timeouts. Source/tests stayed frozen through the full gate;
+CRAP reused coverage. Logs: `check.log`, `crap.log`, `final-gate.log`.
+`npm run stamp`, its check and `git diff --check` pass.
+
+**Next:** review and merge this branch; then another free choice of atmosphere,
+motion or presentation. Commit on the branch only; no push or deployment.
