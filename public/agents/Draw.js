@@ -3016,6 +3016,7 @@ function drawActors(ctx, w, pal, opts) {
   drawSpecialCard(ctx, w, pal)
   drawHatch(ctx, w, pal)
   drawEnemyHatch(ctx, w, pal, opts)
+  drawUmbrellaOffice(ctx, w, pal)
   drawExitGlow(ctx, w, pal)
   drawExitWelcome(ctx, w, pal)
   drawExitGate(ctx, w, pal)
@@ -3274,6 +3275,7 @@ function drawActorFixtures(ctx, w, pal) {
 }
 
 function drawActorColony(ctx, w, pal, opts) {
+  if (w.res === 2 && opts && opts.labels) opts = Object.assign({}, opts, { whoLabels: [] })
   for (var i = 0; i < w.agents.length; i++) {
     var ag = w.agents[i]
     if (ag.gone) { drawDeath(ctx, w, pal, ag); continue }
@@ -3287,6 +3289,7 @@ function drawActorColony(ctx, w, pal, opts) {
     drawEnemy(ctx, w, pal, enemy, opts)
     if (enemy.throttled > 0) drawThrottled(ctx, w, enemy.x * w.k.CELL, (enemy.y - 4) * w.k.CELL - 4, enemy.throttled)
   }
+  if (opts && opts.whoLabels) drawWhoLabels(ctx, w, opts.whoLabels)
 }
 
 // Board transitions belong to the per-tick layer in every host. No timers,
@@ -6133,6 +6136,124 @@ var EXIT_WELCOMES = {
   "Rooftops": ["porch","door"], "Subway": ["signal","warm"],
   "Harbour": ["harbour","warm"], "The Cloud": ["signal","door"]
 }
+// The lost-umbrella office: one furled canopy per colleague home, five in
+// the stand and five neatly stacked beside it. Display only; no stock moves.
+var UMBRELLA_OFFICE_CACHE = new WeakMap()
+var UMBRELLA_OFFICES = {
+  "Cavern":["stone","rockShade","rockEdge"], "Ruins":["pot","dirtShade","oreEdge"],
+  "Frost":["wood","dirtShade","snow"], "Foundry":["metal","steelShade","oreEdge"],
+  "Jungle":["wood","dirtShade","decorLit"], "Ice Cave":["stone","rockShade","exitLight"],
+  "Spaceship":["metal","steelShade","exitLight"], "Factory":["metal","steelShade","warn"],
+  "Skyscraper":["deco","rigDark","oreEdge"], "Trench":["barrel","oreShade","oreEdge"],
+  "Desert":["pot","dirtShade","oreEdge"], "Data Center":["metal","steelShade","exitLight"],
+  "Library":["wood","dirtShade","oreEdge"], "Mail Room":["crate","dirtShade","oreEdge"],
+  "Building Site":["pail","steelShade","warn"], "Clock Tower":["deco","rigDark","oreEdge"],
+  "Rooftops":["pot","steelShade","rockEdge"], "Subway":["tile","rockShade","exitLight"],
+  "Harbour":["barrel","dirtShade","oreEdge"], "The Cloud":["pail","steelShade","rockEdge"]
+}
+function umbrellaOfficeClear(w,x,foot,width) {
+  if (x < 6 || x+width > w.k.COLS*w.k.CELL-6 || foot-16 < w.k.SKY*w.k.CELL || foot >= w.k.ROWS*w.k.CELL) return false
+  var C=w.k.CELL
+  for (var yy=foot-16; yy<foot; yy+=C)
+    for (var xx=x; xx<x+width; xx+=C) if (!mechanismAir(w,xx,yy)) return false
+  for (var sx=x; sx<x+width; sx+=C) if (mechanismAir(w,sx,foot)) return false
+  var box={x:x,y:foot-16,width:width,height:16}
+  for (var i=0;i<w.hazards.length;i++) {
+    var h=w.hazards[i], zone={x:h.zx0*C-2,y:h.zy0*C-2,width:(h.zx1-h.zx0)*C+4,height:(h.zy1-h.zy0)*C+4}
+    if (levelTitleOverlap(box,zone)>0) return false
+  }
+  return true
+}
+function umbrellaOfficeFind(w) {
+  var e=w.exit,C=w.k.CELL,foot=(e.y+e.h)*C
+  var sides=e.x<w.k.COLS/2?[1,-1]:[-1,1], rises=[0,-4,-8,-12,4]
+  for (var size=24;size>=12;size-=12) for (var gap=12;gap<=36;gap+=12) for (var side=0;side<2;side++) for (var row=0;row<rises.length;row++) {
+    var d=sides[side],x=d<0?e.x*C-gap-size:(e.x+e.w)*C+gap,base=foot+rises[row]
+    if (umbrellaOfficeClear(w,x,base,size)) return {x:x,foot:base,width:size,stand:d<0?x+size-12:x,pile:d<0?x:x+12}
+  }
+  return null
+}
+function umbrellaOfficeLayout(w) {
+  var e=w.exit,old=UMBRELLA_OFFICE_CACHE.get(w)
+  var key=[w.terrainVersion,e.x,e.y,e.w,e.h].join(":")
+  if (old && old.key===key && old.terrain===w.terrain && old.hazards===w.hazards) return old.layout
+  var layout=umbrellaOfficeFind(w)
+  UMBRELLA_OFFICE_CACHE.set(w,{key:key,terrain:w.terrain,hazards:w.hazards,layout:layout})
+  return layout
+}
+function drawUmbrellaOffice(ctx,w,pal) {
+  if (w.res!==2 || !w.exit) return
+  var b=umbrellaOfficeLayout(w)
+  if (!b) return
+  var spec=Object.prototype.hasOwnProperty.call(UMBRELLA_OFFICES,w.biome)?UMBRELLA_OFFICES[w.biome]:UMBRELLA_OFFICES.Cavern
+  var count=Math.max(0,Math.min(10,Math.floor(w.saved||0)))
+  ctx.save()
+  // Back rim, then the canopies, then the bowl's front: they sit IN it.
+  ctx.fillStyle=pal.rigDark;ctx.fillRect(b.stand,b.foot-7,12,6)
+  ctx.fillStyle=pal[spec[2]]||GAG_PAPER;ctx.fillRect(b.stand,b.foot-7,12,0.5)
+  for (var i=0;i<Math.min(5,count);i++) drawOfficeBrolly(ctx,w,pal,i,b.stand+1+i*2,b.foot-15+(i%2),false)
+  drawOfficeBowl(ctx,w,pal,b,spec)
+  if (b.width===24) for (var j=5;j<count;j++) drawOfficeBrolly(ctx,w,pal,j,b.pile+1,b.foot-1-(j-5)*1.5,true)
+  ctx.restore()
+}
+function drawOfficeBrolly(ctx,w,pal,index,x,y,flat) {
+  var id=w.homeOrder&&w.homeOrder[index]!==undefined?w.homeOrder[index]:index
+  var ag={id:id},candy=candyBrolly(w,ag),bat=batBrolly(w,ag)
+  var ink=candy||bat||brollyColour(w,pal,ag)
+  // Rotate by swapping coordinates, keeping the half-pixel grid exact.
+  function mark(a,b,width,height){if(flat)ctx.fillRect(x+b,y-a-width,height,width);else ctx.fillRect(x+a,y+b,width,height)}
+  ctx.fillStyle=pal.umbrellaStem
+  mark(0,0,2,0.5);mark(0,0.5,0.5,1);mark(1.5,0.5,0.5,9)
+  ctx.fillStyle=ink
+  mark(1,3,1.5,4);mark(1.5,2,0.5,1);mark(1.5,7,0.5,1.5)
+  if (candy) {ctx.fillStyle=GAG_PAPER;mark(1,3.5,1.5,0.5);mark(1,5.5,1.5,0.5)}
+  if (bat) {ctx.fillStyle="#a393bc";mark(1,3,0.5,3);mark(0.5,3,0.5,1);mark(2.5,3,0.5,1)}
+}
+function drawOfficeBowl(ctx,w,pal,b,spec) {
+  var x=b.stand,y=b.foot-6,trim=pal[spec[2]]||GAG_PAPER
+  ctx.fillStyle=pal.rigDark;ctx.fillRect(x,y,12,6)
+  ctx.fillStyle=pal[spec[1]];ctx.fillRect(x+1,y+1,10,4)
+  ctx.fillStyle=trim;ctx.fillRect(x,y,12,1);ctx.fillRect(x+1,y+1,0.5,4)
+  UMBRELLA_OFFICE_TRIM[spec[0]](ctx,pal,x,y,trim)
+  // A small umbrella stamped on the front; no new font or tiny unreadable text.
+  ctx.fillStyle=GAG_PAPER;ctx.fillRect(x+5,y+2,3,0.5);ctx.fillRect(x+4.5,y+2.5,4,0.5)
+  ctx.fillRect(x+6,y+3,0.5,1.5);ctx.fillRect(x+5,y+4,1,0.5)
+}
+var UMBRELLA_OFFICE_TRIM = {
+  stone:officeStoneTrim,pot:officePotTrim,wood:officeWoodTrim,metal:officeMetalTrim,
+  deco:officeDecoTrim,barrel:officeBarrelTrim,crate:officeCrateTrim,pail:officePailTrim,tile:officeTileTrim
+}
+function officeStoneTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=pal.rockEdge;ctx.fillRect(x+1,y+3,3,0.5);ctx.fillRect(x+9,y+3,2,0.5)
+}
+function officePotTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=pal.rigDark;ctx.fillRect(x,y+1,1,2);ctx.fillRect(x+11,y+1,1,2)
+  ctx.fillStyle=trim;ctx.fillRect(x+2,y+4.5,8,0.5)
+}
+function officeWoodTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=trim;ctx.fillRect(x+3,y+1,0.5,4);ctx.fillRect(x+9,y+1,0.5,4)
+}
+function officeMetalTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=pal.steelEdge;ctx.fillRect(x+2,y+2,0.5,0.5);ctx.fillRect(x+10,y+2,0.5,0.5)
+  ctx.fillRect(x+2,y+4,0.5,0.5);ctx.fillRect(x+10,y+4,0.5,0.5)
+}
+function officeDecoTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=trim;ctx.fillRect(x+2,y+1,0.5,4);ctx.fillRect(x+9.5,y+1,0.5,4);ctx.fillRect(x+1,y+5,10,0.5)
+}
+function officeBarrelTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=trim;ctx.fillRect(x+1,y+2,3,0.5);ctx.fillRect(x+9,y+2,2,0.5);ctx.fillRect(x+1,y+4.5,10,0.5)
+}
+function officeCrateTrim(ctx,pal,x,y,trim) {
+  officeWoodTrim(ctx,pal,x,y,trim);ctx.fillStyle=trim;ctx.fillRect(x+1,y+4.5,10,0.5)
+}
+function officePailTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=trim;ctx.fillRect(x,y+1,0.5,2);ctx.fillRect(x+11.5,y+1,0.5,2);ctx.fillRect(x+2,y+4.5,8,0.5)
+}
+function officeTileTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=pal.rockEdge;ctx.fillRect(x+3,y+1,0.5,4);ctx.fillRect(x+9,y+1,0.5,4)
+  ctx.fillStyle=trim;ctx.fillRect(x+1,y+3.5,3,0.5);ctx.fillRect(x+9,y+3.5,2,0.5)
+}
+
 function exitWelcomeArrival(w) {
   if (!w || w.res !== 2 || !w.saved || !w.exit) return null
   if (w.mission && !w.mission.done) return null
@@ -13255,7 +13376,13 @@ function drawAgentLabel(ctx, w, pal, ag, ox, oy, st, opts) {
     // choices it gets to make — and the name is the useful thing to know.
     var nsp = ag.special ? w.specialSpec : null
     var text = nsp ? nsp.name : (action !== "" ? action : (ag.trait || ""))
-    if (text !== "") {
+    if (text !== "" && w.res === 2) {
+      var tag = { text: text.toUpperCase(), x: ox + SPRITE_W / 2, y: oy,
+        width: text.length * 4 + 5, height: 9, ag: ag,
+        priority: nsp ? 2 : (action !== "" ? 1 : 0), alpha: ctx.globalAlpha }
+      if (opts.whoLabels) opts.whoLabels.push(tag)
+      else drawWhoLabels(ctx, w, [tag])
+    } else if (text !== "") {
       ctx.fillStyle = nsp ? nsp.robe : (action !== "" ? pal.label : pal.labelFaint)
       ctx.font = "7px monospace"
       ctx.textAlign = "center"
@@ -13263,6 +13390,137 @@ function drawAgentLabel(ctx, w, pal, ag, ox, oy, st, opts) {
     }
   }
 
+}
+
+// WHO is a page overlay, not world state. Exact drawing anchors are collected
+// from the existing poses (including lifts, hooks and tubes), then painted once
+// above the cast. Native/panel and share renders retain their original labels.
+function whoRaisedCanopy(w, ag) {
+  if (ag.brollyFor > 0) return true
+  if (ag.state === "fall") return ag.floater && ag.fall > 2
+  if (ag.state !== "walk") return false
+  var age = w.ticks - ag.brollyClosedAt
+  return (age >= 0 && age < BROLLY_FOLD) || dripOver(w, ag)
+}
+
+function whoBodyRect(w, tag) {
+  var canopy = whoRaisedCanopy(w, tag.ag), width = canopy ? 38 : 14
+  var above = canopy ? 18 : (tag.ag.state === "bomb" ? 14 : (tag.ag.state === "zip" ? 8 : 0))
+  return { x: tag.x - width / 2, y: tag.y - above,
+    width: width, height: 18 + above }
+}
+
+function whoSpeechRect(w, tag) {
+  var q = quipFor(w, tag.ag)
+  if (!q || !quipAllowed(w, tag.ag, q)) return null
+  return whoBubbleRect(w, q, Math.round(tag.x), tag.y)
+}
+
+function whoBubbleRect(w, q, cx, oy) {
+  var width = q.text.length * 4 + 5, W = w.k.COLS * w.k.CELL
+  var conflict = q.text === "<<<<<<<" || q.text === ">>>>>>>"
+  var left = conflict ? gagConflictLeft(w, q, cx, width, W) : Math.max(1, Math.min(W - width - 2, Math.round(cx - width / 2)))
+  var top = Math.round(oy - 13 - (conflict ? 0 : q.lift || 0))
+  var sign = gagRateLimitRect(w)
+  if (sign && !conflict && left < sign[2] && left + width > sign[0] && top < sign[3] && top + 13 > sign[1])
+    left = sign[2] + width + 4 < W ? sign[2] + 3 : Math.max(1, sign[0] - width - 3)
+  top = bubbleClear(w, left - 1, top - 1, width + 2, 13) + 1
+  return { x: left - 2, y: top - 2, width: width + 4, height: 15 }
+}
+
+function whoOtherBodies(w, tags) {
+  var keep = []
+  for (var i = 0; i < w.agents.length; i++) {
+    var a = w.agents[i]
+    if (a.gone || tags.some(function(t) { return t.ag === a })) continue
+    // Brawls, arrivals and the last step home can have no label of their own.
+    keep.push({ x: pageAgentX(w, a) - 4, y: pageAgentY(w, a) - 4, width: 20, height: 24 })
+  }
+  return keep
+}
+
+function whoKeepClear(w, tags) {
+  var keep = levelTitleKeepClear(w).concat(whoOtherBodies(w, tags)), C = w.k.CELL
+  for (var i = 0; i < tags.length; i++) {
+    keep.push(whoBodyRect(w, tags[i]))
+    var speech = whoSpeechRect(w, tags[i])
+    if (speech) keep.push(speech)
+  }
+  for (var j = 0; j < w.enemies.length; j++) {
+    var en = w.enemies[j]
+    if (en.gone) continue
+    // Include the old enemy name and the wide NOT TONIGHT/BANNED bubbles.
+    var ex = Math.round(en.x * C) - en.dir * enemyRecoil(en)
+    var ey = Math.round((en.y + 1) * C) - SPRITE_PX - (en.state === "brawl" ? 4 : enemyMotion(w, en).bob)
+    keep.push({ x: ex - 45, y: ey - 15, width: 90, height: 34 })
+    var eq = enemyQuipFor(w, en)
+    if (eq) keep.push(whoBubbleRect(w, eq, ex, ey - 3))
+  }
+  for (var h = 0; h < w.hazards.length; h++) {
+    var hz = w.hazards[h]
+    if (hz.wrecked) continue
+    keep.push({ x: hz.zx0 * C, y: hz.zy0 * C,
+      width: (hz.zx1 - hz.zx0 + 1) * C, height: (hz.zy1 - hz.zy0 + 1) * C })
+    var hw = (hz.name || "").length * 4 + 6
+    keep.push({ x: (hz.zx0 + hz.zx1 + 1) * C / 2 - hw / 2,
+      y: hz.zy0 * C - 11, width: hw, height: 9 })
+  }
+  var sign = gagRateLimitRect(w)
+  if (sign) keep.push({ x: sign[0] - 1, y: sign[1] - 1, width: sign[2] - sign[0] + 2, height: sign[3] - sign[1] + 2 })
+  return keep
+}
+
+function whoCandidate(w, tag, tier, side) {
+  var W = w.k.COLS * w.k.CELL, H = w.k.ROWS * w.k.CELL
+  return { x: Math.max(6, Math.min(W - tag.width - 6,
+      Math.round(tag.x - tag.width / 2 + side * (tag.width / 2 + 5)))),
+    y: Math.max(w.k.SKY * w.k.CELL + 1, Math.min(H - 11, Math.round(tag.y - 12 - tier * 10))),
+    width: tag.width, height: tag.height }
+}
+
+function whoFits(rect, keep) {
+  for (var i = 0; i < keep.length; i++) if (levelTitleOverlap(rect, keep[i]) > 0) return false
+  return true
+}
+
+function whoPlacement(w, tag, keep) {
+  var best = null, low = Infinity
+  // Nine bounded candidates; dense queues omit lower-priority tags rather
+  // than covering another agent or drawing unreadable piles of names.
+  for (var tier = 0; tier < 3; tier++) for (var side = -1; side <= 1; side++) {
+    var r = whoCandidate(w, tag, tier, side)
+    if (!whoFits(r, keep)) continue
+    var cost = tier * 12 + Math.abs(side) * 8 + levelTitleScore(w, r, []) * 0.05
+    if (cost < low) { low = cost; best = r }
+  }
+  return best
+}
+
+function whoLabelLayout(w, tags) {
+  var ordered = tags.slice().sort(function(a, b) { return b.priority - a.priority || a.ag.id - b.ag.id })
+  var keep = whoKeepClear(w, tags), placed = []
+  for (var i = 0; i < ordered.length; i++) {
+    var r = whoPlacement(w, ordered[i], keep)
+    if (!r) continue
+    placed.push({ tag: ordered[i], rect: r })
+    keep.push({ x: r.x - 1, y: r.y - 1, width: r.width + 2, height: r.height + 2 })
+  }
+  return placed
+}
+
+function drawWhoLabels(ctx, w, tags) {
+  var placed = whoLabelLayout(w, tags)
+  ctx.save()
+  for (var i = 0; i < placed.length; i++) {
+    var item = placed[i], r = item.rect, tag = item.tag
+    ctx.globalAlpha = tag.alpha
+    ctx.fillStyle = "#16161c"
+    ctx.fillRect(r.x + 1, r.y, r.width - 2, r.height)
+    ctx.fillRect(r.x, r.y + 1, r.width, r.height - 2)
+    ctx.fillStyle = tag.priority === 2 ? "#e6c878" : "#f4f4ec"
+    drawTransitionText(ctx, tag.text, r.x + r.width / 2, r.y + 2, 1)
+  }
+  ctx.restore()
 }
 
 function actionLabel(st) {
