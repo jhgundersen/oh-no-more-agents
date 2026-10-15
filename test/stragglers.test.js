@@ -302,3 +302,14 @@ test("the Ice Cave gets a slightly bigger toolbar, and nothing else about the le
   assert.ok(a.skills.climber - S.ICE_CLIMBERS >= 12 && a.skills.climber - S.ICE_CLIMBERS <= 18)
   assert.ok(b.skills.basher <= 15 || b.ascending, "other biomes are untouched")
 })
+
+test("a crawlway that ends at a ledge hands the slider back to walking instead of turning it", () => {
+  const w = box(70), k = w.k
+  for (let x = 30; x < 50; x++) w.terrain[26 * k.COLS + x] = k.DIRT     // a low roof over x30-49
+  for (let y = 30; y < 33; y++) for (let x = 45; x < 70; x++) w.terrain[y * k.COLS + x] = k.EMPTY
+  for (let x = 0; x < k.COLS; x++) w.terrain[33 * k.COLS + x] = k.DIRT    // the floor three below the lip
+  const ag = Object.assign(S.spawn(w), { x: 44.5, y: 29, dir: 1, state: "slide", timer: 0 })
+  for (let i = 0; i < 4 && ag.state === "slide"; i++) S.stepSlide(w, ag)
+  assert.equal(ag.dir, 1, "still facing the way it was going")
+  assert.equal(ag.state, "walk")
+})

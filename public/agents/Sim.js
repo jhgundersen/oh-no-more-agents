@@ -9248,8 +9248,17 @@ function stepSlide(w, ag) {
     return
   }
 
-  if (solid(w, cx, footY) || !solid(w, cx, footY + 1)
-      || !crouchroom(w, cx, footY)) {
+  // The floor ending under a low roof is an edge, not a wall: stand up and let
+  // the walk's edge rule decide whether to drop. Level 84 has a crawlway that
+  // ends three cells above the floor on the way home, and its slide turned
+  // back at the lip every time until the clock ran out.
+  if (!solid(w, cx, footY) && !solid(w, cx, footY + 1)) {
+    ag.state = "walk"
+    ag.timer = 0
+    return
+  }
+
+  if (solid(w, cx, footY) || !crouchroom(w, cx, footY)) {
     ag.dir = -ag.dir
     ag.turns++
     // Reversing is only an answer if the other way is open. Wedged in a crouch

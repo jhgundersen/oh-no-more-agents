@@ -7032,3 +7032,27 @@ frames. Terrain is cached in play; these are Node raster times, not browser FPS.
 no push or deployment.
 
 Reviewed and merged by the loop (with `npm run compare`). Rooftops: a skyline band with lit windows, readable pink and cyan neon, solid tanks and dishes on the roofs; the umbrellas still pop.
+
+## 235 — 2026-10-15 · A crawlway that ends at a ledge
+
+**Asked:** after the office radio, take the best remaining item from the
+play-test list.
+
+**Found:** level 84's stall endings (and several clock-outs elsewhere) were
+agents crawling west under a low roof whose floor ends three cells above the
+ground on the way home. The slide treated the missing floor like a wall,
+turned, tried the other end, gave up, and walked back out. They did that until
+the stall cutoff or the clock.
+
+**Changed:** in `stepSlide`, a crawlway whose floor ends ahead hands the agent
+back to walking without turning it, so the walk's ordinary edge rule decides
+whether the drop is safe. Walls and a roof too low to crawl under still turn
+it as before. Test in `test/stragglers.test.js`; it fails without the fix.
+
+**Measured:** playtest 1-150 × 24, A/B against main: 51339 → 51383 home
+(+44, noise about ±16). Runs that ran out the clock fell from 8 to 2 (level 78
+2→0, 61, 101 and 118 1→0; 92 and 138 left). Level 84 331 → 335. Some
+stall endings moved: 138 went from 5 to 8 of 24 and 81 now has 4. Those are
+agents who now get further and stop somewhere new.
+
+**Next:** level 138 (stalls and a clock-out), then 81.
