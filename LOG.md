@@ -8311,3 +8311,39 @@ which passed (3 min, levels 1–7).
 **After:** `npm run verify -- --previous 8ed231cd` passed: shipped files,
 build agreement, the open tab reloading, level 20, `?daily&full=1`, Next
 during a standup, and the patch notes by keyboard (5 counter writes refused).
+
+## 343 — 2026-10-15 · After a round trip, a wall in a tower gets a charge
+
+**Chosen (autonomy):** the clock flags left in the 1–440 playtest. Level
+109 (Skyscraper) was nuked in 2 of 16 colonies with 9 of 12 home.
+
+**Traced** (salt 6): the last three shuttled in the left lift between
+floors 16 and 28 for over 1,000 ticks.
+- **Floor 16 (the exit's floor):** a dirt partition at x45–50 runs from
+  floor to slab between the left shaft and the door.
+- **Floor 28:** cubicle walls at x42–43, 47–48, 52–53 and 66–67, also
+  floor to slab.
+- **The toolbar:** no bashers, diggers or miners, and climbers can't get
+  over a wall that reaches the slab. There were 12 bombers.
+- **What happened:** `useLift`'s round trip (down a storey, across, up the
+  other shaft) met walls on the lower floor too. Every ride resets `idle`,
+  so `wallLastResort` never reached its half-patience gate to lay a charge
+  (`blastWall`). They rode up and down until the clock.
+
+**Changed:**
+- `useLift` counts `ag.roundTrips` when it sends an agent round.
+- `wallLastResort` treats an agent with a round trip behind it as patient:
+  at a wall it may lay a charge.
+- Everything else `blastWall` checks still applies: depth within reach,
+  someone coming, no charge already there.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 109, 16 colonies: home | 97% | 98% |
+| Level 109: nukes | 2 | 0 |
+| Level 109: written off | 0 | 4 |
+| `npm run sim play` | 2,976/3,129, 39 s | identical |
+| `sim hazards` | — | unchanged |
+| Playtest 1–440 | — | only the 109 clock flag goes; nothing new |

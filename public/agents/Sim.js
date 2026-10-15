@@ -5845,7 +5845,11 @@ function wallLastResort(w, ag, t) {
   // on level 2 a straggler met a wall it could not climb (no room on top) with
   // the bashers gone and seven miners in the toolbar, and walked seventy-five
   // cells back each time until the stall cutoff, in 6 of 24 colonies.
-  var patient = ag.idle * 2 > PATIENCE - trait.digBias
+  // A round trip in a tower (useLift) resets idle on every ride, so an agent
+  // that has already been down a storey and back is patient enough: on level
+  // 109 three agents shuttled between two floors of cubicle walls with twelve
+  // bombers in the toolbar until the clock (LOG 343).
+  var patient = ag.idle * 2 > PATIENCE - trait.digBias || (ag.roundTrips || 0) >= 1
   var jammed = ag.still * 2 > STILL_ESCAPE
   if ((patient || jammed || lastOut(w)) && blastWall(w, ag, t, !patient)) return
 
@@ -8161,6 +8165,7 @@ function useLift(w, ag, L, footY) {
   if (want === 0) {
     if (ag.turns < 3 && ag.idle < 240) { turnAround(w, ag); return }
     want = floorY === L.stops[0] ? 1 : -1
+    ag.roundTrips = (ag.roundTrips || 0) + 1
   }
   var reach = want < 0 ? L.stops[0] : L.stops[L.stops.length - 1]
   if ((reach - floorY) * want <= 0) { turnAround(w, ag); return }
