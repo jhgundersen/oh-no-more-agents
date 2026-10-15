@@ -1355,6 +1355,9 @@
     if (wantFull) setFaux(true)
 
     fitBoard()
+    // A local UI font can settle after the first layout, especially offline
+    // fallback/retry paths. Re-test the integer board scale once it settles.
+    if (document.fonts) document.fonts.ready.then(fitBoard)
     restartClock()
     loadGlobalStats()
 

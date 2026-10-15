@@ -25,14 +25,16 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="565f9cf9">
+<meta name="build" content="0e3a4cae">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+	<link rel="preload" href="/fonts/vt323-ui-1.woff2" as="font" type="font/woff2" crossorigin>
 	<style>
+		@font-face { font-family: 'VT323'; src: url('/fonts/vt323-ui-1.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
 		:root {
 			/* web.js supplies the selected board theme before the first paint. */
 			--bg: #1a1b26;
@@ -389,6 +391,36 @@
 		@media (prefers-reduced-motion: reduce) {
 			*, *::before, *::after { animation: none !important; transition: none !important; }
 		}
+		/* Pixel labels for short UI; readable prose; retain the original theme buttons. */
+		.hud, #toolbar, .controls, .news-row, #toast, #tip, .news-card { font-family: 'VT323', ui-monospace, monospace; font-weight: 400; font-synthesis: none; }
+		.hud { font-size: 18px; line-height: 1.15; }
+		#biome { font-size: 16px; letter-spacing: 0.025em; }
+		.skill-name { font-size: 14px; letter-spacing: 0.025em; }
+		.skill-count { font-size: 20px; }
+		.ctl { font-size: 20px; line-height: 1; padding: 7px 8px; }
+		.controls b { font-weight: 400; }
+		.counts { font-size: 16px; line-height: 1.3; }
+		.linkish { font-size: 18px; letter-spacing: 0.025em; }
+		.daily-sub { font-size: 16px; letter-spacing: 0.025em; }
+		#toast, #tip { font-size: 18px; letter-spacing: 0.025em; }
+		#news-title { font-size: 22px; }
+		.news-card ol { font: 13px/1.6 ui-monospace, monospace; }
+		.news-close { font-size: 18px; }
+		body > .sub:last-of-type { font: 13px/1.65 ui-monospace, monospace; letter-spacing: 0; }
+		body > .sub:last-of-type { max-width: min(80ch, 100%); }
+		@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) { .hud { font-size: 18px; } .ctl { font-size: 18px; } .skill-name { font-size: 14px; } .skill-count { font-size: 20px; } .counts { font-size: 16px; } }
+		@media(max-width:599px) { .hud { gap: 8px 12px; padding: 7px 10px; } .skill { padding: 6px 2px; } .ctl { min-height: 44px; } }
+
+		@media (pointer: fine), (pointer: none) {
+			#stage:is(.faux, :fullscreen) { gap: 3px; }
+			#stage:is(.faux, :fullscreen) .hud { padding: 6px 10px; font-size: 18px; line-height: 1; }
+			#stage:is(.faux, :fullscreen) #biome { font-size: 16px; }
+			#stage:is(.faux, :fullscreen) .skill { padding: 4px 2px; gap: 2px; }
+			#stage:is(.faux, :fullscreen) .skill-name { font-size: 14px; }
+			#stage:is(.faux, :fullscreen) .skill-count { font-size: 20px; }
+			#stage:is(.faux, :fullscreen) .ctl { font-size: 18px; min-height: 34px; padding: 4px 6px; }
+			#stage:is(.faux, :fullscreen) .counts { font-size: 14px; line-height: 1.2; margin-top: 1px; padding: 2px 0; }
+		}
 	</style>
 </head>
 
@@ -497,7 +529,7 @@
 	<script src="agents/sfx.js?v=443464e2"></script>
 	<script src="agents/season.js?v=30ab2597"></script>
 	<script src="agents/news.js?v=30824986"></script>
-	<script src="agents/web.js?v=d5e5059a"></script>
+	<script src="agents/web.js?v=fca3e82b"></script>
 
 </body>
 

@@ -9527,3 +9527,36 @@ Logs/evidence and source hashes are under `/tmp/codex-page-panels/`.
 
 **Next:** the separately committed controls/footer typography pass, then the
 queued lost-umbrella office at biome exits. No push or deployment.
+
+## 371 — 2026-10-15 · Small print, bigger character (on a branch)
+
+**Changed:** the second presentation commit on `codex/page-panels` brings short
+HUD, skill, control and patch-note labels into the game's pixel style with a
+locally hosted, numbered VT323 subset (12,460 bytes; SIL OFL licence and source
+provenance in `docs/fonts.md`). Longer footer and patch-note prose uses a readable
+13px system monospace. The introductory copy and theme buttons keep their existing
+font; theme colours, pressed states, keyboard outlines and touch targets remain
+intact. The board refits after the font is ready. Compact fullscreen spacing keeps
+the same 800×496 board at 720p; phone controls retain 44px targets. No simulation
+or drawing changes.
+
+**Evidence:** `/tmp/codex-page-panels/type-review/index.html`, current sheet
+`contact-sheet-183bdf46.png`, SHA-256
+`676902cbfd0505d56c2495a4c0d3bfe78e98eaf448b3be745492e6252cb31c11`.
+Nine before/after views cover desktop, 320/390px phones, DPR2, landscape, reduced
+motion, palettes, fullscreen and a zoom-sized viewport. Every world digest and
+board rectangle/scale matches; no clipped text, horizontal overflow or browser
+errors. All nine themes pass 4.5:1 text contrast. Keyboard focus and blocked-font
+fallback are tested. The sheet tool now normalises DPR to actual CSS size for both
+page and board exports, and validates canonical copies against source-stamped
+image hashes. Batched captures took 3.85s before and 3.49s after.
+
+**Validation:** focused checks **9/9**. Frozen-source full check and coverage:
+**1,512 passed, 0 failed**, **385.89s**, including Factory art; CRAP **30** passes
+using that same LCOV. Source hashes, stamp check and diff whitespace check pass.
+The FIFO testlock service used two workers, 120-second test timeouts, a 2,048MB
+Node heap, `ulimit -v 6000000`, and a 3GB service cap: **802.9MiB peak**, 6m37s
+for check/coverage/CRAP together. Completion was reported immediately. Logs and
+source proofs are under `/tmp/codex-page-panels/`.
+
+**Next:** the queued lost-umbrella office, on a separate branch. No push/deploy.
