@@ -29,7 +29,7 @@ export const VIEWS = [
   { name: "desktop", width: 1280, height: 900, mobile: false }
 ]
 const TARGET = 44
-const CMD_TIMEOUT = 20000
+const CMD_TIMEOUT = 10000      // active time a CDP command may take before it fails
 
 // root: another copy of the page (tools/ship.js's dist/). brotli: compress
 // text as Cloudflare does on the fly (about quality 5), for load timings.
@@ -53,49 +53,102 @@ export function serve({ root = ROOT, brotli = false } = {}) {
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
-export async function browser() {
-  const port = 9300 + Math.floor(Math.random() * 500)
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), "phone-"))
-  const proc = spawn("chromium", ["--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
-    "--mute-audio", "--hide-scrollbars", "about:blank"], { stdio: "ignore" })
-  let tabs
-  for (let i = 0; i < 60 && !tabs; i++) { try { tabs = await (await fetch(`http://127.0.0.1:${port}/json`)).json() } catch { await sleep(150) } }
-  const ws = new WebSocket(tabs.find(t => t.type === "page").webSocketDebuggerUrl)
-  await new Promise(r => { ws.onopen = r })
-  let id = 0
-  const pending = new Map(), errors = []
-  // Made first: the handler below reads onEvent from it from the first message.
-  const api = { errors, onEvent: null }
-  ws.onmessage = m => {
-    const d = JSON.parse(m.data)
-    if (d.id && pending.has(d.id)) { pending.get(d.id).resolve(d.result || {}); pending.delete(d.id) }
-    if (d.method === "Runtime.exceptionThrown") errors.push(d.params.exceptionDetails.text)
-    if (d.method && api.onEvent) api.onEvent(d)     // e.g. Fetch.requestPaused, for tests that mock the API
+// Chromium reserves a large virtual address cage. Under the test runner's
+// address-space cap, launch it through the user manager with a stricter *real*
+// memory budget instead; Node and the test workers keep their existing limits.
+export function cappedAddressSpace() {
+  try {
+    const m = fs.readFileSync("/proc/self/limits", "utf8").match(/Max address space\s+(\d+)/)
+    return !!m && Number(m[1]) < 16 * 1024 ** 3
+  } catch { return false }
+}
+function launchBrowser(args, profile) {
+  const unit = cappedAddressSpace() ? "agents-browser-" + path.basename(profile) : null
+  const command = unit ? "systemd-run" : "chromium"
+  const argv = unit ? ["--user", "--quiet", "--wait", "--pipe", "--collect", "--service-type=exec", "--unit=" + unit,
+    "--property=MemoryMax=512M", "--property=TasksMax=256", "--property=RuntimeMaxSec=300", "chromium", ...args] : args
+  const proc = spawn(command, argv, { stdio: "ignore" })
+  proc.on("error", e => { proc.launchError = e.message })
+  return { proc, unit }
+}
+async function browserTargets(port, proc) {
+  var spent = 0, last = Date.now()
+  for (let i = 0; i < 60 && spent < 10000; i++) {
+    spent += Math.min(600, Date.now() - last); last = Date.now()
+    if (proc.launchError || proc.exitCode !== null || proc.signalCode) throw Error("Headless browser exited at startup: " + (proc.launchError || proc.signalCode || proc.exitCode))
+    try {
+      const tabs = await (await fetch(`http://127.0.0.1:${port}/json`, { signal: AbortSignal.timeout(400) })).json()
+      if (tabs.some(t => t.type === "page")) return tabs
+    } catch { /* not listening yet */ }
+    await sleep(150)
   }
-  // Every command settles: with its answer, after CMD_TIMEOUT, or as soon as
-  // the socket closes. A Chromium that died mid-test used to leave the await
-  // hanging forever, and the test run with it (sightings, 3.5 min idle).
-  let closed = false
-  const cmd = (method, params = {}) => new Promise((resolve, reject) => {
-    if (closed) { reject(new Error(`chromium is gone (${method})`)); return }
-    const i = ++id
-    const timer = setTimeout(() => { pending.delete(i); reject(new Error(`chromium did not answer ${method} in ${CMD_TIMEOUT} ms`)) }, CMD_TIMEOUT)
-    pending.set(i, { resolve: v => { clearTimeout(timer); resolve(v) }, reject: e => { clearTimeout(timer); reject(e) } })
-    ws.send(JSON.stringify({ id: i, method, params }))
+  throw Error("Headless browser did not start within the bounded discovery window")
+}
+// Count active time: a serialized test runner may be SIGSTOPped while another
+// full suite owns the host. That pause must not turn a healthy browser into a timeout.
+function browserTimer(ms, expire) {
+  var spent = 0, last = Date.now()
+  const timer = setInterval(() => {
+    spent += Math.min(500, Date.now() - last); last = Date.now()
+    if (spent >= ms) { clearInterval(timer); expire() }
+  }, 250)
+  return () => clearInterval(timer)
+}
+function browserSocket(url) {
+  const ws = new WebSocket(url)
+  return new Promise((resolve, reject) => {
+    const cancel = browserTimer(5000, () => { ws.close(); reject(Error("Headless browser connection timed out")) })
+    ws.onopen = () => { cancel(); resolve(ws) }
+    ws.onerror = () => { cancel(); reject(Error("Headless browser connection failed")) }
   })
+}
+function stopBrowserUnit(unit) {
+  return new Promise(resolve => {
+    const stop = spawn("systemctl", ["--user", "stop", unit], { stdio: "ignore" })
+    const timer = setTimeout(() => { stop.kill(); resolve() }, 3000)
+    stop.on("exit", () => { clearTimeout(timer); resolve() }); stop.on("error", () => { clearTimeout(timer); resolve() })
+  })
+}
+async function closeBrowser(proc, unit, profile) {
+  if (unit) await stopBrowserUnit(unit)
+  else proc.kill()
+  if (proc.exitCode === null && !proc.signalCode) await new Promise(resolve => {
+    const timer = setTimeout(resolve, 3000)
+    proc.once("exit", () => { clearTimeout(timer); resolve() })
+  })
+  try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) } catch { /* temporary profile; no user data */ }
+}
+
+export async function browser() {
+  const port = 9300 + Math.floor(Math.random() * 500), profile = fs.mkdtempSync(path.join(os.tmpdir(), "phone-"))
+  const { proc, unit } = launchBrowser(["--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
+    "--mute-audio", "--hide-scrollbars", "about:blank"], profile)
+  let ws
+  try {
+    const tabs = await browserTargets(port, proc)
+    ws = await browserSocket(tabs.find(t => t.type === "page").webSocketDebuggerUrl)
+  } catch (e) { await closeBrowser(proc, unit, profile); throw e }
+  let id = 0, closed = false
+  const pending = new Map(), errors = [], api = { errors, onEvent: null }
+  ws.onmessage = m => {
+    const d = JSON.parse(m.data), p = pending.get(d.id)
+    if (p) { p.cancel(); pending.delete(d.id); p.resolve(d.result || {}) }
+    if (d.method === "Runtime.exceptionThrown") errors.push(d.params.exceptionDetails.text)
+    if (d.method && api.onEvent) api.onEvent(d)
+  }
   ws.onclose = () => {
     closed = true
-    for (const [i, p] of pending) { pending.delete(i); p.reject(new Error("chromium closed the connection")) }
+    for (const p of pending.values()) { p.cancel(); p.reject(Error("Headless browser closed during a command")) }
+    pending.clear()
   }
-  await cmd("Runtime.enable"); await cmd("Page.enable")
-  // Chromium keeps writing its profile for a moment after the kill; removing it
-  // straight away failed with ENOTEMPTY and took the report down with it.
-  const exited = new Promise(r => proc.on("exit", r))
-  api.cmd = cmd
-  api.close = async () => {
-    ws.close(); proc.kill(); await Promise.race([exited, sleep(3000)])
-    try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }) } catch { /* a temp dir; the OS will have it */ }
-  }
+  api.cmd = (method, params = {}) => new Promise((resolve, reject) => {
+    if (closed) { reject(Error("Headless browser is gone: " + method)); return }
+    const i = ++id, cancel = browserTimer(CMD_TIMEOUT, () => { pending.delete(i); reject(Error("Headless browser command timed out: " + method)) })
+    pending.set(i, { resolve, reject, cancel }); ws.send(JSON.stringify({ id: i, method, params }))
+  })
+  api.close = async () => { ws.close(); await closeBrowser(proc, unit, profile) }
+  try { await api.cmd("Runtime.enable"); await api.cmd("Page.enable") }
+  catch (e) { await api.close(); throw e }
   return api
 }
 
