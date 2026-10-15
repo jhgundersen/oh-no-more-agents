@@ -338,3 +338,20 @@ test("a walker on a long straight run towards the door counts as moving, however
   ag.dir = -1; moving(); ag.x = 10.5
   assert.equal(moving(), 0, "a long run away from the door is not going home")
 })
+
+test("a dead end at the board's edge a few rows over the exit is dug through, not walked away from", () => {
+  const w = box(90), k = w.k
+  for (let x = 0; x < k.COLS; x++) w.terrain[40 * k.COLS + x] = k.DIRT          // the floor below, with the exit on it
+  for (let y = 0; y < k.ROWS; y++) w.terrain[y * k.COLS + 3] = k.STEEL           // the board's edge
+  w.exit = { x: 10, y: 35, w: 6, h: 5 }
+  w.corridors = [{ x0: 4, x1: 95, floorY: 30 }, { x0: 4, x1: 95, floorY: 40 }]
+  const ag = Object.assign(S.spawn(w), { x: 4.3, y: 29, dir: -1, state: "walk", trait: "steady" })
+  w.agents = [ag]
+  const before = w.skills.digger + w.skills.miner
+  S.hitWall(w, ag)
+  assert.ok(ag.state === "dig" || w.skills.digger + w.skills.miner < before, "goes down")
+  const far = Object.assign(S.spawn(w), { x: 4.3, y: 29, dir: -1, state: "walk", trait: "steady" })
+  w.exit = { x: 60, y: 35, w: 6, h: 5 }
+  S.hitWall(w, far)
+  assert.equal(far.dir, 1, "home is a long walk away: turn as before")
+})

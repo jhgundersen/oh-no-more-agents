@@ -8037,3 +8037,64 @@ full runs and pauses only our own Node/browser tree when another starts.
 no push, deployment or sibling sync.
 
 Reviewed and merged by the loop. A 1200×630 share card, og and twitter tags, umbrella favicons (16, 32 and a 180 px apple-touch icon) and `_headers` for them. `index.html` conflicted on the build stamp and the old SVG favicon; the merge keeps the build line and the branch's icon links.
+
+## 253 — 2026-10-15 · Level 2: through the floor, not back round
+
+**Asked:** level 2's dead time from the first-impressions list. Pacing matters
+most in the first levels: at normal speed a new visitor should see something
+happen within ~5 s and an agent home within ~30 s on levels 1–3, without
+making them trivial.
+
+**Measured first** (48 colonies each, normal speed, 33 ms a tick):
+
+| | Agents out | First home: median | First home: worst | Level length: median |
+|---|---|---|---|---|
+| Level 1 | 1.0 s | 12.9 s | 13.7 s | 23 s |
+| Level 2 | 1.1 s | 22.4 s | 58.5 s (7/48 over 30 s) | 61 s |
+| Level 3 | 1.0 s | 15.4 s | 18.2 s | 33 s |
+
+On level 2 several colonies also had a 35–50 s gap between homecomings.
+
+**Found:** level 2's middle floor ends at the board's edge (a skin of dirt in
+front of steel), four rows straight above the exit. Colonies that walked
+west along it reached the dead end and turned round. "Steel is the one honest
+no", or the dirt in front of it went to the last-resort rules. So they walked
+the whole level back the long way: over to the far right, down, then west
+along the bottom floor. Two walls stand there, one floor-to-ceiling and one
+with no room on top, and the bashers had all been spent upstairs.
+
+**Changed:** `wallBypassed` asks, at a dead end (`deadEndAt`: steel at the
+wall or one cell behind it) with the exit below and within a short walk (10
+cells) and a corridor underneath (`deadEndOverHome`), for the ordinary
+`startDescent`: a mine or a dig, paid through `spend` so a hoarder keeps its
+thrift. If that can't happen it turns as before.
+
+**What it cost to get right:**
+- `startDescent` pays as `pay(w, skill)`. Handing it `spend(w, ag, skill)`
+  directly refused silently every time (the skill landed in the agent slot),
+  so the first version measured as "no effect". It now uses a wrapper.
+- A reach of 16 cells cost level 120 (Ice Cave) 13 home: it dug at its right
+  edge 11 cells from the exit. 10 keeps level 2 and leaves level 120 alone.
+- I also tried treating walls nothing gets over (floor-to-ceiling, or no room
+  on top) as reason enough for an immediate mine. It cost 39 home, mostly on
+  level 63, and is not shipped.
+
+**After (level 2, 48 colonies):**
+
+| | Before | After |
+|---|---|---|
+| First home, median | 22.4 s | 20.6 s |
+| First home, worst | 58.5 s | 24.1 s |
+| Colonies over 30 s to the first home | 7 | 0 |
+| Level length, median | 61 s | 43 s |
+
+Levels 1 and 3 are unchanged.
+
+Playtest 1-150 × 24 against 246: 51450 → 51446. Level 2 is 303 → 299 and
+everything else is within ±3. The cost: 5 of 24 level-2 colonies now end on
+the stall cutoff, a last agent who walked the other way along the middle
+floor, climbed off to the right and was left behind (a 20 s tail).
+`test/stragglers.test.js` covers digging through at the dead end and turning
+when home is a long walk away; it fails without the fix.
+
+**Next:** that level-2 straggler, then the rest of the first-impressions list.

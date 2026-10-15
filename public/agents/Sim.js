@@ -5587,6 +5587,18 @@ function hitWall(w, ag) {
 
 // The ways past a wall that are not the toolbar's: a stair door or a ladder,
 // a hero's own move, steel (no way at all), or open water to swim.
+// The exit is below, within a short walk of this column, and there is a
+// corridor under it to land in.
+var DEAD_END_REACH = 10
+// The board's edge, or a skin of rock in front of it: nothing beyond.
+function deadEndAt(w, ax, dir, footY) {
+  return at(w, ax, footY) === STEEL || at(w, ax + dir, footY) === STEEL
+}
+
+function deadEndOverHome(w, ag) {
+  return exitBelow(w, ag) && Math.abs(goalX(w, ag) - ag.x) <= DEAD_END_REACH && !!corridorBelow(w, ag)
+}
+
 function wallBypassed(w, ag) {
   var footY = Math.floor(ag.y)
   var ax = Math.floor(ag.x) + ag.dir
@@ -5617,7 +5629,15 @@ function wallBypassed(w, ag) {
   // shut for at most 90 ticks of its 240.
   if (gateShutAt(w, ax, footY)) { ag.waitFor = 2; ag.still = 0; return true }
 
-  // Steel is the one honest "no". Nothing to try, so don't waste a skill on it.
+  // Steel is the one honest "no". Nothing to try on it, so don't waste a skill
+  // on it — but a dead end with the way home a few rows underfoot is a floor
+  // to go through, not a wall to walk away from. Level 2's middle floor ends
+  // at the board's edge four rows over the exit, and colonies that turned
+  // there walked the whole level back the long way round: 40-58 s before
+  // anyone was home, on a new visitor's second level. `spend`, so a hoarder
+  // keeps its thrift; startDescent pays as pay(w, skill), hence the wrapper.
+  if (deadEndAt(w, ax, ag.dir, footY) && deadEndOverHome(w, ag)
+      && startDescent(w, ag, function (w2, skill) { return spend(w2, ag, skill) }, true, true, true, true)) return true
   if (at(w, ax, footY) === STEEL) { turnAround(w, ag); return true }
 
   // Before any of the tools: if home is up or down and the water is open, the
