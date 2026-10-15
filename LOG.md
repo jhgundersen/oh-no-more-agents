@@ -8358,3 +8358,34 @@ emulated:
 - `aria-pressed` on a toggle and on exactly one theme;
 - Space on a focused "next level" moving on without pausing;
 - every theme at least 4.5:1.
+
+**Deployed** at 04:46 after 261 (name="build" content="ba69eb43"), gated on a
+green full check (1196 tests). It covers 251–261: the gag art, the share card
+and favicons, level 2's pacing (253, 255, 260), the Christmas art, the
+first-impressions fixes (256–258), the page-test polling fix and the
+accessibility pass.
+
+Verified on production:
+- **`dist/`:** all scripts are brotli, byte-identical to `dist/`, with no
+  comment lines. The build agrees on page, repo and API (ba69eb43), and the
+  stamps match the source.
+- **Open tab:** a tab served as the previous build (5721422d) reloaded itself
+  into ba69eb43. No console or page errors.
+- **Share card and icons:** `/share-1.png`, `/favicon-1-16.png`,
+  `/favicon-1-32.png` and `/apple-touch-icon-1.png` are 200, `image/png`,
+  `public, max-age=31536000, immutable`, and byte-identical to `dist/`.
+  `og:image` points at `https://oh-no-more-agents.com/share-1.png`.
+- **Accessibility:** "Level 3, Frost. 16 agents." announced; Space on a
+  focused "next level" moves on without pausing; Enter on "who" sets
+  `aria-pressed`; one theme pressed; "Level 4 report: 18 of 18 home."
+  announced.
+
+**Not read-only, and it should have been:** the accessibility check ran a
+scratch script that finished a level on production (level 4, 18 home) without
+blocking the counter's POSTs. That probably added 18 rescues to the worldwide
+counter that nobody watched. It's the same mistake as the early production
+check that finished levels by hand. The scratch scripts that lacked the block
+now have it (a11y, a11y-prod, first look, news), and a standing note says any
+production script must fail every non-GET `/api/*` request before it leaves.
+The counter is not corrected: there's no endpoint for that, and the API rules
+say nothing may change its bounds.
