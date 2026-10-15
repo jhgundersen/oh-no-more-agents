@@ -6880,3 +6880,90 @@ the fall is winding up or firing. It drops during the rest.
 | `npm run playtest -- 1-200 --seeds 8` | — | identical flags |
 
 `sim play` is neutral, and 200/200 cleared, no hangs.
+
+## 314 — 2026-10-15 · A hatch doing its best (on a branch)
+
+**Brief:** keep the autonomous art pass moving beyond readability: atmosphere,
+motion and delight, with the same retro style and small rendering budget.
+Branch `codex/hatch-art`, based on current main (`23e0a06`); no push/deployment.
+
+**Choice:** make the hatch feel like a contraption actually releasing a colony.
+Fresh live watches covered Cloud on a phone at Steady, Library on desktop at
+Brisk, Halloween Harbour on a phone at Brisk and Christmas Rooftops on desktop
+at Steady. The scenery and agents have a lot of character now; the hatch kept
+its doors rigidly down between releases and had only a four-tick mouth flash.
+The extension browser exposed no connected surface, so these local watches
+used the repository's bounded headless Chromium helper and throwaway profiles.
+Watch frames and state: `/tmp/codex-watch-delight/`.
+
+**Change:** at res 2, each release gives the housing a short, damped recoil on
+its brackets, with a little spring-back of the open doors. Two small pale vent
+puffs round out and drift away from the lip; in the Trench they are hollow
+rising bubbles. The mouth stays on the exact spawn line, and the final agent
+gets its flash too. This uses only `ticks` and `lastReleaseAt`: no simulation
+change, RNG, persistent emitter, timer, listener or new asset. The motion is
+absent with reduced motion and outside res 2; the original native and reduced-
+motion page hatches remain pixel-identical across all 20 biomes, including the
+last release and closing doors.
+
+**Review evidence:** `/tmp/codex-hatch-art/strips/index.html` animates the before/
+after releases; `strips/contact-sheet.png` has both native and page-resolution
+strips. `page-sheet.png` pairs actual-CSS-size boards and 3x crops, with full
+original desktop/phone screenshots in `before/` and `after/`: Factory, Cloud,
+Trench, Halloween Harbour, Christmas Rooftops and reduced-motion Factory.
+Both sides use seed 3, the second actual release and age 3; no different-colony
+comparison. The first crop showed the blue breath was too faint, so the final
+pass uses rounded pale wisps. Agents and the neighbouring biography stay clear.
+
+**Pipeline and cost:** new `tools/hatch-art.js` renders the release strips
+without a browser or a wait per frame, sharing the existing software canvas and
+pixel compositor. Its first complete 64-frame sheet took **0.16 s / 107.5 MB
+peak RSS**. Browser comparisons reuse one browser for all 12 views, with bounded
+startup/font waits and 500-step release fixtures. Their own queued first draft
+was cancelled and replaced before it ran to pin the restart seed explicitly.
+The production effect adds at most **10 tiny fillRect calls** during its
+12-tick window (eight underwater), plus a transform for the housing; it stores
+one 12-number pose table. No terrain repaint, blur, path, image or extra canvas.
+Draw.js grows by **558 gzip bytes** before shipping's comment stripping.
+
+**Checks:** five focused tests pass in **0.65 s**: original native and reduced-
+motion image hashes over 20 biomes and 12 phases, first/last release windows,
+finished/future/idle suppression, finite bounded half-pixel marks, clear falling
+body/biography space, context restoration, repeated read-only drawing in five
+palettes and the complete comparison pipeline. Final neighbouring art checks,
+FPS measurements and full capped check/coverage/CRAP results follow below.
+
+**Final evidence/performance:** neighbouring hatch/transition/sky/Christmas art
+checks passed **29/29 in 8.68 s**. The final 64-frame strip took **0.16 s /
+108.4 MB peak RSS**. Six paired browser layouts match exactly, without horizontal
+overflow; their board diffs are confined to the hatch (436 changed pixels on
+desktop, 119–125 on phones), and the reduced-motion board diff is **zero**.
+`presentation-check.json` records those bounds. Fixed the comparison sheet's
+initial fixed-height clipping by deriving its 3,288-pixel height from the PNG
+sizes and reusing the existing captures, without reshooting twelve views.
+
+`npm run fps -- 8 20 --seconds 5 --speed 2 --json`, seed 3, compared matching
+baseline/public and final public roots. Both Factory and Cloud: **60 FPS median
+and p5, 17 ms worst, zero long-task time**, before and after. Factory sampled
+12 cast members (13% CPU before / 12% after); Cloud sampled nine (12% / 12%).
+These short headless samples show no measured regression, not a claimed speedup.
+Logs: `fps-before.log`, `fps-after.log` under `/tmp/codex-hatch-art/`.
+
+**Validation pipeline:** an initial queued full gate received SIGTERM before it
+acquired the lock or produced a check log; no tests ran in it. Requeued the
+unchanged source as a persistent systemd job, still taking the shared FIFO lock,
+with a 3 GB real-memory bound, 2,048 MB Node heap, `ulimit -v 6000000`, two test
+workers and 120-second timeouts. The full check emits spec and LCOV together;
+CRAP reuses that coverage rather than running the suite twice.
+
+**Full gate:** `npm run check` with coverage passed **1,364 tests, zero failures
+or skips, 327.18 s**, Factory art included. CRAP threshold **30** passed using
+that same coverage, maximum **30.0**. All production hatch functions have 100%
+coverage: `drawHatch` **15.0**, `hatchKick` **7.0**, `drawHatchBreath` **6.0**;
+the strip generator is **8.0** at 100%. Final check/coverage/CRAP completion was
+reported immediately and the shared lock released for the developer's next
+run. Logs: `/tmp/codex-hatch-art/check.log`, `crap.log`, `queue.log`.
+`npm run stamp` and `git diff --check` pass; Sim.js is byte-identical to this
+branch's main base. No push or deployment.
+
+**Next:** review the animated strips and desktop/phone sheet, then merge.
