@@ -8933,3 +8933,68 @@ as soon as CRAP finished. `git diff --check` is clean.
 
 **Next:** ready for Cloud art review. Commit on `codex/cloud` only; no push,
 deployment or sibling sync.
+
+## 271 — 2026-10-15 · Cumulus, not glass (on a branch)
+
+Revision on `codex/cloud`, following review of level 20/seed 3/tick 500.
+The previous smooth depth ramp reached straight cell edges and read as ice.
+Cloud banks now have overlapping rounded cream crowns in the air above the
+real walking line, irregular hanging lobes underneath and bulging side edges.
+Every short bank gets a crown, with staggered widths and heights along longer
+runs. The cream/silver foot line stays continuous and exactly on the terrain.
+The original three-pixel crown envelope at the first bank preserves the sky.
+
+Rounded highlights interrupt the body ramp. Exposed narrow columns have
+height-local overlapping volumes so their stepped terrain reads as rising
+cumulus; broad banks do not acquire false columns where depth groups meet.
+The underside no longer has a continuous straight dark border. Side lobes
+blend with the body depth rather than forming a bright rectangular frame.
+The thunderheads, server silhouettes, brick refuge, weather and wind-up light
+are unchanged. Native/res-3 and non-Cloud rendering remain unchanged.
+
+Contour fragments and rising volumes are computed once in the existing
+world/terrain-version cache. Air fragments must touch the actual bank; steel,
+built bricks and carved openings retain their masks. All animation still
+uses the existing cached masks without terrain scans or new per-frame work.
+No simulation, RNG, host integration or palette changes.
+
+**Review:** `/tmp/codex-cloud-revision/compare-main.png` is the requested
+`npm run compare -- codex/cloud 20 --seed 3 --ticks 500`; `compare-revision.png`
+uses first-pass `22ec45e` as the before image. `final/level-20.png`
+and `final/crop-20.png` are res-2 shoot.js renders at that exact seed/tick.
+The eleven-pair `review/contact-sheet.png` covers five Cloud layouts at tick
+500 (including the review frame), tick 400, and natural
+charge/strike/recovery/flash phases. Reviewed native-sized images and enlarged crops for ground, faces,
+suits, umbrella rims, hazards and ON-PREM readability.
+
+**Isolation and cost:** 360 unspecified/res-1/res-3 live frames and all
+95 non-Cloud res-2 frames match the previous Cloud commit byte for byte.
+Eleven Cloud frames preserve the original sky band. The sheet/isolation
+probe takes 8.84 s, peak RSS 330 MB with a 256 MB heap. Both comparisons
+finish in 0.2–0.3 s; their first changed pixel is canvas (24,50).
+The busiest sampled Cloud scene remains nineteen characters at level 340,
+tick 480. Five interleaved batches of one hundred actor frames measure
+1.5304 → 1.5307 ms (0.0003 ms difference, within noise). Internal flicker
+remains 76 rectangles/~0.040 ms, idle phase zero calls, splashes three/six
+calls/~0.0016–0.0033 ms. The revision changes cached terrain paint only.
+
+**Validation:** `npm run stamp` is current (Draw `9d2d3dd1`, build
+`96acba68`). The capped full `npm run check` with LCOV passes all 1,245 tests,
+zero failures/skips, in 230.96 s. Factory art remains explicitly excluded.
+The shared-lock run uses a 2,048 MB Node heap, `ulimit -v 6000000`, two test
+workers and 120 s test timeouts. `npm run crap -- --threshold 30
+--use-existing-coverage` passes, maximum 30.0; new helpers score at most
+13.0, with boundary layout/fragments 100% covered. All final source hashes
+match the checked files. The focused 13-test Cloud set passes in 4.44 s,
+including adjacent-air contour masks and a tower joined to a broad base.
+Rendered/unrendered Cloud digests still match through 600 ticks on five
+layouts. `git diff --check` is clean.
+
+**Pipeline:** the comparison sheet reuses each played world for both Draw
+versions. New shape fragments are clipped and shaded during cache creation,
+so the detailed outline adds no live weather work. The full check emits
+LCOV once and CRAP reuses it, avoiding a duplicate suite. All heavy runs use
+the shared FIFO lock; this revision queued behind main's soak run.
+
+**Next:** ready for Cloud revision review. Branch commit only; no push,
+deployment or sibling sync.

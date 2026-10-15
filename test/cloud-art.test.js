@@ -51,7 +51,7 @@ test("cloud layers are pure, RNG-free, grid aligned and deterministic in five pa
   for(const draw of layers){
    const a=picture(ctx=>draw(ctx,frozen,pal)),b=picture(ctx=>draw(ctx,frozen,pal))
    assert.equal(a.digest,b.digest)
-   for(const r of a.calls)assert.ok(r[0]>=0&&r[1]>=w.k.SKY*4-2&&r[0]+r[2]<=400&&r[1]+r[3]<=248,"board envelope")
+   for(const r of a.calls)assert.ok(r[0]>=0&&r[1]>=w.k.SKY*4-3&&r[0]+r[2]<=400&&r[1]+r[3]<=248,"board envelope")
   }
   assert.equal(hash(JSON.stringify(w)),before);Math.random=random
  }}finally{Math.random=random}
@@ -170,4 +170,40 @@ test("placeholder cave scatter becomes supported condensation, with no floating 
  const support=d.kind==="hang"?d.y-1:d.y+1
  w.terrain[support*100+d.x]=w.k.EMPTY;w.terrainVersion++
  assert.equal(draw().calls.length,0)
+})
+
+test("rounded bank contours stay in adjoining air and never paint steel, brick or detached shapes",()=>{
+ for(const level of levels){
+  const {w}=sample(level),before=hash(JSON.stringify(w)),scene=D.cloudLayout(w)
+  let above=0,below=0,sides=0
+  for(const r of scene.outline){
+   const x=Math.floor(r.x/4),y=Math.floor(r.y/4),material=w.terrain[y*100+x]
+   assert.ok(r.width<=4&&r.height<=4,"cell-clipped contour")
+   if(material!==w.k.EMPTY){assert.ok(D.cloudEarth(w,x,y));continue}
+   const top=D.cloudEarth(w,x,y+1),bottom=D.cloudEarth(w,x,y-1)
+   const side=D.cloudEarth(w,x-1,y)||D.cloudEarth(w,x+1,y)
+   assert.ok(top||bottom||side,"every air lobe touches its real bank")
+   if(top)above++;if(bottom)below++;if(side)sides++
+  }
+  assert.ok(above>10&&below>10&&sides>10,"crowns, hanging lobes and bulging sides")
+  assert.equal(hash(JSON.stringify(w)),before,"contour never adds terrain")
+ }
+})
+test("a tall narrow cloud has rising rounded volumes while a wide slab keeps its broad body",()=>{
+ const {w,pal}=sample();w.terrain.fill(w.k.EMPTY)
+ for(let y=20;y<38;y++)for(let x=45;x<50;x++)w.terrain[y*100+x]=w.k.DIRT
+ w.terrainVersion++
+ const scene=D.cloudLayout(w),towers=scene.puffs.filter(p=>p.tower)
+ assert.ok(towers.length>=3,"overlapping height-local volumes")
+ assert.ok(new Set(towers.map(p=>p.y)).size>=3)
+ const frame=picture(ctx=>D.drawCloudPageBanks(ctx,w,pal))
+ assert.ok(frame.calls.some(r=>r[0]<180&&r[1]>=80&&r[1]<152),"left silhouette protrudes into air")
+ assert.ok(frame.calls.some(r=>r[0]>=200&&r[1]>=80&&r[1]<152),"right silhouette protrudes into air")
+ assert.ok(scene.outline.some(r=>r.y<80)&&scene.outline.some(r=>r.y>=152),"rounded crown and underside")
+ // A wide base joins the lower half, leaving different depth groups across
+ // one continuous slab. Those groups must not become separate bright pillars.
+ for(let y=28;y<38;y++)for(let x=30;x<70;x++)w.terrain[y*100+x]=w.k.DIRT
+ w.terrainVersion++
+ const joined=D.cloudLayout(w).puffs.filter(p=>p.tower)
+ assert.ok(joined.length>0&&joined.every(p=>p.y<28*4),"only the exposed upper tower gets rising lobes")
 })

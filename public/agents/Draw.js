@@ -19541,7 +19541,9 @@ function cloudLayout(w) {
   var scene={version:w.terrainVersion,rows:[],tops:[],rims:[],edges:[],puffs:[],distant:[],flashes:[]}
   cloudBankLayout(w,scene)
   cloudFarLayout(w,scene)
+  cloudTowerLayout(w,scene)
   cloudVolumeLayout(w,scene)
+  cloudOutlineLayout(w,scene)
   CLOUD_PAGE_CACHE.set(w,scene)
   return scene
 }
@@ -19678,6 +19680,7 @@ function drawCloudPageBanks(ctx,w,pal) {
     }
   }
   for(var p=0;p<scene.puffs.length;p++) drawCloudVolume(ctx,w,scene.puffs[p])
+  drawCloudOutline(ctx,scene)
   for(var t=0;t<scene.tops.length;t++) drawCloudWalkRim(ctx,w,scene.tops[t])
   for(var r=0;r<scene.rims.length;r++) drawCloudDampRim(ctx,scene.rims[r])
   ctx.fillStyle=CLOUD_SKY[2];ctx.globalAlpha=0.45
@@ -19686,6 +19689,21 @@ function drawCloudPageBanks(ctx,w,pal) {
     for(var dot=0;dot<3;dot++) ctx.fillRect(e.x+(e.side?3.5:0),e.y+0.5+dot,0.5,0.5)
   }
   ctx.restore()
+}
+// Narrow connected columns get overlapping rising lobes, rather than a
+// separate top-to-bottom glass gradient on every rectangular step.
+function cloudTowerLayout(w,scene) {
+  for(var i=0;i<scene.rows.length;i++) {
+    var b=scene.rows[i]
+    if(b.width>32 || b.depth>7 || b.depth%3!==1) continue
+    var col=b.x/4,row=b.y/4
+    if(w.terrain[row*w.k.COLS+col-1] && w.terrain[row*w.k.COLS+col+b.width/4]) continue
+    var seed=b.x*3+b.y*7+w.level*11
+    var puff={x:b.x-3+seed%5,y:b.y-3,width:b.width+5,height:15+seed%5,rects:[],tower:true,depth:b.depth}
+    var shape=cloudPuffRects(puff.x,puff.y,puff.width,puff.height)
+    for(var r=0;r<shape.length;r++) cloudFragments(w,shape[r],true,puff.rects)
+    scene.puffs.push(puff)
+  }
 }
 var CLOUD_LOBE_LIGHT = [1,3,4,4,3,2,1,0]
 function cloudVolumeLayout(w,scene) {
@@ -19696,9 +19714,10 @@ function cloudVolumeLayout(w,scene) {
       for(var yy=b.y;yy<b.y+b.height;yy+=1) {
         var depth=scene.depths[Math.floor(yy/4)*w.k.COLS+Math.floor(b.x/4)]
         var base=Math.min(CLOUD_GRADE.length-1,depth*4+Math.floor(yy%4))
-        var strength=puff.surface?CLOUD_LOBE_LIGHT[b.row]:Math.ceil(CLOUD_LOBE_LIGHT[b.row]/2)
+        var strength=puff.surface?CLOUD_LOBE_LIGHT[b.row]+2:CLOUD_LOBE_LIGHT[b.row]
         if (depth>7) strength=Math.min(3,strength)
-        lit.push({x:b.x,y:yy,width:b.width,height:Math.min(1,b.y+b.height-yy),color:CLOUD_GRADE[Math.max(0,base-strength)]})
+        var shade=puff.tower?Math.min(27,puff.depth*2+[2,0,1,3,5,7,10,13][b.row]):Math.max(0,base-strength)
+        lit.push({x:b.x,y:yy,width:b.width,height:Math.min(1,b.y+b.height-yy),color:CLOUD_GRADE[shade]})
       }
     }
     puff.rects=lit
@@ -19713,24 +19732,86 @@ function drawCloudVolume(ctx,w,p) {
 function drawCloudWalkRim(ctx,w,b) {
   var C=w.k.CELL
   ctx.fillStyle=CLOUD_SILVER;ctx.fillRect(b.x,b.y,C,1)
-  // Silver lining is precisely on the feet line; low crowns never hide legs.
-  ctx.fillStyle=CLOUD_SUN
-  for(var half=0;half<2;half++) {
-    var xx=b.x+half*2,phase=(xx+Math.floor(b.y/4)*7)%24
-    var lift=Math.round((1+Math.cos(phase/24*Math.PI*2))*2)/2
-    ctx.fillRect(xx,b.y-lift,2,lift+0.5)
-    ctx.fillStyle=CLOUD_SILVER;ctx.fillRect(xx,b.y+0.5,2,0.5);ctx.fillStyle=CLOUD_SUN
-  }
+  // Keep the real walking line continuous beneath the rounded air crowns.
+  ctx.fillStyle=CLOUD_SUN;ctx.fillRect(b.x,b.y,C,0.5)
   ctx.fillStyle=CLOUD_BODY[1];ctx.fillRect(b.x,b.y+1,C,1)
   ctx.fillStyle=CLOUD_BODY[2]
   for(var d=b.seed%2;d<C;d+=2) ctx.fillRect(b.x+d,b.y+2,0.5,0.5)
 }
 function drawCloudDampRim(ctx,b) {
-  ctx.fillStyle=CLOUD_BODY[6];ctx.fillRect(b.x,b.y-1,4,1)
+  // Sparse damp specks, rather than a ruler-straight dark bottom border.
   if (b.seed%3!==0) return
-  ctx.fillStyle=CLOUD_BODY[5];ctx.fillRect(b.x+0.5,b.y,2.5,0.5)
-  ctx.fillStyle=CLOUD_BODY[6];ctx.fillRect(b.x+1,b.y+0.5,1.5,0.5)
-  ctx.fillStyle=CLOUD_BODY[4];ctx.fillRect(b.x+0.5,b.y-0.5,0.5,0.5)
+  ctx.fillStyle=CLOUD_BODY[5];ctx.fillRect(b.x+0.5,b.y,1,0.5)
+}
+// Cloud contours are cached paint in neighbouring air, never new terrain.
+// Overlapping small lobes keep thin pillars rounded all the way down.
+function cloudOutlineLayout(w,scene) {
+  scene.outline=[]
+  cloudBoundaryLobes(w,scene,scene.tops,0)
+  cloudBoundaryLobes(w,scene,scene.rims,1)
+  cloudBoundaryLobes(w,scene,scene.edges,2)
+}
+function cloudBoundaryLobes(w,scene,boundary,kind) {
+  for(var i=0;i<boundary.length;i++) {
+    var b=boundary[i],col=b.x/4,row=b.y/4,seed=col*17+row*31+w.level*7
+    // Round every short run; stagger crowns at four cells and sides at three.
+    var previous=cloudBoundaryPrevious(w,b,kind)
+    if ((kind===2?row%3:col%4)!==1 && previous) continue
+    var side=kind===2,under=kind===1
+    var width=side?12+seed%4:12+seed%5,height=side?16+seed%7:8+seed%3
+    var x=side?b.x+(b.side?0:-4):b.x-3
+    var y=side?b.y-3:b.y-(under?height-3.5:(b.y===w.k.SKY*4?3:4))
+    var shape=cloudPuffRects(x,y,width,height)
+    for(var r=0;r<shape.length;r++) cloudOutlineFragments(w,scene,shape[r],kind,b)
+  }
+}
+function cloudBoundaryPrevious(w,b,kind) {
+  var col=b.x/4,row=b.y/4
+  if(kind===2) return cloudEarth(w,col,row-1) && !w.terrain[(row-1)*w.k.COLS+col+(b.side?1:-1)]
+  var source=row-(kind===1?1:0),air=row+(kind===1?0:-1)
+  return cloudEarth(w,col-1,source) && !w.terrain[air*w.k.COLS+col-1]
+}
+function cloudOutlineFragments(w,scene,box,kind,anchor) {
+  var C=w.k.CELL,parts=[]
+  // Separate masks preserve steel/brick and every actual opening. Only the
+  // immediate air next to this bank may receive the rounded silhouette.
+  if(kind===0) cloudFragments(w,box,true,parts)
+  cloudFragments(w,box,false,parts)
+  cloudCrownSky(w,box,kind,parts)
+  for(var i=0;i<parts.length;i++) {
+    var b=parts[i],col=Math.floor(b.x/C),row=Math.floor(b.y/C)
+    var solid=cloudEarth(w,col,row)
+    if (!solid && !cloudOutlineAir(w,col,row,kind,anchor)) continue
+    var sourceCol=kind===2?col+(anchor.side?-1:1):col
+    var sourceRow=kind===1?row-1:row
+    var depth=scene.depths[Math.max(0,sourceRow)*w.k.COLS+sourceCol]
+    var shade=kind===0?Math.max(0,box.row-2):Math.min(29,depth*4+(kind===1?3:Math.floor(b.y%4)))
+    var color=kind===0&&box.row===0?CLOUD_SUN:CLOUD_GRADE[shade]
+    scene.outline.push({x:b.x,y:b.y,width:b.width,height:b.height,color:color})
+  }
+}
+// The first bank's crown may use the original three-pixel sky envelope.
+function cloudCrownSky(w,box,kind,out) {
+  var top=w.k.SKY*4
+  if(kind!==0 || box.y>=top || box.y+box.height<=top-3) return
+  var y=Math.max(top-3,box.y),bottom=Math.min(top,box.y+box.height)
+  for(var col=Math.floor(box.x/4);col<Math.ceil((box.x+box.width)/4);col++) {
+    if(!cloudEarth(w,col,w.k.SKY)) continue
+    var x=Math.max(box.x,col*4)
+    out.push({x:x,y:y,width:Math.min(box.x+box.width,(col+1)*4)-x,height:bottom-y,row:box.row})
+  }
+}
+function cloudOutlineAir(w,col,row,kind,b) {
+  if(col<3 || col>=w.k.COLS-3) return false
+  if(kind===0) return row===b.y/4-1 && cloudEarth(w,col,row+1)
+  if(kind===1) return row===b.y/4 && cloudEarth(w,col,row-1)
+  return col===b.x/4+(b.side?1:-1) && cloudEarth(w,col+(b.side?-1:1),row)
+}
+function drawCloudOutline(ctx,scene) {
+  for(var i=0;i<scene.outline.length;i++) {
+    var b=scene.outline[i];ctx.fillStyle=b.color
+    ctx.fillRect(b.x,b.y,b.width,b.height)
+  }
 }
 function drawCloudWeather(ctx,w,pal) {
   if (!cloudPage(w)) return
