@@ -8707,3 +8707,79 @@ Logs: `check.log`, `crap.log`, `queue.log` in the evidence directory.
 
 **Next:** review and merge this branch, then another free choice of atmosphere,
 motion or presentation. Commit on the branch only; no push or deployment.
+
+## 351 — 2026-10-15 · Let the storm announce itself (on a branch)
+
+**Review:** keep the new storm head and forks, but restore the lethal hazard's
+visibility: the late warning and thin strike were too subtle on a phone.
+Revision on `codex/storm-art`, after `ce80bac`; drawing only, no Sim.js changes.
+
+**Changed:** late wind-up now fills the complete original column from three
+pixels below the ceiling, with **0.22–0.60 opacity** instead of **0.10–0.32**.
+It stays steady and brightens with the real charge. The live main channel is
+**two art pixels wide** (two CSS pixels on the phone, four canvas pixels on the
+page), surrounded by a four-pixel lilac halo. The small outer forks remain
+fine. A local full-column glow starts at 0.30 opacity and fades across the six
+fire ticks. Reduced motion suppresses that flash and contact sparks, retaining
+the full bright core and steady warning. Every discharge mark remains in air
+inside the actual lethal column, behind faces, collars and umbrella rims.
+The cached head geometry and real wind-up/fire/recovery timings are unchanged.
+
+**Evidence:** `/tmp/codex-storm-revision/phone-sheet.png` compares **original /
+first pass / revision** at **390 px**, with actual CSS-size boards and 3× crops:
+late warning, strike onset, mid-strike and final strike tick. The separate full
+pages are in `original/`, `before/`, `after/`. The larger `page-sheet.png`
+(**1640×6888**) also includes the warning's first late tick, desktop, lower
+corridors, Halloween, Christmas and both reduced-motion cues. All browser
+world digests and geometry agree, and all changed pixels remain inside the
+lightning envelope, with no page errors or overflow.
+
+`phone-contrast.json` measures the same 192 phone pixels below the storm head:
+late-warning mean luminance rises from **122.16 to 165.23** (**35% above the
+original**). Pixels over luminance 220 during strike onset/middle/end rise
+from **31/31/31** in the first pass to **48/44/44** in the revision. The three-way
+sheet keeps the original's brighter wide discharge visible for comparison;
+the revision retains the requested two-pixel core, with its glow confined
+to the actual lethal column.
+
+`strips/index.html` animates the first-pass/revision comparison, while
+`original-strips/index.html` compares the pre-art original with the revision.
+Both have complete native **res 1** and page **res 2** frame strips and sheets.
+Native/default/share aggregate **6678370a…** stays exact. The software comparisons
+still seek one real charge onset and use cached terrain/direct actor crops;
+the browser tool reuses one bounded, disposable local browser for all three
+versions. The phone sheet automatically checks warning luminance against the
+original and increased bright-core coverage at each sampled fire age.
+
+**Tests:** **129/129 focused pass, 8.89 s**. Added a direct pixel comparison
+against the independent pre-art renderer for five late-charge ages in every
+palette on three layouts; no sampled warning colour channel below the head
+gets dimmer. Separate guards require the two-pixel white core, four-pixel
+halo and fine forks throughout fire, plus a monotonic six-tick local flash
+that clears for reduced motion, expiry and obstruction. Existing native
+parity, full live digests, air clipping, opaque agent/umbrella, crop/cache and
+Cloud/hazard guards all pass.
+
+**Cost:** **331 source bytes / 67 gzip bytes** added to Draw.js by this revision.
+Five-second Brisk real-page runs on levels 20 and 100, around ticks 550–780,
+all hold **60 median / 60 p5 FPS, 17 ms worst, zero long-task time**. CPU before /
+after is **11% / 11%** on 20 and **12% / 13%** on 100, up to 12 cast members.
+No speedup claimed. Logs and `fps-summary.json` are in the evidence directory.
+
+
+The complete phase sweep peaks at **200 rectangles** (first pass 179) across
+**4,704** valid phase/motion/strike samples. No new canvases or retained effects.
+
+**Full gate:** **1,458 passed, zero failures/cancellations/skips, 356.33 s**,
+including Factory art and coverage. CRAP threshold **30** passed from the same
+LCOV, maximum **30.0**. The new flash helper is **4.0 / 100% covered**; tension
+**3.0 / 100%**, discharge **12.1 / 91.7%**. Completion was reported immediately.
+The persistent FIFO run used a **3 GB service cap**, **2,048 MB Node heap**,
+`ulimit -v 6000000`, two workers and 120-second test timeouts; sampled peak
+was **782 MB**. Source/tests stayed frozen through the full gate, their hashes
+still match, and CRAP reused coverage. Logs: `check.log`, `crap.log`, `queue.log`
+in the revision evidence directory. `npm run stamp`, its check and
+`git diff --check` pass.
+
+**Next:** review this revision and merge `codex/storm-art`. Commit on the branch
+only; no push or deployment.

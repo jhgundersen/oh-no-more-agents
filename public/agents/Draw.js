@@ -6347,9 +6347,9 @@ function drawPageStorm(ctx,w,pal,h,g) {
 function drawStormTension(ctx,w,h,g,alpha) {
   var energy=Math.max(0,(g.progress-0.35)/0.65)
   if(!energy)return
-  ctx.fillStyle=BOLT;ctx.globalAlpha=alpha*(0.10+0.22*energy)
-  // The established steady full-column tell stays throughout late wind-up.
-  for(var row=g.y0+7;row<g.y1;row+=1)
+  ctx.fillStyle=BOLT;ctx.globalAlpha=alpha*(0.22+0.38*energy)
+  // Stronger than the original tell, including the charged belly of the head.
+  for(var row=g.y0+3;row<g.y1;row+=1)
     moteFineRect(ctx,w,g.x0,row,g.wide,1)
   ctx.globalAlpha=alpha*(0.3+0.5*energy);ctx.fillStyle=CLOUD_SILVER
   var reach=1+Math.floor(energy*3)
@@ -6364,15 +6364,16 @@ function drawStormTrace(ctx,w,x0,y0,x1,y1,size) {
   }
 }
 function drawStormDischarge(ctx,w,h,g,alpha) {
-  // One stable fork per strike: no full-board flash or frame-to-frame jitter.
+  // A brief local flash surrounds a two-art-pixel core; forks stay fine.
+  drawStormFlash(ctx,w,h,g,alpha)
   var top=g.y0+6,bottom=g.y1-0.5,seed=h.fired||0
   for(var pass=0;pass<2;pass++) {
     ctx.fillStyle=pass?BOLT:CLOUD_LILAC;ctx.globalAlpha=alpha*(pass?1:0.28)
-    var px=g.cx,py=top,size=pass?1:2
+    var px=g.cx,py=top,size=pass?2:4,offset=(size-1)/2
     for(var i=1;i<=5;i++) {
       var nx=g.cx+(((i*5+seed*3)%7)-3)*0.5
       var ny=Math.round((top+(bottom-top)*i/5)*2)/2
-      drawStormTrace(ctx,w,px,py,nx,ny,size)
+      drawStormTrace(ctx,w,px-offset,py,nx-offset,ny,size)
       if(i===2) drawStormTrace(ctx,w,nx,ny,g.x0+1,Math.min(bottom,ny+5),pass?0.5:1)
       if(i===4) drawStormTrace(ctx,w,nx,ny,g.x1-1,Math.min(bottom,ny+3),pass?0.5:1)
       px=nx;py=ny
@@ -6383,6 +6384,14 @@ function drawStormDischarge(ctx,w,h,g,alpha) {
     moteFineRect(ctx,w,g.cx-3,g.y1-1.5,2,0.5)
     moteFineRect(ctx,w,g.cx+2,g.y1-1,2,0.5)
   }
+}
+function drawStormFlash(ctx,w,h,g,alpha) {
+  if(w.reducedMotion)return
+  var strength=Math.max(0,1-h.t/6)
+  if(!strength)return
+  ctx.fillStyle=BOLT;ctx.globalAlpha=alpha*0.30*strength
+  for(var row=g.y0+3;row<g.y1;row+=1)
+    moteFineRect(ctx,w,g.x0,row,g.wide,1)
 }
 function drawStormAfterglow(ctx,w,h,g,alpha) {
   ctx.fillStyle=SCORCH;ctx.globalAlpha=alpha*g.cool

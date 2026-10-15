@@ -52,11 +52,11 @@ test('the volumetric storm head is cached, refreshed by actual terrain edits and
  w.terrain.fill(w.k.STEEL);w.terrainVersion++;assert.equal(D.stormHeadLayout(w,g).length,0)
  assert.notEqual(D.stormHeadLayout(w,{...g,x0:g.x0+4,x1:g.x1+4,cx:g.cx+4}),D.stormHeadLayout(w,g))
 })
-test('each live fork is thin, stable for its strike, air-clipped and wholly inside the actual lethal column',()=>{
+test('the two-pixel live channel and fine forks are stable, air-clipped and inside the lethal column',()=>{
  const{w,h,g}=scene();h.fired=1;h.t=0
  const draw=()=>marks(ctx=>{ctx.save();D.drawStormDischarge(ctx,w,h,g,0.35);ctx.restore()})
- const first=draw();assert.ok(first.length>40&&first.length<300);assert.ok(new Set(first.filter(c=>c[4]===D.BOLT&&c[1]<g.y0+10).map(c=>c[0])).size>1,'jagged main channel, not a straight line')
- for(const[x,y,width,height]of first){assert.ok(x>=g.x0&&x+width<=g.x1&&y>=g.y0+6&&y+height<=g.y1);assert.ok(width<=2&&height===0.5);for(let yy=y;yy<y+height;yy+=0.5)for(let xx=x;xx<x+width;xx+=0.5)assert.equal(w.terrain[Math.floor(yy/4)*100+Math.floor(xx/4)],0)}
+ const first=draw();assert.ok(first.length>40&&first.length<300);assert.ok(new Set(first.filter(c=>c[4]===D.BOLT&&c[2]===2&&c[3]===0.5&&c[1]<g.y0+10).map(c=>c[0])).size>1,'jagged main channel, not a straight line')
+ for(const[x,y,width,height]of first){assert.ok(x>=g.x0&&x+width<=g.x1&&y>=g.y0+3&&y+height<=g.y1);assert.ok((width===g.wide&&height===1)||(width<=4&&height===0.5));for(let yy=y;yy<y+height;yy+=0.5)for(let xx=x;xx<x+width;xx+=0.5)assert.equal(w.terrain[Math.floor(yy/4)*100+Math.floor(xx/4)],0)}
  w.ticks+=13;assert.deepEqual(draw(),first,'no jitter or global-clock flash')
  assert.ok(first.some(c=>c[0]<=g.x0+1)&&first.some(c=>c[0]>=g.x1-1),'two short forks')
  w.terrain.fill(w.k.STEEL);assert.equal(draw().length,0)
@@ -66,7 +66,7 @@ test('late charge retains a steady increasing full-column warning; no bolt is dr
  const early=draw(0.2),late=draw(0.95)
  assert.ok(!early.some(c=>c[4]===D.BOLT))
  assert.ok(late.some(c=>c[4]===D.BOLT&&c[1]>=g.y0+7&&c[2]===g.wide))
- assert.ok(!late.some(c=>c[4]===D.BOLT&&c[2]===1&&c[3]===0.5),'no full discharge core during warning')
+ assert.ok(!late.some(c=>c[4]===D.BOLT&&c[2]===2&&c[3]===0.5),'no full discharge core during warning')
  assert.notEqual(hash(JSON.stringify(early)),hash(JSON.stringify(late)))
  const quiet=marks(ctx=>{ctx.save();D.drawStormTension(ctx,w,h,{...g,progress:0.2},0.35);ctx.restore()});assert.equal(quiet.length,0)
 })
@@ -116,4 +116,41 @@ test('the live discharge stays behind opaque faces, collars, eyes and umbrella r
  const colors=[pal.skin,pal.shirt,pal.eye,pal.umbrellaRim].map(c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16)));let checked=0
  for(let i=0;i<one.buf.length;i+=3)if(colors.some(c=>c.every((v,j)=>one.buf[i+j]===v))){for(let j=0;j<3;j++)assert.equal(all.buf[i+j],one.buf[i+j]);checked++}
  assert.ok(checked>100,'opaque colony pixels in front of the actual strike')
+})
+
+test('late warning pixels below the head meet or exceed the original contrast in every palette',()=>{
+ for(const level of STORM_LEVELS)for(const name of Object.keys(THEMES))for(const t of[17,24,32,40,45]){
+  const{w,h,g}=scene(level),pal=P.build(themeOf(name).theme,level);Object.assign(h,{phase:'charge',t})
+  const a=canvas(800,496,themeOf(name).background),b=canvas(800,496,themeOf(name).background)
+  for(const img of[a,b]){D.drawTerrain(img.ctx,w,pal);img.ctx.setTransform(2,0,0,2,0,0)}
+  OLD.drawHazardKind(a.ctx,w,pal,h);D.drawHazardKind(b.ctx,w,pal,h)
+  let gain=0,checked=0
+  for(let y=(g.y0+7)*2;y<g.y1*2;y++)for(let x=g.x0*2;x<g.x1*2;x++){
+   if(w.terrain[Math.floor(y/8)*100+Math.floor(x/8)])continue
+   const at=(y*800+x)*3
+   for(let c=0;c<3;c++){assert.ok(b.buf[at+c]>=a.buf[at+c],'no weaker than the original column');gain+=b.buf[at+c]-a.buf[at+c]}
+   checked++
+  }
+  assert.ok(checked>500&&gain>500,'visible improvement over the original warning')
+ }
+})
+test('the white main channel stays two art pixels wide throughout fire, with a four-pixel halo',()=>{
+ const{w,h,g}=scene();w.reducedMotion=true
+ for(const t of[0,3,5]){
+  h.t=t;h.fired=1
+  const calls=marks(ctx=>{ctx.save();D.drawStormDischarge(ctx,w,h,g,0.35);ctx.restore()})
+  const core=calls.filter(c=>c[4]===D.BOLT&&c[1]<g.y1-3&&c[3]===0.5),halo=calls.filter(c=>c[4]===D.CLOUD_LILAC&&c[2]===4)
+  assert.ok(core.filter(c=>c[2]===2&&c[5]===0.35).length>20)
+  assert.ok(core.some(c=>c[2]===0.5),'fine outer forks retained');assert.ok(halo.length>20)
+ }
+})
+test('the strike flash fades over six ticks, stays local and respects reduced motion and terrain',()=>{
+ const{w,h,g}=scene(),draw=()=>marks(ctx=>{ctx.save();D.drawStormFlash(ctx,w,h,g,0.35);ctx.restore()});let previous=1
+ for(let t=0;t<6;t++){
+  h.t=t;const calls=draw();assert.ok(calls.length>0)
+  for(const[x,y,width,height,color,alpha]of calls){assert.equal(x,g.x0);assert.equal(width,g.wide);assert.ok(y>=g.y0+3&&y+height<=g.y1);assert.equal(color,D.BOLT);assert.ok(alpha<previous)}
+  previous=calls[0][5]
+ }
+ h.t=6;assert.equal(draw().length,0);h.t=0;w.reducedMotion=true;assert.equal(draw().length,0)
+ w.reducedMotion=false;w.terrain.fill(w.k.STEEL);assert.equal(draw().length,0)
 })
