@@ -1050,6 +1050,7 @@ function newWorld(level, attempt, colonySeed) {
 
     progressMark: 0,
     stallTicks: 0,
+    stillTicks: 0,
     rescues: 0,
     bombsUsed: 0,
     collapseCopies: 0,
@@ -11675,7 +11676,12 @@ function finishWorldStep(w, active, blockers, moving) {
   if (!w.done) {
     var settled = w.saved + w.lost
     var nearlyDone = settled >= w.toRelease - 2 && w.released >= w.toRelease
-    var allStuck = w.movingCount === 0
+    // Stuck means nobody has moved for a while, not on this one tick: an
+    // agent turning at a wall stands still for a tick, and on level 324 the
+    // last one out turned at the far wall at t1536 and the level ended under
+    // it, in 2 of 16 colonies (LOG 335).
+    w.stillTicks = w.movingCount === 0 ? (w.stillTicks || 0) + 1 : 0
+    var allStuck = w.stillTicks > STILL_FOR
     if (w.stallTicks > 900
         || (nearlyDone && allStuck && w.stallTicks > 210)
         || (nearlyDone && w.stallTicks > 600)) {
@@ -11685,6 +11691,7 @@ function finishWorldStep(w, active, blockers, moving) {
   }
   if (w.done) stepAgi(w)
 }
+var STILL_FOR = 30   // ticks of nobody moving before the colony counts as stuck
 function step(w) {
   w.ticks++
   w.lastEvent = ""

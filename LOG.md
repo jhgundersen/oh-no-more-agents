@@ -7955,3 +7955,42 @@ Across 16 colonies, 6 ended that way.
   flagged.
 - **Why `sim hazards` moved:** a camper that packs up wrecks fewer fixtures,
   and the colony gets by.
+
+## 335 — 2026-10-15 · "Everyone stuck" means nobody has moved for a while
+
+**Chosen (autonomy):** level 324 (Foundry). 2 of 16 colonies ended on the
+stall cutoff with the last agent out stranded.
+
+**Traced** (salt 6):
+- The last one out dropped onto a 4-high block between it and the door,
+  facing away, and walked off the far side.
+- It then walked the length of the exit floor away from the door, which is
+  the next thing to look at.
+- **The level did not end because it was stuck.** At t1536 it reached the
+  far wall and turned. That tick it moved nowhere, so `movingCount` was 0,
+  and the early cutoff (`nearlyDone && allStuck && stallTicks > 210`) fired
+  on that single tick.
+- **The cause:** `allStuck` was `w.movingCount === 0`, one tick's reading.
+  Any agent turning at a wall stands still for a tick.
+
+**Changed:**
+- `allStuck` is now `w.stillTicks > STILL_FOR` (30).
+- `w.stillTicks` counts consecutive ticks with nobody moving and is
+  initialised with `stallTicks`.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 324, 16 colonies: home | 92% | 93% |
+| Level 324: stall cutoffs | 2 | 0 |
+| Playtest 1–440 (6 colonies): level 204 stall cutoffs | 2/6 | 1/6 |
+| `npm run sim play` | 2,976/3,129, 39 s | identical |
+
+- **Stall flags gone in the 1–440 playtest:** 264, 324, 134, 185, 313, 365.
+  Nothing new is flagged.
+- **`sim play`:** 200/200 cleared, no hangs.
+
+**Next:** the 324 straggler walking the exit floor away from the door after
+coming off the block. `homeStretch` exists for exactly this, and it's worth
+seeing why it didn't turn.
