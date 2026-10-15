@@ -6833,6 +6833,7 @@ function walkHazardAhead(w, ag, nx, cx, footY) {
 }
 
 function stepWalk(w, ag) {
+  comeBackToMine(w, ag)
   // The floor blown out from under a walker. advanceWalk only ever looks at
   // the cell ahead, so without this the agent read a cliff edge both ways and
   // turned on the spot in mid-air until the still rule bombed it: three at
@@ -7854,6 +7855,19 @@ function plantMine(w, ag) {
   ag.idle = 0
   ag.turns = 0
   ag.dir = -ag.dir
+  // Clear of the blast, it comes back to the gap it is opening rather than
+  // walking on to the far end of the floor and back: on level 2 a last agent
+  // planted at a wall with no room on top and was 75 cells away when it blew.
+  // Turned back MINE_COMEBACK ticks in, the walk back lands after the bang.
+  ag.comeBackAt = w.ticks + MINE_COMEBACK
+  ag.comeBackDir = -ag.dir
+}
+
+var MINE_COMEBACK = 60
+function comeBackToMine(w, ag) {
+  if (ag.comeBackAt === undefined || w.ticks < ag.comeBackAt) return
+  if (ag.state === "walk" && ag.dir !== ag.comeBackDir) turnAround(w, ag)
+  ag.comeBackAt = undefined
 }
 
 

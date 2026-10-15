@@ -8261,3 +8261,36 @@ then asserted; under the full run's load the page sometimes hadn't got there.
 sweepstake test also retries its click on a moving agent up to 12 times (was
 6). No assertion changed. Two consecutive full checks after the change are
 green.
+
+## 260 — 2026-10-15 · Back to the gap
+
+**Asked:** (from 253) level 2's dead time, rechecked. The first look was run
+again at both sizes, recording the colony seed this time.
+
+**Found:** the phone's level 2 (seed 1189176747) sat at 12/13 for 25 s. The
+last agent laid a mine at the bottom floor's wall (the one with no room on
+top) as the last-out rule says. Planting turns an agent away from its charge,
+but nothing turned it back, so it walked 75 cells to the far end of the floor
+and 75 back.
+
+**Changed:** `plantMine` notes when and which way to come back. Walking,
+`MINE_COMEBACK` (60) ticks after planting, the agent turns back towards the
+gap (`comeBackToMine`). By then it is well outside the blast radius, and its
+walk back lands after the 90-tick fuse.
+
+**Measured:**
+- That phone colony's level 2: 1751 → 913 ticks, all 13 home.
+- Level 2 (48 colonies): median length 37.6 → 30.0 s, first home unchanged.
+- Playtest 1-150 × 24 against 255: 51450 → 51468 home, bad endings 31 → 20,
+  mean level length 1164 → 1155 ticks. Level 136 228 → 240; level 115
+  397 → 389.
+
+`test/stragglers.test.js` checks it steps away, comes back from outside the
+blast, and arrives after the bang.
+
+**Level 2 overall today:**
+
+| | Before 253 | After 260 |
+|---|---|---|
+| Worst first home | 58.5 s | 24 s |
+| Median level length | 61 s | 30 s |

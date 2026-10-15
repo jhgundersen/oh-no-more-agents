@@ -372,3 +372,17 @@ test("the last ones out spend no tool on a wall that leads away from a home belo
   ag.dir = 1
   assert.equal(S.walkingOffHome(w, ag), false, "with the colony still coming, the old rules stand")
 })
+
+test("a planter clears the blast and then comes back to the gap, not on to the far end", () => {
+  const w = box(90), k = w.k
+  for (let y = 26; y < 30; y++) for (let x = 40; x < 43; x++) w.terrain[y * k.COLS + x] = k.DIRT
+  const ag = Object.assign(S.spawn(w), { x: 39.5, y: 29, dir: 1, state: "walk", trait: "steady" })
+  w.agents = [ag]
+  S.plantMine(w, ag)
+  assert.equal(ag.dir, -1, "steps away from its charge")
+  for (let i = 0; i < S.MINE_COMEBACK; i++) { w.ticks++; S.stepWalk(w, ag) }
+  assert.equal(ag.dir, 1, "and heads back to the gap")
+  assert.ok(Math.abs(ag.x - 39.5) > S.MINE_RADIUS, "from outside the blast")
+  const back = (39.5 - ag.x) / S.walkStep(ag, w)
+  assert.ok(back > 90 - S.MINE_COMEBACK, "arriving after the bang")
+})
