@@ -534,11 +534,26 @@ function inHatchMouth(w, x, y) {
   return Math.abs(x - w.hatch.x) <= 1 && y > w.hatch.y && y <= w.hatch.y + AGENT_H
 }
 
+// The few cells in front of a lift or fire-escape door, at that floor's
+// height. Bricks there raise the approach above the door: on level 129 a
+// causeway two rows over the bottom floor ran up to the shaft, and the hero
+// walked its top to a hoistway with no door at that height, turned, and paced
+// until the cutoff (LOG 354).
+function inDoorway(w, x, y) {
+  for (var i = 0; i < w.lifts.length; i++) {
+    var L = w.lifts[i], out = (x - L.wallX) * L.out
+    if (out < 1 || out > 3) continue
+    for (var k = 0; k < L.stops.length; k++)
+      if (y >= L.stops[k] - AGENT_H && y < L.stops[k]) return true
+  }
+  return false
+}
+
 function makeBuildRoom(w, cells, builder) {
   var lifts = {}
   for (var ci = 0; ci < cells.length; ci++) {
     var cell = cells[ci]
-    if (inHatchMouth(w, cell.x, cell.y)) return false
+    if (inHatchMouth(w, cell.x, cell.y) || inDoorway(w, cell.x, cell.y)) return false
     for (var i = 0; i < w.agents.length; i++) {
       var ag = w.agents[i]
       if (ag === builder || ag.gone || ag.state === "saved") continue

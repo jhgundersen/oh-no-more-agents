@@ -8753,3 +8753,33 @@ if the agent really stops.
 | Levels 109, 129, 204 (16 colonies) | — | identical |
 | `npm run sim play` | 2,965/3,113, 207 attempts | identical |
 | Playtest 1–440 | — | only the level-9 flag goes; nothing new |
+
+## 354 — 2026-10-15 · No bricks in front of a lift or escape door
+
+**Chosen (autonomy):** level 129 (Skyscraper), still on the stall cutoff in
+2 of 16 colonies. Both were the hero, the Bulwark, released last at the
+hatch.
+
+**Traced** (salt 5): the hero paced the bottom floor between x10 and x33
+for over 1,000 ticks.
+- **Right:** a dirt mass blocks the way to the far shaft.
+- **Left:** the lift's door at x9 is on that floor. But bricks laid earlier
+  formed a causeway two rows above the floor (row 51, x10–26) right up to
+  the shaft.
+- **What it did:** walked along the top of the causeway to the hoistway at
+  a height with no door. `edgeIsRoute` turns anyone back from a shaft
+  column, so it turned and paced until the cutoff.
+
+**Changed:** `inDoorway`. `makeBuildRoom` refuses a brick in the 1–3 cells
+outward of any lift or escape door, from the stop's floor up `AGENT_H`
+rows, the same way 319 keeps the hatch's mouth clear. The builder waits
+and turns as it would for traffic.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 129, 16 colonies: home | 89% | 91% |
+| Level 129: stall cutoffs | 2 | 0 |
+| `npm run sim play` | 2,965/3,113 | identical |
+| Playtest 1–440 | — | only the 129 flag goes; nothing new |
