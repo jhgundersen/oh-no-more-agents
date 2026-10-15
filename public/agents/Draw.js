@@ -2032,6 +2032,51 @@ function drawBelts(ctx, w, pal) {
   }
 }
 
+// The Library's librarian (Sim's placeLibrarian): bun, glasses and a
+// cardigan behind a desk with a lamp and a stack of returns, turned towards
+// whoever she last shushed, and the SHHH while it lasts.
+var LIBRARIAN = { bun: "#4a4458", cardigan: "#7a5c8f", desk: "#6b4a2f", deskTop: "#8c6440", lamp: "#9ece6a", glow: "#ffe08a" }
+function drawLibrarians(ctx, w, pal) {
+  var C = w.k.CELL
+  for (var i = 0; i < w.librarians.length; i++) {
+    var lib = w.librarians[i]
+    var ox = Math.round(lib.x * C) - SPRITE_W / 2, oy = Math.round((lib.y + 1) * C) - SPRITE_PX
+    drawLibrarian(ctx, pal, ox, oy, lib.dir)
+    var at = lib.shushAt
+    if ((w.res || 1) >= 2 && w.ticks - at >= 0 && w.ticks - at < QUIP_TICKS)
+      drawBubble(ctx, w, pal, { at: at, text: "SHHH" }, ox, oy)
+  }
+}
+
+function drawLibrarian(ctx, pal, ox, oy, dir) {
+  var L = LIBRARIAN
+  ctx.fillStyle = L.bun
+  blit(ctx, ox, oy, dir, 3, 0, 2, 2)                  // the bun
+  blit(ctx, ox, oy, dir, 2, 2, 4, 2)
+  ctx.fillStyle = pal.skin
+  blit(ctx, ox, oy, dir, 2, 4, 4, 4)
+  ctx.fillStyle = "#16161c"
+  blit(ctx, ox, oy, dir, 4, 5, 1, 1)                  // glasses
+  blit(ctx, ox, oy, dir, 6, 5, 1, 1)
+  blit(ctx, ox, oy, dir, 5, 5, 1, 1)
+  ctx.fillStyle = L.cardigan
+  blit(ctx, ox, oy, dir, 1, 8, 6, 5)
+  // The desk in front of her, the lamp lit on it, the returns piled up.
+  ctx.fillStyle = L.desk
+  blit(ctx, ox, oy, dir, 4, 11, 8, 5)
+  ctx.fillStyle = L.deskTop
+  blit(ctx, ox, oy, dir, 4, 11, 8, 1)
+  ctx.fillStyle = L.lamp
+  blit(ctx, ox, oy, dir, 10, 8, 2, 1)
+  blit(ctx, ox, oy, dir, 10, 9, 1, 2)
+  ctx.fillStyle = L.glow
+  blit(ctx, ox, oy, dir, 10, 10, 2, 1)
+  ctx.fillStyle = pal.decorLit
+  blit(ctx, ox, oy, dir, 6, 9, 3, 1)                  // returns
+  ctx.fillStyle = pal.label
+  blit(ctx, ox, oy, dir, 6, 10, 3, 1)
+}
+
 // The Data Center's aisles (Sim's placeAisles): a floor grate, warm where the
 // racks exhaust and cool where they breathe in, with the air showing — heat
 // shimmering up off the hot run, chilled air sinking onto the cold one.
@@ -2120,6 +2165,7 @@ function drawMachines(ctx, w, pal) {
   if (w.biome === "Data Center") drawRackLights(ctx, w)
   if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
   if (w.aisles && w.aisles.length) drawAisles(ctx, w, pal)
+  if (w.librarians && w.librarians.length) drawLibrarians(ctx, w, pal)
   if (w.updraft) drawUpdrafts(ctx, w, pal)
   drawAmbience(ctx, w, pal)
   if (w.biome === "Factory") drawFactoryMachines(ctx, w, pal)
@@ -7279,6 +7325,7 @@ function quipFor(w, ag) {
     [w.bet === ag.id ? w.betAt : undefined, "MY MONEY'S ON YOU"],  // the watcher's pick
     [ag.conflictAt, ag.conflictSide > 0 ? "<<<<<<<" : ">>>>>>>"],  // nose to nose in a merge conflict
     [ag.rebasedAt, "REBASED"],                                     // and the one that gave way
+    [ag.shushedAt, "SORRY"],         // shushed by the Library's librarian
     [ag.duckAt, "SO BASICALLY"],     // explaining it to the rubber duck...
     [ag.duckAt === undefined ? undefined : ag.duckAt + 30, "OH!"]   // ...and seeing it
   ]

@@ -137,7 +137,7 @@ test("actual level 13 walk, palm, scuffle, throw, stagger and dated defeat never
   // A colony in which the Bouncer walks, scuffles, recovers and is put down.
   // The colony comes from the cast, so a new trait reshuffles it; the moments
   // are read off a first run rather than pinned, and only the seed is chosen.
-  const seed = 102991, moments = new Set(), scout = S.generate(13, 0, seed)
+  const seed = 103011, moments = new Set(), scout = S.generate(13, 0, seed)
   let last = "", died = -1
   while (scout.ticks < 2400 && died < 0) {
     S.step(scout)

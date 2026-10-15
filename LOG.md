@@ -7634,3 +7634,40 @@ aisles line made nine patch notes and the test caps them at eight. The oldest
 (rubber duck) drops off, and `NEWS` now says so: eight at most, oldest out.
 I ran the news test, saw it fail, and committed anyway; from now on the full
 check runs after the last edit before every commit.
+
+## 246 — 2026-10-15 · The librarian
+
+**Asked:** (from 245) the Library has no mechanic of its own; give it one that
+fits its art and the puns, playtest-neutral, never a soft-lock.
+
+**Changed:** `placeLibrarian`, the Library's own mechanism, on a stream of its
+own.
+- **Where she stands.** One librarian at a desk on the first corridor, which
+  the whole colony walks, a few strides short of its first obstacle.
+- **Who counts as noise.** Anyone who bashes, mines, digs or lays bricks within
+  earshot (12 cells along, 6 rows down). Also the loud walkers (brave,
+  stubborn, curious) passing within 3 cells of her desk. Heroes are left
+  alone.
+- **The shush.** She shushes the nearest one: it holds still for 40 ticks, says
+  "SORRY", then carries on exactly where it was, the same way and with the
+  same job. One whose floor goes falls as it would have. She needs 150 ticks
+  between shushes.
+- **Ticker.** It rotates "SHHH! AGENT 003 WAS TOO LOUD", "… HAS BEEN ASKED TO
+  USE ITS INSIDE VOICE" and "… WAS RATE-LIMITED BY THE LIBRARIAN".
+- **Draw.** `drawLibrarian` shows her (bun, glasses, purple cardigan) behind a
+  desk with a green lamp and a pile of returns. She turns towards whoever she
+  last shushed, with a SHHH bubble at page resolution.
+- **Patch notes:** one line for the librarian and the aisles together, so the
+  list stays at eight.
+
+**Tuning:** she shushed in 6 of 48 runs at first, because tools are rarely
+needed where she stood. Counting the loud walkers brought it to 28 of 48, and
+a 150-tick cooldown gives about 1–2 shushes a level.
+
+**Measured:** playtest 1-150 × 24, A/B against 245. Every other biome is
+identical run for run. Library: 2764 → 2762 of 2832, and bad endings went
+from 3 to 2. Total 51452 → 51450, no hangs. `test/librarian.test.js` covers
+placement, the shush and its rules, falling while shushed, and the drawing.
+Because the librarian changes level 13's colonies, `test/bouncer-art.test.js`
+moves to seed 103011, one where the Bouncer is still put down; the test asks
+for exactly that.

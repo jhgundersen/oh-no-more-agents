@@ -905,6 +905,7 @@ function newWorld(level, attempt, colonySeed) {
     beltAt: null,     // and which way each feet cell is carried, -1/0/1
     aisles: [],       // the Data Center's hot and cold aisles; see placeAisles
     aisleAt: null,    // and which each feet cell is: 1 hot, -1 cold, 0 neither
+    librarians: [],   // the Library's; see placeLibrarian
     frozen: [],       // the Ice Cave's colleagues in the ice; see placeFrozen
     pads: [],
     cranes: [],       // the Building Site's gantry cranes; see placeCranes
@@ -1540,6 +1541,7 @@ var BIOME_MECHANISMS = {
   "Ruins": placeBoulder,
   "Factory": placeBelts,
   "Data Center": placeAisles,
+  "Library": placeLibrarian,
   "Ice Cave": placeFrozen,
   "Spaceship": placePads,
   "Foundry": placeChains,
@@ -1815,6 +1817,78 @@ function stepAisles(w) {
     feedNote(w, (kind === "hot" ? "HOT AISLE: " : "COLD AISLE: ") + agentTag(w, ag) + " " + AISLE_LINES[kind])
     return
   }
+}
+
+// ---------------------------------------------------------------------------
+// The librarian
+// ---------------------------------------------------------------------------
+//
+// The Library's own mechanism. One corridor has a desk, and behind it a
+// librarian who will not have noise. Whoever bashes, mines, digs or hammers a
+// brick within earshot of her floor, or walks past her desk making a noise (the brave
+// stomp, the stubborn hum, the curious ask questions), is shushed: it stops what it is doing for
+// a moment, looking sheepish, then carries on exactly where it left off. She
+// needs a while to recover her composure before the next one. A pause, never
+// a turn and never a stop, so it costs a little time and cannot strand anyone.
+// Placed from a stream of its own.
+var LIB_REACH = 12          // cells along her floor she can hear
+var LIB_BELOW = 6          // and rows down (a digger is noisy going down)
+var LIB_COOL = 150         // ticks between shushes
+var HUSH_TICKS = 40        // how long a shushed agent stands still
+var NOISY = { bash: true, mine: true, dig: true, build: true }
+var LOUD = { brave: true, stubborn: true, curious: true }  // stomping, humming, questions
+var LIB_DESK = 3                               // a loud walker must pass this close
+var SHUSH_LINES = ["WAS TOO LOUD", "HAS BEEN ASKED TO USE ITS INSIDE VOICE", "WAS RATE-LIMITED BY THE LIBRARIAN"]
+
+function placeLibrarian(w, corridors) {
+  var lrng = makeRng(w.level * 8191 + 5419)
+  // On the first corridor, which the whole colony walks: a few strides short
+  // of the first thing in its way if it has one, where the work will be.
+  var c = corridors[0]
+  if (!c) return
+  var o = c.obstacles && c.obstacles.length ? c.obstacles[0] : Math.round((c.x0 + c.x1) / 2)
+  var x = padSpot(w, c, o - c.dir * irand(lrng, 4, 7))
+  if (x < 0) return
+  w.librarians.push({ x: x, y: c.floorY - 1, dir: lrng() < 0.5 ? 1 : -1, shushAt: -LIB_COOL, who: -1 })
+}
+
+function stepLibrarians(w) {
+  for (var i = 0; i < w.librarians.length; i++) {
+    var lib = w.librarians[i]
+    if (w.ticks - lib.shushAt < LIB_COOL) continue
+    var ag = noisiest(w, lib)
+    if (!ag) continue
+    lib.shushAt = w.ticks
+    lib.who = ag.id
+    lib.dir = ag.x < lib.x ? -1 : 1
+    ag.hushedFor = HUSH_TICKS
+    ag.shushedAt = w.ticks + 10           // a beat, then the apology
+    w.shushes = (w.shushes || 0) + 1
+    feedNote(w, "SHHH! " + agentTag(w, ag) + " " + SHUSH_LINES[(w.shushes - 1) % SHUSH_LINES.length])
+  }
+}
+
+// The nearest agent making a noise within earshot, or null.
+function noisiest(w, lib) {
+  var best = null, bestD = LIB_REACH + 1
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.hushedFor > 0 || ag.special) continue
+    var dy = ag.y - lib.y, d = Math.abs(ag.x - lib.x)
+    var loud = NOISY[ag.state] || (ag.state === "walk" && LOUD[ag.trait] && d <= LIB_DESK && Math.abs(dy) < 1)
+    if (!loud || dy < -1 || dy > LIB_BELOW || d >= bestD) continue
+    best = ag; bestD = d
+  }
+  return best
+}
+
+// A shushed agent stands still with its tool in hand. Nothing that holds it
+// up may go, though: one whose floor has gone falls as it would have.
+function hushed(w, ag) {
+  if (!(ag.hushedFor > 0)) return false
+  if (unsupported(w, ag)) { ag.hushedFor = 0; return false }
+  ag.hushedFor--
+  return true
 }
 
 // ---------------------------------------------------------------------------
@@ -10827,6 +10901,7 @@ function stepOneAgent(w, ag) {
     return "fading"
   }
   if (!agentReady(w, ag)) return "turned"
+  if (hushed(w, ag)) return "on"
   agentActs(w, ag)
   if (ag.gone) return "gone"
   var e = w.exit
@@ -11277,6 +11352,7 @@ function finishWorldStep(w, active, blockers, moving) {
   stepDuck(w)
   stepConflicts(w)
   stepAisles(w)
+  stepLibrarians(w)
   stepAgi(w)
   stepRadio(w)
   stepMission(w)
