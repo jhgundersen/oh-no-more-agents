@@ -36,6 +36,9 @@
   var lastTerrainVersion = 0
   var lifetimeSaved = 0
   var levelsCleared = 0
+  // Levels in a row with nobody lost, and the best run: the factory-floor
+  // safety sign (Draw's incidentLine puts it on the report card).
+  var incidentFree = 0, incidentBest = 0
   var globalSaved = null
   var milestone = null      // this session's community milestone, if one was crossed
   var levelsThisVisit = 0   // the sweepstake's how-to shows on the first few
@@ -82,6 +85,8 @@
       if (typeof d.level === "number" && d.level >= 1) level = Math.floor(d.level)
       if (typeof d.lifetimeSaved === "number") lifetimeSaved = d.lifetimeSaved
       if (typeof d.levelsCleared === "number") levelsCleared = d.levelsCleared
+      if (typeof d.incidentFree === "number" && d.incidentFree >= 0) incidentFree = Math.floor(d.incidentFree)
+      if (typeof d.incidentBest === "number" && d.incidentBest >= incidentFree) incidentBest = Math.floor(d.incidentBest)
       if (typeof d.speedIndex === "number" && d.speedIndex >= 0 && d.speedIndex < SPEED_INTERVALS.length)
         speedIndex = Math.floor(d.speedIndex)
       if (typeof d.showLabels === "boolean") showLabels = d.showLabels
@@ -96,6 +101,7 @@
       localStorage.setItem(STORE_KEY, JSON.stringify({
         version: 1, level: level, lifetimeSaved: lifetimeSaved,
         levelsCleared: levelsCleared, speedIndex: speedIndex,
+        incidentFree: incidentFree, incidentBest: incidentBest,
         showLabels: showLabels, theme: themeName, track: trackIndex,
         sfx: !!(window.AgentSfx && AgentSfx.isOn())
       }))
@@ -557,6 +563,7 @@
     paintActors()
 
     if (world.done && completionLine === "") {
+      noteIncidents(world)
       completionLine = outcomeLine(world)
       announce(reportAnnouncement(world))
       noteSightings(world)
@@ -939,6 +946,7 @@
     el.pauseWord.textContent = running ? "pause" : "resume"
     var lv = levelsCleared === 1 ? " level" : " levels"
     el.lifetime.textContent = compact(lifetimeSaved) + " home, " + levelsCleared + lv
+      + (incidentFree >= 2 ? ", " + incidentFree + " without an incident" : "")
     el.lifetime.title = lifetimeSaved.toLocaleString() + (lifetimeSaved === 1 ? " agent" : " agents") + " home over " + levelsCleared + lv
     el.global.textContent = globalSaved === null
       ? "worldwide: offline"
@@ -991,9 +999,26 @@
   // live region — twice a level, never per frame. The board itself is a
   // picture with a name; everything that matters on it is said here.
   function levelAnnouncement(w) { return "Level " + w.level + ", " + w.biome + ". " + w.toRelease + " agents." }
+  // An incident is anybody lost. A clean level adds one to the run; anything
+  // else resets it, and the card says what the run was when it was worth
+  // having (three or more). The colony of the day counts like any level.
+  function noteIncidents(w) {
+    var clean = w.lost === 0 && w.saved >= w.toRelease, was = incidentFree
+    incidentFree = clean ? incidentFree + 1 : 0
+    if (incidentFree > incidentBest) incidentBest = incidentFree
+    w.incidents = { streak: incidentFree, best: incidentBest, broke: !clean && was >= 3 ? was : 0 }
+  }
+
   function reportAnnouncement(w) {
     return "Level " + w.level + " report: " + w.saved + " of " + w.toRelease + " home" + (w.lost ? ", " + w.lost + " lost." : ".")
-      + spokenEmployee(w)
+      + spokenEmployee(w) + spokenIncidents(w)
+  }
+  function spokenIncidents(w) {
+    var n = w.incidents
+    if (!n) return ""
+    if (n.broke) return " Incident counter reset. It was " + n.broke + "."
+    if (n.streak < 2) return ""
+    return " " + n.streak + " levels without an incident" + (n.streak === n.best && n.streak >= 3 ? ", a record." : ".")
   }
   // The card's Employee of the Level, in sentence case for a screen reader.
   function spokenEmployee(w) {

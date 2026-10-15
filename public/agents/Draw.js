@@ -3670,6 +3670,17 @@ function employeeLine(w) {
   return ag.state === "saved" ? line + "." : line + " (POSTHUMOUS)."
 }
 
+// The safety sign the page keeps (web.js noteIncidents): levels in a row with
+// nobody lost. Only when it is news: a run of two or more, or the end of a run
+// of three or more.
+function incidentLine(w) {
+  var n = w.incidents
+  if (!n) return ""
+  if (n.broke) return "INCIDENT COUNTER RESET. IT WAS " + n.broke + "."
+  if (n.streak < 2) return ""
+  return n.streak + " LEVELS WITHOUT AN INCIDENT" + (n.streak === n.best && n.streak >= 3 ? " · RECORD" : "")
+}
+
 function commitLine(w) {
   var type = w.saved >= w.toRelease ? "FEAT" : w.saved === 0 ? "REVERT" : w.nuking ? "HOTFIX" : "FIX"
   var subject = w.saved >= w.toRelease ? "SHIP ALL " + w.toRelease + " AGENTS HOME"
@@ -3811,6 +3822,8 @@ function reportRows(w, pal) {
   if (w.agiHome) rows.push({ text: "AGI ACHIEVED · +1 BONUS", colour: AGI_GOLD, step: 12 })
   else if (w.agiLost) rows.push({ text: "AGI LOST. STILL FIVE YEARS AWAY.", colour: pal.urgent, step: 12 })
   if (w.bet !== undefined && w.bet !== null) rows.push({ text: betLine(w), colour: betCalled(w) ? AGI_GOLD : pal.label, step: 12 })
+  var incident = (w.res || 1) >= 2 ? incidentLine(w) : ""
+  if (incident) rows.push({ text: incident, colour: w.incidents.broke ? pal.urgent : pal.label, step: 12 })
   rows.push({ text: commitLine(w), colour: pal.decor, step: 12 })
   // The watcher's sightings (the page sets w.sightings at the end of a level).
   // Not until there is one: a row of seven grey icons and "0/7" means nothing

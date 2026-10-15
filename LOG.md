@@ -10122,3 +10122,44 @@ Reviewed and merged by the loop: codex/transporter-art (44ef025, entry 386),
 `--no-ff`, as approved. Codex's entry is renumbered and the page is
 re-stamped. Drawing only, with no Sim.js change; the branch also carried
 the already-merged forecast plate, which git folded in.
+
+## 388 — 2026-10-15 · Levels without an incident
+
+**Chosen (autonomy, something new for watchers):** the factory-floor safety
+sign as office humour. It counts levels in a row with nobody lost, keeps
+the record, and resets with a short note. It gives every level a little at
+stake, and it is logic and page text, not art.
+
+**Built:**
+- **web.js:**
+  - `noteIncidents` runs at the end of every level, before the
+    announcement.
+  - A level with nobody lost and everyone home adds one to `incidentFree`;
+    anything else resets it.
+  - `incidentBest` keeps the record. Both are saved with the rest of the
+    page's state.
+  - The world gets `w.incidents = { streak, best, broke }`, where `broke` is
+    the run that just ended if it was 3 or more.
+  - The footer adds ", N without an incident" from 2 up.
+  - The screen-reader report adds the same sentence.
+- **Draw.js:** `incidentLine` puts a row on the page's report card, only
+  when it is news, in the warning colour when it resets. The panel's card
+  is unchanged.
+  - "N LEVELS WITHOUT AN INCIDENT" from 2 up, with " · RECORD" when it
+    equals the best (3 or more);
+  - "INCIDENT COUNTER RESET. IT WAS N." when a run of 3 or more ends.
+- **Patch notes:** "Added: a safety sign. Levels without an incident,
+  counted until there is one." It replaces the voices line; the list stays
+  at eight.
+
+**Checked:** headless on the local page, starting from a saved run of 3:
+- **A clean finish:** streak 4, a record. The footer reads "16 home, 1
+  level, 4 without an incident" and the announcement says "4 levels without
+  an incident, a record."
+- **Then a finish with 2 lost:** "Incident counter reset. It was 4." The
+  saved streak is 0. No page errors.
+
+**Tests:**
+- `test/incidents.test.js`: the line's thresholds, the record, the reset,
+  no line on res 1, and the warning colour.
+- `test/a11y.test.js` accepts the optional sentence.
