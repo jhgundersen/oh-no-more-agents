@@ -7826,3 +7826,96 @@ the festive lines, and hats and stripes drawn only with the season. Local
 headless check at `?season=christmas`, level 1: Santa hats on every walker,
 snow over the cave air, the exit wrapped with a bow, "AGENT 001 DELIVERED. NO
 CHIMNEY REQUIRED" on the ticker, no page errors.
+
+## 251 — 2026-10-15 · Give the gags whole pixels (on a branch)
+
+**Brief:** art for the recent gameplay gags at native 1× and page res 2, on
+`codex/gag-art`. Started from local main and rebased onto `902d5be` after the
+developer merged the approved Harbour revision. No push, deployment or sibling
+sync.
+
+**Changed:** the dreamer's false exit has broken luminous jambs, a readable
+EXIT header and a rippling silhouette. The bevelled 429 plate, post and queue
+tickets read at native size; queue dialogue sits beside the sign rather than
+over it or the hero card. Golden AGI glints sit outside the face and collar;
+pep-talk stars use a separate mint accent. Both ducks have a rounded body,
+orange beak, eye, wing and shaded belly. Their speech and merge-conflict
+chevrons now have whole-pixel lettering at res 1, complete tails and dark
+edges; conflict panels sit side by side and stay within either board edge.
+Exit and hazard clearance includes the whole speech panel and shadow.
+
+Outages retain their darkness, with paired eyes, dim hat/collar cues, small
+hazard lamps and an exit threshold/frame that remains visible. Hidden riders
+and departed bodies do not leave floating eyes. The standup has a clock,
+sprint calendar, active-speaker mark, labelled TODO/DOING/DONE columns and
+shadowed, inked sticky notes. Replay gets a bevelled recording badge below the
+sky. Seven distinct report-card icons retain their labels and fresh-sighting
+frame. Party hats have clear cones/stripes or a pronged crown; confetti flips
+like paper, with its trajectory vectors calculated once at load.
+
+Halloween gets ribbed, carved pumpkins with candle pixels and a small warm
+floor pool; scalloped, hooked bat wings with a pale rim and amber eyes; and
+rounded ghosts with shaded folds and tasselled hems. Seasonal props avoid
+living faces, umbrella canopies, exits, hazards and unsupported/blocked floor
+positions. Reduced motion holds decorative movement still. No simulation,
+palette, web orchestration or gag timing changes.
+
+**Looked:** all 17 contexts in `/tmp/codex-gag-art/final/contact-sheet.png`,
+with before/after res-1 and res-2 crops, plus 68 native full frames and 68
+native crops. Reviewed the native 400×248 frames together in `native-1x.png`,
+including complete queue sign/dialogue and all seven report icons. Local
+`?season=halloween&level=9&seed=3` page at tick 405 shows the lanterns and
+readable agents; `halloween-page.png` and JSON are in `/tmp/codex-gag-art/`.
+The preferred Chromium extension connection was unavailable; the repository's
+isolated headless preview produced no page exceptions.
+
+**Isolation:** 285 ordinary frames (19 biomes × five themes × unspecified,
+res 1 and res 2) are byte-identical to merged main when gags are inactive.
+The new tests compare complete simulation digests in all nineteen biomes
+through 600 ticks, with identical random draws and only existing `season*`
+display bookkeeping omitted. They also enforce deterministic, RNG-free,
+read-only painting, finite positive rectangles, whole/half-pixel grids,
+context restoration, protected sprite pixels, conflict/queue clearance,
+seasonal occlusion, reduced motion and effect expiry. Assertions hash frames
+or inspect bounded pixels rather than diffing canvas buffers.
+
+**Pipeline:** `node --max-old-space-size=256 tools/gag-art.js --base 902d5be
+--out /tmp/codex-gag-art/final` reproduces the sheet and native frames in about
+1.3 s, peak RSS 166 MB. Reuses four seasonal VM contexts. Caching unchanged
+terrain in the all-context test, as the real host does, reduced it from 6.8 s
+to 1.4 s while keeping every context, resolution and theme.
+
+The existing headless browser helper hung indefinitely when Chromium exited
+under the required 6 GB virtual-address limit. Chromium reserves an address
+cage larger than that limit. `tools/phone.js` now detects that limit and uses
+an isolated transient user service with **MemoryMax=512M**, TasksMax=256 and a
+five-minute lifetime; Node and test workers keep their 2048 MB heap and
+`ulimit -v 6000000`. Startup, sockets, commands and cleanup have bounded
+failure paths. Active-time deadlines tolerate a serialized test pause. The
+host-aware art launcher also suspends only its own managed browser alongside
+its Node tree when another full run starts. No user browser/profile or system
+configuration is changed. The capped browser smoke test and existing page
+replay integration test pass; no three-second cleanup timer remains after a
+successful browser exit.
+
+**Measured:** five interleaved warmed batches of twenty res-2 actor frames,
+merged main → revision, Node software rasterizer: mirage **0.843 → 0.884 ms**,
+queue **0.934 → 0.959**, AGI **0.836 → 0.843**, conflict **0.854 → 0.863**,
+outage **1.945 → 1.982**, standup **1.886 → 2.031**, report **1.774 → 1.865**,
+party **0.888 → 0.912**, bat **0.632 → 0.629**. These are cached-terrain draw
+times, not browser FPS. No new per-frame canvases, gradients or scene state.
+
+**Validation:** `npm run stamp` and the capped `npm run check` pass: **1,138
+tests**, zero failures/skips, **212.11 s** including shared-host pauses. The
+focused gag/429 run passes **20 tests** in **5.50 s**. Capped coverage also
+passes **1,138 tests**, zero failures/skips, in **179.18 s**. `npm run crap --
+--threshold 30 --coverage-command /tmp/codex-gag-art/coverage-safe.sh` passes;
+highest score **30.0**, new gag helpers at most **13.0**, speech panel **17.1**,
+browser helper at most **12.0**. Draw coverage is **99.77% lines / 98.26%
+branches**. Factory art remains explicitly excluded; one worker for check
+and two for coverage, never overlapping full runs. Start/end source hashes
+match; simulation, palette, web and outcome files remain byte-identical to
+merged main. No temporary browsers remain.
+
+**Next:** ready for gag-art review. Commit on `codex/gag-art` only; no push,
+deployment or sibling sync.
