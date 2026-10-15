@@ -8888,6 +8888,7 @@ function stepCamp(w, ag) {
     ag.shotFor = 12
     killEnemy(w, redTarget)
     ag.cool = spec.cool
+    ag.emptySweeps = 0
     return
   }
 
@@ -8911,6 +8912,7 @@ function stepCamp(w, ag) {
     ag.shotFor = 12
     wreckHazard(w, visibleHazard)
     ag.cool = spec.cool
+    ag.emptySweeps = 0
     return
   }
 
@@ -8928,14 +8930,27 @@ function stepCamp(w, ag) {
       ag.shotY = fy - 2
       ag.shotFor = 8
       ag.cool = spec.cool
+      ag.emptySweeps = 0
       return
     }
   }
 
-  // Nothing in that direction worth a bullet. Face the other way and wait.
+  // Nothing in that direction worth a bullet. Face the other way and wait —
+  // but not for ever. A camp lasted until the colony stood down, so on level
+  // 305 Beam Search sat two thousand ticks at a wall with nothing in sight,
+  // set off home when the rest were in, and met the clock on the way, in 6 of
+  // 16 colonies (LOG 334). Enough empty sweeps and it packs up and goes home.
   ag.dir = -ag.dir
   ag.cool = Math.round(spec.cool / 2)
+  ag.emptySweeps = (ag.emptySweeps || 0) + 1
+  if (ag.emptySweeps >= CAMP_SWEEPS) {
+    ag.campedOut = true
+    ag.state = "walk"
+    ag.idle = 0
+    ag.turns = 0
+  }
 }
+var CAMP_SWEEPS = 8   // empty looks each way before a camper packs up (~480 ticks)
 
 // Every way a hero's own move has nothing for this wall ends here. Mid-level
 // it turns, as it always did — its move will come back, and the colony needs
@@ -9021,7 +9036,7 @@ function specialAtWall(w, ag) {
   // Search came out of its camp onto a corridor walled off from the way down
   // and paced it until the stall cutoff, in 6 of 24 colonies. At a wall toward
   // home it borrows the colony's tools, the way forceEscape lends them.
-  if (spec.act === "camp" && w.stoodDown) {
+  if (spec.act === "camp" && (w.stoodDown || ag.campedOut)) {
     if (!crossingHelps(w, ag) || !borrowWallTools(w, ag)) turnAround(w, ag)
     return
   }

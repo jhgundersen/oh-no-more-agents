@@ -7917,3 +7917,41 @@ re-stamped.
   are pinned unchanged by a new test across directions, phases and palettes.
   Codex reconstructed the old native Harbour hash (c94428a9…), which is
   unchanged; only the page's moved.
+
+## 334 — 2026-10-15 · A camper packs up when there is nothing left to shoot
+
+**Chosen (autonomy):** a fresh `npm run playtest -- 301-440` (95% home). Its
+worst flag was "level 305: ran out the clock in 2/6 runs".
+
+**Traced** (305, Jungle, salt 5):
+- the hero, Beam Search (`act: "camp"`), camped at its first wall, (88, 14),
+  from t210 to t2245;
+- that is about 2,000 ticks of sweeping left and right with nothing to shoot;
+- it only came out at the stand-down, when everyone else was home;
+- its walk home took longer than the 1,055 ticks left on the clock, and the
+  nuke caught it at t3305.
+
+Across 16 colonies, 6 ended that way.
+
+**Changed** (`stepCamp`):
+- **Packing up:** an empty sweep (nothing to shoot either way) counts
+  toward `CAMP_SWEEPS` (8, about 480 ticks), and any shot resets the count.
+  At 8 the camper sets `campedOut` and walks.
+- **No re-camping:** `specialAtWall` treats `campedOut` like a stand-down. At
+  a wall it borrows the colony's tools toward home or turns, so it does not
+  dig in at the next wall.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 305, 16 colonies: home | 97% | 99% |
+| Level 305: ran out the clock | 6 | 0 |
+| `npm run sim play`: home | 2,976/3,129 | 2,976/3,129 (identical) |
+| `npm run sim play`: average attempt | 40 s | 39 s |
+| `sim hazards`: kills | 60 | 58 |
+
+- **Playtest 1–440 (6 colonies):** the 305 flag is gone and nothing new is
+  flagged.
+- **Why `sim hazards` moved:** a camper that packs up wrecks fewer fixtures,
+  and the colony gets by.
