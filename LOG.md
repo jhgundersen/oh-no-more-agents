@@ -7241,3 +7241,106 @@ it does for traffic, and after 15 tries it turns round.
 
 **Next:** that straggler, a lone agent on a tower floor that never takes the
 lift on up.
+
+## 323 — 2026-10-15 · A little lift (on a branch)
+
+**Branch:** `codex/lift-art`, from current main at the start of the pass
+(`9c34e7e`). One autonomous pick: the Skyscraper's moving rooms still looked
+flat beside the finished city. Give the lift ride some warmth and character.
+
+**Watched first:** local desktop and phone views of Skyscraper, Spaceship,
+Mail Room, Subway and Cavern, at Steady and Brisk speeds, including Halloween
+and Christmas previews. `/tmp/codex-watch-next/watch.json` and the new
+`tower-*`, `ship-*`, `mail-*`, `subway-*`, `cavern-*` screenshots record this
+watch. The extension browser exposed no connected surfaces; used the repo's
+bounded, throwaway-profile Chromium helper and ephemeral local server instead.
+The local server has no counter API.
+
+**Art:** res 2 lift cabins now have stepped brass capitals and skirting, a warm
+pendant over a muted back panel, a small pool of light, and five roof lamps
+showing the existing five-seat occupancy. The rope's tiny joints travel with
+the car; the pendant sways by at most one art pixel and settles at a served
+stop. Door frames get a fine brass edge and a lit sill. One brief, warm lamp
+halo and three little rays mark a real arrival. A passing car, an idle car and
+an unrequested stop do not ring.
+
+Everything reads `L.car`, `L.riders`, `L.hold`, `L.parked`, `L.at` and
+`L.doorFor`. No emitter, rendering history, wall clock, RNG, timer, listener,
+world field or simulation change. The passengers are still painted afterwards,
+so the light falls behind their dark suits. Their floor plate stays on the
+same row, and the real door timing/geometry is unchanged. Fire escapes retain
+their existing drawing. Native res 1 (and the res-3 share-card path) retain the
+old cabin exactly, extracted into `drawLiftCabin`.
+
+**Reduced motion:** the warm architecture remains, with a centred pendant,
+fixed cable pattern and no arrival halo/rays. Actual lift travel and existing
+door state still show. No blinking decoration or repeating idle flourish.
+
+**Before/after:** `/tmp/codex-lift-art/strips/index.html` animates three real,
+five-passenger trips, seed 3: descending level 9 and ascending levels 29/49.
+`strips/contact-sheet.png` pairs both loaded travel and emptied arrivals for
+each. The per-level `*-frames.png` sheets include native and page resolution:
+four travelling poses, the exact dock, and three settling poses. The offsets
+are selected phases, not equal-time frames; the preview says so. Real travel
+and arrival clocks are recorded in `strips/manifest.json`.
+
+`/tmp/codex-lift-art/page-sheet.png` shows the actual CSS-size boards and 3x
+crops. Full desktop/phone originals are in `before/` and `after/`: loaded
+level 9 on desktop, its five passengers at the exact docking tick on phone,
+Christmas level 29's arrival on phone, loaded Halloween level 49 on desktop,
+and a real reduced-motion phone preview. Board/stage geometry matches and
+there is no horizontal overflow. The phone crop now intersects the viewport:
+its board starts at x=-5, so passing a negative crop x to CDP previously
+captured the wrong page area. The corrected Christmas crop includes the cabin
+and Santa hats. Metrics and pixel-difference bounds: `pages.json` and
+`presentation-check.json`. Baseline assets are pinned to `9c34e7e`.
+
+**Pipeline/cost:** `tools/lift-art.js` finds an occupied departure with a
+12,000-tick bound, steps the actual journey, caches terrain by version,
+resolution and palette, and paints actors directly into small translated
+crops. Tests compare those pixels with full-board crops. All **96 frames**,
+the paired sheet and animated review take **0.40 s / 140.1 MB peak RSS**.
+The sheet reserves the measured crop height for each row, including separate
+loaded/arrival rows; an early undersized layout was corrected before review.
+One browser captures all ten page views; composition reuses their PNGs.
+
+The game paints **25 small rectangles per cabin**, five of them the occupancy
+lamps, plus a rope joint per eight art pixels and four edge/sill marks per
+portal. An active arrival adds four marks at one served floor. There are at
+most two cars; a crowd does not multiply the effect. No new image, filter or
+canvas. Draw.js adds **1,155 gzip bytes** before the shipping comment strip.
+
+**Measured:** `npm run fps -- 9 29 --from-tick 750 --seconds 5 --speed 2 --json`
+on the saved baseline and final page roots. This includes level 9's loaded
+ride at tick 763 and its arrival at 780, rather than just the opening. Up to
+**18 cast members** in level 9 and **15** in level 29. Both before and after,
+both levels: **60 FPS median and p5, 17 ms worst, zero long-task time,
+11% main-thread CPU**. Logs: `fps-before.log` / `fps-after.log`. This short
+headless sample shows no measured regression, not a claimed speedup.
+
+**Focused:** **29/29 passed in 6.29 s** across lift art, Skyscraper, mechanisms
+and ordinary-agent art. The new tests cover served/pass/idle/reduced signals,
+the exact rider floor, finite local half-pixel paint and inherited opacity,
+all five occupancy lamps, stationary reduced-motion details, unchanged native
+pixels, real loaded travel/docking and fire escapes, read-only RNG-free
+rendering in five palettes, crop equivalence and cache invalidation, and the
+bounded review generator. Existing ordinary-agent tests compare complete
+rendered/unrendered gameplay digests. The Skyscraper native snapshot is
+unchanged; its page snapshot intentionally includes the reviewed lift art.
+Sim.js is byte-identical to the branch's main base.
+
+**Full gate:** **1,375 passed, zero failures/cancellations/skips, 333.80 s**,
+including Factory art, with coverage. CRAP threshold **30** passed using the
+same LCOV, maximum **30.0**. All new runtime helpers have 100% coverage:
+`liftArrivalLight` **6.0**, `drawLiftPendant` / `drawPageLiftPortal` **5.0**,
+`drawLiftOccupancy` / `drawPageLiftCable` **3.0**, and `drawPageLiftCabin` /
+`drawLiftBell` **1.0**. The comparison generator is **16.1**. Completion was
+reported immediately and the shared lock released.
+
+One persistent FIFO-locked systemd job, 3 GB real-memory budget, 2,048 MB Node
+heap, `ulimit -v 6000000`, two workers and 120-second per-test timeouts. Coverage
+ran once and CRAP reused it. Source/tests stayed frozen throughout the gate.
+Logs: `/tmp/codex-lift-art/check.log`, `crap.log`, `queue.log`.
+`npm run stamp`, its check and `git diff --check` pass.
+
+**Next:** review and merge this branch. No push or deployment from this pass.

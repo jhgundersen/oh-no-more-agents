@@ -171,9 +171,10 @@ test("city lighting precedes lifts, hazards, guards, agents, umbrellas and exit"
     assert.ok(calls.findLastIndex(c => c === colour) > last, `original foreground ${colour} follows distant lights`)
 })
 
-test("original tower materials, skyline, desks, lamps, lifts, fire escape, hazards and exits retain bytes", () => {
+// Native snapshot is unchanged; page snapshot includes the Art Deco lift pass.
+test("tower fixtures retain native bytes and the reviewed page lift art", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "5df232c9176acb6cbcecf4a9b4e3fcc8a35d118143a646078590d0e212937d59"], [[2], "9c1bb8cb0da62b8baa3ed30199811a0c30d98051b1603b2b694dbd733620bf9b"]
+    [[undefined, 1], "5df232c9176acb6cbcecf4a9b4e3fcc8a35d118143a646078590d0e212937d59"], [[2], "e7a22ad068ce2d692f00d388a98b0f478adf0e6135fa470ded86ea9a640064ab"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of [9, 29, 49, 69])
