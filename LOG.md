@@ -7241,3 +7241,22 @@ it does for traffic, and after 15 tries it turns round.
 
 **Next:** that straggler, a lone agent on a tower floor that never takes the
 lift on up.
+
+## 320 — 2026-10-15 · Deploy (11:44)
+
+**Deployed** build dde21043 (version 5036aa20), replacing 1e1a7406. It
+covers 311–319:
+- the edge wait over a blast (311);
+- no digging into nothing (312);
+- the readable hero intros;
+- the hatch recoil;
+- the tunnel home (318);
+- no bricks in the hatch's mouth (319).
+
+**Before:** the last gate (1,370 tests), then `npm run smoke` on the clean
+tree, which passed (3 min, levels 1–7). The stall-progress change was
+stashed: its CRAP gate failed (see 322).
+
+**After:** `npm run verify -- --previous 1e1a7406` passed: shipped files,
+build agreement, the open tab reloading, level 20, `?daily&full=1`, Next
+during a standup, and the patch notes by keyboard (5 counter writes refused).
