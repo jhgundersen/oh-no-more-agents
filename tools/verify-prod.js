@@ -89,14 +89,26 @@ export async function shipped(base) {
   return { build, problems: out }
 }
 
+// The Worker reaches every edge a little after the assets do: straight after
+// a deploy the page can be new while /api/stats still names the old build
+// (15:22 deploy, 2026-10-15). Give it up to a minute before calling it.
 async function buildAgrees(base, build) {
   const repo = /BUILD = "([^"]+)"/.exec(fs.readFileSync(path.join(ROOT, "src/version.js"), "utf8"))[1]
-  const api = JSON.parse((await get(base + "api/stats")).body).build
+  const api = await apiBuild(base, repo)
   return build === repo && repo === api ? [] : [`build disagrees: page ${build}, repo ${repo}, api ${api}`]
 }
 
-// The deployed page names the content-hashed scripts ship.js wrote into
-// dist/index.html (not public/'s ?v= stamps), so that is what it must match.
+// The build /api/stats names, polled until it is `want` or a minute passes.
+async function apiBuild(base, want, waitMs = 60000) {
+  const end = Date.now() + waitMs
+  let api = JSON.parse((await get(base + "api/stats")).body).build
+  while (api !== want && Date.now() < end) {
+    await sleep(5000)
+    api = JSON.parse((await get(base + "api/stats")).body).build
+  }
+  return api
+}
+
 function stampsMatch(srcs) {
   const local = fs.readFileSync(path.join(ROOT, "dist/index.html"), "utf8")
   return JSON.stringify(srcs) === JSON.stringify([...local.matchAll(/<script src="([^"]+)"/g)].map(m => m[1])) ? [] : ["script names differ from dist/index.html"]

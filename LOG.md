@@ -8993,3 +8993,37 @@ Reviewed and merged by the loop: codex/storm-art (5ca585d, two commits,
 entries 356–357), `--no-ff`, as approved after one revision. Codex's entries
 are renumbered and the page is re-stamped. Drawing only, with no Sim.js
 change.
+
+## 359 — 2026-10-15 · Deploy (15:22); verify waits for the Worker to catch up
+
+**Deployed** build 797541f9 (version aa2ba1c0), replacing 9826ad5f. It
+covers 351–358:
+- the aisle grates;
+- the director leaving door-bound agents alone (353);
+- no bricks in front of doors (354);
+- the lent bridge (355);
+- the storm lightning.
+
+**Before:** the gate (1,472 tests), then `npm run smoke` on the clean tree,
+which passed (3 min, levels 1–6).
+
+**After:**
+- **First run:** `npm run verify` crashed with a Node exception (the trace
+  was not kept).
+- **Second run:** "build disagrees: page 797541f9, repo 797541f9, api
+  9826ad5f". The page's assets were new, but the Worker answering
+  `/api/stats` at this edge was still the old one.
+- **Polling:** the API reported 797541f9 by 15:23:28, and the next
+  `npm run verify -- --previous 9826ad5f` passed: shipped files, build
+  agreement, the open tab reloading, level 20, `?daily&full=1`, Next during
+  a standup, and the patch notes by keyboard (5 counter writes refused).
+
+**Tool change:** `buildAgrees` in `tools/verify-prod.js` now polls
+`/api/stats` for up to a minute until it names the repo's build, before
+calling it a disagreement. A real mismatch still fails, a minute later.
+`test/verify.test.js` passes.
+
+The first gate failed CRAP: `buildAgrees` scored 42, because the polling
+loop made it complexity 6 and the tests never reach it (0% covered). The
+loop is now its own function, `apiBuild`, and both halves are small enough
+to pass the gate.
