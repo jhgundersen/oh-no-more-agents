@@ -25,7 +25,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="7ee3fc5c">
+<meta name="build" content="16aed039">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
@@ -230,6 +230,24 @@
 			transition: width 240ms steps(4, end);
 		}
 
+		/* The canvas's 5px ticker cannot be read at phone scale. Reserve its
+		   caption space even between notes, so the controls never move. */
+		#eventCaption {
+			width: var(--board-w); max-width: 100%; height: 22px; box-sizing: border-box;
+			display: flex; align-items: center; gap: 8px; padding: 0 8px;
+			border-left: 2px solid var(--accent); background: var(--panel); color: var(--fg);
+			font: 12px/18px ui-monospace, monospace;
+		}
+		#stage[data-board-scale="1"] #eventCaption { height: 30px; font-size: 12px; line-height: 14px; }
+		#eventCaption.empty { visibility: hidden; }
+		/* Fullscreen (?full, kiosks) keeps every pixel for the board: the
+		   caption row would cost a 720p screen its 2x scale. The board draws its
+		   own ticker there instead, as before captions (web.js). */
+		#stage.faux #eventCaption, #stage:fullscreen #eventCaption { display: none; }
+		#stage.faux #board, #stage:fullscreen #board { transform: none; }
+		#eventCaption::before { content: '›'; color: var(--accent); font-weight: bold; }
+		#eventText { min-width: 0; overflow-wrap: anywhere; }
+
 		#toolbar { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }
 		.skill {
 			display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -298,6 +316,8 @@
 			.hud { flex-wrap: wrap; gap: 10px 14px; padding: 10px; }
 			#biome { flex: 1; }
 			.track { flex-basis: 100%; order: 1; }
+			#stage { gap: 4px; }
+			#eventCaption { height: 30px; font-size: 12px; line-height: 14px; }
 			#toolbar { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 			.skill { padding: 8px 2px; }
 			.skill-name { font-size: 10px; }
@@ -311,7 +331,7 @@
 		   and preserve the canvas scale chosen by web.js. */
 		@media (max-width: 423px) {
 			#stage { width: calc(100% + 24px); overflow-x: clip; }
-			.hud, #toolbar, .controls { max-width: calc(100% - 24px); }
+			.hud, #toolbar, .controls, #eventCaption { max-width: calc(100% - 24px); }
 		}
 		@media (pointer: coarse) { .ctl { min-height: 44px; } .theme { min-height: 36px; } .linkish { min-height: 44px; } }
 		/* No double-tap zoom on the board (a tap pauses) or the controls. */
@@ -329,7 +349,10 @@
 				column-gap: 10px; row-gap: 6px; align-items: start;
 				min-height: calc(100dvh - 12px); box-sizing: border-box;
 			}
-			#board { grid-column: 1; grid-row: 1 / span 3; align-self: center; }
+			#board { grid-column: 1; grid-row: 1 / span 3; align-self: center; transform: translateY(-18px); }
+			/* Centre the 248px board + 6px gap + 30px caption as one group. */
+			#eventCaption { grid-column: 1; grid-row: 1 / span 3; align-self: center; margin: 0;
+				height: 30px; font-size: 12px; line-height: 14px; transform: translateY(calc(124px + 50% - 12px)); }
 			.hud, #toolbar, .controls { grid-column: 2; width: auto; margin: 0; }
 			.hud { grid-row: 1; flex-wrap: wrap; gap: 6px 12px; padding: 7px 10px; }
 			.track { flex-basis: 100%; order: 1; }
@@ -386,6 +409,8 @@
 			</div>
 		</div>
 
+		<div id="eventCaption" class="empty" role="note" aria-label="Latest colony event" aria-live="off" aria-hidden="true"><span id="eventText"></span></div>
+
 		<div id="toolbar" role="group" aria-label="Skills remaining"></div>
 
 		<!-- The key is the letter it is, inside the word it belongs to: "restart"
@@ -439,14 +464,14 @@
 	</p>
 
 	<script src="agents/Sim.js?v=4f0e92c1"></script>
-	<script src="agents/Draw.js?v=b094bf8a"></script>
+	<script src="agents/Draw.js?v=0870442a"></script>
 	<script src="agents/Palette.js?v=ff1f4919"></script>
 	<script src="agents/Outcome.js?v=1105e622"></script>
 	<script src="agents/share.js?v=c3e48a0d"></script>
 	<script src="agents/sfx.js?v=13e9c6e5"></script>
 	<script src="agents/season.js?v=dbb629c3"></script>
 	<script src="agents/news.js?v=11e53121"></script>
-	<script src="agents/web.js?v=9a7645b0"></script>
+	<script src="agents/web.js?v=f8413083"></script>
 
 </body>
 

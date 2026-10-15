@@ -3442,12 +3442,17 @@ function drawLevelClosing(ctx, w, pal) {
 // the bedrock at the foot of the board for five seconds, fading at the end.
 // Page resolution only; the panel has no room for prose.
 var FEED_SHOW = 150, FEED_FADE = 30
-function drawFeed(ctx, w, pal) {
+// Shared selection only: the page gives the same note a readable DOM caption.
+function feedNotice(w) {
   var f = w.feed && w.feed[w.feed.length - 1], sn = w.season && w.season.note
-  if (sn && (!f || sn.t >= f.t)) f = sn             // a season's line, newer than the feed's
+  if (sn && (!f || sn.t >= f.t)) f = sn
+  if (!f || w.ticks < f.t || w.ticks - f.t >= FEED_SHOW) return null
+  return f
+}
+function drawFeed(ctx, w, pal) {
+  var f = feedNotice(w)
   if ((w.res || 1) < 2 || !f) return
   var age = w.ticks - f.t
-  if (age < 0 || age >= FEED_SHOW) return
   var y = (w.k.ROWS - 2) * w.k.CELL + 1, width = f.text.length * 4 - 1
   ctx.save()
   ctx.globalAlpha = Math.min(1, (FEED_SHOW - age) / FEED_FADE)
@@ -3541,7 +3546,7 @@ function drawStandupBubble(ctx, pal, x, foot, lines, W) {
 }
 
 function drawLevelTransition(ctx, w, pal, opts) {
-  if (!w.done) drawFeed(ctx, w, pal)
+  if (!w.done && !(opts && opts.feed === false)) drawFeed(ctx, w, pal)
   if (w.done) {
     ctx.save()
     drawLevelResults(ctx, w, pal)
