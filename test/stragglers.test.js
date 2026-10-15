@@ -313,3 +313,16 @@ test("a crawlway that ends at a ledge hands the slider back to walking instead o
   assert.equal(ag.dir, 1, "still facing the way it was going")
   assert.equal(ag.state, "walk")
 })
+
+test("a builder whose stairs meet a roof over walkable ground stops building and walks on, the same way", () => {
+  const w = box(70), k = w.k
+  for (let x = 42; x < 60; x++) w.terrain[26 * k.COLS + x] = k.DIRT     // a low ledge from x42
+  const ag = Object.assign(S.spawn(w), { x: 40.5, y: 29, dir: 1, state: "build", bricks: 12, timer: 5, idle: 0, buildWait: 0 })
+  S.stepBuild(w, ag)
+  assert.equal(ag.state, "walk")
+  assert.equal(ag.dir, 1, "the way on is open at a crouch, so no about-turn")
+  Object.assign(ag, { x: 40.5, y: 29, dir: 1, state: "build", bricks: 12, timer: 5 })
+  w.terrain[29 * k.COLS + 41] = k.DIRT; w.terrain[28 * k.COLS + 41] = k.DIRT  // now a real wall
+  S.stepBuild(w, ag)
+  assert.equal(ag.dir, -1, "a wall still turns it")
+})

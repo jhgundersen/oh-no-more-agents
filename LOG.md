@@ -7149,3 +7149,26 @@ are Node raster timings, not browser FPS.
 no push or deployment.
 
 Reviewed and merged by the loop (with `npm run compare`). Subway: a readable `NEXT: HOME - DELAYED` board, an Agent Line map, wall stripes and posters; the trains are intact. One branch test asserted the shared font had no `:`; main added that glyph in 197 for the commit line on the report card, so the merge drops that one assertion and keeps the station's own glyph checks.
+
+## 237 — 2026-10-15 · Stairs that run into a roof
+
+**Asked:** keep going down the play-test list before the deploy.
+
+**Found:** on level 138 the builders climb a one-brick hump towards the exit
+and their next step meets the ledge above. A blocked build always turned the
+builder around, even where the floor ahead is perfectly walkable at foot level,
+or at a crawl. So the last few in the colony kept walking back to the far wall,
+and the level ended on the stall cutoff.
+
+**Changed:** when both a full and a narrow step are blocked, the build still
+ends, but the builder turns only if a walker couldn't go on from there
+(`walkOnAhead`: the next cell is free, there is floor under it or one below,
+and there is room to stand or crawl). Since 235, a crawl over a lip ends in a
+step down. Test in `test/stragglers.test.js`; it fails without the fix.
+
+**Measured:** playtest 1-150 × 24 against 235: 51383 → 51408 home (+25,
+noise about ±16). Level 138's stall endings went from 8 to 6 of 24. Level 92's
+last clock-out is gone, so 138 has the only one left (1/24). 118 375 → 382 and
+47 299 → 304. 7 and 142 lost 3 and 4, which is within noise.
+
+**Next:** 138's remaining stalls, then 81.

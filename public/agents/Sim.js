@@ -7490,6 +7490,13 @@ function trimOverhang(w, x, footY) {
   return true
 }
 
+// Ground a walker could take from here: the next cell free, floor under it or
+// one below, and room to stand or at least crawl.
+function walkOnAhead(w, x, footY) {
+  return !solid(w, x, footY) && (solid(w, x, footY + 1) || solid(w, x, footY + 2))
+    && (headroom(w, x, footY) || crouchroom(w, x, footY))
+}
+
 function stepBuild(w, ag) {
   ag.timer++
   if (ag.timer < BUILD_INTERVAL) return
@@ -7571,8 +7578,12 @@ function stepBuild(w, ag) {
       // old order left a three-cell stub from a step the builder could never
       // occupy, and a queue of agents repeated it into the little brick heaps
       // seen on level 19.
-      ag.dir = -ag.dir
       ag.state = "walk"
+      // But where the way on is open at foot level, even if only at a crouch,
+      // the stairs have simply run into a roof on ground the agent can walk:
+      // stop building and carry on. Level 138's builders topped out under the
+      // ledge by the exit and turned their backs on it, every time.
+      if (!walkOnAhead(w, bx, footY)) ag.dir = -ag.dir
       return
     }
   }
