@@ -14105,6 +14105,7 @@ function clockGateDrawing(w, g) {
     span: cycle < CLOCK_GATE_OPEN ? CLOCK_GATE_OPEN : CLOCK_GATE_PERIOD - CLOCK_GATE_OPEN }
 }
 function drawClockGate(ctx, w, pal, g) {
+  if (w.res === 2) return drawPageClockGate(ctx, w, pal, g)
   var b = clockGateDrawing(w, g)
   ctx.save()
   // Mask the steel cells while the bars retract; the slot remains a dark
@@ -14118,6 +14119,113 @@ function drawClockGate(ctx, w, pal, g) {
   drawClockShutter(ctx, w, b)
   drawClockGateDial(ctx, w, pal, g, b)
   ctx.restore()
+}
+// A clockwork portal, inside the original cassette/guide reservation.
+var GATE_IVORY = "#c9bc92", GATE_AMBER = "#e0ad61"
+var GATE_COG = [[0, -1], [1, 0], [0, 1], [-1, 0]]
+var GATE_HAND = [[0,-2], [1.5,-1.5], [2,0], [1.5,1.5], [0,2], [-1.5,1.5], [-2,0], [-1.5,-1.5]]
+function gateClosingSoon(w, g) {
+  var cycle = (w.ticks + g.phase) % CLOCK_GATE_PERIOD
+  return g.open && cycle >= CLOCK_GATE_OPEN - 18
+}
+function drawPageClockGate(ctx, w, pal, g) {
+  var b = clockGateDrawing(w, g)
+  if (w.reducedMotion) b.drop = g.open ? 0 : b.height
+  ctx.save()
+  ctx.fillStyle = pal.backDim; ctx.fillRect(b.x, b.y, b.width, b.height)
+  drawGateFrame(ctx, pal, b)
+  drawGateWeights(ctx, b)
+  drawPageGateBars(ctx, b)
+  drawGateDrive(ctx, w, pal, b)
+  drawGateFace(ctx, w, pal, g, b)
+  drawGateTell(ctx, w, pal, g, b)
+  ctx.restore()
+}
+function drawGateFrame(ctx, pal, b) {
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(b.x - 1.5, b.y - 3, 1.5, b.height + 3)
+  ctx.fillRect(b.x + b.width, b.y - 3, 1.5, b.height + 3)
+  ctx.fillRect(b.x - 2, b.y - 4, b.width + 4, 4)
+  ctx.fillStyle = CLOCK_DARK
+  ctx.fillRect(b.x - 1.5, b.y - 1, 0.5, b.height + 1)
+  ctx.fillRect(b.x + b.width + 1, b.y - 1, 0.5, b.height + 1)
+  ctx.fillStyle = CLOCK_BRASS
+  ctx.fillRect(b.x - 2, b.y - 4, b.width + 4, 0.5)
+  ctx.fillRect(b.x - 1.5, b.y + b.height - 1, 1.5, 1)
+  ctx.fillRect(b.x + b.width, b.y + b.height - 1, 1.5, 1)
+}
+function drawGateWeights(ctx, b) {
+  var weightY = Math.round((b.y + 1 + (b.height - 5) * (1 - b.drop / b.height)) * 2) / 2
+  for (var side = 0; side < 2; side++) {
+    var x = side ? b.x + b.width + 1.5 : b.x - 4
+    ctx.fillStyle = CLOCK_DARK; ctx.fillRect(x, b.y, 2.5, b.height)
+    ctx.fillStyle = CLOCK_BRASS; ctx.fillRect(x + 1, b.y, 0.5, weightY - b.y + 0.5)
+    ctx.fillStyle = CLOCK_GLINT; ctx.fillRect(x + 0.5, weightY, 1.5, 3)
+    ctx.fillStyle = CLOCK_BRASS; ctx.fillRect(x + 1, weightY + 0.5, 1, 2.5)
+    ctx.fillStyle = CLOCK_DARK; ctx.fillRect(x + 0.5, weightY + 1.5, 1.5, 0.5)
+  }
+}
+function gateSlotRect(ctx, b, x, y, width, height) {
+  var left = Math.max(b.x, x), top = Math.max(b.y, y)
+  var right = Math.min(b.x + b.width, x + width), bottom = Math.min(b.y + b.drop, y + height)
+  if (right > left && bottom > top) ctx.fillRect(left, top, right - left, bottom - top)
+}
+function drawPageGateBars(ctx, b) {
+  if (b.drop <= 0) return
+  for (var x = b.x; x < b.x + b.width; x += 3) {
+    ctx.fillStyle = CLOCK_DARK; ctx.fillRect(x, b.y, 1, b.drop)
+    ctx.fillStyle = CLOCK_GLINT; ctx.fillRect(x, b.y, 0.5, b.drop)
+  }
+  ctx.fillStyle = CLOCK_BRASS
+  var rail = Math.min(1, b.drop)
+  ctx.fillRect(b.x, b.y + b.drop - rail, b.width, rail)
+  for (var y = b.y + b.drop - 5; y > b.y; y -= 4) ctx.fillRect(b.x, y, b.width, 1)
+  ctx.fillStyle = CLOCK_GLINT; ctx.fillRect(b.x, b.y + b.drop - 0.5, b.width, 0.5)
+  // A riveted plate moves with the leaf, disappearing into the cassette.
+  var mid = b.y + b.drop - b.height / 2
+  ctx.fillStyle = CLOCK_DARK; gateSlotRect(ctx, b, b.x + b.width / 2 - 1.5, mid - 1, 3, 2)
+  ctx.fillStyle = CLOCK_BRASS; gateSlotRect(ctx, b, b.x + b.width / 2 - 1, mid - 0.5, 2, 1)
+  ctx.fillStyle = CLOCK_GLINT; gateSlotRect(ctx, b, b.x + b.width / 2 - 0.5, mid - 0.5, 0.5, 0.5)
+}
+function drawGateDrive(ctx, w, pal, b) {
+  var pose = w.reducedMotion ? 0 : Math.round(b.drop * 2) % 4
+  for (var side = 0; side < 2; side++) {
+    var x = side ? b.x + b.width + 2 : b.x - 2, y = b.y - 2
+    ctx.fillStyle = CLOCK_BRASS
+    ctx.fillRect(x - 1.5, y - 1, 3, 2); ctx.fillRect(x - 1, y - 1.5, 2, 3)
+    ctx.fillStyle = CLOCK_DARK; ctx.fillRect(x - 0.5, y - 0.5, 1, 1)
+    ctx.fillStyle = CLOCK_GLINT
+    ctx.fillRect(x + GATE_COG[pose][0], y + GATE_COG[pose][1], 0.5, 0.5)
+  }
+}
+function drawGateFace(ctx, w, pal, g, b) {
+  var x = b.x + b.width / 2, y = b.y - 5.5
+  ctx.fillStyle = CLOCK_DARK; ctx.fillRect(x - 3.5, y - 3.5, 7, 7)
+  ctx.fillRect(x - 4.5, y - 2.5, 9, 5)
+  ctx.fillStyle = CLOCK_BRASS; ctx.fillRect(x - 4, y - 2, 8, 4)
+  ctx.fillStyle = GATE_IVORY; ctx.fillRect(x - 3, y - 2.5, 6, 5)
+  ctx.fillRect(x - 3.5, y - 1.5, 7, 3)
+  ctx.fillStyle = CLOCK_GLINT; ctx.fillRect(x - 2.5, y - 3.5, 5, 0.5)
+  ctx.fillStyle = CLOCK_DARK
+  ctx.fillRect(x - 0.5, y - 2, 1, 0.5); ctx.fillRect(x - 0.5, y + 1.5, 1, 0.5)
+  ctx.fillRect(x - 2.5, y - 0.5, 0.5, 1); ctx.fillRect(x + 2, y - 0.5, 0.5, 1)
+  var pose = w.reducedMotion ? 0 : Math.floor((1 - b.left / b.span) * 8) % 8
+  drawGateHand(ctx, x, y, pose)
+}
+function drawGateHand(ctx, x, y, pose) {
+  ctx.fillStyle = CLOCK_DARK
+  ctx.fillRect(x - 0.5, y, 1, 0.5)
+  for (var i = 1; i <= 2; i++) {
+    var dx = Math.round(GATE_HAND[pose][0] * i) / 2, dy = Math.round(GATE_HAND[pose][1] * i) / 2
+    ctx.fillRect(x + dx, y + dy, 0.5, 0.5)
+  }
+}
+function drawGateTell(ctx, w, pal, g, b) {
+  var soon = gateClosingSoon(w, g)
+  ctx.fillStyle = g.open ? (soon ? GATE_AMBER : pal.exitLight) : CLOCK_BRASS
+  ctx.fillRect(b.x - 3, b.y - 1.5, 1.5, 1)
+  ctx.fillRect(b.x + b.width + 1.5, b.y - 1.5, 1.5, 1)
+  if (soon) ctx.fillRect(b.x + b.width / 2 - 1.5, b.y - 2.5, 3, 0.5)
 }
 function drawClockShutter(ctx, w, b) {
   if (b.drop <= 0) return
