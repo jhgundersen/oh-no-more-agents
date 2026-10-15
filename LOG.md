@@ -7785,3 +7785,44 @@ check without checking its result. The sweepstake test now asserts both
 cases: on a first visit the tip shows and the ticker stays quiet; on a return
 visit the ticker gives the hint. From here on, commits go through a gate that
 only commits when `npm run check` exits 0.
+
+## 250 — 2026-10-15 · Christmas
+
+**Asked:** if time remains, a Christmas season module following the Halloween
+pattern: Dec 1–26 and `?season=christmas`, snow on the backdrop, Santa hats,
+umbrellas sometimes candy-striped, a gift-wrapped exit, "HO HO HOME" as the
+report title, a few festive ticker puns. Cosmetic only.
+
+**Changed:** one more entry in `season.js`'s `SEASONS`, and the module grew
+the general knobs Christmas needed. Every field is optional.
+- **season.js:**
+  - `snow` (flakes as a pure function of the tick, only over open air, still
+    under reduced motion);
+  - `gift` (a red ribbon down and across the exit, with a bow);
+  - `hats`;
+  - `candy`/`candyEvery`;
+  - `homeSuffix`;
+  - `homePuns`, for the first one home and every fifth after;
+  - `ghosts`, now a flag Halloween sets.
+- **Draw.js** reads more plain data:
+  - `drawPartyHat` gains a "santa" kind (red cap with a flopped tip, fur brim
+    and pompom), drawn when the season asks and no milestone hat is up;
+  - `candyBrolly`/`drawCandyStripes` give one floater umbrella in three a
+    white canopy with red stripes;
+  - `homeTitle` takes the season's suffix, so the card reads "HO HO HOME:
+    12 / 12".
+- **Puns.** Home: "IS HOME FOR THE HOLIDAYS", "MADE THE NICE LIST" and
+  "DELIVERED. NO CHIMNEY REQUIRED". Lost: "IS ON THE NAUGHTY LIST", "GOT COAL"
+  and "WAS RETURNED, NO RECEIPT".
+- **Patch notes.** The Halloween line covers both seasons now, so the list
+  stays at eight.
+
+Built on a branch in a worktree, so `main` stayed clean for the 03:46 `dist/`
+deploy, which ships the working tree.
+
+**Measured:** `test/season.test.js` covers the date window and the preview
+link, a dressed colony playing out exactly like a plain one, the card title,
+the festive lines, and hats and stripes drawn only with the season. Local
+headless check at `?season=christmas`, level 1: Santa hats on every walker,
+snow over the cave air, the exit wrapped with a bow, "AGENT 001 DELIVERED. NO
+CHIMNEY REQUIRED" on the ticker, no page errors.

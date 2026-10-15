@@ -3266,7 +3266,8 @@ function reportTop(w, rows) {
 
 // The card's big line; a season (season.js) may put its greeting in front.
 function homeTitle(w) {
-  return (w.season && w.season.homePrefix || "") + w.saved + " / " + w.toRelease + " HOME"
+  var s = w.season || {}
+  return (s.homePrefix || "") + w.saved + " / " + w.toRelease + (s.homeSuffix === undefined ? " HOME" : s.homeSuffix)
 }
 
 function drawLevelResults(ctx, w, pal) {
@@ -7031,8 +7032,9 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   // to hand mid-descent, and offset by the colony seed so the same id is not
   // handed the same umbrella every playthrough — the same trick the colony
   // itself uses, and it costs no draw from the trait stream to do it here.
-  var brolly = brollyColour(w, pal, ag), bat = batBrolly(w, ag)
+  var brolly = brollyColour(w, pal, ag), bat = batBrolly(w, ag), candy = candyBrolly(w, ag)
   if (bat) brolly = bat
+  else if (candy) brolly = "#f4f4ec"
 
   if ((w.res || 1) >= 2) drawFloatingUmbrella(ctx, w, pal, ag, ox, oy, flex, brolly)
   else {
@@ -7054,6 +7056,7 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   blit(ctx, ox, oy, 1, 9, -8, 2, 1)
   }
   if (bat) drawBatEars(ctx, ox, oy, flex, bat)
+  if (candy) drawCandyStripes(ctx, ox, oy, flex, candy)
 }
 
 // A season (web-only season.js) may hand some floaters a bat-wing umbrella:
@@ -7062,6 +7065,19 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
 function batBrolly(w, ag) {
   var s = w.season
   return s && s.bat && (ag.id + (w.colonySeed || 0)) % s.batEvery === 0 ? s.bat : null
+}
+
+// Or candy-striped: the canopy white with the season's stripes across it.
+function candyBrolly(w, ag) {
+  var s = w.season
+  return s && s.candy && (ag.id + (w.colonySeed || 0)) % s.candyEvery === 0 ? s.candy : null
+}
+
+function drawCandyStripes(ctx, ox, oy, flex, colour) {
+  ctx.fillStyle = colour
+  for (var x = -1; x < 10; x += 3) blit(ctx, ox, oy, 1, x, -9 - flex, 1, 2)
+  blit(ctx, ox, oy, 1, -2, -7, 1, 2)
+  blit(ctx, ox, oy, 1, 10, -7, 1, 2)
 }
 
 function drawBatEars(ctx, ox, oy, flex, colour) {
@@ -11763,6 +11779,7 @@ var PEP_GLOW = 18
 function drawAgentGlitter(ctx, w, ag, ox, oy) {
   if (ag.agi || (ag.pepAt !== undefined && w.ticks - ag.pepAt >= 0 && w.ticks - ag.pepAt < PEP_GLOW)) drawAgiSparkle(ctx, w, ag, ox, oy)
   if (w.milestone && ag.state !== "saved") drawPartyHat(ctx, w.milestone.kind, ag, ox, oy)
+  else if (w.season && w.season.hats && ag.state !== "saved") drawPartyHat(ctx, w.season.hats, ag, ox, oy)
   if (w.bet === ag.id && ag.state !== "saved") drawBetCoin(ctx, w, ox, oy)
 }
 
@@ -11773,7 +11790,14 @@ var PARTY = ["#ff5f8a", "#5fd0ff", "#ffd23f", "#8cff6a", "#c58bff"]
 function drawPartyHat(ctx, kind, ag, ox, oy) {
   var cx = ox + 4, top = oy - 4
   ctx.save()
-  if (kind === "million") {
+  if (kind === "santa") {
+    ctx.fillStyle = "#d42a3c"
+    ctx.fillRect(cx - 1, top + 1, 3, 2)
+    ctx.fillRect(cx + 1, top, 1, 1)                 // the tip, flopping over
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(cx - 2, top + 3, 5, 1)             // the fur brim
+    ctx.fillRect(cx + 2, top, 1, 1)                 // the pompom
+  } else if (kind === "million") {
     ctx.fillStyle = "#ffd23f"
     ctx.fillRect(cx - 2, top + 2, 5, 2)
     ctx.fillRect(cx - 2, top, 1, 2); ctx.fillRect(cx, top, 1, 2); ctx.fillRect(cx + 2, top, 1, 2)

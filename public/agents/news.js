@@ -10,7 +10,7 @@
   var NEWS = [
     { id: "2026-10-15-voices", text: "Added: voices, with sound on. Let's go, oh no, yippee. Any resemblance is a tribute." },
     { id: "2026-10-15-librarian", text: "Added: a librarian in the Library, hot and cold aisles in the Data Center. Both have notes." },
-    { id: "2026-10-15-halloween", text: "Added: Halloween, Oct 24 to Nov 1. Same agents, worse lighting." },
+    { id: "2026-10-15-seasons", text: "Added: Halloween (Oct 24 to Nov 1) and Christmas (Dec 1 to 26). Same agents, worse hats." },
     { id: "2026-10-15-replay", text: "Added: instant replay. The level's best moment, again, because nobody saw it the first time." },
     { id: "2026-10-15-sweepstake", text: "Added: sweepstake. Tap an agent before anyone's home to back it. It will not try any harder." },
     { id: "2026-10-15-sightings", text: "Added: sightings. The report card keeps track of the rare things you've seen. Nobody else is told." },
