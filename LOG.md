@@ -7291,3 +7291,27 @@ or missing storage. Headless at 1280×900 and 390×844: the tip and the dot show
 on the first visit, a tap on the tip hides it without pausing, the panel opens
 with 7 lines, Esc closes it, the dot clears, and after a reload neither comes
 back. No page errors. `npm run phone` is fine in all three views.
+
+**Deployed** at 02:46 after 241 (name="build" content="f279cc1a"), gated on a
+green full check (1124 tests). It covers 229–241: the event banner below the
+outage, instant replay, the sweepstake, the office radio, the Rooftops and
+Subway art, the crawlway lip, stairs that meet a roof, the long way home,
+Halloween and the patch notes.
+
+Verified on production in headless Chromium, read-only. Every non-GET to
+`/api/*` was failed in the browser before it left (6 on desktop, 4 on the
+phone), and each view used a throwaway profile, so the queued reports never
+retried.
+- **Sweepstake** (1280×900 and 390×844 with touch, `?level=5&seed=111`):
+  tapping the first walker made it the pick (bet 1) with no pause and no
+  nudge. The level played out on its own to its card: 12/12 home, "YOUR PICK
+  AGENT 001 CAME HOME 5TH · CALLED 0 OF 1", tally 0/1.
+- **Instant replay:** it showed on the next levels the page reached (level 7
+  on desktop, level 6 on the phone, an AGI moment each), with the INSTANT
+  REPLAY tag and "AGENT 006 IS FIRST HOME" on the ticker.
+- **Halloween:** `?season=halloween` on level 2, seed 7919 gave five lanterns,
+  a ghost and "AGENT 001 WENT TO THE GREAT /DEV/NULL". `?season=none` and
+  `?season=xmas` gave no season.
+- **Patch notes:** the tip and the NEW dot show on a first visit, the panel
+  has 7 lines, Esc closes it, and after a reload neither shows.
+- **All views:** build f279cc1a, no page errors.
