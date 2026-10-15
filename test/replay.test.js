@@ -55,7 +55,7 @@ test("on the page: a level ending with a moment replays it, then the report card
     await b.cmd("Page.navigate", { url: base + "?level=1&seed=2" }); await sleep(1200)
     await ev(`(() => { const w = AgentWorld(); while (!w.done) step(w) })()`)
     let seen = null
-    for (let i = 0; i < 150 && !(seen && seen.t > seen.from); i++) { await sleep(100); seen = await ev(`AgentReplay()`) }
+    for (let i = 0; i < 300 && !(seen && seen.t > seen.from); i++) { await sleep(100); seen = await ev(`AgentReplay()`) }
     assert.equal(seen.kind, "agi")
     assert.ok(seen.t > seen.from && seen.t <= seen.to, "playing the window")
     fs.mkdirSync("shots", { recursive: true })

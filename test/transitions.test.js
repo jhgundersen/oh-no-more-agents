@@ -183,5 +183,5 @@ test("page provides the hold at world creation and transition is last in the act
   const web = fs.readFileSync(new URL("../public/agents/web.js", import.meta.url), "utf8")
   assert.match(web, /world = generate\(level, 0, seed\)\s+world.res = RES\s+world.doneHold = DONE_HOLD/)
   const actors = D.drawActors.toString()
-  assert.match(actors, /drawLevelTransition\(ctx, w, pal\)\s*}$/)
+  assert.match(actors, /drawLevelTransition\(ctx, w, pal, opts\)\s*}$/)
 })

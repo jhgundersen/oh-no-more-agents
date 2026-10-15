@@ -19,7 +19,7 @@ test("screen reader and keyboard: announced levels and results, named canvas, pr
     await b.cmd("Page.navigate", { url: `http://127.0.0.1:${server.address().port}/?level=3&seed=42` })
     for (let i = 0; i < 40 && !(await ev(`!!(window.AgentWorld && AgentWorld())`)); i++) await sleep(100)
     assert.equal(await ev(`document.getElementById("announce").getAttribute("aria-live")`), "polite")
-    assert.match(await ev(`document.getElementById("announce").textContent`), /^Level 3, Frost\. \d+ agents\.$/)
+    assert.match(await ev(`document.getElementById("announce").textContent`), /^Level 3, Frost\. \d+ agents\. Cold start\.$/)
     assert.equal(await ev(`document.getElementById("terrain").getAttribute("role")`), "img")
     assert.ok((await ev(`document.getElementById("terrain").getAttribute("aria-label")`)).length > 10)
     assert.equal(await ev(`document.getElementById("actors").getAttribute("aria-hidden")`), "true")

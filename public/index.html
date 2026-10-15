@@ -25,7 +25,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="f056d7ce">
+<meta name="build" content="80b11e82">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
@@ -118,6 +118,12 @@
 			width: 100%;
 			height: 100%;
 			image-rendering: pixelated;
+		}
+		#levelTitle { pointer-events: none; animation: level-title-fade 1.2s linear both; }
+		@keyframes level-title-fade { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
+		@media (prefers-reduced-motion: reduce) {
+			/* No travel or entrance motion; just a shorter stationary fade. */
+			#levelTitle { animation: level-title-fade 0.6s linear both !important; }
 		}
 		#overlay {
 			position: absolute; inset: 0; z-index: 2;
@@ -365,6 +371,7 @@
 		<div id="board">
 			<canvas id="terrain" role="img" aria-label="The game board: agents finding their own way home. Each level and its result are announced."></canvas>
 			<canvas id="actors" aria-hidden="true"></canvas>
+			<canvas id="levelTitle" aria-hidden="true" hidden></canvas>
 			<div id="toast" role="status" aria-live="polite"></div>
 			<div id="announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 			<div id="tip" hidden>Tip: tap an agent. <span aria-hidden="true">&times;</span></div>
@@ -427,14 +434,14 @@
 	</p>
 
 	<script src="agents/Sim.js?v=d6ab3146"></script>
-	<script src="agents/Draw.js?v=54dcef52"></script>
+	<script src="agents/Draw.js?v=b094bf8a"></script>
 	<script src="agents/Palette.js?v=ff1f4919"></script>
 	<script src="agents/Outcome.js?v=1105e622"></script>
 	<script src="agents/share.js?v=c3e48a0d"></script>
 	<script src="agents/sfx.js?v=13e9c6e5"></script>
 	<script src="agents/season.js?v=dbb629c3"></script>
 	<script src="agents/news.js?v=cfe62b0f"></script>
-	<script src="agents/web.js?v=e1c54de3"></script>
+	<script src="agents/web.js?v=88e002f2"></script>
 
 </body>
 

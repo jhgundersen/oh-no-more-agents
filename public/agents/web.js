@@ -479,12 +479,13 @@
     // while the first-visit tip (news.js) is saying "tap an agent" already.
     if (++levelsThisVisit <= 3 && !tipShowing()) world.feed.push({ t: 45, text: "TAP AN AGENT: WHO GETS HOME FIRST?" })
     world.reducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
-    announce(levelAnnouncement(world))
+    announce(levelAnnouncement(world) + " " + levelTitleSubtitle(world.level, world.biome))
     completionLine = ""
     lastTerrainVersion = 0
     rebuildPalette()
     paintTerrain()
     paintActors()
+    showLevelTitle()
     render()
   }
 
@@ -620,6 +621,7 @@
   }
 
   function startReplay(w) {
+    hideLevelTitle()
     var best = bestMoment(w)
     if (!best) return
     var sim = generate(w.level, w.attempt || 0, w.colonySeed)
@@ -650,7 +652,7 @@
     if (sim.ticks === replay.best.t && !sim.moments.some(function (m) { return m.t === replay.best.t && m.kind === replay.best.kind })) { endReplay(); return }
     if (window.AgentSeason) window.AgentSeason.dress(sim)
     if (sim.terrainVersion !== replay.terrain) { replay.terrain = sim.terrainVersion; drawTerrain(terrainCtx, sim, palette) }
-    drawActors(actorCtx, sim, palette, { labels: showLabels })
+    drawActors(actorCtx, sim, palette, { labels: showLabels, intro: false })
     if (window.AgentSeason) window.AgentSeason.paint(actorCtx, sim)
     if (sim.ticks >= replay.to || sim.done) endReplay()
   }
@@ -673,6 +675,7 @@
   var recent = [], transitions = 0, standup = null
 
   function startStandup() {
+    hideLevelTitle()
     var home = world.agents.filter(function (a) { return a.state === "saved" }).slice(0, 5)
     if (!home.length) return false
     var lines = standupLines(standupRecap(recent), home.length)
@@ -709,9 +712,44 @@
   }
   function paintActors() {
     if (!world) return
+    if (world.done || world.replaying) hideLevelTitle()
     if (window.AgentSeason) window.AgentSeason.dress(world)
-    drawActors(actorCtx, world, palette, { labels: showLabels })
+    drawActors(actorCtx, world, palette, { labels: showLabels, intro: false })
     if (window.AgentSeason) window.AgentSeason.paint(actorCtx, world)
+  }
+
+  // One cached image per level/theme. CSS fades only this transparent layer;
+  // the hatch, first drop and input keep running underneath. Wall-clock time
+  // makes the duration independent of game speed (and of pausing the game).
+  var titleTimer = 0, titleLayout = null
+  function hideLevelTitle() {
+    clearTimeout(titleTimer)
+    titleTimer = 0
+    titleLayout = null
+    var c = document.getElementById("levelTitle")
+    if (c) c.hidden = true
+  }
+
+  function paintLevelTitle() {
+    var c = document.getElementById("levelTitle")
+    if (!c || c.hidden || !world) return
+    var ctx = c.getContext("2d")
+    clearLayer(ctx, world)
+    drawLevelTitleCard(ctx, world, palette, (level - 1) % BIOMES.length, titleLayout)
+  }
+
+  function showLevelTitle() {
+    hideLevelTitle()
+    var c = document.getElementById("levelTitle")
+    if (!c || world.done || world.replaying || replay || standup) return
+    titleLayout = levelTitleLayout(world)
+    c.width = WIDTH * RES; c.height = HEIGHT * RES
+    // Commit the hidden state so even rapid navigation restarts the fade.
+    // This also works with the reduced-motion CSS exception.
+    void c.offsetWidth
+    c.hidden = false
+    paintLevelTitle()
+    titleTimer = setTimeout(hideLevelTitle, world.reducedMotion ? 600 : 1200)
   }
 
   // -------------------------------------------------------------------------
@@ -979,6 +1017,7 @@
     saveState()
     paintTour()
     repaintLogo()
+    paintLevelTitle()
     Array.prototype.forEach.call(el.themes.children, function (b) {
       b.classList.toggle("on", b.dataset.theme === name)
       b.setAttribute("aria-pressed", b.dataset.theme === name ? "true" : "false")
@@ -1216,6 +1255,7 @@
     // A tap on an agent is a pep talk (Sim's pepTalk); anywhere else, or
     // while paused, it is pause as it always was.
     el.boardWrap.addEventListener("click", function (ev) {
+      hideLevelTitle()
       if (standup) { endStandup(); return }
       if (replay) { endReplay(); return }
       var ag = running && world ? agentUnder(ev) : null

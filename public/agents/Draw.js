@@ -2751,7 +2751,7 @@ function drawActors(ctx, w, pal, opts) {
   else if (w.fastForward && !w.done) drawFastForwardTag(ctx, w, pal)
   // Above the outage, so an event's or a boss's warning is never in the dark.
   drawEventBanner(ctx, w, pal)
-  drawLevelTransition(ctx, w, pal)
+  drawLevelTransition(ctx, w, pal, opts)
 }
 
 // The instant replay (the page re-simulates the level's best moment; see
@@ -3041,6 +3041,134 @@ function drawLevelIntro(ctx, w, pal) {
     ctx.fillStyle = pal.urgent
     drawTransitionText(ctx, "WARNING · " + (w.bossName || "THE MODERATOR") + " HOLDS THIS LEVEL", cx, y + 41, 1)
   }
+}
+
+// Page title cards are painted once to a separate host canvas. Native hosts
+// retain the tick-driven intro above; neither path owns simulation state.
+var LEVEL_TITLE_LINES = {
+  "Cavern": ["Working remotely. Very remotely.", "Please lower your expectations.", "A solid grounding in uncertainty."],
+  "Ruins": ["Legacy infrastructure.", "The previous team left notes. Somewhere.", "Still in better shape than the roadmap."],
+  "Frost": ["Cold start.", "Bring your own warm feelings.", "The forecast is noncommittal."],
+  "Foundry": ["Hotfixes made here.", "Please let the build cool first.", "Everything is in production."],
+  "Jungle": ["The dependencies have grown.", "A natural branching strategy.", "No maintained paths."],
+  "Ice Cave": ["The backlog is frozen.", "Defrost before deploying.", "Some colleagues are still on ice."],
+  "Spaceship": ["Scope has left the atmosphere.", "No rollback beyond this point.", "The launch was not a metaphor."],
+  "Factory": ["Another day on the pipeline.", "Continuous delivery. Literally.", "Please keep hands inside the sprint."],
+  "Skyscraper": ["Vertical integration.", "Your next meeting is downstairs.", "Going up in the organisation."],
+  "Trench": ["We are out of our depth.", "The deep end has no onboarding.", "Please surface your concerns."],
+  "Desert": ["Dry run.", "The cloud budget ran out.", "No shade in the documentation."],
+  "Data Center": ["The servers are listening.", "Uptime is a state of mind.", "Please keep the aisle cold."],
+  "Library": ["Shh.", "Read-only access.", "The silence is well documented."],
+  "Mail Room": ["Reply all at your own risk.", "Your request is in the queue.", "Return to sender. Eventually."],
+  "Building Site": ["Still under construction.", "Hard hats. Soft deadlines.", "The plan is mostly scaffolding."],
+  "Clock Tower": ["Time is a dependency.", "We are on borrowed ticks.", "The deadline has moving parts."],
+  "Rooftops": ["An elevated risk profile.", "Please mind the air gap.", "Forecast: scattered agents."],
+  "Subway": ["Mind the context gap.", "The next service is delayed.", "Please stand behind the yellow line."],
+  "Harbour": ["Ready to ship. Probably.", "Containers all the way down.", "All aboard the release candidate."],
+  "The Cloud": ["It's just someone else's computer.", "On-prem is looking quite nice.", "The forecast includes downtime."]
+}
+
+function levelTitleSubtitle(level, biome) {
+  var lines = LEVEL_TITLE_LINES[biome] || LEVEL_TITLE_LINES.Cavern
+  // Biomes repeat every twenty levels. Cycle the visit, rather than the
+  // biome index, so every biome gets all three lines across the catalogue.
+  var visit = Math.floor((Math.floor(level) - 1) / 20)
+  return lines[Math.abs(visit) % lines.length]
+}
+
+function levelTitleSize(w) {
+  var title = "LEVEL " + w.level + " · " + w.biome.toUpperCase()
+  var subtitle = levelTitleSubtitle(w.level, w.biome).toUpperCase()
+  var warning = w.bossPost ? "WARNING · " + (w.bossName || "THE MODERATOR") : ""
+  var titleSize = title.length > 46 ? 1 : 1.5
+  var textWidth = Math.max((title.length * 4 - 1) * titleSize, (subtitle.length * 4 - 1) * 1.5, warning.length * 4 - 1)
+  return { title: title, subtitle: subtitle, warning: warning, titleSize: titleSize,
+    width: Math.ceil(textWidth) + 46, height: w.bossPost ? 36 : 30 }
+}
+
+// Twelve bounded choices. Position is settled once at level creation; neither
+// actors nor the clock affect it. Upper choices also leave the tip/HUD clear.
+function levelTitleCandidates(w, size) {
+  var width = w.k.COLS * w.k.CELL, height = w.k.ROWS * w.k.CELL
+  var xs = [14, Math.round((width - size.width) / 2), width - size.width - 14]
+  var ys = [48, 94, 142, height - size.height - 16], spots = []
+  for (var y = 0; y < ys.length; y++) for (var x = 0; x < xs.length; x++)
+    spots.push({ x: xs[x], y: ys[y], width: size.width, height: size.height })
+  return spots
+}
+
+function levelTitleKeepClear(w) {
+  var C = w.k.CELL, h = w.hatch, e = w.exit
+  return [{ x: h.x * C - 24, y: h.y * C - 18, width: 48, height: 62 },
+    { x: e.x * C - 8, y: e.y * C - 12, width: e.w * C + 16, height: e.h * C + 24 }]
+}
+
+function levelTitleOverlap(a, b) {
+  return Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) *
+    Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y))
+}
+
+// Terrain interiors are less costly than a walking surface or the sixteen
+// pixels above it where an agent's body will be. All solid materials count
+// alike; colour is never a route. Read only, and only while choosing the card.
+function levelTitleCellCost(w, x, y) {
+  var k = w.k, at = y * k.COLS + x
+  if (w.terrain[at] !== k.EMPTY)
+    return y > 0 && w.terrain[at - k.COLS] === k.EMPTY ? 40 : 1
+  for (var down = 1; down <= 4 && y + down < k.ROWS; down++)
+    if (w.terrain[at + down * k.COLS] !== k.EMPTY) return 12
+  return 0
+}
+
+function levelTitleScore(w, r, keep) {
+  var C = w.k.CELL, cost = 0
+  for (var i = 0; i < keep.length; i++) cost += levelTitleOverlap(r, keep[i]) * 100000
+  for (var y = Math.floor(r.y / C); y < Math.ceil((r.y + r.height) / C); y++)
+    for (var x = Math.floor(r.x / C); x < Math.ceil((r.x + r.width) / C); x++)
+      cost += levelTitleCellCost(w, x, y)
+  return cost
+}
+
+function levelTitleLayout(w) {
+  var spots = levelTitleCandidates(w, levelTitleSize(w)), keep = levelTitleKeepClear(w)
+  var best = spots[0], low = Infinity
+  // The level breaks equal scores without a random draw or colony dependence.
+  for (var i = 0; i < spots.length; i++) {
+    var spot = spots[(i + w.level) % spots.length], score = levelTitleScore(w, spot, keep)
+    if (score < low) { best = spot; low = score }
+  }
+  return best
+}
+
+function drawLevelTitleCard(ctx, w, pal, icon, layout) {
+  if (w.done || w.replaying) return
+  var r = layout || levelTitleLayout(w), size = levelTitleSize(w)
+  var cx = r.x + 38 + (r.width - 46) / 2
+  ctx.save()
+  var alpha = ctx.globalAlpha
+  // One translucent fill, not stacked plates that become opaque together.
+  ctx.globalAlpha = alpha * 0.82
+  ctx.fillStyle = pal.cardBack
+  ctx.fillRect(r.x + 0.5, r.y + 0.5, r.width - 1, r.height - 1)
+  ctx.globalAlpha = alpha * 0.85
+  ctx.fillStyle = pal.dirtEdge
+  ctx.fillRect(r.x, r.y, r.width, 0.5)
+  ctx.fillRect(r.x, r.y + r.height - 0.5, r.width, 0.5)
+  ctx.fillRect(r.x, r.y, 0.5, r.height)
+  ctx.fillRect(r.x + r.width - 0.5, r.y, 0.5, r.height)
+  ctx.globalAlpha = alpha
+  ctx.save()
+  ctx.translate(r.x + 6, r.y + (r.height - 16) / 2)
+  drawTourIcon(ctx, pal, icon)
+  ctx.restore()
+  ctx.fillStyle = pal.label
+  drawTransitionText(ctx, size.title, cx, r.y + 5, size.titleSize)
+  drawTransitionText(ctx, size.subtitle, cx, r.y + 17, 1.5)
+  if (size.warning) {
+    ctx.fillStyle = pal.urgent
+    drawTransitionText(ctx, size.warning, cx, r.y + 27, 1)
+  }
+  ctx.restore()
 }
 
 function levelVerdict(w) {
@@ -3412,14 +3540,14 @@ function drawStandupBubble(ctx, pal, x, foot, lines, W) {
   for (var j = 0; j < lines.length; j++) drawTransitionText(ctx, lines[j], left + bw / 2, top + 4 + j * 8, 1)
 }
 
-function drawLevelTransition(ctx, w, pal) {
+function drawLevelTransition(ctx, w, pal, opts) {
   if (!w.done) drawFeed(ctx, w, pal)
   if (w.done) {
     ctx.save()
     drawLevelResults(ctx, w, pal)
     drawLevelClosing(ctx, w, pal)
     ctx.restore()
-  } else if (w.ticks >= 0 && w.ticks < LEVEL_INTRO_TICKS + (w.bossPost ? 20 : 0)) {
+  } else if (!(opts && opts.intro === false) && w.ticks >= 0 && w.ticks < LEVEL_INTRO_TICKS + (w.bossPost ? 20 : 0)) {
     ctx.save()
     drawLevelIntro(ctx, w, pal)
     ctx.restore()
