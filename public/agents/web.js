@@ -511,6 +511,7 @@
       b.setAttribute("aria-label", "Go to " + name)
       var c = document.createElement("canvas")
       c.width = 24; c.height = 16
+      c.setAttribute("aria-hidden", "true")
       b.appendChild(c)
       b.addEventListener("click", function () { newLevel(tourLevel(level, i, BIOMES.length)); saveState(); render() })
       el.tour.appendChild(b)
@@ -519,29 +520,17 @@
   }
 
   function paintTour() {
+    var badge = document.getElementById("dailyBadge")
+    if (badge) drawDailyBadge(badge.getContext("2d"), 0, 0)
     if (!el.tour) return
     var t = THEMES[themeName]
     Array.prototype.forEach.call(el.tour.children, function (b, i) {
       var pal = build({ background: hex(t.background), foreground: hex(t.foreground), accent: hex(t.accent),
         urgent: hex(t.urgent), muted: hex(t.muted) }, i + 1)
-      drawTourStop(b.firstChild.getContext("2d"), pal, i)
+      drawTourIcon(b.firstChild.getContext("2d"), pal, i)
     })
   }
 
-  // Sky, the back wall, a bank of ground with a top edge of one of four
-  // shapes, and the way home lit at the right. Twenty of them tell apart.
-  function drawTourStop(c, pal, i) {
-    c.fillStyle = pal.skyLow; c.fillRect(0, 0, 24, 16)
-    c.fillStyle = pal.backDim; c.fillRect(0, 5, 24, 6)
-    c.fillStyle = pal.dirt; c.fillRect(0, 11, 24, 5)
-    c.fillStyle = pal.dirtEdge
-    for (var x = 0; x < 24; x++) {
-      var shape = i % 4, lift = shape === 1 ? (x >> 3) % 2 : shape === 2 ? (x % 4 < 2 ? 1 : 0) : shape === 3 ? (x % 6 === 2 ? 2 : 0) : 0
-      c.fillRect(x, 11 - lift, 1, 1 + lift)
-    }
-    c.fillStyle = pal.decorLit; c.fillRect(4 + (i * 5) % 12, 8, 2, 3)
-    c.fillStyle = pal.exitLight; c.fillRect(19, 7, 3, 4)
-  }
 
   function tick() {
     if (!world) return

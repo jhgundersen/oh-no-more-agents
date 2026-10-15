@@ -5194,3 +5194,73 @@ the shared FIFO lock; this revision queued behind main's soak run.
 deployment or sibling sync.
 
 Reviewed and merged by the loop. Cumulus lobes, a towering cumulus column, a brick ON-PREM refuge and thunderheads at page resolution; the banks read as ground.
+
+## 275 — 2026-10-15 · A tiny tour of twenty places (on a branch)
+
+`codex/tour-art` starts from approved Cloud `82f96c8` and merges main
+`3a4db13` to obtain the tour and Colony of the Day. Main's archived/lean docs
+and new UI are preserved. The two Cloud art entries follow main as 273–274.
+The merge and this pass are committed together after a green check/CRAP gate.
+
+**Art:** twenty distinct 20×12 pixel silhouettes sit inside the tour's
+existing 24×16 canvas, with a common dark outline and a small game-colour
+palette. Cavern crystals, the broken Ruins arch, snowy fir, hot furnace,
+jungle canopy, icicles, saucer, sawtooth factory, office tower, kelp/fish,
+cactus, server pair, books/ladder, stamped envelope, crane, clock, rooftop
+aerial, station train, container ship/lighthouse and a cloud with its brick
+door replace the four repeated ground shapes. Background plates still use
+the active theme/biome palette. They repaint only on creation/theme change.
+No external assets, animation, per-frame UI painting or simulation edits.
+
+A 16×16 calendar badge with a green umbrella sits beside Colony of the Day.
+Its pins, cream paper and gold edge use the same outline treatment. The date,
+subtitle, click behaviour and accessible name remain intact. Decorative
+canvases are hidden from assistive technology; the buttons keep their names,
+current-state outline, keyboard focus and existing navigation behaviour.
+
+**Sightings:** inspected all seven existing gag-pass silhouettes in their
+real report-card context at desktop and phone sizes (14px and 7px), including
+the gold fresh-item ring. Their AGI, mirage/keyhole, red queue sign, duck,
+conflict arrows, outage eyes and party hat remain clear, so those already
+polished sprites are retained unchanged.
+
+**Review:** `/tmp/codex-tour-art/after/ui-sheet.png` is a browser screenshot
+sheet with all twenty tour icons at their measured desktop 24×16 and phone
+36×24 CSS sizes, and 3× beside each. It also includes the daily badge and the
+report card/sightings at real size and 3×. `page-desktop.png`/`page-phone.png`
+show the live page; `ui-context-desktop.png`/`ui-context-phone.png` scroll the
+full tour/daily row into view. No page errors, no sideways page overflow at
+1280 or 390px; phone targets remain at least 44×44. Tour jumps still move
+forward, select the right biome and count nothing cleared. Daily links and
+date behaviour pass their existing tests.
+
+**Isolation/weight:** all twenty res-2 biome frames at seed 3/tick 400 are
+byte-identical to the merged pre-art renderer, with unchanged complete world
+digests. Sim.js, Palette.js and Outcome.js are untouched. Draw grows by
+1,446 Brotli bytes; web loses 214 and the page gains 64: net **1,296 bytes**
+(~1.3 KB compressed). No PNG, SVG, font or manifest is added to the page.
+
+**Pipeline:** `node tools/tour-art.js <out>` uses the existing bounded local
+browser helper and a throwaway profile/ephemeral server. Two live viewport
+captures supply all icon canvases and measured CSS sizes for one labelled
+sheet; it does not reload a page or launch a browser per icon. Ready checks
+are bounded at three seconds, font settling at one, image decoding explicit,
+and browser/server cleanup runs in `finally`. The live-art test completes
+in 1.90 s; the focused nine-test UI/daily/tour set takes 5.99 s. Pixel tests
+use bounded recordings and SHA digests. The full check writes LCOV once;
+CRAP reuses it. All heavy runs use the shared FIFO lock.
+
+**Validation:** `npm run stamp` is current (Draw `c7e558d0`, web `06381ec0`,
+build `a256d64d`). The capped full `npm run check` with LCOV passes all
+**1,254 tests**, no failures/skips, in **234.77 s**. Factory art is explicitly
+excluded. Node uses a 2,048 MB heap, `ulimit -v 6000000`, two test workers
+and 120 s timeouts. `npm run crap -- --threshold 30 --use-existing-coverage`
+passes, highest score 30.0. New art helpers have 100% coverage and score at
+most 9.0; the screenshot helper scores 10.5. Final checked source hashes
+match. Conflict-marker and unresolved-merge-file checks are clean, as is
+`git diff --check`. The merge/feature commit is gated on these green results.
+
+**Next:** ready for tour-art review. Branch commit only; no push, deployment
+or sibling sync.
+
+Reviewed and merged by the loop. Recognisable pixel icons for all 20 biomes in the tour, at real size on desktop and phone, and a badge for the colony of the day.

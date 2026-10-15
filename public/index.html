@@ -25,7 +25,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="4ff17b75">
+<meta name="build" content="a256d64d">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
@@ -147,7 +147,9 @@
 		.tour-stop.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 		.tour-stop:hover, .tour-stop:focus-visible { border-color: var(--fg); }
 		@media (pointer: coarse) { .tour-stop { min-width: 44px; min-height: 44px; } .tour-stop canvas { width: 36px; height: 24px; } }
-		.daily { margin-right: auto; text-align: left; }
+		.daily { margin-right: auto; text-align: left; display: grid; grid-template-columns: 16px 1fr; column-gap: 7px; align-items: center; }
+		.daily canvas { width: 16px; height: 16px; grid-row: 1 / span 2; image-rendering: pixelated; }
+		.daily-sub { grid-column: 2; }
 		.daily-sub { display: block; font-size: 9px; letter-spacing: 0.06em; color: var(--dim); text-decoration: none; opacity: 0.85; }
 		.news-row { width: var(--board-w); max-width: 100%; display: flex; justify-content: flex-end; margin-top: -10px; }
 		.linkish {
@@ -395,7 +397,7 @@
 
 	<div id="tour" class="tour" role="group" aria-label="Biome tour: jump to any of the biomes"></div>
 
-	<div class="news-row"><button id="daily" class="linkish daily" title="One level, one colony, the same for everyone today (UTC)">colony of the day · <span id="dailyDate"></span><span class="daily-sub">Today's standup is mandatory.</span></button><button id="news-open" class="linkish" aria-haspopup="dialog">what's new<span class="dot" aria-label="new"></span></button></div>
+	<div class="news-row"><button id="daily" class="linkish daily" title="One level, one colony, the same for everyone today (UTC)"><canvas id="dailyBadge" width="16" height="16" aria-hidden="true"></canvas><span>colony of the day · <span id="dailyDate"></span></span><span class="daily-sub">Today's standup is mandatory.</span></button><button id="news-open" class="linkish" aria-haspopup="dialog">what's new<span class="dot" aria-label="new"></span></button></div>
 	<div id="news" role="dialog" aria-modal="true" aria-labelledby="news-title" hidden>
 		<div class="news-card">
 			<div id="news-title">PATCH NOTES</div>
@@ -420,14 +422,14 @@
 	</p>
 
 	<script src="agents/Sim.js?v=3a10324e"></script>
-	<script src="agents/Draw.js?v=4a47bead"></script>
+	<script src="agents/Draw.js?v=c7e558d0"></script>
 	<script src="agents/Palette.js?v=ff1f4919"></script>
 	<script src="agents/Outcome.js?v=1105e622"></script>
 	<script src="agents/share.js?v=c3e48a0d"></script>
 	<script src="agents/sfx.js?v=13e9c6e5"></script>
 	<script src="agents/season.js?v=dbb629c3"></script>
 	<script src="agents/news.js?v=cfe62b0f"></script>
-	<script src="agents/web.js?v=9ccb5681"></script>
+	<script src="agents/web.js?v=06381ec0"></script>
 
 </body>
 
