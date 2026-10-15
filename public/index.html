@@ -25,7 +25,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="33a1cea7">
+<meta name="build" content="ddf75a58">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
@@ -259,7 +259,9 @@
 			border-left: 2px solid var(--accent); background: var(--panel); color: var(--fg);
 			font: 12px/18px ui-monospace, monospace;
 		}
-		#stage[data-board-scale="1"] #eventCaption { height: 30px; font-size: 12px; line-height: 14px; }
+		/* Hero lines fill two rows with ~2% to spare; a wider system monospace
+		   (DejaVu, on many Linux phones and the CI runner) took a third. */
+		#stage[data-board-scale="1"] #eventCaption { height: 30px; font-size: 12px; line-height: 14px; letter-spacing: -0.3px; }
 		#eventCaption.empty { visibility: hidden; }
 		/* Fullscreen (?full, kiosks) keeps every pixel for the board: the
 		   caption row would cost a 720p screen its 2x scale. The board draws its
@@ -341,7 +343,7 @@
 			#biome { flex: 1; }
 			.track { flex-basis: 100%; order: 1; }
 			#stage { gap: 4px; }
-			#eventCaption { height: 30px; font-size: 12px; line-height: 14px; }
+			#eventCaption { height: 30px; font-size: 12px; line-height: 14px; letter-spacing: -0.3px; }
 			#toolbar { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 			.skill { padding: 8px 2px; }
 			.skill-name { font-size: 10px; }

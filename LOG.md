@@ -10266,3 +10266,17 @@ Run 38791606208: 1547 passed, 2 failed.
   `fc-match monospace`, so the next run says what to fix.
 
 Local gate: 1549/1549, CRAP green.
+
+## 394 — 2026-10-15 · Hero captions on a wider monospace
+Run 38793139302: 1548 passed, 1 failed. The Chromium warm-up fixed a11y. The
+runner's monospace is DejaVu Sans Mono. On it, the 360 px phone's Prompt
+Injection line took three rows: 42 px of text in a 30 px caption. Measured
+here with DejaVu loaded from a scratch fontconfig: all 231 hero lines fit two
+rows at 336 px, but with only about 2% to spare (at 324 px, one or two
+overflow). That's a real page bug for anyone whose monospace is a little
+wider, and many Linux phones and desktops use DejaVu. The phone-size caption
+now uses letter-spacing -0.3px, which gives about 6% slack: 0/231 overflow
+at 318 px under DejaVu.
+
+Local gate: 1549/1549, CRAP green. This is a page change, so it ships with
+the next deploy.
