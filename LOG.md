@@ -5648,3 +5648,58 @@ match, and `git diff --check` is clean. Commit gated on green check and CRAP.
 deployment or sibling sync.
 
 Reviewed and merged by the loop. Compact, translucent level title cards placed clear of the hatch, the exit and the route, with lines such as 'Shh.' and 'Your next meeting is downstairs.'. The replay page test once missed its 15 s window under the full run's load during this merge; it now waits up to 30 s.
+
+## 283 — 2026-10-15 · Navigation ends the intermission (review finding 1)
+
+**Asked:** Codex's review of main (docs/review-2026-10-15.md, finding 1, P2).
+Navigation doesn't cancel the previous level's intermission. Next during the
+fifth level's standup made level 6, but the standup kept drawing over it, and
+its finish then advanced again, so level 6 was never played. Restart, the tour
+and Colony of the Day had the same problem, and a replay survived navigation
+the same way.
+
+**Changed:** `newLevel` clears `standup` and `replay` before making the new
+world. Every navigation goes through it: prev/next, restart, the tour, the
+daily, shared links, and the normal advance. Cancelling is now separate from
+a standup's finish (`endStandup`, which still advances when a meeting runs its
+course), so cancelling can't advance the world just chosen.
+
+**Tests** (`test/navigation.test.js`, which fails without the fix):
+- Next during a standup plays exactly one level on, and that level is being
+  played;
+- a board click afterwards doesn't advance again;
+- the daily chosen during a standup is still the daily after the meeting would
+  have ended;
+- Next during a replay ends the replay and plays level 2.
+
+## 284 — 2026-10-15 · Shared and daily links keep ?full (review finding 3)
+
+**Asked:** review finding 3 (P2). `/?level=3&seed=42&full=1` and
+`/?daily=2026-10-15&full=1` loaded the right colony but not in fullscreen:
+the shared-link boot cleaned the whole query before `fullParam()` read it.
+`?fullscreen` was affected too.
+
+**Changed:** the boot reads `fullParam()` once, before the address is cleaned,
+and uses that. The cleaned address keeps `?full` when it was asked for, so a
+reload stays the kiosk it was. `?full=0` stays an explicit no.
+
+**Tests:** `test/fullparam.test.js` (fails without the fix) checks a shared
+link with `full=1`, a daily link with `full=1`, a shared link with
+`fullscreen`, a shared link with `full=0` (stays off), and plain `?full`. In
+each case it checks the faux-fullscreen stage, the colony that loaded, and the
+cleaned address.
+
+## 285 — 2026-10-15 · Fast-forward is heard on every tick (review finding 5)
+
+**Asked:** review finding 5 (P3). With sound on, fast-forward's extra steps
+weren't observed by `sfx.js`. Cues that fire on an exact tick (the outage's
+power-down and power-up, a fuse's "oh no" at 40) were lost when that tick was
+one of the skipped ones.
+
+**Changed:** `fastForward` calls `AgentSfx.observe` after each of its extra
+steps, as the normal tick does after its one. `sfx.js` keeps its own
+real-time gaps per sound, so 4× steps don't mean 4× noise.
+
+**Tests:** in `test/fastforward.test.js` (fails without the fix), level 109's
+stalled colony is driven on the page through `fastForward` with the observer
+wrapped. All 4904 ticks are observed, and it did fast-forward.

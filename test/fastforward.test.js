@@ -48,3 +48,23 @@ test("the tag shows only while fast-forwarding and never over a replay", () => {
   assert.ok(ff > none, "the tag draws")
   assert.equal(fills({ fastForward: true, replaying: true }), fills({ fastForward: false, replaying: true }), "the replay tag wins")
 })
+
+test("fast-forward lets the sound layer see every tick, so tick-exact cues are not skipped", { skip: !chromium && "no chromium", timeout: 60000 }, async () => {
+  const server = await serve(), b = await browser()
+  const ev = async e => (await b.cmd("Runtime.evaluate", { expression: e, returnByValue: true })).result.value
+  try {
+    await b.cmd("Page.navigate", { url: `http://127.0.0.1:${server.address().port}/?level=109&seed=93778362` })
+    for (let i = 0; i < 40 && !(await ev(`!!(window.AgentWorld && AgentWorld())`)); i++) await sleep(100)
+    const r = await ev(`(() => {
+      const seen = new Set(), observe = AgentSfx.observe
+      AgentSfx.observe = w => { seen.add(w.ticks); return observe(w) }
+      const w = generate(109, 0, 93778362); let ff = 0
+      while (!w.done && w.ticks < 6000) { step(w); AgentSfx.observe(w); AgentFastForward.check(w); if (w.fastForward) ff++ }
+      AgentSfx.observe = observe
+      let missing = 0; for (let t = 1; t <= w.ticks; t++) if (!seen.has(t)) missing++
+      return { ff, missing, ticks: w.ticks }
+    })()`)
+    assert.ok(r.ff > 0, "it fast-forwarded")
+    assert.equal(r.missing, 0, `every one of ${r.ticks} ticks observed`)
+  } finally { await b.close(); server.close() }
+})
