@@ -23,6 +23,7 @@
     "loadtime": "node tools/loadtime.js",
     "soak": "node tools/testlock.js run -- node tools/soak.js",
     "smoke": "node tools/testlock.js run -- node tools/soak.js --minutes 3 --every 15",
+    "verify": "node tools/verify-prod.js",
     "fps": "node tools/fps.js",
     "compare": "node tools/compare.js",
     "shot": "node tools/shoot.js",

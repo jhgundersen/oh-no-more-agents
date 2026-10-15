@@ -5747,3 +5747,43 @@ ran sequentially under the shared test lock, Node heap 2,048 MB,
 **Next:** review and merge this branch; no push or deployment from this pass.
 
 Reviewed and merged by the loop. Finding 2: the patch notes are a native modal `<dialog>` with a Close button, and focus moves in, is contained and is restored. Finding 4: the 429 sign counts only live, walking members, so a gone one can't hold it up. Checked while merging: `queued()` runs for every live agent every tick and clears `queueFor` the moment a member isn't walking, so the walking-only count can't drop the sign early.
+
+## 287 — 2026-10-15 · npm run verify
+
+**Chosen (autonomy):** every deploy tonight was checked with four scratch
+scripts from my temp directory, rebuilt and patched each time. One of them
+once wrote fake rescues to the real counter because it lacked the block.
+A committed tool, read-only by construction and exercised by the test suite,
+makes every deploy check repeatable for me, Codex and the supervisor. It also
+carries the three checks asked for at this deploy.
+
+**Changed:** `tools/verify-prod.js` (`npm run verify`).
+- **Read-only.** Every browser it opens (`readOnly()`) fails every non-GET to
+  `/api/*` before the first navigation, counts the refusals, and uses a
+  throwaway profile.
+- **The deploy.** The shipped scripts are `dist/` byte for byte and brotli.
+  The build agrees on page, repo and API. The script stamps match
+  `public/index.html`. The share card and icons serve as immutable PNGs. With
+  `--previous <build>`, a tab served as that build reloads into this one.
+- **Behaviour,** checked locally too with `--local`:
+  - level 20 (The Cloud, updrafts, 20 tour stops) at desktop and phone size;
+  - `?daily=2026-10-15&full=1` opens that colony fullscreen;
+  - Next during a standup moves on exactly one level and plays it;
+  - the patch notes take focus when opened by keyboard, hold it on Tab, and
+    give it back on Esc.
+- **Errors.** Any page or console error fails the run.
+
+AGENTS.md's deploy rule now ends with it.
+
+**Measured:**
+- **Against this build, served locally:** passes, with 5 counter writes
+  refused on the way (`test/verify.test.js`).
+- **Against production as deployed at 07:46 (84496cb6)**, before the review
+  fixes: it reports `?daily&full=1` not fullscreen, Next during a standup
+  going 7 → 8 with the new level never ticking, and the patch-notes focus
+  failing twice. Those are the review's findings 1–3, caught by the tool. The
+  build mismatch is expected, since main is ahead of the deploy. The shipped
+  files and the open-tab reload pass.
+
+The production-only parts are split into functions small enough for the CRAP
+gate without a deploy to cover them.

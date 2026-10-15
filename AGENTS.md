@@ -100,7 +100,11 @@ Each of these is here because breaking it once cost something real.
   Before each deploy: the full check, then `npm run smoke` (a 3-minute soak:
   page errors, growing heap/nodes/listeners/storage, piling audio nodes,
   frame-time creep). Not part of the per-commit gate. `npm run soak --
-  --minutes 20` is the long version.
+  --minutes 20` is the long version. After the deploy:
+  `npm run verify -- --previous <the build it replaced>` (read-only by
+  construction: shipped files, build agreement, an open tab reloading,
+  level 20, a daily link with ?full, Next during a standup, the patch notes
+  by keyboard).
 
 ## Deeper notes
 
