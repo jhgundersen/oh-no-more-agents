@@ -8489,7 +8489,8 @@ room on top, as it would onto a step. Otherwise it is still `hitWall`.
 
 The first gate failed "a stalled colony fast-forwards … and takes fewer page
 ticks". Its fixture, level 109 / 93778362, had been picked because it ended
-on a long stall, and 343 fixed that stall: the run now takes 1,565 page
+on a long stall, and this entry's ledge step removes that stall (343 still
+passed with it): the run now takes 1,565 page
 ticks of 1,591, so too little is skipped. The new fixture is level 163 /
 47748399, found by replaying the page's own fast-forward rule over 120
 colonies of the levels still flagged. It runs in 71% of the page ticks.

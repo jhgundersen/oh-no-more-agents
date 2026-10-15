@@ -15,7 +15,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms))
 
 test("a stalled colony fast-forwards, ends exactly as the plain simulation does, and takes fewer page ticks", { skip: !chromium && "no chromium", timeout: 60000 }, async () => {
   // A colony with a long dead stretch: fast-forward runs it in 71% of the page
-  // ticks. Was level 109 / 93778362 until LOG 343 fixed that one's shuttle.
+  // ticks. Was level 109 / 93778362 until LOG 346 took that stall away.
   const level = 163, seed = 47748399
   const plain = S.generate(level, 0, seed)
   while (!plain.done && plain.ticks < 6000) S.step(plain)
