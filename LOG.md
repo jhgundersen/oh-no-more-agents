@@ -5313,3 +5313,20 @@ through the test lock) timed out waiting behind Codex's validation and needs
 a second attempt. localStorage grows with sightings, bet and milestone state,
 under 1 KB here. Neither is a problem at this rate, but a tab left open for a
 day would carry several more MB than it needs to; that's the next look.
+
+**Deployed** at 06:46 after 276 (name="build" content="a256d64d"), gated on a
+green full check through the test lock (1270 tests). It covers 272–276: Colony
+of the Day, the Cloud art, the tour icons and the soak tool.
+
+Verified on production, read-only (every non-GET to `/api/*` failed in the
+browser; none were attempted):
+- **`dist/` and the build:** all scripts byte-identical to `dist/`. The build
+  agrees on page, repo and API (a256d64d).
+- **Open tab:** a tab from a5cbb381 reloaded into a256d64d. The share card and
+  icons are still correct. No console or page errors.
+- **Level 20** at desktop and phone size: The Cloud with Codex's cumulus banks,
+  the brick ON-PREM refuge, rain, umbrella floaters, lightning present, and
+  "AGENT 002 IS FIRST HOME".
+- **The tour strip** shows its 20 icons.
+- **`?daily=2026-10-15`** opened level 13 with colony 188139894, exactly
+  `AgentShare.daily("2026-10-15")`. The button shows its badge and the date.
