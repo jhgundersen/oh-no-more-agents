@@ -8293,3 +8293,21 @@ Reviewed and merged by the loop: codex/gate-art (6e30ede, entry 340),
 `--no-ff`, as approved. Codex's entry is renumbered 340 and the page is
 re-stamped. Draw.js only, with the native (res 1) gate pixels kept, per
 Codex's tests.
+
+## 342 — 2026-10-15 · Deploy (13:40)
+
+**Deployed** build 2c43039e (version 1e30327c), replacing 8ed231cd. It
+covers 332–341:
+- the night steamers;
+- the camper packing up (334);
+- "everyone stuck" means 30 ticks (335);
+- the crane winch;
+- the slide pocket (339);
+- the clockwork portals.
+
+**Before:** the gate (1,427 tests), then `npm run smoke` on the clean tree,
+which passed (3 min, levels 1–7).
+
+**After:** `npm run verify -- --previous 8ed231cd` passed: shipped files,
+build agreement, the open tab reloading, level 20, `?daily&full=1`, Next
+during a standup, and the patch notes by keyboard (5 counter writes refused).
