@@ -8503,3 +8503,87 @@ the tower floor by floor: the fire escape is at x4–8 and the lift at
 x91–95. On the floor at row 37 it walks back to the escape, builds at x10
 facing it, turns, and walks away; the cutoff ends the level at t2558. The
 next thing to check is whether the escape has a door or stop on that floor.
+
+## 348 — 2026-10-15 · Climate controlled colleagues (on a branch)
+
+**Chosen (autonomy):** give the Data Center's hot/cold aisles working ventilation
+hardware and distinct airflow. The original orange/cyan dots read weakly beside
+the cabinets, particularly on a phone. Branch `codex/aisle-art` starts from main
+`8ccc99a`; drawing only, no Sim.js or web.js changes.
+
+**Changed:** page-resolution inset steel grilles, orange exhaust / cyan intake
+rails, and a small four-pose fan at the start of each half. Intake and exhaust
+turn opposite ways. Sparse warm curls rise; chilled air falls and gathers in
+a thin floor-edge wisp. Existing walking pace, aisle notices and updrafts stay
+as they were. The apparatus occupies only surviving, exposed supporting floor;
+whole air marks are clipped against the actual clear terrain. It is painted
+behind agents, umbrellas and hazards. Reduced motion keeps both colours and
+complete hardware, stops the rotors and suppresses the loose air.
+
+**Evidence:** `/tmp/codex-aisle-art/strips/index.html` animates the before/after;
+`contact-sheet.png` compares entry and 24 ticks later, and `32-frames.png`,
+`52-frames.png`, `72-frames.png` show all eight six-tick poses at native and
+page resolution. These are natural seed-3 crossings, not posed agents: level
+72 enters at tick 138 and crosses from cold into hot in the strip; level 32
+starts at 474, level 52 at 449. Level 12's colony bypasses its aisle, so the
+bounded scene seeker rejects it instead of showing an empty crossing.
+
+`/tmp/codex-aisle-art/page-sheet.png` is the **1640×4408** browser sheet: actual
+CSS-size boards and 3× crops, desktop and 390 px phone, hot-first/cold-first,
+level 72's lower pair, Halloween, Christmas and reduced motion. The full phone
+and desktop pages are also in `before/` and `after/`. Browser assertions verify
+identical worlds, board/stage geometry, no horizontal page overflow, no errors,
+and **every changed pixel inside the union of actual aisle envelopes**.
+
+**Tooling:** `tools/aisle-art.js` seeks once, reuses terrain by version/resolution,
+and draws translated actor crops directly. All **96** frames take **0.51 s /
+182.2 MB peak RSS**. Its HTML, strip PNGs, complete frame sheets and manifest are
+written together; the export test catches a missing linked frame sheet. The
+validated uppercase ROM label helper is identical to the approved librarian
+branch's helper, fixing the earlier `?????` labels without introducing a second
+font. Core-name, syntax and stamp checks run before queueing. Tests compare
+hashes rather than raw buffers and bound paint recordings to 3,000 calls.
+
+**Compatibility:** `native-proof.json` compares the independent renderer frozen
+at main `8ccc99a` with this branch: aggregate **c6a3dbdd…** is exact for default,
+res 1 and share-card res 3, five Data Center layouts, every palette, both motion
+preferences and four tick phases. Full rendered/unrendered simulation JSON
+stays identical over 800 live ticks on all three crossing layouts; pace remains
+1.35× / 0.85×. Other biomes receive no aisle art, and the original updrafts,
+rack lights, materials, props, exit and hazards retain their own guards.
+
+**Cost:** **2,592 source bytes / 815 gzip bytes** added to Draw.js before ship's
+comment strip. At most **402** primitive rectangles for the entire three-pair
+world over 576 motion/phase samples; no new canvas, particles, timers or RNG.
+
+Five-second real-page Brisk FPS runs before/after: level 72, ticks 120–348,
+three aisle pairs, up to 11 cast; level 32, ticks 461–689, up to 12 cast. All
+four hold **60 median / 60 p5 FPS, 17 ms worst, zero long-task time**. CPU is
+**12% / 12%** on 72 and **11% / 12%** on 32. No speedup claimed. Logs and the
+combined `fps-summary.json` are in the evidence directory.
+
+**Focused:** **33/33 pass, 3.14 s**. Covers native/share parity, every biome's
+eligibility, bounded missing/no-crossing scenes, supporting-floor and whole-air
+footprints, carving and obstruction, four rotor poses and opposite direction,
+rising/falling air, opacity and palette/state/RNG safety, static reduced motion,
+actual walking pace and full live digests, translated crop/cache equality
+through terrain edits, and complete review exports. Data Center and Cloud
+mechanism/art guards are included.
+
+
+**Full gate:** **1,445 passed, zero failures/cancellations/skips, 349.23 s**.
+Factory art and coverage included. CRAP threshold **30** passed from the same
+LCOV; maximum **30.0**. Every new runtime helper has **100% coverage**, scores
+**3.0–7.0**; comparison orchestration **17.0 / 100%**, scene discovery
+**10.0 / 100%**, cached frame rendering **3.1 / 75%**. The shared label helper
+is **3.3 / 66.7%** in this gate (its separate librarian validation covered the
+rejection path). Completion was reported immediately.
+
+The persistent FIFO run used a **3 GB service cap**, **2,048 MB Node heap**,
+`ulimit -v 6000000`, two workers and 120-second test timeouts; sampled service
+peak was **792 MB**. Source/tests stayed frozen through the full gate and
+CRAP reused coverage. Logs: `check.log`, `crap.log`, `queue.log` in the evidence
+directory. `npm run stamp`, its check and `git diff --check` pass.
+
+**Next:** review and merge this branch; then another free choice of atmosphere,
+motion or presentation. Commit on the branch only; no push or deployment.
