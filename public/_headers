@@ -2,12 +2,9 @@
 # the default `cache-control: public, max-age=0, must-revalidate` for the
 # kinds of file that are safe to keep forever.
 
-# Safe only because tools/stamp-assets.js puts a content hash in the URL:
-# change the code and index.html asks for a different ?v=, so nothing here is
-# ever the wrong answer. index.html itself is deliberately left on the default
-# — it is the file that hands out the new stamps.
-/agents/*.js
-  cache-control: public, max-age=31536000, immutable
+# Bare /agents/*.js (including ?v= source URLs) deliberately use the default
+# revalidation policy. tools/ship.js appends exact immutable rules to dist/
+# only for the content-hashed JavaScript filenames referenced by its page.
 
 # 24 MB of soundtrack that has no stamp, so this one is a promise we keep by
 # hand: a replacement track gets a new number, it does not overwrite an old one.

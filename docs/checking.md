@@ -11,7 +11,11 @@ reload.
   `index.html` with the build slot blanked — a hash cannot contain itself — and
   writes the result to both `<meta name="build">` and `src/version.js`. Script
   stamps are inside that hash, so it moves for a code change and for a
-  markup-only change alike.
+  markup-only change alike. The deploy build preserves that meta hash and
+  rewrites only its script URLs to filenames hashed from the actual emitted
+  bytes. Exact `dist/_headers` rules make those names immutable; bare source
+  paths revalidate. An uncertain JavaScript scan prints an “unchanged” notice
+  and copies the entire original; invalid JavaScript still fails `node --check`.
 - **`reporting` was a latch with nothing to open it.** It stops two reports
   going up at once and was cleared only by the fetch settling — and a fetch is
   not obliged to settle. A request in flight when the tab is backgrounded, or

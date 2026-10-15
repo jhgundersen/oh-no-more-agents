@@ -37,7 +37,9 @@ Production is `https://oh-no-more-agents.com`.
   `node tools/testlock.js run -- <command>`. Single-file `node --test` runs do
   not need it.
 - `tools/ship.js` — `npm run deploy` first builds `dist/` (a copy of `public/`
-  whose scripts drop comment-only lines and indentation, nothing else) and
+  whose scripts drop comment-only text and indentation when safely scanned,
+  otherwise ship unchanged). The shipped page uses content-hashed script
+  filenames with exact immutable cache rules; bare scripts revalidate.
   Wrangler serves that. Edit `public/`, never `dist/`; `npm run dev` serves
   `public/` directly. `npm run loadtime` measures what a throttled phone gets.
 - `wrangler.jsonc` — Worker bindings and production custom-domain routes.
@@ -47,8 +49,10 @@ Production is `https://oh-no-more-agents.com`.
 - Keep the game dependency-free and runnable as plain browser JavaScript.
 - Keep simulation behaviour in `Sim.js` and rendering-only behaviour in `Draw.js`.
 - Match the existing pixel-art look, biome palettes, humour, and agent puns.
-- Script URLs in `index.html` carry `?v=<content hash>` so the JS can be cached
-  forever. After editing anything under `public/agents/`, run `npm run stamp` and
+- Source script URLs in `index.html` carry `?v=<content hash>`; the build
+  rewrites only `dist/index.html` to immutable content-hashed filenames. Bare
+  `/agents/*.js` (with or without `?v=`) revalidate. After editing anything under
+  `public/agents/`, run `npm run stamp` and
   commit the re-stamped page with the code; `npm run check` fails on a stale
   stamp. The same command stamps the page's own hash into `<meta name="build">`
   and the generated `src/version.js`, which is how an open tab notices a deploy

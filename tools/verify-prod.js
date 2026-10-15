@@ -93,9 +93,11 @@ async function buildAgrees(base, build) {
   return build === repo && repo === api ? [] : [`build disagrees: page ${build}, repo ${repo}, api ${api}`]
 }
 
+// The deployed page names the content-hashed scripts ship.js wrote into
+// dist/index.html (not public/'s ?v= stamps), so that is what it must match.
 function stampsMatch(srcs) {
-  const local = fs.readFileSync(path.join(ROOT, "public/index.html"), "utf8")
-  return JSON.stringify(srcs) === JSON.stringify([...local.matchAll(/<script src="([^"]+)"/g)].map(m => m[1])) ? [] : ["script stamps differ from public/index.html"]
+  const local = fs.readFileSync(path.join(ROOT, "dist/index.html"), "utf8")
+  return JSON.stringify(srcs) === JSON.stringify([...local.matchAll(/<script src="([^"]+)"/g)].map(m => m[1])) ? [] : ["script names differ from dist/index.html"]
 }
 
 export async function filesShipped(base, srcs) {

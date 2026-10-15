@@ -60,14 +60,22 @@ function wireSize(url) {
   })
 }
 
-export async function transfer(base) {
-  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8")
+const sourceName = file => file.replace(/\.[a-f0-9]{64}(?=\.js$)/, "")
+const readPage = async url => {
+  const response = await fetch(url, { signal: AbortSignal.timeout(30000) })
+  if (!response.ok) throw new Error("loadtime: page returned " + response.status)
+  return response.text()
+}
+
+export async function transfer(base, { page = readPage, measure = wireSize } = {}) {
+  // Measure the URLs actually deployed, not the source page's bare ?v= URLs.
+  const html = await page(base)
   const rows = [{ file: "index.html", url: base }]
-  for (const src of pageScripts(html)) rows.push({ file: src.split("?")[0], url: base + src })
+  for (const src of pageScripts(html)) rows.push({ file: sourceName(src.split("?")[0].replace(/^\//, "")), url: new URL(src, base).href })
   const out = []
   for (const r of rows) {
     const raw = fs.statSync(path.join(ROOT, r.file)).size
-    const wire = await wireSize(r.url)
+    const wire = await measure(r.url)
     out.push({ file: r.file, raw, wire: wire.bytes, encoding: wire.encoding })
   }
   return out
@@ -94,7 +102,7 @@ export function scriptCost(events) {
   const by = {}
   const add = (url, key, ms) => {
     if (!url) return
-    const file = url.split("?")[0].split("/").pop()
+    const file = sourceName(url.split("?")[0].split("/").pop())
     by[file] = by[file] || { compile: 0, background: 0, evaluate: 0 }
     by[file][key] += ms
   }
