@@ -103,6 +103,8 @@ test("each container colour, full stencil, stepped hull, solid gantry and perche
   for (let seed = 0; seed < 10; seed++) {
     const a = picture(ctx => D.drawPortContainer(ctx, w, 40, 60, seed, []))
     colours.add(a.calls[1][4]); labels.add(a.buf)
+    assert.ok(a.calls.filter(c => c[4] === D.PORT_NIGHT && c[2] === 1 && c[3] === 10).length >= 6, "whole-art-pixel corrugation ribs")
+    assert.equal(a.calls.filter(c => c[4] === "#81918a" && c[2] === 1 && c[3] === 8).length, 2, "two locking bars")
     const stencil = a.calls.filter(c => c[4] === "#a3a28b")
     assert.ok(stencil.length > 15)
     assert.ok(stencil.every(c => c[0] >= 44 && c[0] + c[2] <= 58 && c[1] >= 63 && c[1] + c[3] <= 66))
@@ -110,6 +112,11 @@ test("each container colour, full stencil, stepped hull, solid gantry and perche
     assert.equal(blocked.calls.filter(c => c[4] === "#a3a28b").length, 0, "reject the complete stencil if a fixture clips it")
   }
   assert.equal(colours.size, 5); assert.equal(labels.size, 10)
+  const rgb = [...colours].map(c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)))
+  assert.ok(rgb.some(([r, g, b]) => r > g * 1.5 && g > b), "rust red")
+  assert.ok(rgb.some(([r, g, b]) => b > r * 1.8 && b > g * 1.3), "faded blue")
+  assert.ok(rgb.some(([r, g, b]) => g > r * 1.8 && Math.abs(g - b) < 10), "teal")
+  assert.ok(rgb.some(([r, g, b]) => r > g * 1.4 && g > b * 1.8), "ochre")
   const a = picture(ctx => D.drawPortHull(ctx, 100, 90, 0)), b = picture(ctx => D.drawPortHull(ctx, 100, 90, 1))
   assert.notEqual(a.buf, b.buf)
   assert.ok(a.calls.some(c => c[2] >= 39 && c[3] >= 3), "solid hull, not wireframe")
@@ -128,9 +135,9 @@ test("live beam and water shimmer use bounded small accents, air checks and sepa
       const img = picture(ctx => { D.drawPortLife(ctx, w); D.drawPortWater(ctx, w) })
       assert.ok(img.calls.length <= 200)
       for (const c of img.calls) {
-        const water = c[4] === "#6b9293"
+        const water = c[4] === D.PORT_GLINT
         assert.ok(water || c[4] === D.PORT_LIGHT)
-        assert.ok(D.abyssClear(w, ...c.slice(0, 4), water ? layout.waterBoxes : layout.boxes))
+        assert.ok(D.abyssClear(w, ...c.slice(0, 4), water ? layout.waterBoxes : layout.beamBoxes))
         footprint(c, (x, y) => assert.ok(D.mechanismAir(w, x, y)))
         if (water) assert.ok(w.pits.some(p => c[0] >= p.x0 * 4 && c[0] + c[2] <= (p.x1 + 1) * 4 && c[1] >= p.surfaceY * 4 + 20), "below ferry and within real water")
       }
@@ -143,6 +150,7 @@ test("live beam and water shimmer use bounded small accents, air checks and sepa
 })
 test("lighthouse sweeps slowly and shimmer changes without moving static quay scenery", () => {
   const { w } = sample(); w.terrain.fill(w.k.EMPTY); w.hazards = []; w.decor = []; w.mission = null; w.enemyHatch = null; w.terrainVersion++
+  w.terrain.fill(w.k.DIRT, w.corridors[0].floorY * 100 + 4, w.corridors[0].floorY * 100 + 96)
   const layout = D.portLayout(w), beams = new Set(), waters = new Set()
   for (const ticks of [0, 66, 210, 420, 800]) {
     w.ticks = ticks
@@ -293,4 +301,51 @@ test("deep-water shimmer remains visible after the original sea fill and beneath
   }
   assert.ok(visible > 0, "actual completed actor layer contains new water glints")
   assert.ok(layout.glints.length >= calls.length)
+})
+
+test("complete lighthouse and attached faint beam survive typical layouts including the reported frame", () => {
+  for (const level of [19, 38, 57, 76, 95, 114, 133, 152]) {
+    const w = S.generate(level, 0, 3); w.res = 2
+    for (let tick = 0; tick < 400; tick++) S.step(w)
+    const layout = D.portLayout(w), b = layout.lighthouse
+    assert.ok(b, `complete lighthouse found on level ${level}`)
+    assert.ok(b.y >= w.k.SKY * 4)
+    assert.ok(D.postalBoxClear(w, b, D.portReserved(w)))
+    const floor = (b.y + b.height) / 4
+    assert.notEqual(w.terrain[floor * 100 + Math.floor((b.x + 7) / 4)], w.k.EMPTY)
+    for (const m of layout.moorings) assert.ok(D.assemblyUnreserved([b], m.x, m.y, m.width, m.height))
+    const beam = picture(ctx => D.drawPortBeam(ctx, w, layout)).calls
+    assert.ok(beam.length >= 12, `visible beam strips on level ${level}`)
+    assert.ok(beam.some(c => c[5] > 0.15))
+    assert.ok(beam.every(c => c[0] < b.x + 7 && c[1] >= w.k.SKY * 4))
+    const pal = P.build(themeOf("tokyo-night").theme, level), scene = canvas(800, 496)
+    D.drawTerrain(scene.ctx, w, pal); D.drawActors(scene.ctx, w, pal, {})
+    let glass = 0
+    for (let y = (b.y + 2) * 2; y < (b.y + 5) * 2; y++)
+      for (let x = (b.x + 4) * 2; x < (b.x + 10) * 2; x++) {
+        const i = (y * 800 + x) * 3
+        if (scene.buf[i] >= 170 && scene.buf[i + 1] >= 150 && scene.buf[i + 2] < 180) glass++
+      }
+    assert.ok(glass >= 8, `lantern visible in the completed frame ${level}`)
+  }
+  const { w } = sample(); w.terrain.fill(w.k.STEEL); w.terrainVersion++
+  assert.equal(D.portLayout(w).lighthouse, null, "omit an entire tower rather than clip its lantern")
+})
+test("all new paint stays below the original warm sky and complete parent sky pixels match", () => {
+  const hash = createHash("sha256")
+  for (const name of Object.keys(THEMES)) for (const level of levels) for (const ticks of [0, 77, 240, 400]) {
+    const { w, pal } = sample(level, name); w.ticks = ticks
+    const img = canvas(800, 496)
+    D.drawTerrain(img.ctx, w, pal); D.drawActors(img.ctx, w, pal, {})
+    hash.update(img.buf.subarray(0, 800 * 56 * 3))
+  }
+  // Captured from the approved Subway parent, before either Harbour page pass.
+  assert.equal(hash.digest("hex"), "f410cc98ff3f9cc043f8d75dba8093fc54151297acbba2b0c60f24a41e2d68c8")
+  for (let level = 19; level <= 19 * 24; level += 19) {
+    const { w } = sample(level)
+    for (const layer of layers) {
+      const img = picture(ctx => layer(ctx, w))
+      assert.ok(img.calls.every(c => c[1] >= w.k.SKY * 4), `no page addition touches the sky on ${level}`)
+    }
+  }
 })

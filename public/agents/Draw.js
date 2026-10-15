@@ -17603,7 +17603,8 @@ var PORT_SHADOW = "#1d3038"
 var PORT_EDGE = "#4b6268"
 var PORT_ROPE = "#9b9273"
 var PORT_LIGHT = "#d1c496"
-var PORT_CONTAINERS = ["#2d4047", "#443833", "#29423e", "#3d3c48", "#3f4134"]
+var PORT_CONTAINERS = ["#304866", "#70392e", "#24504b", "#65401e", "#54405d"]
+var PORT_GLINT = "#80a9a8"
 var PORT_CACHE = new WeakMap()
 
 function portReserved(w, water) {
@@ -17633,6 +17634,8 @@ function portLayout(w) {
   var old = PORT_CACHE.get(w)
   if (old && old.version === w.terrainVersion) return old.layout
   var C = w.k.CELL, boxes = portReserved(w), moorings = [], glints = []
+  var lighthouse = portFindLight(w, boxes)
+  if (lighthouse) boxes.push(lighthouse)
   for (var row = 0; row < w.corridors.length; row++) {
     var c = w.corridors[row], y = c.floorY * C
     for (var x = 28 + (row * 37 + w.level) % 55; x < 370; x += 91) {
@@ -17649,34 +17652,33 @@ function portLayout(w) {
     var pit = w.pits[p]
     for (var gy = pit.surfaceY * C + 20; gy < w.k.ROWS * C - 3; gy += 4)
       for (var gx = pit.x0 * C + 3 + gy % 5; gx < (pit.x1 + 1) * C - 4; gx += 9)
-        if (abyssClear(w, gx, gy, 3, 0.5, waterBoxes)) glints.push({ x: gx, y: gy })
+        if (abyssClear(w, gx, gy, 4, 1, waterBoxes)) glints.push({ x: gx, y: gy })
   }
-  var layout = { boxes: boxes, waterBoxes: waterBoxes, moorings: moorings, glints: glints }
+  var layout = { boxes: boxes, waterBoxes: waterBoxes, moorings: moorings, glints: glints, lighthouse: lighthouse,
+    beamBoxes: boxes.filter(function(b) { return b !== lighthouse }) }
   PORT_CACHE.set(w, { version: w.terrainVersion, layout: layout })
   return layout
 }
 function drawPortNight(ctx, w) {
   if (!portPage(w)) return
   ctx.save()
-  var C = w.k.CELL, wide = w.k.COLS * C, high = w.k.ROWS * C
-  var night = ctx.createLinearGradient(0, 0, 0, high)
+  var C = w.k.CELL, wide = w.k.COLS * C, high = w.k.ROWS * C, top = w.k.SKY * C
+  var night = ctx.createLinearGradient(0, top, 0, high)
   night.addColorStop(0, "#111a2a"); night.addColorStop(1, "#1b3037")
-  ctx.globalAlpha = 0.82; ctx.fillStyle = night; ctx.fillRect(0, 0, wide, high)
+  ctx.globalAlpha = 0.82; ctx.fillStyle = night; ctx.fillRect(0, top, wide, high - top)
   ctx.globalAlpha = 1
-  var boxes = portReserved(w)
+  var boxes = portLayout(w).boxes
   for (var row = 0; row < w.corridors.length; row++) {
     var floor = w.corridors[row].floorY * C
     ctx.fillStyle = PORT_SHADOW; ctx.fillRect(0, floor - 3, wide, 3)
     for (var bay = 0; bay < 5; bay++) {
       var x = 24 + bay * 74 + (row * 13 % 21), seed = bay + row * 7 + w.level
-      if (bay === 2 && row < 2) { drawPortHull(ctx, x, floor - 7, row); continue }
-      drawPortContainer(ctx, w, x, floor - 15, seed, boxes)
-      if (seed % 3 === 0) drawPortContainer(ctx, w, x + 4, floor - 28, seed + 2, boxes)
+      if (bay === 2 && row < 2 && floor - 19 >= top) { drawPortHull(ctx, x, floor - 7, row, top); continue }
+      drawPortContainer(ctx, w, x, Math.max(top, floor - 15), seed, boxes)
+      if (seed % 3 === 0 && floor - 28 >= top) drawPortContainer(ctx, w, x + 4, floor - 28, seed + 2, boxes)
     }
   }
-  drawPortGantry(ctx, wide - 108, w.corridors[1].floorY * C, 77)
-  // Keep the original lighthouse in its original position, now backlit at night.
-  drawHarbourLighthouse(ctx, { backLit: "#54666b", backDim: "#253941" }, wide - 31, w.corridors[0].floorY * C)
+  drawPortGantry(ctx, wide - 108, w.corridors[1].floorY * C, Math.min(77, w.corridors[1].floorY * C - top))
   ctx.restore()
 }
 function drawPortContainer(ctx, w, x, y, seed, boxes) {
@@ -17685,8 +17687,18 @@ function drawPortContainer(ctx, w, x, y, seed, boxes) {
   ctx.fillStyle = PORT_CONTAINERS[seed % PORT_CONTAINERS.length]; ctx.fillRect(x, y, width, 12)
   ctx.fillStyle = PORT_EDGE; ctx.globalAlpha = 0.5; ctx.fillRect(x, y, width, 0.5)
   ctx.fillRect(x + width - 1, y + 1, 0.5, 10)
-  ctx.fillStyle = PORT_NIGHT; ctx.globalAlpha = 0.4
-  for (var rib = 3; rib < width - 2; rib += 4) ctx.fillRect(x + rib, y + 1, 0.5, 10)
+  ctx.fillStyle = PORT_NIGHT; ctx.globalAlpha = 0.65
+  for (var rib = 3; rib < width - 11; rib += 4) ctx.fillRect(x + rib, y + 1, 1, 10)
+  ctx.globalAlpha = 0.35; ctx.fillStyle = "#81918a"
+  for (var seam = 4; seam < width - 11; seam += 4) ctx.fillRect(x + seam, y + 1, 0.5, 10)
+  ctx.fillStyle = PORT_NIGHT; ctx.globalAlpha = 0.6
+  ctx.fillRect(x + width - 10, y + 1, 1, 10); ctx.fillRect(x + width - 5, y + 1, 0.5, 10)
+  ctx.fillStyle = "#81918a"; ctx.globalAlpha = 0.5
+  for (var door = 0; door < 2; door++) {
+    var bar = x + width - 8 + door * 4
+    ctx.fillRect(bar, y + 2, 1, 8)
+    ctx.fillRect(bar - 0.5, y + 3, 2, 0.5); ctx.fillRect(bar - 0.5, y + 8, 2, 0.5)
+  }
   ctx.globalAlpha = 0.75; ctx.fillStyle = "#a3a28b"
   var code = ["CTX 019", "RAG 404", "LLM 007", "API 503", "BOT 808"][seed % 5]
   var b = { x: x + 4, y: y + 3, width: 14, height: 3 }
@@ -17705,7 +17717,8 @@ function drawPortGantry(ctx, x, base, height) {
   ctx.fillRect(x - 19, base - 10, 4, 2)
   ctx.fillStyle = "#7d7861"; ctx.fillRect(x + 10, base - height + 7, 3, 2)
 }
-function drawPortHull(ctx, x, y, seed) {
+function drawPortHull(ctx, x, y, seed, top) {
+  top = top || 0
   ctx.fillStyle = "#293e47"
   ctx.fillRect(x, y - 4, 45, 3); ctx.fillRect(x + 3, y - 1, 39, 3)
   ctx.fillRect(x + 6, y + 2, 32, 1)
@@ -17714,13 +17727,18 @@ function drawPortHull(ctx, x, y, seed) {
   ctx.fillRect(x + 14, y - 12, 19, 1)
   ctx.fillStyle = "#706e59"; ctx.fillRect(x + 18, y - 10, 3, 2); ctx.fillRect(x + 24, y - 10, 3, 2)
   ctx.fillStyle = PORT_SHADOW
-  ctx.fillRect(x + 8 + seed * 26, y - 26, 1, 22)
-  for (var i = 0; i < 7; i++) ctx.fillRect(x + 8 + seed * 26 - i, y - 24 + i * 3, 0.5, 3)
+  var mastTop = Math.max(top, y - 26)
+  ctx.fillRect(x + 8 + seed * 26, mastTop, 1, y - 4 - mastTop)
+  for (var i = 0; i < 7; i++) {
+    var ry = y - 24 + i * 3
+    if (ry >= top) ctx.fillRect(x + 8 + seed * 26 - i, ry, 0.5, 3)
+  }
 }
 function drawPortQuay(ctx, w) {
   if (!portPage(w)) return
   ctx.save()
-  var layout = portLayout(w)
+  var layout = portLayout(w), light = layout.lighthouse
+  if (light && postalBoxClear(w, light, portReserved(w))) drawPortLighthouse(ctx, light)
   for (var i = 0; i < layout.moorings.length; i++) {
     var b = layout.moorings[i]
     if (postalBoxClear(w, b, portReserved(w))) drawPortMooring(ctx, b)
@@ -17741,7 +17759,7 @@ function drawPortMooring(ctx, b) {
   ctx.fillStyle = PORT_NIGHT; ctx.fillRect(x + 5, base - 9, 0.5, 0.5)
 }
 function portAccent(ctx, w, layout, x, y, width, height) {
-  if (abyssClear(w, x, y, width, height, layout.boxes)) ctx.fillRect(x, y, width, height)
+  if (y >= w.k.SKY * w.k.CELL && abyssClear(w, x, y, width, height, layout.boxes)) ctx.fillRect(x, y, width, height)
 }
 function drawPortLife(ctx, w) {
   if (!portPage(w)) return
@@ -17751,27 +17769,29 @@ function drawPortLife(ctx, w) {
   ctx.restore()
 }
 function drawPortBeam(ctx, w, layout) {
-  var x = w.k.COLS * w.k.CELL - 31, y = w.corridors[0].floorY * w.k.CELL - 24
+  var light = layout.lighthouse
+  if (!light) return
+  var x = light.x + 7, y = light.y + 4, ink = { boxes: layout.beamBoxes }
   var sweep = Math.sin(w.ticks / 210 + w.level * 0.1)
   ctx.fillStyle = PORT_LIGHT
   // Half-pixel strips: a broad, slow cone with a soft fringe, bounded to 72
   // small rectangles. No gradients, polygon rasterization or world state live.
   for (var i = 0; i < 24; i++) {
     var xx = x - 7 - i * 4, yy = Math.round((y + sweep * i * 0.6) * 2) / 2
-    ctx.globalAlpha = (1 - i / 27) * 0.13
-    portAccent(ctx, w, layout, xx, yy, 4, 1)
+    ctx.globalAlpha = (1 - i / 27) * 0.23
+    portAccent(ctx, w, ink, xx, yy, 4, 1)
     ctx.globalAlpha *= 0.4
-    portAccent(ctx, w, layout, xx, yy - 1, 4, 1)
-    portAccent(ctx, w, layout, xx, yy + 1, 4, 1)
+    portAccent(ctx, w, ink, xx, yy - 1, 4, 1)
+    portAccent(ctx, w, ink, xx, yy + 1, 4, 1)
   }
 }
 function drawPortShimmer(ctx, w, layout) {
-  ctx.fillStyle = "#6b9293"
+  ctx.fillStyle = PORT_GLINT
   for (var i = 0; i < layout.glints.length; i++) {
     var b = layout.glints[i], phase = (Math.floor(w.ticks / 11) + i * 7) % 17
     if (phase > 4) continue
-    ctx.globalAlpha = (5 - phase) * 0.08
-    portAccent(ctx, w, { boxes: layout.waterBoxes }, b.x, b.y, 3, 0.5)
+    ctx.globalAlpha = (5 - phase) * 0.11
+    portAccent(ctx, w, { boxes: layout.waterBoxes }, b.x, b.y, 4, 1)
   }
 }
 
@@ -17780,4 +17800,34 @@ function drawPortWater(ctx, w) {
   ctx.save()
   drawPortShimmer(ctx, w, portLayout(w))
   ctx.restore()
+}
+
+// Fit a complete lantern and striped tower below the sky and inside clear air;
+// the old fixed lighthouse could lose its lantern behind a corridor ceiling.
+function portFindLight(w, boxes) {
+  var C = w.k.CELL
+  for (var row = 0; row < w.corridors.length; row++) {
+    var c = w.corridors[row], y = c.floorY * C - 20
+    if (y < w.k.SKY * C) continue
+    for (var x = c.x1 * C - 14; x >= c.x0 * C + 4; x -= C) {
+      var b = { x: x, y: y, width: 14, height: 20 }
+      if (!postalBoxClear(w, b, boxes)) continue
+      if (w.terrain[c.floorY * w.k.COLS + Math.floor((x + 7) / C)] !== w.k.EMPTY) return b
+    }
+  }
+  return null
+}
+function drawPortLighthouse(ctx, b) {
+  var x = b.x + 7, base = b.y + b.height
+  ctx.fillStyle = "#68767a"
+  ctx.fillRect(x - 3, base - 14, 6, 6); ctx.fillRect(x - 4, base - 8, 8, 8)
+  ctx.fillStyle = "#425b65"; ctx.fillRect(x + 2, base - 14, 1, 6); ctx.fillRect(x + 2, base - 8, 2, 8)
+  ctx.fillStyle = "#785046"; ctx.fillRect(x - 3, base - 11, 6, 3)
+  ctx.fillRect(x - 4, base - 5, 8, 2)
+  ctx.fillStyle = PORT_NIGHT; ctx.fillRect(x - 6, base - 20, 12, 2)
+  ctx.fillRect(x - 5, base - 18, 10, 4); ctx.fillRect(x - 5, base - 14, 10, 1)
+  ctx.fillStyle = "#83908b"; ctx.fillRect(x - 6, base - 20, 12, 0.5)
+  ctx.fillRect(x - 5, base - 1, 10, 1)
+  ctx.fillStyle = "#b7ac7e"; ctx.fillRect(x - 3, base - 18, 6, 3)
+  ctx.fillStyle = "#e4d39b"; ctx.fillRect(x - 2, base - 17, 1, 1); ctx.fillRect(x + 1, base - 17, 1, 1)
 }
