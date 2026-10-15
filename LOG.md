@@ -8452,3 +8452,44 @@ Reviewed and merged by the loop: codex/pool-art (5387545, entry 344),
 `--no-ff`, as approved. Codex's entry is renumbered 344 and the page is
 re-stamped. It changes drawing only, with no Sim.js change, and keeps the
 native (res 1) pool pixels, per Codex's tests.
+
+## 346 — 2026-10-15 · A ledge at knee height is a step
+
+**Chosen (autonomy):** the last clock flag in the 1–440 playtest, level 297
+(Rooftops). 1 of 16 colonies was nuked with 15 of 16 home.
+
+**Traced** (salt 3):
+- The last one out walked the exit's floor toward the door and turned at
+  x17 (`hitWall` → `wallLastResort`).
+- **What it met:** a one-row beam at row 55, x11–16, a cell above the floor
+  at row 56. It was the stub of an earlier bridge. Too low to crouch under,
+  but with room to stand on top.
+- **Why that was a wall:** `advanceWalk` only steps up when the cell at
+  foot level is solid.
+- **Why no charge either:** as the last one out it may lay a mine, but the
+  beam is 6 cells long, deeper than a mine reaches. It paced the floor until
+  the clock.
+
+**Changed:** `ledgeStep`. When the way ahead has no headroom and no crouch
+room, a walker steps up onto a ledge within `MAX_STEP` that has standing
+room on top, as it would onto a step. Otherwise it is still `hitWall`.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 297, 16 colonies | 100%, 1 nuke | 100%, no nukes |
+| `npm run sim play` | 2,976/3,129 in 208 attempts (95.11%) | 2,965/3,113 in 207 (95.25%) |
+| `sim hazards` | — | unchanged |
+| Playtest 1–440 | — | only the 297 clock flag goes; nothing new |
+
+`sim play`: 200/200 cleared, no hangs.
+
+**Clock flags:** none are left in the 1–440 playtest.
+
+The first gate failed "a stalled colony fast-forwards … and takes fewer page
+ticks". Its fixture, level 109 / 93778362, had been picked because it ended
+on a long stall, and 343 fixed that stall: the run now takes 1,565 page
+ticks of 1,591, so too little is skipped. The new fixture is level 163 /
+47748399, found by replaying the page's own fast-forward rule over 120
+colonies of the levels still flagged. It runs in 71% of the page ticks.

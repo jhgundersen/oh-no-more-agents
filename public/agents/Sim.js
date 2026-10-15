@@ -7066,13 +7066,29 @@ function advanceWalk(w, ag, nx, cx, footY) {
       ag.still = 0
       return
     }
-    hitWall(w, ag)
-    return
+    // A ledge at knee height over open floor — the stub of a bridge, say —
+    // is a step, not a wall: the stride only stepped up when the foot cell
+    // itself was solid. On level 297 the last one out met a one-row beam a
+    // cell above the floor by the door, with room on top, and turned from it
+    // until the clock (LOG 346).
+    var up = ledgeStep(w, cx, targetY)
+    if (up >= 0) { targetY = up } else {
+      hitWall(w, ag)
+      return
+    }
   }
 
   ag.x = nx
   ag.y = targetY
   ag.anim++
+}
+
+function ledgeStep(w, cx, footY) {
+  for (var k = 1; k <= MAX_STEP; k++) {
+    var ny = footY - k
+    if (solid(w, cx, ny + 1) && standable(w, cx, ny)) return ny
+  }
+  return -1
 }
 
 // A follower lands facing whichever of its own is nearest and still on its
