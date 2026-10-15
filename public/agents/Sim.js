@@ -11115,9 +11115,21 @@ function headingForDoor(w, ag) {
   return false
 }
 
+// On the door's floor, facing it, with the way ahead open: walking home, not
+// stalled. A wall ahead is still the director's business.
+function walkingHome(w, ag) {
+  var x = Math.floor(ag.x), y = Math.floor(ag.y)
+  return ag.state === "walk" && homeStretch(w, ag)
+      && !solid(w, x + ag.dir, y) && !solid(w, x + 2 * ag.dir, y)
+}
+
 // The first of these that applies and can be paid for.
 function directorNudge(w, best) {
-  if (headingForDoor(w, best)) return
+  // Nor one walking along the door's own floor toward it: on level 294 the
+  // director handed a builder to the last one out on open floor thirty cells
+  // short of the door; the stairs stalled, it fell off them facing the other
+  // way, and the cutoff ended the level (LOG 360).
+  if (headingForDoor(w, best) || walkingHome(w, best)) return
   // Below the exit and pacing: nothing horizontal helps, and digging only
   // makes it worse. Hand them a climb.
   if (exitAbove(w, best) && !liftRouted(w)) { directorRaise(w, best); return }

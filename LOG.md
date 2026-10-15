@@ -9027,3 +9027,46 @@ The first gate failed CRAP: `buildAgrees` scored 42, because the polling
 loop made it complexity 6 and the tests never reach it (0% covered). The
 loop is now its own function, `apiBuild`, and both halves are small enough
 to pass the gate.
+
+## 360 — 2026-10-15 · The director leaves alone an agent walking home on the door's floor
+
+**Chosen (autonomy):** the single-straggler stalls left in the 1–440
+playtest (163, 204, 225, 294, 345). Three of them share a pattern: build a
+few steps, turn at the top, fall off, stranded.
+
+**Traced** (294, Mail Room, salt 3):
+- The last one out was walking along the exit's own floor, x31 → x51, at
+  the door (x87) over open floor.
+- At t1316 the stall director (`directorNudge`) handed it a builder. The
+  agent had been nearer the door earlier, so this pass had not yet beaten
+  its best distance and the level's stall clock had run.
+- The staircase stalled after seven bricks at x65. The agent turned, fell
+  off it facing away, and the cutoff ended the level.
+
+**Changed:** `directorNudge` passes over a walker in `homeStretch` (on the
+door's floor, facing the door), alongside 353's `headingForDoor`.
+
+**Measured** (16 colonies each):
+
+| Level | Before | After |
+|---|---|---|
+| 294 | 99%, 1 stall | 99%, no stalls |
+| 163 | 11 written off | 10 written off |
+| 204, 225, 345 | — | identical |
+
+**Process slip:** while this change was being measured, I started 359's
+gate in the background with it in the tree. Killing that gate with
+`pgrep -f` matched my own shell (exit 144) and left an orphaned gate.sh
+running. That orphan committed 9ef1b2d at 15:42, after I had set Sim.js
+aside, so the commit holds only 359's LOG.md and verify-prod.js. A clean
+re-run of the gate then passed on exactly that tree. Lesson: gate one
+change at a time, keep experiments out of the tree while a gate runs, and
+kill by PID.
+
+The first gate failed two of 323's director tests: a wall on the door's
+floor gets a basher, and boxed in, one bomb. `homeStretch` is true for an
+agent facing home at a wall as well, so the first version left blocked
+agents alone too. Now `walkingHome` also needs the two cells ahead to be open, the same reach `boxedIn` measures:
+walking home, not stopped at something. The 294 result is unchanged.
+`npm run sim play` is identical (2,965/3,113). In the 1–440 playtest only
+the 294 flag goes, and nothing new is flagged.
