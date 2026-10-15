@@ -7256,3 +7256,38 @@ date window and edges, strict parsing, a dressed colony playing out exactly
 like a plain one, the ghost and pun, the tint and the card title. Local
 headless check at `?season=halloween` on levels 2, 9 and 14: lanterns on the
 floors, no page errors. `?season=none` and `?season=xmas` both give no season.
+
+## 241 — 2026-10-15 · Patch notes, and one tip
+
+**Asked:** discoverability. Watchers can't know about pep talks, the
+sweepstake, sightings, the replay or share links. Add a "what's new" link under
+the controls that opens a short pixel-styled list (newest first, about six
+items, one dry line each). It closes with Esc or a tap and shows a NEW dot
+until opened (localStorage, try/catch). Keep the data static and in one place.
+Also a one-time, dismissible first-visit hint: "Tip: tap an agent."
+
+**Changed:**
+- **`public/agents/news.js`** (web-only). `NEWS` is the one list: one `{ id,
+  text }` per feature, newest first, so a feature adds one line. It also holds
+  the `unseen`/`markSeen` and `tipDue`/`tipDone` helpers and `mount`.
+- **The link.** A "what's new" link sits under the controls, outside `#stage`
+  so it doesn't push the game below the fold on phones; it is 44 px tall on
+  touch screens. The NEW dot shows while the stored id isn't the newest one,
+  so adding a line lights it again.
+- **The panel.** A "PATCH NOTES" dialog in the page's own panel style.
+  Clicking or tapping anywhere closes it. Escape closes it too, and is caught
+  before the game's own keys hear it.
+- **The tip.** It shows on the board on the first visit and goes on its own
+  tap or the first tap on the board. Tapping the tip doesn't pause the game or
+  count as a pick.
+- **Without storage,** the dot and the tip simply show again next time.
+
+Seven lines: Halloween, instant replay, sweepstake, sightings, copy link, pep
+talks, rubber duck.
+
+**Measured:** `test/news.test.js` covers the data shape and order, the dot's
+memory (including a new line relighting it), the tip showing once, and broken
+or missing storage. Headless at 1280×900 and 390×844: the tip and the dot show
+on the first visit, a tap on the tip hides it without pausing, the panel opens
+with 7 lines, Esc closes it, the dot clears, and after a reload neither comes
+back. No page errors. `npm run phone` is fine in all three views.

@@ -10,7 +10,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-	<meta name="build" content="05a6ae05">
+	<meta name="build" content="f279cc1a">
 	<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%237aa2f7' d='M2 11h4V7h4V3h4v4h-4v4H6v4H2z'/%3E%3C/svg%3E">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -111,6 +111,34 @@
 			box-shadow: 0 2px var(--muted); opacity: 0; transition: opacity 200ms; pointer-events: none;
 		}
 		#toast.on { opacity: 1; }
+		#tip {
+			position: absolute; left: 50%; top: 12%; z-index: 3; transform: translateX(-50%);
+			padding: 6px 10px; font-size: 10px; letter-spacing: 0.08em; cursor: pointer; white-space: nowrap;
+			background: var(--ink); color: var(--fg); border: 1px solid var(--accent); box-shadow: 0 2px var(--muted);
+		}
+		#tip[hidden], #news[hidden] { display: none; }
+		.news-row { width: var(--board-w); max-width: 100%; display: flex; justify-content: flex-end; margin-top: -10px; }
+		.linkish {
+			font: inherit; font-size: 10px; letter-spacing: 0.08em; color: var(--dim); background: none;
+			border: 0; padding: 4px 0; cursor: pointer; text-decoration: underline dotted; position: relative;
+		}
+		.linkish:hover, .linkish:focus-visible { color: var(--fg); }
+		#news-open .dot { display: none; width: 6px; height: 6px; margin-left: 6px; vertical-align: 2px; background: var(--signal); box-shadow: 0 0 0 1px var(--ink); }
+		#news-open.new .dot { display: inline-block; }
+		#news {
+			position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+			padding: 16px; background: rgba(0, 0, 0, 0.6); cursor: pointer;
+		}
+		.news-card {
+			max-width: 520px; width: 100%; box-sizing: border-box; padding: 16px 18px;
+			background: var(--panel); color: var(--fg); border: 2px solid var(--accent);
+			box-shadow: 0 0 0 2px var(--ink), 0 6px 0 2px var(--muted); image-rendering: pixelated;
+		}
+		#news-title { font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: var(--signal); margin-bottom: 10px; }
+		.news-card ol { margin: 0; padding: 0; list-style: none; font-size: 11px; line-height: 1.5; }
+		.news-card li { padding: 5px 0; border-top: 1px dashed var(--edge); }
+		.news-card li::before { content: "> "; color: var(--accent); }
+		.news-close { margin-top: 10px; font-size: 9px; letter-spacing: 0.1em; color: var(--dim); text-align: right; }
 		#overlay-title { font-size: 16px; font-weight: 700; letter-spacing: 0.08em; }
 		#overlay-line { max-width: 560px; font-size: 12px; line-height: 1.45; color: #fff; opacity: 0.78; }
 
@@ -232,7 +260,7 @@
 			#stage { width: calc(100% + 24px); overflow-x: clip; }
 			.hud, #toolbar, .controls { max-width: calc(100% - 24px); }
 		}
-		@media (pointer: coarse) { .ctl { min-height: 44px; } .theme { min-height: 36px; } }
+		@media (pointer: coarse) { .ctl { min-height: 44px; } .theme { min-height: 36px; } .linkish { min-height: 44px; } }
 		/* No double-tap zoom on the board (a tap pauses) or the controls. */
 		#board, .ctl, .theme { touch-action: manipulation; }
 		/* A phone on its side has 390px of height: the title and blurb alone
@@ -296,6 +324,7 @@
 			<canvas id="terrain"></canvas>
 			<canvas id="actors"></canvas>
 			<div id="toast" role="status" aria-live="polite"></div>
+			<div id="tip" hidden>Tip: tap an agent. <span aria-hidden="true">&times;</span></div>
 			<div id="overlay" style="display: none">
 				<div id="overlay-title">PAUSED</div>
 				<div id="overlay-line">Space or click to resume</div>
@@ -328,6 +357,15 @@
 
 	</div>
 
+	<div class="news-row"><button id="news-open" class="linkish" aria-haspopup="dialog">what's new<span class="dot" aria-label="new"></span></button></div>
+	<div id="news" role="dialog" aria-modal="true" aria-labelledby="news-title" hidden>
+		<div class="news-card">
+			<div id="news-title">PATCH NOTES</div>
+			<ol></ol>
+			<div class="news-close">tap or esc to close</div>
+		</div>
+	</div>
+
 	<div id="themes" role="group" aria-label="Colour theme"></div>
 
 	<div class="audio">
@@ -350,6 +388,7 @@
 	<script src="agents/share.js?v=60eef852"></script>
 	<script src="agents/sfx.js?v=91c16a65"></script>
 	<script src="agents/season.js?v=224b8c0d"></script>
+	<script src="agents/news.js?v=b0ce6a95"></script>
 	<script src="agents/web.js?v=67f47775"></script>
 
 </body>
