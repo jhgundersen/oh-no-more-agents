@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [14, 33, 52, 71], layers = [D.drawPostalHall, D.drawPostalCycle]
+const levels = [14, 34, 54, 74], layers = [D.drawPostalHall, D.drawPostalCycle]
 const MAX_CALLS = 20000
 function sample(level = 14, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -179,7 +179,7 @@ test("RETURN TO SENDER bin appears whole or is omitted, never clipped through te
 })
 
 test("postal scenery precedes original terrain and live paper precedes tubes, umbrellas and exit", () => {
-  const { w, pal } = sample(33), ctx = canvas(800, 496).ctx
+  const { w, pal } = sample(34), ctx = canvas(800, 496).ctx
   let serial = 0, marks = {}
   ctx.fillRect = () => {
     assert.ok(++serial <= 100000, "bounded complete pass")
@@ -225,7 +225,7 @@ test("postal scenery preserves opaque face, shirt, eye and umbrella pixels in al
 
 test("original Mail Room letters, tubes, props, pits, hazards and exit retain bytes", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "94047997b18a0835def27944b21a3705c78f5f2768356e40b48d793b36db6e5e"], [[2], "32679374231d4450de20e7832e670dbc760337aaa8d4331f2952ebd65db29677"]
+    [[undefined, 1], "6d20129da63d5f8265b3ff6adc35e82df734064adf41cec5bcfb5ac1c9d56a58"], [[2], "c875d722a25d12827233462a7266655779a28202199802940a9c557dab0f67e8"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)
@@ -245,7 +245,7 @@ test("original Mail Room letters, tubes, props, pits, hazards and exit retain by
 
 test("Dead Letter Queue and Backlog still edit terrain without relocating the sorting office", () => {
   for (const id of ["deadletter", "backlog"]) {
-    const { w, pal } = sample(52), c = w.corridors[1], ev = S.EVENTS.find(e => e.id === id)
+    const { w, pal } = sample(54), c = w.corridors[1], ev = S.EVENTS.find(e => e.id === id)
     // A floor event needs an intact span, not the hole at the old pinned x.
     let x = c.x0 + 4
     for (; x + ev.span < c.x1 - 3; x++) {

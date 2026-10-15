@@ -7827,6 +7827,49 @@ headless check at `?season=christmas`, level 1: Santa hats on every walker,
 snow over the cave air, the exit wrapped with a bow, "AGENT 001 DELIVERED. NO
 CHIMNEY REQUIRED" on the ticker, no page errors.
 
+**Deployed** at 03:46 after 250 (name="build" content="5721422d"), gated on a
+green full check (1165 tests) and the CRAP gate. It covers 242–250: the
+Harbour art, page weight and the `dist/` ship, the aisles, the librarian, the
+test-hang fix, the voices, first impressions and Christmas. It is the first
+deploy built by `tools/ship.js`.
+
+Verified on production, read-only (every non-GET to `/api/*` failed in the
+browser, throwaway profiles):
+- **`dist/` shipped as built.** All 9 scripts serve as brotli and are
+  byte-identical to `dist/` after decoding, with no comment lines.
+  Cache-Control is `public, max-age=31536000, immutable`. The `?v=` stamps in
+  the served page match the source's `index.html`. The build agrees on the
+  page meta, `src/version.js` and `/api/stats` (5721422d). The page itself
+  differs from `dist/index.html` only by Cloudflare's injected challenge
+  script before `</body>`, which is edge-side and not ours.
+- **Version notice for open tabs.** A tab served the page as the previous
+  build (meta rewritten to f279cc1a) learned the new build from
+  `/api/stats`. When its level ended it reloaded itself into 5721422d. No
+  console errors, no page errors.
+- **Sweepstake and replay** (desktop 1280×900 and phone 390×844 with touch,
+  `?level=5&seed=111`):
+  - Sweepstake: the pick was recorded on both, and both cards say "YOUR PICK
+    AGENT 001 CAME HOME 5TH · CALLED 0 OF 1".
+  - Replay: on the desktop it played on level 9 (an AGI moment). On the phone
+    none of the levels in the 150 s window had a moment worth replaying, so
+    there was none, which is the designed behaviour.
+- **Seasons:** `?season=halloween` gives lanterns, a ghost and "WENT TO THE
+  GREAT /DEV/NULL"; `?season=christmas` gives "AGENT 001 DELIVERED. NO CHIMNEY
+  REQUIRED".
+- **Patch notes:** the tip, the dot, 8 lines and Esc all work at both sizes.
+
+**Load time on production** (`npm run loadtime -- --runs 3`), before (f279cc1a) → after:
+
+| | Before | After |
+|---|---|---|
+| Total on the wire | 390 KB | 250 KB |
+| Draw.js on the wire | 198 KB | 146 KB |
+| Sim.js on the wire | 149 KB | 73 KB |
+| Fast 3G first frame | 3.8 s | 3.0 s |
+| Fast 4G first frame | 1.0 s | 0.86 s |
+
+Still no long tasks.
+
 ## 251 — 2026-10-15 · Give the gags whole pixels (on a branch)
 
 **Brief:** art for the recent gameplay gags at native 1× and page res 2, on
@@ -7920,6 +7963,8 @@ merged main. No temporary browsers remain.
 **Next:** ready for gag-art review. Commit on `codex/gag-art` only; no push,
 deployment or sibling sync.
 
+Reviewed and merged by the loop (with `npm run compare`). The mirage EXIT is crisp, the 429 bubble says AFTER YOU, the standup has a kanban board, the conflict and pep bubbles are drawn in whole pixels, and the Halloween pieces are tidied. `tools/phone.js` conflicted with 247: the branch's harness already settles every CDP command (a timeout counted in active time, and a rejection when the socket closes) and adds a memory-capped Chromium launch under the test runner's address-space cap. The merge keeps the branch's version, with 247's `CMD_TIMEOUT` constant naming its 10 s timeout. 247's per-test and global timeouts stay as they were. `season.js` keeps Christmas (250) alongside the branch's Halloween changes. Standup bubbles on a 390 px phone (headless, 4 speakers): none is clipped. They are clamped 4 px inside the board, though, and the board overhangs the screen by 5 px a side there, so `STANDUP_EDGE` is now 8.
+
 ## 252 — 2026-10-15 · A shared link with an umbrella (on a branch)
 
 **Brief:** a 1200×630 social preview from our own renderer, numbered PNGs,
@@ -7991,7 +8036,70 @@ full runs and pauses only our own Node/browser tree when another starts.
 **Next:** ready for shared-link art review. Commit on `codex/share-art` only;
 no push, deployment or sibling sync.
 
-## 253 — 2026-10-15 · Snow on the ledges (on a branch)
+Reviewed and merged by the loop. A 1200×630 share card, og and twitter tags, umbrella favicons (16, 32 and a 180 px apple-touch icon) and `_headers` for them. `index.html` conflicted on the build stamp and the old SVG favicon; the merge keeps the build line and the branch's icon links.
+
+## 253 — 2026-10-15 · Level 2: through the floor, not back round
+
+**Asked:** level 2's dead time from the first-impressions list. Pacing matters
+most in the first levels: at normal speed a new visitor should see something
+happen within ~5 s and an agent home within ~30 s on levels 1–3, without
+making them trivial.
+
+**Measured first** (48 colonies each, normal speed, 33 ms a tick):
+
+| | Agents out | First home: median | First home: worst | Level length: median |
+|---|---|---|---|---|
+| Level 1 | 1.0 s | 12.9 s | 13.7 s | 23 s |
+| Level 2 | 1.1 s | 22.4 s | 58.5 s (7/48 over 30 s) | 61 s |
+| Level 3 | 1.0 s | 15.4 s | 18.2 s | 33 s |
+
+On level 2 several colonies also had a 35–50 s gap between homecomings.
+
+**Found:** level 2's middle floor ends at the board's edge (a skin of dirt in
+front of steel), four rows straight above the exit. Colonies that walked
+west along it reached the dead end and turned round. "Steel is the one honest
+no", or the dirt in front of it went to the last-resort rules. So they walked
+the whole level back the long way: over to the far right, down, then west
+along the bottom floor. Two walls stand there, one floor-to-ceiling and one
+with no room on top, and the bashers had all been spent upstairs.
+
+**Changed:** `wallBypassed` asks, at a dead end (`deadEndAt`: steel at the
+wall or one cell behind it) with the exit below and within a short walk (10
+cells) and a corridor underneath (`deadEndOverHome`), for the ordinary
+`startDescent`: a mine or a dig, paid through `spend` so a hoarder keeps its
+thrift. If that can't happen it turns as before.
+
+**What it cost to get right:**
+- `startDescent` pays as `pay(w, skill)`. Handing it `spend(w, ag, skill)`
+  directly refused silently every time (the skill landed in the agent slot),
+  so the first version measured as "no effect". It now uses a wrapper.
+- A reach of 16 cells cost level 120 (Ice Cave) 13 home: it dug at its right
+  edge 11 cells from the exit. 10 keeps level 2 and leaves level 120 alone.
+- I also tried treating walls nothing gets over (floor-to-ceiling, or no room
+  on top) as reason enough for an immediate mine. It cost 39 home, mostly on
+  level 63, and is not shipped.
+
+**After (level 2, 48 colonies):**
+
+| | Before | After |
+|---|---|---|
+| First home, median | 22.4 s | 20.6 s |
+| First home, worst | 58.5 s | 24.1 s |
+| Colonies over 30 s to the first home | 7 | 0 |
+| Level length, median | 61 s | 43 s |
+
+Levels 1 and 3 are unchanged.
+
+Playtest 1-150 × 24 against 246: 51450 → 51446. Level 2 is 303 → 299 and
+everything else is within ±3. The cost: 5 of 24 level-2 colonies now end on
+the stall cutoff, a last agent who walked the other way along the middle
+floor, climbed off to the right and was left behind (a 20 s tail).
+`test/stragglers.test.js` covers digging through at the dead end and turning
+when home is a long walk away; it fails without the fix.
+
+**Next:** that level-2 straggler, then the rest of the first-impressions list.
+
+## 254 — 2026-10-15 · Snow on the ledges (on a branch)
 
 **Brief:** finish the developer's Christmas dressing (`adb2323`) at native 1×
 and page res 2, keeping all nineteen biomes readable. `codex/christmas-art`
@@ -8077,7 +8185,212 @@ Outcome and share assets remain unchanged. No temporary browsers remain.
 **Next:** ready for Christmas art review. Commit on `codex/christmas-art` only;
 no push, deployment or sibling sync.
 
-## 254 — 2026-10-15 · The cast gets its kit (on a branch)
+Reviewed and merged by the loop. Crisp Santa hats, ribbon-wrapped exits, snow settling on ledges, and candy canopies in all 19 biomes. The branch had rebased the gag and share art onto 250; `main` already had both (with the loop's own conflict resolutions), so the merge takes the branch's `Draw.js` and `season.js`, re-applies `STANDUP_EDGE` from the gag-art merge, and keeps `main`'s `tools/phone.js` (`CMD_TIMEOUT`).
+
+## 255 — 2026-10-15 · The last ones out don't climb away
+
+**Asked:** (from 253) level 2's leftover dead time. In 5 of 24 colonies the
+last agent was left on the stall cutoff with a 20 s tail.
+
+**Found:** that agent had landed on the middle floor facing away from the
+dug-through hole by the exit. It walked east, climbed the wall at the end of
+the floor, then the next one, and ended on the top floor until the cutoff.
+Every tool it spent took it further from a home below and behind it.
+
+**Changed:** `wallTools` spends nothing for the last ones out (`lastOut`)
+when home is below and they aren't facing it (`walkingOffHome`). The wall
+turns them the ordinary way. Facing home, or with the colony still coming,
+the old rules stand.
+
+**Measured:**
+- **Level 2** (48 colonies): median length 42.6 → 37.6 s; colonies ending on
+  a straggler's 20 s tail 5 → 1. First home unchanged (median 20.6 s, worst
+  24.1 s).
+- **Playtest 1-150 × 24** against 253: 51446 → 51450, bad endings 33 → 31,
+  no level moved by 3 or more.
+
+`test/stragglers.test.js` covers it.
+
+## 256 — 2026-10-15 · No empty sightings strip
+
+**Asked:** next from the first-impressions list (249).
+
+**Changed:** the report card shows the sightings strip only once this browser
+has seen at least one. On a first visit's first card, "0/7 SIGHTINGS" and
+seven grey icons said nothing; the strip appears with the first sighting,
+which is gold and named. `test/sightings.test.js` covers it.
+
+## 257 — 2026-10-15 · The ticker clear of a phone's edge
+
+**Asked:** next from the first-impressions list (249).
+
+**Changed:** the ticker's plate starts `STANDUP_EDGE` (8 px) in from the
+board's left, instead of 4. On a 390 px phone the board overhangs the screen
+by 5 px a side, so the ticker sat flush against the glass. Now it has the same
+margin as the standup bubbles (251). The longest ticker lines (about 60
+characters, 250 px with the plate) still fit the 400 px board.
+
+## 258 — 2026-10-15 · A tighter blurb on phones
+
+**Asked:** the last item on the first-impressions list (249).
+
+**Changed:** at 599 px wide and below, the intro blurb is 10 px with 1.55
+line height (was 11 px and 1.8). On a 390×844 phone (`npm run phone`) the
+board's top moves from 244 to 223 px and its bottom from 492 to 471. It stays
+five lines and readable. A correction to 249: the board was always entirely on
+the first screen. "Halfway down" was my reading of a 2× screenshot; the board
+starts about a quarter of the way down.
+
+**The first-impressions list is done:**
+- 249: the tip leaves after its first level; no duplicate hint; "1 level".
+- 253 and 255: level 2's dead time.
+- 256: no empty sightings strip.
+- 257: the ticker clears a phone's edge.
+- 258: this.
+
+## 259 — 2026-10-15 · Two page tests that only failed under load
+
+**Asked:** standing order: when dev tooling is slow or flaky, fix it.
+
+**Found:** the gate for 258 went red once. The standup and sweepstake page
+tests failed in the full parallel run and passed alone. Both slept a fixed
+200–400 ms for the page to move on (a level advancing, a tally written) and
+then asserted; under the full run's load the page sometimes hadn't got there.
+
+**Changed:** those waits now poll, up to 4–5 s, for the thing they assert. The
+sweepstake test also retries its click on a moving agent up to 12 times (was
+6). No assertion changed. Two consecutive full checks after the change are
+green.
+
+## 260 — 2026-10-15 · Back to the gap
+
+**Asked:** (from 253) level 2's dead time, rechecked. The first look was run
+again at both sizes, recording the colony seed this time.
+
+**Found:** the phone's level 2 (seed 1189176747) sat at 12/13 for 25 s. The
+last agent laid a mine at the bottom floor's wall (the one with no room on
+top) as the last-out rule says. Planting turns an agent away from its charge,
+but nothing turned it back, so it walked 75 cells to the far end of the floor
+and 75 back.
+
+**Changed:** `plantMine` notes when and which way to come back. Walking,
+`MINE_COMEBACK` (60) ticks after planting, the agent turns back towards the
+gap (`comeBackToMine`). By then it is well outside the blast radius, and its
+walk back lands after the 90-tick fuse.
+
+**Measured:**
+- That phone colony's level 2: 1751 → 913 ticks, all 13 home.
+- Level 2 (48 colonies): median length 37.6 → 30.0 s, first home unchanged.
+- Playtest 1-150 × 24 against 255: 51450 → 51468 home, bad endings 31 → 20,
+  mean level length 1164 → 1155 ticks. Level 136 228 → 240; level 115
+  397 → 389.
+
+`test/stragglers.test.js` checks it steps away, comes back from outside the
+blast, and arrives after the bang.
+
+**Level 2 overall today:**
+
+| | Before 253 | After 260 |
+|---|---|---|
+| Worst first home | 58.5 s | 24 s |
+| Median level length | 61 s | 30 s |
+
+## 261 — 2026-10-15 · Accessibility pass
+
+**Asked:**
+- **(a) Keyboard:** every control reachable by Tab in a sensible order, a
+  visible focus ring in the page's style, Esc closes panels, no traps.
+- **(b) Screen readers:** a polite live region announcing level starts and the
+  report summary, buttons with proper names and pressed states, a short label
+  on the canvas, nothing chatty per frame.
+- **(c) Reduced motion:** confirm the outage, confetti, replay, standup, any
+  screen shake and snow have gentle variants.
+- **(d) Contrast:** page UI text at least 4.5:1 against its background in
+  every theme.
+
+Add tests where practical.
+
+**(a) Keyboard.** Audited headless by pressing Tab 45 times. The order follows
+the page: pause, prev, next, restart, speed, who, fullscreen, sfx, copy link,
+what's new, the nine themes, the soundtrack and its seven tracks, the source
+link, then back round with no trap. Every stop shows the page's 2 px solid
+focus ring. Esc already closed the patch notes and faux fullscreen. **Fixed:**
+Space on a focused button paused the game instead of pressing the button, so
+"next level" by keyboard paused. Space and Enter on a focused control now
+belong to the control; elsewhere Space still pauses.
+
+**(b) Screen readers.**
+- **Announcements.** A visually hidden `#announce` (`aria-live="polite"`,
+  atomic) says "Level 3, Frost. 16 agents." when a level starts and "Level 4
+  report: 18 of 18 home." (plus ", N lost.") when it ends. That's twice a
+  level and never per frame.
+- **The board.** The terrain canvas is `role="img"` with a short name that
+  says levels and results are announced; the actors canvas is `aria-hidden`.
+  The board's container stays an ordinary element, so the toast and tip
+  inside it are still read.
+- **Toggles.** Agent names, fullscreen, sound effects, the soundtrack
+  play/pause, the themes and the tracks carry `aria-pressed`, kept in step
+  wherever their state changes. The toggles have stable names ("Agent names",
+  "Fullscreen", "Sound effects"); the track buttons are named "Soundtrack N".
+
+**(c) Reduced motion,** checked in the code. `w.reducedMotion` comes from the
+media query and reaches the replay's re-simulation as well.
+- **Gentle versions already exist:** the outage (no flicker, lower dim, no
+  wave), the confetti (static positions, no sparkle), the replay tag's blink,
+  the 429 sign, the rubber duck's bob, ghosts (no rise), snow (still), and
+  lanterns and umbrellas (no flicker or sway).
+- **Standup:** speakers only idle in place, with no camera move.
+- **No screen shake:** the only "shake" is a 1 px umbrella twitch when it
+  parries.
+- **CSS:** all animations and transitions are off under the media query.
+
+**(d) Contrast.** New `tools/contrast.js` runs in the page and measures each
+visible element with its own text against its effective background (layered
+backgrounds, colour-mix values, own opacity). Every one of the nine themes
+passes. The lowest are nord at 4.64:1 and everforest at 4.84:1; hackerman is
+10.47:1.
+
+**Tests:** `test/a11y.test.js`, in Chromium with prefers-reduced-motion
+emulated:
+- the level and report announcements;
+- the canvas name and the hidden actors layer;
+- reduced motion reaching the world;
+- `aria-pressed` on a toggle and on exactly one theme;
+- Space on a focused "next level" moving on without pausing;
+- every theme at least 4.5:1.
+
+**Deployed** at 04:46 after 261 (name="build" content="ba69eb43"), gated on a
+green full check (1196 tests). It covers 251–261: the gag art, the share card
+and favicons, level 2's pacing (253, 255, 260), the Christmas art, the
+first-impressions fixes (256–258), the page-test polling fix and the
+accessibility pass.
+
+Verified on production:
+- **`dist/`:** all scripts are brotli, byte-identical to `dist/`, with no
+  comment lines. The build agrees on page, repo and API (ba69eb43), and the
+  stamps match the source.
+- **Open tab:** a tab served as the previous build (5721422d) reloaded itself
+  into ba69eb43. No console or page errors.
+- **Share card and icons:** `/share-1.png`, `/favicon-1-16.png`,
+  `/favicon-1-32.png` and `/apple-touch-icon-1.png` are 200, `image/png`,
+  `public, max-age=31536000, immutable`, and byte-identical to `dist/`.
+  `og:image` points at `https://oh-no-more-agents.com/share-1.png`.
+- **Accessibility:** "Level 3, Frost. 16 agents." announced; Space on a
+  focused "next level" moves on without pausing; Enter on "who" sets
+  `aria-pressed`; one theme pressed; "Level 4 report: 18 of 18 home."
+  announced.
+
+**Not read-only, and it should have been:** the accessibility check ran a
+scratch script that finished a level on production (level 4, 18 home) without
+blocking the counter's POSTs. That probably added 18 rescues to the worldwide
+counter that nobody watched. It's the same mistake as the early production
+check that finished levels by hand. The scratch scripts that lacked the block
+now have it (a11y, a11y-prod, first look, news), and a standing note says any
+production script must fail every non-GET `/api/*` request before it leaves.
+The counter is not corrected: there's no endpoint for that, and the API rules
+say nothing may change its bounds.
+
+## 262 — 2026-10-15 · The cast gets its kit (on a branch)
 
 Page-resolution art on `codex/cast-art`, from approved `codex/christmas-art`
 (`4d9f727`). The red team gets squared oxblood service jackets, pale chevrons,
@@ -8158,7 +8471,279 @@ changes slipped in.
 **Next:** ready for cast art review. Commit on `codex/cast-art` only; no push,
 deployment or sibling sync.
 
-## 255 — 2026-10-15 · The colony finds its stride (on a branch)
+Reviewed and merged by the loop. The red team, Moderator, Bouncer, Backup and Cloud Provider have clearer silhouettes and tells at page resolution; resolution 1 is unchanged.
+
+## 263 — 2026-10-15 · The Cloud
+
+**Asked:** a twentieth biome, The Cloud, "the one place where umbrellas are the
+point":
+- platforms that are drifting cloud banks;
+- constant rain;
+- telegraphed lightning (flash and rumble, scorches a cell; umbrellas don't
+  protect);
+- updrafts that lift floaters;
+- an ON-PREM exit door;
+- agent puns on the ticker.
+
+Appended to the end of `BIOMES`, as AGENTS.md requires. Sim, plain art,
+palette, tests and a play-test across its levels, never a soft-lock. Page-res
+art is left to Codex.
+
+**Re-skin (read this first):** biomes are picked by level number, so with 20
+of them every level from 20 up is now a different biome than before. Level 20
+is The Cloud, level 21 a Cavern again, and so on, and every old share link to
+a level above 19 opens a different-looking level with a different colony
+outcome. Levels 1–19 are unchanged. `Palette.js`'s `poolTint`/`biomeTint` rule
+moves from `% 19` to `% 20` in the same commit, and AGENTS.md's note says
+`% 20` now.
+
+**Changed (Sim):**
+- **The biome.** `BIOMES` gains "The Cloud" at the end. Its mission is "BRING
+  THE SYSADMINS ON-PREM" (2 civilians), and it has three events: Region Outage
+  (blackout), Eventual Consistency (growth), Scale to Zero (floor collapse).
+- **`skinCloud`.** Banks are DIRT with a ROCK core where thick. Shape is left
+  exactly as generated (rounder banks are drawing's business), so every route
+  stays proven.
+- **`cloudLining`.** The Cloud's mechanism lays ORE on every exposed top once
+  the level is final (the silver lining). Material only.
+- **Updrafts.** Columns at a fixed pitch (17, offset by level) with
+  `w.updraftLift`. In them a floater falls at half umbrella speed
+  (`CLOUD_LIFT`); anyone without one gets nothing. The Data Center's updraft,
+  which carries everyone, is unchanged.
+- **Lightning.** "Flash Storage", a ceiling cycle hazard: a 46-tick visible
+  wind-up, a 6-tick strike, a 170-tick rest. It's marked `weather`, so it
+  comes on top of the level's ordinary hazard, as the Trench current does, on
+  85% of Cloud levels. Nothing in the hazard rules lets an umbrella parry a
+  cycle: umbrellas are not lightning rods.
+- **Ticker** (`stepCloud`, once a level each): "YOUR FILES ARE IN THE CLOUD. SO
+  IS AGENT 012." for the first one lost, and "AGENT 003 HAS GONE SERVERLESS"
+  for the first floater an updraft holds up.
+- **The hole** at the bottom is dry: just more sky.
+
+**Changed (plain art, Draw and Palette):**
+- `backCloud`: rows of distant rounded banks.
+- Rain: the Rooftops' rain motes, denser.
+- `drawExitCloud`: a grey door with rack lights and an "ON-PREM" sign.
+- `drawHzLightning`: the thundercloud darkens and crackles faster through the
+  wind-up; the strike is a white flash and a zigzag bolt; a scorch mark fades
+  after.
+- The updraft columns use the existing `drawUpdrafts`.
+- Palette: a cloud tint (case 19), pale and blue.
+
+Page-resolution art falls back to the plain art for Codex to replace.
+
+**Measured:**
+- **The Cloud** (7 levels × 48 colonies, levels 20–140): 95% home, no hangs,
+  no stall endings or clock-outs. Level 20 is the hardest at 83%, level 100
+  at 88%.
+- **All 150 levels × 24:** 95.75% → 94.33% home and bad endings 20 → 45,
+  because of the re-skin, not the Cloud: the Cloud's own levels are at 94.2%,
+  mid-pack. The new trouble spots are re-skinned levels:
+  - 109, now a Skyscraper: its hero is left last at a sealed wall with no
+    tools; heroes are barred from the toolbar (15/24 stall endings, 6
+    clock-outs);
+  - 101, now a Cavern mission level: nobody home in 3/24, fixed in 264;
+  - 45: 2 clock-outs.
+
+`test/cloud.test.js` covers:
+- the biome's place and that levels 1–19 keep theirs;
+- the lining and updraft columns;
+- an updraft holding up a floater and nobody else;
+- lightning winding up, striking and killing a floater under it;
+- both ticker lines;
+- drawing at both resolutions;
+- the tint (level 21 a Cavern again).
+
+**What re-skinning cost the tests.** About 80 failures across 29 files, all
+from level numbers that meant a biome under `% 19`:
+- **Pinned levels.** Levels pinned in `generate(N)`, `level: N`, `sample(N)`
+  and per-biome level arrays were mapped to the same biome's same occurrence
+  under `% 20`.
+- **Stored digests.** 38 stored render digests of those levels were
+  re-baselined from the new output. No existing biome's drawing code changed;
+  only The Cloud's paths and the rain branch were added.
+- **Tests that needed a particular layout** got a new level by search: a
+  Jungle level with a red-team hatch (5), a Library level where Deprecation
+  Notice and Reindexing still cut terrain (33), a Foundry level with a guard
+  on screen at page resolution (84), and a Cavern sniper that reaches its post
+  (by predicate).
+- **The rate-limit page test** plays levels 1–50 (was 1–30) to meet a queue.
+- **Fixed rather than re-baselined:** the ship test now expects
+  `BIOMES.length` biomes.
+- **Lightning's drawing** follows the rules every fixture keeps: still a
+  little alive at idle (the thundercloud drifts a cell), and its scorch fits
+  the shared recovery window.
+- **The Cloud's exit** got a minimal page-resolution pass so every biome has
+  one; the real one is Codex's.
+- **The event-duration mirror** knows Region Outage (300 ticks).
+
+## 264 — 2026-10-15 · Descoping a mission nobody can reach
+
+**Asked:** (from 263) level 101, re-skinned to a Cavern mission level, had
+nobody home in 3 of 24 colonies.
+
+**Found:** the mission's miners sit beyond two walls that hang to within two
+rows of the floor, and the colony had spent its bashers upstairs. Nobody
+could reach the miners, so the door stayed shut. The colony arrived at it and
+paced between the door and a wall. The loop rule took that for a loop and
+blew them up one at a time, all fifteen, by about tick 1470.
+
+**Changed:**
+- **Descope.** Once anybody has reached the shut door, the mission gets
+  `MISSION_PATIENCE` (450 ticks). If nobody has made any progress on it by
+  then, it's descoped (`descopeMission`): the door opens, the cages stay
+  shut, and the ticker says "MISSION DESCOPED: FREE THE MINERS MOVED TO NEXT
+  SPRINT".
+- **No condemning.** An agent that has found the door shut is not condemned
+  as a looper while the mission is untouched. The descope guarantees the door
+  opens, so waiting can't hang the level.
+
+**Measured:**
+- **Level 101:** colonies that lost all 15 now get 12–14 home.
+- **Playtest 1-150 × 24 with The Cloud:** home 94.33% → 94.50%, nobody-home
+  runs 3 → 0. Level 101 239 → 307, level 51 360 → 382, no level worse by 5 or
+  more.
+
+The rule applies to every mission level, not just re-skinned ones.
+`test/stragglers.test.js` covers it: a colony meets the unreachable mission,
+it gets descoped, agents still get home, the cages stay shut, and a waiting
+agent isn't condemned. The test fails without the change.
+
+## 265 — 2026-10-15 · Banks that read as cloud
+
+**Asked (supervisor, from level 20, seed 3, res 2, tick 500):** the ON-PREM
+door and the rain read, but the walkable terrain looks like ordinary grey
+stone slabs. At resolution 1 the platforms should read as cloud banks:
+- a puffy, scalloped top edge;
+- a lighter sunlit top and a darker damp underside;
+- slightly soft, dithered edges.
+
+Terrain drawing only, no sim change. And give the biome a palette with some
+sky colour in it (dusky blue/lilac) so it doesn't look unfinished.
+
+**Changed:**
+- **`drawCloudBanks`** paints over the ordinary materials on Cloud levels,
+  shading each solid cell by depth: sunlit (`dirtEdge`) where air is just
+  above, lit (`decorLit`) one row down, then the pale body (`dirt`) with soft
+  horizontal wisps, and damp (`dirtShade`) where air is just below.
+- **Crowns** (`drawCloudCrown`): every 4 cells a round crown three pixels
+  high, spanning two cells and easing in at the shoulders, rises into the air
+  above the walking line.
+- **Undersides** (`drawCloudUnderside`) hang in shallow darker scallops, with
+  the bottom row dithered. The sides are dithered too, so no edge is a slab.
+- **Palette:** the Cloud tint moves from near-white to dusk, a pale lilac
+  (`CLOUD` 0.78/0.74/0.96) pulled from the theme's accent. Sky, back wall and
+  banks now share an evening colour instead of one flat grey.
+
+Draw and Palette only; the cells are the same cells. Page resolution draws the
+same pass until Codex's art replaces it.
+
+## 266 — 2026-10-15 · Levels 1–200 after the re-skin; level 109's hero
+
+**Asked:** since levels from 20 up re-skinned, play-test levels 1–200 and fix
+the new regressions. The Cloud especially: lightning near the door, updrafts
+carrying non-floaters, banks that thin under a blocker.
+
+**Measured** (1–200 × 24, 4800 runs): 94.35% home, no hangs, no nobody-home
+runs, 56 bad endings.
+- **The Cloud's levels:** 92.6% home, 2 bad endings.
+- **Lightning:** never near the door. Over the ten Cloud levels up to 200 its
+  nearest is 10 cells from the exit on another floor.
+- **Updrafts:** carry only floaters, covered by `test/cloud.test.js`.
+- **Banks:** don't thin; that part of the brief wasn't built, so it can't
+  strand anyone.
+- **Worst by far:** level 109 (a Skyscraper since the Cloud), with 21 bad
+  endings out of 24.
+
+**Found:** level 109 gives no miners or diggers, and its bashers are spent
+before the hero reaches the exit floor. That floor has a six-thick wall
+between the left-hand lift and the door. The colony gets round by the
+right-hand lift; the hero takes the left one, gets to the wall last out and
+can't pass. Heroes are barred from the toolbar except through
+`borrowWallTools`, and nothing borrowable was left.
+
+**Changed:** `borrowWallTools` (a last-out hero facing home) now falls back to
+`bomberAsMine`. The colony's bombers are no use to anyone by then, so one is
+laid as a mine, not worn. A tower's floor is steel, so the charge goes into
+the foot of the wall when it can't go into the floor. The usual rules still
+apply: within mine reach, no other charge nearby, the mine cooldown.
+
+**Measured:** level 109 251 → 274 home of 288. 1–200 × 24: 68109 → 68131 home
+and bad endings 56 → 41; no other level moved by 3 or more.
+`test/stragglers.test.js` covers it; the test fails without the change.
+
+## 267 — 2026-10-15 · Lightning you can see coming, and name
+
+**Asked:** check that a lightning strike is readable: a visible wind-up about
+a second before (flicker or glow at the strike column), and a death cause or
+ticker line that names it.
+
+**Found:** the wind-up already darkened the thundercloud and crackled faster,
+over 46 ticks (1.5 s at normal speed), but nothing marked the column the bolt
+would come down. A lightning death had no line of its own: the Cloud's first
+loss read "YOUR FILES ARE IN THE CLOUD. SO IS AGENT 012." whatever the cause.
+
+**Changed:**
+- **Glow.** In the last second of the wind-up (progress over 0.35, about 30
+  ticks), the strike column itself glows, faint and brightening, in the
+  bolt's colour. It's the same at both resolutions, and steady, so reduced
+  motion keeps it.
+- **Cause.** A lightning kill records `ag.killedBy = "lightning"`.
+- **Ticker.** The first strike each level says "STRUCK BY LIGHTNING: AGENT
+  012. UMBRELLAS ARE NOT LIGHTNING RODS."; later ones say "AGENT 012 · STRUCK
+  BY LIGHTNING". The files-in-the-cloud line is kept for losses of any other
+  kind.
+
+**Tests:** in `test/cloud.test.js`, a strike on a floater gives the named
+first line and the cause, and there's no glow early in the wind-up but there
+is in its last second. The test fails without the change. The sim is
+unchanged apart from the cause field and the ticker line.
+
+## 268 — 2026-10-15 · A shared lock for heavy test runs
+
+**Asked (supervisor):** my coverage runs kept interrupting Codex's final
+checks. Build a shared test lock: a small `tools/testlock.js`, a lock file in
+the repo's common git dir so both worktrees see it, recording owner, PID and
+start time, with stale-PID cleanup and a FIFO queue, wrapped around
+`npm run check`, coverage and crap so the two worktrees take turns.
+
+**Changed:** `tools/testlock.js`.
+- **Where.** `<git common dir>/testlock/`, which the main worktree and Codex's
+  share.
+- **The lock.** `lock` records owner (worktree), pid, host, command and start
+  time. It is created with O_EXCL, so of everyone who sees it free, exactly one
+  wins.
+- **The queue.** `queue/` holds one ticket per waiter, named by arrival time;
+  only the first ticket may take the lock.
+- **Heartbeats.** Holder and waiters touch their file every 5 s. A file nobody
+  has touched for 90 s, or whose pid is gone on this host, is a crashed run
+  and is cleared.
+- **Waiting.** A waiter says every 30 s whom it is waiting for.
+- **Interrupts.** Ctrl-C or SIGTERM releases.
+- **Nesting.** A run started inside a locked run (crap runs coverage, check
+  runs `npm test`) passes straight through, because `TESTLOCK_HELD` is set
+  for the child.
+- **Status.** `node tools/testlock.js status` shows the holder and the queue.
+
+**Wired in:** `npm run check`, `npm test`, `npm run coverage` and
+`npm run crap` all go through the lock; the old commands are kept as
+`check:raw`, `test:raw` and `coverage:raw`. AGENTS.md says how to wrap any
+other heavy run.
+
+**Tests:** `test/testlock.test.js` covers:
+- the lock living in the git common dir;
+- FIFO order;
+- O_EXCL letting one taker win;
+- only the holder releasing;
+- dead or silent holders being cleared and live ones kept;
+- two concurrent runs from separate processes executing strictly one after
+  the other.
+
+Run as a single file, because full runs were paused for Codex's check.
+Committed on single-file tests with the supervisor's go-ahead; the full gate
+runs when full runs are allowed again.
+
+## 269 — 2026-10-15 · The colony finds its stride (on a branch)
 
 Art pass on `codex/agent-art`, based on approved `codex/cast-art` (`5b4905a`).
 Ordinary dry agents at exactly res 2 use eight gait poses, half-pixel travel

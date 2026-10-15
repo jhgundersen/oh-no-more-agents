@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [15, 34, 53, 72], layers = [D.drawWorksite, D.drawWorkDrums]
+const levels = [15, 35, 55, 75], layers = [D.drawWorksite, D.drawWorkDrums]
 const MAX_CALLS = 20000
 function sample(level = 15, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -260,7 +260,7 @@ test("worksite background preserves opaque faces, shirts, eyes and umbrellas", (
 })
 test("original Building Site ground, fixtures, cranes, pits, hazards and exit retain bytes", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "ea9e74422fc751d55c3aaae08d2c6a20cf2c825db71272db3221d311927a40d5"], [[2], "a4510513fd98275cd1032af02b9d2eedebb44bf10673cdac7a75fd420f672f14"]
+    [[undefined, 1], "eec79298331243f3fc1f36d4125c23959a1cf0289a30555d240ef9d18dfa85e3"], [[2], "a7430a15cffc503e26406311826a6d3ee6bf9f7debb9a5a359c4a1042b7c2dfb"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)

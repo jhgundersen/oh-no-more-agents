@@ -54,3 +54,13 @@ test("on the page: a finished level records its sightings in this browser; with 
     } finally { await b.close(); server.close() }
   }
 })
+
+test("no strip on the card until there is a sighting to show", () => {
+  const w = S.generate(3, 0, 5); while (!w.done) S.step(w)
+  const D2 = loadCore("Draw.js"), P2 = loadCore("Palette.js")
+  const pal = P2.build({ background: "#1a1b26", foreground: "#c0caf5", accent: "#7aa2f7", urgent: "#f7768e", muted: "#565f89" }, 3)
+  w.sightings = { seen: [], fresh: [] }
+  assert.ok(!D2.reportRows(w, pal).some(r => r.sightings), "nothing seen yet")
+  w.sightings = { seen: ["duck"], fresh: ["duck"] }
+  assert.ok(D2.reportRows(w, pal).some(r => r.sightings))
+})

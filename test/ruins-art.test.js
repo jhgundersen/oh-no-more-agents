@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [2, 21, 40]
+const levels = [2, 22, 42]
 const layers = [D.drawRuinsTemple, D.drawRuinsMasonry, D.drawRuinsTorches]
 function sample(level = 2, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -152,7 +152,7 @@ test("temple silhouettes have full-frame presence, fluted capitals, arches and b
 })
 
 test("torches precede faces, umbrellas, guards, the exit and rolling boulder", () => {
-  const { w, pal } = sample(21)
+  const { w, pal } = sample(22)
   for (let i = 0; i < 160; i++) S.step(w)
   const ag = S.spawn(w)
   Object.assign(ag, { x: 70, y: 16, state: "fall", floater: true, fall: 9 })
@@ -170,8 +170,8 @@ test("torches precede faces, umbrellas, guards, the exit and rolling boulder", (
 test("original Ruins columns, terrain, drips, decor, motes, exit and booth retain component bytes", () => {
   // Captured from main. Individual original recipes, never a whole-frame pin.
   for (const [resolutions, expected] of [
-    [[undefined, 1], "e5434cb85d8d32ec57761ea36f0f902c76b34e74034d680bed341f3770549de2"],
-    [[2], "d2ff220331f159d14d04892806fe363bbb4ae89740fed767073f9ccd41c9a214"]
+    [[undefined, 1], "09385ef3a10fd832b2b61c1ad202e75da381fe33bce96107e4ca2cd0c34adcff"],
+    [[2], "d1c601889e6cb5a284c7c1d4e54cea85a0c9ea45249b2fc803983bee86dee2b1"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)

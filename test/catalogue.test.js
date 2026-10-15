@@ -98,7 +98,14 @@ test("every hazard kind runs its whole cycle with the colony walking past", () =
 })
 
 test("an enemy sniper finds a post and takes aim", () => {
-  const level = levelWith(S, "Cavern", (w) => w.enemyRoster[0] === "sniper", 3, 200)
+  // A Cavern level whose sniper gets as far as its post (the first one dies
+  // on the way in on some layouts; which one does moves when BIOMES grows).
+  const level = levelWith(S, "Cavern", (w) => {
+    if (w.enemyRoster[0] !== "sniper") return false
+    const seen = new Set()
+    while (!w.done && w.ticks < 6000) { S.step(w); for (const e of w.enemies) if (e.kind === "sniper") seen.add(e.state) }
+    return seen.size > 1
+  }, 3, 200)
   const w = S.generate(level, 0, 3)
   let states = new Set()
   while (!w.done && w.ticks < 6000) {

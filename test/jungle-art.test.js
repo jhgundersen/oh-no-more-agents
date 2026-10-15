@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [5, 24, 43, 62]
+const levels = [5, 25, 45, 65]
 const layers = [D.drawJungleBackdrop, D.drawJungleSurfaces, D.drawJungleLife]
 function sample(level = 5, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -158,7 +158,7 @@ test("broad tropical silhouettes read without zoom, behind the original backdrop
 })
 
 test("humidity and butterflies precede colleagues, umbrellas, guards, fixtures and exit", () => {
-  const { w, pal } = sample(24)
+  const { w, pal } = sample(25)
   for (let i = 0; i < 160; i++) S.step(w)
   const ag = S.spawn(w)
   Object.assign(ag, { x: 70, y: 16, state: "fall", floater: true, fall: 9 })
@@ -175,11 +175,11 @@ test("humidity and butterflies precede colleagues, umbrellas, guards, fixtures a
 test("original Jungle back art, terrain, vines, motes, drips, exit and booth keep their bytes", () => {
   // Original component recipes captured from main; no whole-frame pins.
   for (const [resolutions, expected] of [
-    [[undefined, 1], "890376d7ce20166d504318ac5a224368c4561c6003368bba1594d4cf9bbf8f0e"],
-    [[2], "615c8a16fb89ec862c84fc9afd05c20a78c3cc19b4bf3196a3bfd161e35ffe63"]
+    [[undefined, 1], "9ed6f3539214df44f567eb28e92f56c09d23b19403718b4f1fe88167637c2b6d"],
+    [[2], "3a60f6e9d97ffc0db7e2e51d2723981d723207e625a92e7dada73b0bc67db062"]
   ]) {
     const hash = createHash("sha256")
-    for (const name of Object.keys(THEMES)) for (const level of [5, 24, 43])
+    for (const name of Object.keys(THEMES)) for (const level of [5, 25, 45])
       for (const res of resolutions) for (const ticks of [0, 77, 240]) {
         const { w, pal } = sample(level, name); w.res = res; w.ticks = ticks
         const img = canvas(400, 248, themeOf(name).background)
@@ -193,7 +193,7 @@ test("original Jungle back art, terrain, vines, motes, drips, exit and booth kee
 })
 
 test("Dependency Hell, Cloud Burst and Fork Bomb keep their sites, pools and warnings", () => {
-  const { w, pal } = sample(43), k = w.k
+  const { w, pal } = sample(45), k = w.k
   const site = { c: w.corridors[0], x: 30 }
   const fx = { mech: "growth", x: 30, span: 14, floorY: site.c.floorY, warnAt: 0, fireAt: 60, firedAt: -1 }
   w.ticks = 24
@@ -212,7 +212,7 @@ test("Dependency Hell, Cloud Burst and Fork Bomb keep their sites, pools and war
   for (let i = 0; i < 120; i++) { w.ticks++; S.stepSpill(w) }
   assert.ok(pit.surfaceY < surface)
   assert.notDeepEqual(picture(ctx => D.drawPits(ctx, w, pal)).buf, before)
-  const fork = sample(24), old = fork.w.enemies.length
+  const fork = sample(5), old = fork.w.enemies.length   // a Jungle level with a red-team hatch
   assert.ok(fork.w.enemyHatch)
   S.fireEvent(fork.w, S.EVENTS.find(e => e.id === "forkbomb"))
   assert.equal(fork.w.enemies.length, old + 2)

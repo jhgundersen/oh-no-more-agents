@@ -217,6 +217,7 @@ function drawTerrain(ctx, w, pal) {
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
 
   drawTerrainMaterials(ctx, w, pal)
+  if (w.biome === "The Cloud") drawCloudBanks(ctx, w, pal)
 
   if (w.biome === "Library") drawLibraryStacks(ctx, w, pal)
   if (w.biome === "Mail Room") drawMailSlots(ctx, w, pal)
@@ -510,7 +511,8 @@ var BACKDROPS = {
   "Foundry": backFoundry, "Jungle": backJungle, "Ice Cave": backIceCave,
   "Spaceship": backSpaceship, "Factory": backFactory, "Trench": backTrench,
   "Desert": backDesert, "Data Center": backDataCenter, "Library": backLibrary, "Mail Room": backMailRoom,
-  "Building Site": backBuildingSite, "Clock Tower": backClockTower, "Rooftops": backRooftops, "Subway": backSubway, "Harbour": backHarbour
+  "Building Site": backBuildingSite, "Clock Tower": backClockTower, "Rooftops": backRooftops, "Subway": backSubway, "Harbour": backHarbour,
+  "The Cloud": backCloud
 }
 
 function drawBackdrop(ctx, w, pal) {
@@ -777,7 +779,8 @@ var BACKDROP_FINE = {
   "Spaceship": backSpaceshipFine, "Factory": backFactoryFine,
   "Skyscraper": backSkyscraperFine, "Trench": backTrenchFine,
   "Desert": backDesertFine, "Data Center": backDataCenterFine, "Library": backLibraryFine, "Mail Room": backMailRoomFine,
-  "Building Site": backBuildingSiteFine, "Clock Tower": backClockTowerFine, "Rooftops": backRooftopsFine, "Subway": backSubwayFine, "Harbour": backHarbourFine
+  "Building Site": backBuildingSiteFine, "Clock Tower": backClockTowerFine, "Rooftops": backRooftopsFine, "Subway": backSubwayFine, "Harbour": backHarbourFine,
+  "The Cloud": backCloudFine
 }
 
 function drawBackdropFine(ctx, w, pal) {
@@ -1295,7 +1298,7 @@ function drawExitBack(ctx, w, pal) {
   drawExitFrameFine(ctx, w, pal, x, y, ww, hh)
 }
 
-var EXIT_FRAMES = { "Library": drawExitLibrary, "Data Center": drawExitDataBack, "Mail Room": drawExitMail, "Building Site": drawExitSite, "Clock Tower": drawExitClock, "Rooftops": drawExitRoof, "Subway": drawExitSubway, "Harbour": drawExitHarbour }
+var EXIT_FRAMES = { "The Cloud": drawExitCloud, "Library": drawExitLibrary, "Data Center": drawExitDataBack, "Mail Room": drawExitMail, "Building Site": drawExitSite, "Clock Tower": drawExitClock, "Rooftops": drawExitRoof, "Subway": drawExitSubway, "Harbour": drawExitHarbour }
 function drawExitFrameBase(ctx, w, pal, x, y, ww, hh, cx3) {
   switch (w.biome) {
   case "Ruins":
@@ -1449,7 +1452,8 @@ var EXIT_FINE = {
   "Data Center": drawExitDataFine,
   "Library": drawExitLibraryFine,
   "Mail Room": drawExitMailFine,
-  "Building Site": drawExitSiteFine, "Clock Tower": drawExitClockFine, "Rooftops": drawExitRoofFine, "Subway": drawExitSubwayFine, "Harbour": drawExitHarbourFine
+  "Building Site": drawExitSiteFine, "Clock Tower": drawExitClockFine, "Rooftops": drawExitRoofFine, "Subway": drawExitSubwayFine, "Harbour": drawExitHarbourFine,
+  "The Cloud": drawExitCloudFine
 }
 
 function drawExitFrameFine(ctx, w, pal, x, y, ww, hh) {
@@ -1759,6 +1763,7 @@ var AMBIENCE = {
   "Harbour": [{ n: 48, vx: -0.12, vy: -0.04, sway: 3, size: 1, col: "poolGlint", alpha: 0.35 }],
   "Subway": [{ n: 44, vx: 0.23, vy: -0.015, sway: 1, size: 1, col: "dust", alpha: 0.28 }],
   "Rooftops": [{ n: 200, vx: -0.35, vy: 1.4, sway: 0, size: 1, col: "dust", alpha: 0.48 }],
+  "The Cloud": [{ n: 240, vx: -0.15, vy: 1.6, sway: 0, size: 1, col: "dust", alpha: 0.5 }],
   "Clock Tower": [{ n: 52, vx: 0.018, vy: 0.04, sway: 2, size: 1, col: "dust", alpha: 0.38 },
                   { n: 4, vx: 0.015, vy: 0.35, sway: 1, size: 2, col: "oreEdge", alpha: 0.55 }],
   "Building Site": [{ n: 48, vx: 0.07, vy: 0.09, sway: 2, size: 1, col: "dust", alpha: 0.34 }],
@@ -1849,7 +1854,7 @@ function drawMotes(ctx, w, pal, spec, salt) {
     if (w.terrain[Math.floor(py / C) * k.COLS + Math.floor(px / C)] !== k.EMPTY) continue
     ctx.globalAlpha = spec.alpha
     if ((w.res || 1) >= 2) AMBIENCE_FINE[w.biome](ctx, w, pal, Math.floor(x * 2) / 2, Math.floor(y * 2) / 2, spec, i)
-    else if (w.biome === "Rooftops") drawRoofRain(ctx, w, pal, px, py, 1)
+    else if (w.biome === "Rooftops" || w.biome === "The Cloud") drawRoofRain(ctx, w, pal, px, py, 1)
     else if (w.biome === "Mail Room") drawMailMote(ctx, w, pal, px, py, spec)
     else ctx.fillRect(px, py, spec.size, spec.size)
   }
@@ -1866,7 +1871,8 @@ var AMBIENCE_FINE = {
   "Spaceship": drawMoteSpaceshipFine, "Factory": drawMoteFactoryFine,
   "Skyscraper": drawMoteSkyscraperFine, "Trench": drawMoteTrenchFine,
   "Desert": drawMoteDesertFine, "Data Center": drawMoteDataFine, "Library": drawMoteLibraryFine, "Mail Room": drawMoteMailFine,
-  "Building Site": drawMoteSiteFine, "Clock Tower": drawMoteClockFine, "Rooftops": drawMoteRoofFine, "Subway": drawMoteSubwayFine, "Harbour": drawMoteHarbourFine
+  "Building Site": drawMoteSiteFine, "Clock Tower": drawMoteClockFine, "Rooftops": drawMoteRoofFine, "Subway": drawMoteSubwayFine, "Harbour": drawMoteHarbourFine,
+  "The Cloud": drawMoteRoofFine
 }
 
 // Check the complete half-pixel footprint: the motion can put a corner into
@@ -3219,7 +3225,9 @@ function reportRows(w, pal) {
   if (w.bet !== undefined && w.bet !== null) rows.push({ text: betLine(w), colour: betCalled(w) ? AGI_GOLD : pal.label, step: 12 })
   rows.push({ text: commitLine(w), colour: pal.decor, step: 12 })
   // The watcher's sightings (the page sets w.sightings at the end of a level).
-  if (w.sightings) {
+  // Not until there is one: a row of seven grey icons and "0/7" means nothing
+  // on a first visit's first card (first-look review).
+  if (w.sightings && w.sightings.seen.length) {
     rows.push({ sightings: true, step: 14 })
     if (w.sightings.fresh.length) rows.push({ text: "NEW: " + sightingLine(w.sightings.fresh[0]), colour: AGI_GOLD, step: 12 })
   }
@@ -3290,9 +3298,9 @@ function drawFeed(ctx, w, pal) {
   ctx.save()
   ctx.globalAlpha = Math.min(1, (FEED_SHOW - age) / FEED_FADE)
   ctx.fillStyle = pal.rigDark
-  ctx.fillRect(4, y - 1, width + 6, 7)
+  ctx.fillRect(STANDUP_EDGE, y - 1, width + 6, 7)          // clear of a phone's edge, as the standup is
   ctx.fillStyle = age < 6 ? "#ffffff" : pal.label
-  drawTransitionText(ctx, f.text, 7 + width / 2, y, 1)
+  drawTransitionText(ctx, f.text, STANDUP_EDGE + 3 + width / 2, y, 1)
   ctx.restore()
 }
 
@@ -3363,11 +3371,14 @@ function drawSprintBoard(ctx, pal, x, y) {
   }
 }
 
+// Kept this far inside the board: on a 390px phone the board overhangs the
+// screen by 5px a side, and a bubble at 4 lost its left edge.
+var STANDUP_EDGE = 8
 function drawStandupBubble(ctx, pal, x, foot, lines, W) {
   var wide = 0
   for (var i = 0; i < lines.length; i++) wide = Math.max(wide, lines[i].length * 4 - 1)
   var bw = wide + 10, bh = lines.length * 8 + 6
-  var left = Math.round(Math.max(4, Math.min(W - bw - 4, x - bw / 2))), top = foot - bh - 4
+  var left = Math.round(Math.max(STANDUP_EDGE, Math.min(W - bw - STANDUP_EDGE, x - bw / 2))), top = foot - bh - 4
   drawGagPanel(ctx, left, top, bw, bh, pal.rigDark, GAG_PAPER)
   ctx.fillStyle = pal.rigDark; ctx.fillRect(Math.round(x) - 1, top + bh - 1, 3, 4)
   ctx.fillStyle = GAG_PAPER; ctx.fillRect(Math.round(x), top + bh - 1, 1, 3)
@@ -5384,7 +5395,8 @@ var HAZARD_CHARGE = {
   echobat: 24, scarab: 18, snowball: 28, molten: 26, hotaisle: 26, scorpion: 22,
   snake: 20, spores: 30, vinelock: 14, icicle: 32, frostjet: 22, blackice: 12,
   airlock: 34, servo: 18, packetloss: 24, stamper: 30, flywheel: 26, steamvent: 26,
-  sprinkler: 26, polisher: 22, shredder: 16, shark: 30, current: 26, vent: 28
+  sprinkler: 26, polisher: 22, shredder: 16, shark: 30, current: 26, vent: 28,
+  lightning: 46
 }
 
 // A small running light, then a filling bank of warning lamps. The tell is
@@ -5423,6 +5435,53 @@ function hzPressure(ctx, w, pal, h, g, x, y, color) {
 }
 
 // Contact sparks/dust stay close to the impact, never claim another corridor.
+// The Cloud's lightning (Sim's "lightning", weather). Winding up, the cloud
+// overhead darkens and crackles with a flicker that quickens; the strike is a
+// white flash and a zigzag bolt top to bottom; after, the cell it hit is
+// scorched for the recovery window every fixture shares. Pure function of the
+// hazard's own clock.
+var BOLT = "#f6f7ff", SCORCH = "#2b2630"
+function drawHzLightning(ctx, w, pal, h, geo) {
+  var x0 = geo.x0, y0 = geo.y0, wide = geo.wide, cx = geo.cx, y1 = geo.y1
+  ctx.save()
+  ctx.fillStyle = pal.rigDark
+  ctx.globalAlpha = 0.35 + 0.5 * (geo.winding ? geo.progress : geo.live ? 1 : 0)
+  var drift = w.reducedMotion ? 0 : Math.floor(w.ticks / 30) % 2              // it idles, a cell's breath
+  ctx.fillRect(x0 - 2 + drift, y0, wide + 4, 3)                             // the thundercloud's belly
+  ctx.globalAlpha = 1
+  if (geo.winding && geo.progress > 0.35) {                                 // the last second: the column lights up
+    ctx.globalAlpha = 0.10 + 0.22 * (geo.progress - 0.35) / 0.65
+    ctx.fillStyle = BOLT
+    ctx.fillRect(x0, y0 + 3, wide, y1 - y0 - 3)
+    ctx.globalAlpha = 1
+  }
+  if (geo.winding && !w.reducedMotion && (h.t % Math.max(2, 9 - Math.floor(geo.progress * 7))) < 2) {
+    ctx.fillStyle = BOLT                                                     // crackle, quickening
+    ctx.fillRect(cx - 2 + (h.t % 3), y0 + 3, 1, 2)
+    ctx.fillRect(cx + 1 - (h.t % 2), y0 + 4, 1, 1)
+  }
+  if (geo.live) {
+    ctx.globalAlpha = 0.25
+    ctx.fillStyle = BOLT
+    ctx.fillRect(x0 - 6, y0, wide + 12, y1 - y0)                             // the flash
+    ctx.globalAlpha = 1
+    var x = cx, segs = Math.max(3, Math.floor((y1 - y0) / 4))
+    for (var i = 0; i < segs; i++) {                                         // the bolt
+      var ny = y0 + 3 + Math.round((y1 - y0 - 3) * (i + 1) / segs)
+      var nx = cx + ((i * 7 + h.fired * 3) % 5) - 2
+      ctx.fillRect(Math.min(x, nx), y0 + 3 + Math.round((y1 - y0 - 3) * i / segs), Math.abs(nx - x) + 1, ny - (y0 + 3 + Math.round((y1 - y0 - 3) * i / segs)))
+      x = nx
+    }
+  }
+  if (geo.cool) {
+    ctx.globalAlpha = geo.cool
+    ctx.fillStyle = SCORCH
+    ctx.fillRect(cx - 2, y1, 4, 1)                                           // scorched
+    ctx.fillRect(cx - 1, y1 + 1, 2, 1)
+  }
+  ctx.restore()
+}
+
 function hzImpact(ctx, pal, h, g, x, y, color) {
   var energy = g.cool
   if (g.live && h.t < 4) energy = 1 - h.t / 6
@@ -5504,7 +5563,7 @@ var HAZARD_DRAW = {
   spores: drawHzSpores, icicle: drawHzIcicle, frostjet: drawHzFrostjet,
   airlock: drawHzAirlock, stamper: drawHzStamper, flywheel: drawHzFlywheel,
   steamvent: drawHzSteamvent, sprinkler: drawHzSprinkler, polisher: drawHzPolisher,
-  shredder: drawHzShredder, servo: drawHzServo
+  shredder: drawHzShredder, servo: drawHzServo, lightning: drawHzLightning
 }
 
 // --- watch: mounted, dormant, wakes when somebody walks into reach -------
@@ -7615,7 +7674,7 @@ function drawReloadSign(ctx, ag, ox, oy, hair) {
 // These are visual durations only (guarded against EVENTS by the tests), so a
 // direct fireEvent and a scheduled one fade alike without a renderer clock.
 var EVENT_VISUAL_SPANS = {
-  boost: { Ruins: 420, Foundry: 360, Factory: 380, Skyscraper: 400, "Data Center": 300, "Mail Room": 360, "Building Site": 380, "Clock Tower": { 0: 280, 2: 360 }, Rooftops: 300, Harbour: 300, Subway: { 0: 300, 2: 360 } },
+  boost: { Ruins: 420, Foundry: 360, Factory: 380, Skyscraper: 400, "Data Center": 300, "Mail Room": 360, "Building Site": 380, "Clock Tower": { 0: 280, 2: 360 }, Rooftops: 300, Harbour: 300, Subway: { 0: 300, 2: 360 }, "The Cloud": 300 },
   sight: { Cavern: 420, Frost: 480, "Ice Cave": 450, Desert: 460, Library: 420, Harbour: 420 },
   fall: { Spaceship: 400 }
 }
@@ -13610,6 +13669,83 @@ function fineRoofPigeon(ctx, pal, d, x, base) {
   ctx.fillRect(x + 4.5, base - 5.5, 0.5, 0.5)
   ctx.fillRect(x, base - 2.5, 2.5, 0.5) // wing
 }
+// The Cloud's banks, over the ordinary materials. Shaded by depth: sunlit
+// where air is just above, a pale body with soft horizontal wisps, and damp
+// and darker where air is just below; puffy scalloped crowns rise into the air
+// above the walking line, softer scallops hang below, and the sides are
+// dithered so no edge is a hard slab. Drawing only — the cells are the same.
+var CLOUD_PUFF = 4                              // cells between puff crowns
+function drawCloudBanks(ctx, w, pal) {
+  var k = w.k, C = k.CELL, cols = k.COLS, T = w.terrain
+  var air = function (x, y) { return x < 0 || x >= cols || y < 0 || y >= k.ROWS || T[y * cols + x] === k.EMPTY }
+  for (var y = k.SKY; y < k.ROWS - 2; y++)
+    for (var x = 3; x < cols - 3; x++) {
+      var c = T[y * cols + x]
+      if (c === k.EMPTY || c === k.STEEL) continue
+      var px = x * C, py = y * C
+      var top = air(x, y - 1) ? 0 : air(x, y - 2) ? 1 : 2
+      var under = air(x, y + 1)
+      ctx.fillStyle = top === 0 ? pal.dirtEdge : top === 1 ? pal.decorLit : under ? pal.dirtShade : pal.dirt
+      ctx.fillRect(px, py, C, C)
+      if (top === 2 && !under && (y * 5 + Math.floor(x / 3)) % 7 === 0) {      // a wisp
+        ctx.fillStyle = pal.decorLit
+        ctx.fillRect(px, py + 1, C, 1)
+      }
+      if (under) drawCloudUnderside(ctx, pal, px, py, C, x)
+      if (air(x - 1, y)) for (var dl = (y % 2); dl < C; dl += 2) ctx.clearRect(px, py + dl, 1, 1)
+      if (air(x + 1, y)) for (var dr = ((y + 1) % 2); dr < C; dr += 2) ctx.clearRect(px + C - 1, py + dr, 1, 1)
+      if (top === 0) drawCloudCrown(ctx, pal, px, py, C, x)
+    }
+}
+
+// The top of a bank: every CLOUD_PUFF cells a round crown three pixels high
+// spanning two cells, with shoulders easing into it.
+function drawCloudCrown(ctx, pal, px, py, C, x) {
+  var phase = x % CLOUD_PUFF
+  ctx.fillStyle = pal.dirtEdge
+  if (phase === 1) { ctx.fillRect(px, py - 2, C, 2); ctx.fillRect(px + 1, py - 3, C - 1, 1) }
+  else if (phase === 2) { ctx.fillRect(px, py - 2, C, 2); ctx.fillRect(px, py - 3, C - 1, 1) }
+  else if (phase === 0) ctx.fillRect(px + 2, py - 1, C - 2, 1)
+  else ctx.fillRect(px, py - 1, C - 2, 1)
+}
+
+// The underside: darker, hanging in shallow scallops, the bottom row dithered.
+function drawCloudUnderside(ctx, pal, px, py, C, x) {
+  ctx.fillStyle = pal.dirtShade
+  ctx.fillRect(px, py + C - 2, C, 2)
+  if (x % CLOUD_PUFF === 2) ctx.fillRect(px + 1, py + C, C - 2, 1)
+  for (var d = (x % 2); d < C; d += 2) ctx.clearRect(px + d, py + C - 1, 1, 1)
+}
+
+// The Cloud's way out is a door back to the data centre: ON-PREM, on a
+// sign over a plain grey door with a server-light strip beside it.
+var ONPREM_LIGHT = "#9ece6a"
+function drawExitCloud(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x - 3, y - 2, ww + 6, hh + 2)
+  ctx.fillStyle = pal.exitFrame
+  ctx.fillRect(x - 1, y, 1, hh); ctx.fillRect(x + ww, y, 1, hh)
+  ctx.fillRect(x - 3, y + hh, ww + 6, 2)                         // the sill
+  ctx.fillStyle = ONPREM_LIGHT
+  for (var i = 0; i < hh - 2; i += 3) ctx.fillRect(x + ww + 2, y + 1 + i, 1, 1)   // rack lights
+  var sw = 29, sx = Math.round(x + ww / 2 - sw / 2), sy = y - 10
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(sx - 1, sy - 1, sw + 2, 8)
+  ctx.fillStyle = "#e8ecf4"
+  ctx.fillRect(sx, sy, sw, 6)
+  ctx.fillStyle = "#16161c"
+  drawTransitionText(ctx, "ON-PREM", sx + sw / 2, sy + 0.5, 1)
+}
+
+// Page resolution: a lit edge on the sign and a seam down the door. Plain
+// on purpose; the page art is Codex's to draw.
+function drawExitCloudFine(ctx, pal, x, y, ww, hh) {
+  ctx.fillStyle = pal.exitFrame
+  ctx.fillRect(Math.round(x + ww / 2) - 0.5, y + 1, 0.5, hh - 2)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x + ww / 2 - 14.5, y - 10.5, 29, 0.5)
+}
+
 function drawExitRoof(ctx, pal, x, y, ww, hh) {
   ctx.fillStyle = pal.dirtShade
   ctx.fillRect(x, y, ww - 3, hh) // a front door ajar, with light down the opening
@@ -14263,6 +14399,24 @@ function subwayTrainBoarding(w, tr) {
 // Scenery is a function of ticks; boats read the Subway's shared trip state.
 var HARBOUR_CREAM = "#d2c8ab", HARBOUR_HULL = "#446367", HARBOUR_RED = "#a45c48"
 var HARBOUR_INK = "#24383c", HARBOUR_GLASS = "#ddc58b"
+// The Cloud's sky: rows of distant, rounded banks in the back colours, a
+// little lighter towards the top where the weather is thinner.
+function backCloud(ctx, r, b, pal) {
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x, b.y, b.w, b.h)
+  for (var row = 0; row < 7; row++) {
+    var y = b.y + 14 + row * Math.floor(b.h / 7)
+    ctx.fillStyle = row % 2 ? pal.back : pal.backLit
+    for (var x = b.x - 20 + Math.floor(r() * 30); x < b.x + b.w; x += 36 + Math.floor(r() * 30)) backCloudPuff(ctx, x, y, 16 + Math.floor(r() * 18))
+  }
+}
+function backCloudPuff(ctx, x, y, size) {
+  var h = Math.round(size / 3)
+  ctx.fillRect(x, y, size, h)                                   // the flat underside
+  ctx.fillRect(x + 2, y - Math.round(h * 0.6), size - 4, h)
+  ctx.fillRect(x + Math.round(size * 0.25), y - h, Math.round(size * 0.4), h)
+}
+
 function backHarbour(ctx, r, b, pal) {
   ctx.fillStyle = pal.backDim
   ctx.fillRect(b.x, b.y, b.w, b.h)
@@ -14306,6 +14460,16 @@ function backHarbourMast(ctx, pal, x, base, h) {
     ctx.fillRect(x + i, base - h + 2 + i * 2, 1, 2)
   }
 }
+// The Cloud at page resolution, plain until Codex draws it: a lit top edge
+// and a soft underside on the back wall, nothing more.
+function backCloudFine(ctx, b, pal) {
+  if (b.w < 3 || b.h < 3) return
+  ctx.fillStyle = pal.backLit
+  ctx.fillRect(b.x + 0.5, b.y + 0.5, b.w - 1, 0.5)
+  ctx.fillStyle = pal.backDim
+  ctx.fillRect(b.x + 1, b.y + b.h - 1, b.w - 2, 0.5)
+}
+
 function backHarbourFine(ctx, b, pal) {
   ctx.fillStyle = pal.backDim
   ctx.fillRect(b.x + b.w - 0.5, b.y, 0.5, b.h)

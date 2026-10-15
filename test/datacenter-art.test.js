@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [12, 31, 50, 69], layers = [D.drawDataHall, D.drawDataFaces, D.drawDataStatus]
+const levels = [12, 32, 52, 72], layers = [D.drawDataHall, D.drawDataFaces, D.drawDataStatus]
 const MAX_CALLS = 20000
 function sample(level = 12, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -137,7 +137,7 @@ test("status dots blink on fixed cabinets with a cheap budget and clear terrain,
 })
 
 test("cached detail precedes original props and exit; live dots precede agents, umbrellas and hazard cues", () => {
-  const { w, pal } = sample(31), calls = [], ctx = canvas(800, 496).ctx
+  const { w, pal } = sample(32), calls = [], ctx = canvas(800, 496).ctx
   ctx.fillRect = (...args) => { assert.ok(calls.length < MAX_CALLS); calls.push([ctx.fillStyle, ...args]) }
   D.drawTerrain(ctx, w, pal)
   const face = calls.findLastIndex(c => c[0] === D.DATA_CABLE)
@@ -155,7 +155,7 @@ test("cached detail precedes original props and exit; live dots precede agents, 
 
 test("original Data Center materials, rack lights, updrafts, props, hazards and exit retain bytes", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "f6b10d396956296a2e6746738439738d696661e9c62043af73c5f7e12440930b"], [[2], "c76f875a7a5ac69bafb340cc76ed6587c9158ce249e3c670612a1356d08cc840"]
+    [[undefined, 1], "ca7e136e8f7cf1a570caad5b907beabc91fae80e7c8b89d9b838e3ab104d4bd3"], [[2], "55088e5a1f136ae9bd20f5db49a5cff93afd7cd72ccd88516a7a7dedad806e79"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)
@@ -175,7 +175,7 @@ test("original Data Center materials, rack lights, updrafts, props, hazards and 
 
 test("Hot Swap and Capacity Planning still carve/grow terrain without moving cabinet anchors", () => {
   for (const id of ["hotfix", "rackgrow"]) {
-    const { w, pal } = sample(50), c = w.corridors[0], ev = S.EVENTS.find(e => e.id === id)
+    const { w, pal } = sample(52), c = w.corridors[0], ev = S.EVENTS.find(e => e.id === id)
     const site = { c, x: 30 }, fx = { ...ev, x: 30, floorY: c.floorY, warnAt: 0, fireAt: 60, firedAt: -1 }
     w.ticks = 24
     const img = canvas(800, 496)

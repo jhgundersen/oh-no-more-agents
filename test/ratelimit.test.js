@@ -106,7 +106,7 @@ test("once a level at most, after the opening, and only on the coin", () => {
 
 test("played levels: when it fires it drains, and no level hangs", () => {
   let fired = 0
-  for (let level = 1; level <= 30; level++) {
+  for (let level = 1; level <= 50; level++) {
     const w = S.generate(level, 0, level * 1009 + 7)
     w.limitRng = () => 0                    // always take the coin, to meet it often
     let longest = 0
@@ -119,7 +119,7 @@ test("played levels: when it fires it drains, and no level hangs", () => {
     if (w.rateLimited) fired++
   }
   // Only real queues qualify (same direction, recent progress), so a forced
-  // coin meets one on a couple of levels in thirty.
+  // coin meets one on a level or two in fifty.
   assert.ok(fired >= 1, `crowds form often enough to meet the sign (${fired})`)
 })
 

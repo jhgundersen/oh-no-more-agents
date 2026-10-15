@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [9, 28, 47, 66]
+const levels = [9, 29, 49, 69]
 const MAX_CALLS = 20000
 const layers = [D.drawOfficeBackdrop, D.drawOfficeSurfaces, D.drawOfficeLife]
 function sample(level = 9, name = "tokyo-night") {
@@ -157,7 +157,7 @@ test("animated city lights stay in air, behind the mullions and clear the exit a
 })
 
 test("city lighting precedes lifts, hazards, guards, agents, umbrellas and exit", () => {
-  const { w, pal } = sample(28)
+  const { w, pal } = sample(29)
   for (let i = 0; i < 240; i++) S.step(w)
   const ag = S.spawn(w)
   Object.assign(ag, { x: 70, y: 16, state: "fall", floater: true, fall: 9 })
@@ -173,10 +173,10 @@ test("city lighting precedes lifts, hazards, guards, agents, umbrellas and exit"
 
 test("original tower materials, skyline, desks, lamps, lifts, fire escape, hazards and exits retain bytes", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "25941a9f114ab056b0df2ffcf5bd995b2ed7ec18413c0187dfb07ec8d98a16fd"], [[2], "7874bb9b0dd9cbb0d18240452d0947c7784ce55350e2cc8d55c419a425d1125e"]
+    [[undefined, 1], "5df232c9176acb6cbcecf4a9b4e3fcc8a35d118143a646078590d0e212937d59"], [[2], "9c1bb8cb0da62b8baa3ed30199811a0c30d98051b1603b2b694dbd733620bf9b"]
   ]) {
     const hash = createHash("sha256")
-    for (const name of Object.keys(THEMES)) for (const level of [9, 28, 47, 66])
+    for (const name of Object.keys(THEMES)) for (const level of [9, 29, 49, 69])
       for (const res of resolutions) for (const ticks of [0, 77, 240]) {
         const { w, pal } = sample(level, name); w.res = res; w.ticks = ticks
         const img = canvas(400, 248, themeOf(name).background)
@@ -193,7 +193,7 @@ test("original tower materials, skyline, desks, lamps, lifts, fire escape, hazar
 
 test("Open Plan and Refactor still carve terrain and show their original event mirrors", () => {
   for (const id of ["openplan", "refurb"]) {
-    const { w, pal } = sample(47), c = w.corridors[0], ev = S.EVENTS.find(e => e.id === id)
+    const { w, pal } = sample(49), c = w.corridors[0], ev = S.EVENTS.find(e => e.id === id)
     const site = { c, x: 30 }, fx = { ...ev, x: 30, floorY: c.floorY, warnAt: 0, fireAt: 60, firedAt: -1 }
     w.ticks = 24
     const img = canvas(800, 496)

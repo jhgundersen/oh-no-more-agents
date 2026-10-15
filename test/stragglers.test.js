@@ -338,3 +338,109 @@ test("a walker on a long straight run towards the door counts as moving, however
   ag.dir = -1; moving(); ag.x = 10.5
   assert.equal(moving(), 0, "a long run away from the door is not going home")
 })
+
+test("a dead end at the board's edge a few rows over the exit is dug through, not walked away from", () => {
+  const w = box(90), k = w.k
+  for (let x = 0; x < k.COLS; x++) w.terrain[40 * k.COLS + x] = k.DIRT          // the floor below, with the exit on it
+  for (let y = 0; y < k.ROWS; y++) w.terrain[y * k.COLS + 3] = k.STEEL           // the board's edge
+  w.exit = { x: 10, y: 35, w: 6, h: 5 }
+  w.corridors = [{ x0: 4, x1: 95, floorY: 30 }, { x0: 4, x1: 95, floorY: 40 }]
+  const ag = Object.assign(S.spawn(w), { x: 4.3, y: 29, dir: -1, state: "walk", trait: "steady" })
+  w.agents = [ag]
+  const before = w.skills.digger + w.skills.miner
+  S.hitWall(w, ag)
+  assert.ok(ag.state === "dig" || w.skills.digger + w.skills.miner < before, "goes down")
+  const far = Object.assign(S.spawn(w), { x: 4.3, y: 29, dir: -1, state: "walk", trait: "steady" })
+  w.exit = { x: 60, y: 35, w: 6, h: 5 }
+  S.hitWall(w, far)
+  assert.equal(far.dir, 1, "home is a long walk away: turn as before")
+})
+
+test("the last ones out spend no tool on a wall that leads away from a home below them", () => {
+  const w = box(90), k = w.k
+  for (let y = 22; y < 30; y++) w.terrain[y * k.COLS + 60] = k.DIRT          // a climbable wall, east
+  w.exit = { x: 10, y: 40, w: 6, h: 5 }                                         // home is west and below
+  w.toRelease = 5; w.released = 5; w.saved = 3; w.lost = 0                       // the last two
+  const ag = Object.assign(S.spawn(w), { x: 59.5, y: 29, dir: 1, state: "walk", trait: "steady" })
+  w.agents = [ag]
+  const before = JSON.stringify(w.skills)
+  assert.equal(S.wallTools(w, ag, 8, 1), false)
+  assert.equal(JSON.stringify(w.skills), before, "nothing spent")
+  ag.dir = -1
+  assert.equal(S.walkingOffHome(w, ag), false, "facing home, the wall is on the way")
+  w.saved = 0
+  ag.dir = 1
+  assert.equal(S.walkingOffHome(w, ag), false, "with the colony still coming, the old rules stand")
+})
+
+test("a planter clears the blast and then comes back to the gap, not on to the far end", () => {
+  const w = box(90), k = w.k
+  for (let y = 26; y < 30; y++) for (let x = 40; x < 43; x++) w.terrain[y * k.COLS + x] = k.DIRT
+  const ag = Object.assign(S.spawn(w), { x: 39.5, y: 29, dir: 1, state: "walk", trait: "steady" })
+  w.agents = [ag]
+  S.plantMine(w, ag)
+  assert.equal(ag.dir, -1, "steps away from its charge")
+  for (let i = 0; i < S.MINE_COMEBACK; i++) { w.ticks++; S.stepWalk(w, ag) }
+  assert.equal(ag.dir, 1, "and heads back to the gap")
+  assert.ok(Math.abs(ag.x - 39.5) > S.MINE_RADIUS, "from outside the blast")
+  const back = (39.5 - ag.x) / S.walkStep(ag, w)
+  assert.ok(back > 90 - S.MINE_COMEBACK, "arriving after the bang")
+})
+
+test("a mission nobody can reach is descoped once the colony has waited at the door, and nobody is condemned for waiting", () => {
+  // Level 101 (a Cavern mission level): the miners sit beyond two walls that
+  // hang to within two rows of the floor, with the bashers spent upstairs.
+  let w = null
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    const c = S.generate(101, 0, seed * 104729)
+    while (!c.done && c.ticks < 6000) S.step(c)
+    if (c.mission && c.mission.descoped) { w = c; break }
+  }
+  assert.ok(w, "some colony meets an unreachable mission")
+  assert.ok(w.saved > 0, "and still gets home")
+  assert.ok(w.feed.some(f => /^MISSION DESCOPED: .+ MOVED TO NEXT SPRINT$/.test(f.text)))
+  assert.ok(w.mission.targets.every(t => !t.freed), "the cages stay shut")
+  // Waiting at a shut door for a job nobody has started is not a loop.
+  const v = S.generate(101, 0, 1)
+  const ag = Object.assign(S.spawn(v), { sawShut: true, state: "walk" })
+  v.mission = v.mission || { done: false, progress: 0, targets: [] }
+  v.mission.done = false; v.mission.progress = 0
+  const bombs = v.skills.bomber
+  S.condemn(v, ag)
+  assert.equal(ag.state, "walk")
+  assert.equal(v.skills.bomber, bombs)
+})
+
+test("a last-out hero at a wall with no tools lays a spare bomber as a mine, in the wall when the floor is steel", () => {
+  const w = box(90), k = w.k
+  for (let x = 0; x < k.COLS; x++) w.terrain[30 * k.COLS + x] = k.STEEL          // a tower's steel floor
+  for (let y = 24; y < 30; y++) for (let x = 45; x < 50; x++) w.terrain[y * k.COLS + x] = k.DIRT
+  w.exit = { x: 70, y: 25, w: 6, h: 5 }
+  w.toRelease = 5; w.saved = 4; w.lost = 0
+  w.special = "fallback"; w.specialSpec = S.specialSpec("fallback")
+  for (const s of Object.keys(w.skills)) w.skills[s] = 0
+  w.skills.bomber = 3
+  const hero = Object.assign(S.spawn(w), { x: 44.5, y: 29, dir: 1, state: "walk", special: "fallback" })
+  w.agents = [hero]
+  assert.equal(S.borrowWallTools(w, hero), true)
+  assert.equal(w.skills.bomber, 2, "one bomber spent")
+  const m = w.mines[w.mines.length - 1]
+  assert.deepEqual([m.x, m.y], [45, 29], "at the foot of the wall, not in the steel")
+  assert.notEqual(hero.state, "bomb", "laid, not worn")
+})
+
+test("the spare-bomber mine goes in the floor where it can, and is refused with nothing ahead or no bombers", () => {
+  const w = box(90), k = w.k
+  for (let y = 24; y < 30; y++) for (let x = 45; x < 50; x++) w.terrain[y * k.COLS + x] = k.DIRT
+  for (const s of Object.keys(w.skills)) w.skills[s] = 0
+  const ag = Object.assign(S.spawn(w), { x: 44.5, y: 29, dir: 1, state: "walk" })
+  w.agents = [ag]
+  assert.equal(S.bomberAsMine(w, ag), false, "no bombers")
+  w.skills.bomber = 1
+  assert.deepEqual({ ...S.mineSpot(w, ag) }, { x: 44, y: 30 }, "the floor, when it is not steel")
+  Object.assign(ag, { x: 20.5 })
+  assert.equal(S.bomberAsMine(w, ag), false, "nothing ahead")
+  Object.assign(ag, { x: 44.5 })
+  assert.equal(S.bomberAsMine(w, ag), true)
+  assert.equal(w.skills.bomber, 0)
+})

@@ -30,6 +30,12 @@ Production is `https://oh-no-more-agents.com`.
 - `migrations/` — ordered production migrations; never rewrite one that may
   already have been applied.
 - `public/_headers` — cache lifetimes for the assets Workers serves.
+- `tools/testlock.js` — one heavy test run at a time across every worktree of
+  this repo. `npm run check`, `npm test`, `npm run coverage` and `npm run crap`
+  queue for it (first come, first served; `node tools/testlock.js status`
+  shows who holds it). For any other heavy run, wrap it:
+  `node tools/testlock.js run -- <command>`. Single-file `node --test` runs do
+  not need it.
 - `tools/ship.js` — `npm run deploy` first builds `dist/` (a copy of `public/`
   whose scripts drop comment-only lines and indentation, nothing else) and
   Wrangler serves that. Edit `public/`, never `dist/`; `npm run dev` serves
@@ -91,7 +97,7 @@ Production is `https://oh-no-more-agents.com`.
   side gets bricks, and the blocker is kept for the drop with no far side.
 - **Biomes are picked by level number, so a new one goes on the end of `BIOMES`**
   — inserting re-skins every level above it. `Palette.js` derives the same index
-  with its own copy of the rule (`(level - 1) % 14` in `poolTint` and `biomeTint`)
+  with its own copy of the rule (`(level - 1) % 20` in `poolTint` and `biomeTint`)
   and must change in the same commit. `rock` is mixed from the theme foreground and is **not** tinted, so a
   skin built mostly of `ROCK` comes out the same grey everywhere.
 - **Events change a level's premise while it is played** (see the block above

@@ -86,7 +86,7 @@ test("Failover freezes and darkens every fixture kind and removes animated hazar
     const h = { kind: spec.id, phase: "fire", t: 2, fired: 1, dir: 1, known: true, throttled: 0,
       zx0: 40, zx1: 40 + spec.w - 1, zy0: 20, zy1: 20 + spec.h - 1, mount: spec.mount, lineTo: 58, lineY: 21 }
     const before = JSON.stringify(h)
-    const frames = [100, 119].map(t => {
+    const frames = [105, 125].map(t => {
       w.ticks = t
       assert.equal(picture(w, ctx => D.drawHazardLight(ctx, w, pal, h)).calls.length, 0)
       return picture(w, ctx => D.drawEventHazard(ctx, w, pal, h)).pixels

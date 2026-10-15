@@ -39,8 +39,11 @@ test("every fifth level ends in a standup, which a tap skips", { skip: !chromium
       // Somebody has to be out of the hatch to come home and speak.
       for (let k = 0; k < 40 && !(await ev(`AgentWorld().agents.length`)); k++) await sleep(100)
       await ev(`(() => { const w = AgentWorld(); w.agents.forEach(a => { a.state = "saved"; a.gone = false }); w.saved = w.agents.length; w.released = w.toRelease; w.done = true; w.doneTicks = 9999 })()`)
-      await sleep(250)
-      if (i < 4) assert.equal(await ev(`AgentWorld().level`), before + 1, `level ${i} moved on`)
+      // Polled, not slept: under the full parallel run the page can take a while.
+      if (i < 4) {
+        for (let k = 0; k < 40 && (await ev(`AgentWorld().level`)) === before; k++) await sleep(100)
+        assert.equal(await ev(`AgentWorld().level`), before + 1, `level ${i} moved on`)
+      } else await sleep(250)
     }
     const during = await ev(`AgentWorld().level`)
     await sleep(500)
@@ -48,7 +51,7 @@ test("every fifth level ends in a standup, which a tap skips", { skip: !chromium
     const r = await ev(`(() => { const b = document.getElementById("board").getBoundingClientRect(); return [b.left + 50, b.top + 50] })()`)
     await b.cmd("Input.dispatchMouseEvent", { type: "mousePressed", x: r[0], y: r[1], button: "left", clickCount: 1 })
     await b.cmd("Input.dispatchMouseEvent", { type: "mouseReleased", x: r[0], y: r[1], button: "left", clickCount: 1 })
-    await sleep(200)
+    for (let k = 0; k < 40 && (await ev(`AgentWorld().level`)) === during; k++) await sleep(100)
     assert.equal(await ev(`AgentWorld().level`), during + 1, "skipped to the next level")
     assert.equal(await ev(`document.getElementById("overlay").style.display`), "none", "and not paused")
     assert.deepEqual(b.errors, [])

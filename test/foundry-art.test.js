@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [4, 23, 42]
+const levels = [4, 24, 44]
 function sample(level = 4, name = "tokyo-night", res = 2) {
   const w = S.generate(level, 0, level * 7919 + 13)
   w.res = res; w.ticks = 77
@@ -135,7 +135,7 @@ test("molten seams pulse only inside surviving earth and never mark steel or air
 })
 
 test("Foundry heat is drawn before agents, umbrellas, guards and the exit", () => {
-  const { w, pal } = sample(42)
+  const { w, pal } = sample(84)   // a Foundry level with a guard on screen
   for (var i = 0; i < 160; i++) S.step(w)
   const ag = S.spawn(w)
   Object.assign(ag, { x: 70, y: 16, state: "fall", floater: true, fall: 9 })
@@ -162,7 +162,7 @@ test("Foundry backdrop, motes, blast door and chain retain their panel component
       D.drawExitBack(img.ctx, w, pal); D.drawChain(img.ctx, w, pal, 100, 140, 32)
       hash.update(img.buf)
     }
-  assert.equal(hash.digest("hex"), "1ee1514c29dbbb39e14f93245588abba4af0b3437c0f26c56d5332405e4beb16")
+  assert.equal(hash.digest("hex"), "b2265e1a7badf036bae487921a2b595aa1f435d8f2236f46adcd6e53cf78021d")
 })
 
 test("Foundry bays come in three kinds, so no level is one furnace repeated", () => {

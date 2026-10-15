@@ -8,7 +8,7 @@ import { canvas } from "../tools/render.js"
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
 
 test("every Library level has one librarian on the first corridor's open floor; no other biome has one", () => {
-  for (const level of [13, 32, 51, 89, 108]) {
+  for (const level of [13, 33, 53, 93, 113]) {
     const w = S.generate(level, 0, 5)
     assert.equal(w.biome, "Library")
     assert.equal(w.librarians.length, 1)

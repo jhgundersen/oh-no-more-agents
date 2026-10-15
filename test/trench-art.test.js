@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [10, 29, 48, 67], layers = [D.drawAbyssBackdrop, D.drawAbyssLife]
+const levels = [10, 30, 50, 70], layers = [D.drawAbyssBackdrop, D.drawAbyssLife]
 const MAX_CALLS = 20000
 function sample(level = 10, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -136,7 +136,7 @@ test("live abyss art moves subtly, stays bounded, and clears original terrain, h
 })
 
 test("large backdrop stays behind original spires; live accents precede fish, divers, umbrellas and exit", () => {
-  const { w, pal } = sample(29), calls = [], ctx = canvas(800, 496).ctx
+  const { w, pal } = sample(30), calls = [], ctx = canvas(800, 496).ctx
   ctx.fillRect = (...args) => {
     assert.ok(calls.length < MAX_CALLS)
     calls.push([ctx.fillStyle, ...args])
@@ -158,7 +158,7 @@ test("large backdrop stays behind original spires; live accents precede fish, di
 
 test("original Trench materials, spires, sea, kelp, fish, snow, pits, hazards and exit retain bytes", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "b0ee6c63dc4f5bc81be8550e34169fed5a1403c2f344c67a9c2429844acca2f5"], [[2], "0d63f7e714480e66176bb52529663df69675a6e7dfaabc92d8e7971227200a7d"]
+    [[undefined, 1], "e3bace3d5c5c296a59c936fbea4673619a993b89ccafddf11adc39a25c7cd634"], [[2], "ab546b94d0e3b4adeafc8e2c955ee7439865fd1904d9fc205e956e49fff3fc1f"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)

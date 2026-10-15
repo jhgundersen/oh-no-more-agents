@@ -132,7 +132,7 @@ var SKILL_LABELS = {
 // putting a new one anywhere but the end would re-skin every level above it.
 // Palette.js derives the same index with the same rule and must be kept in
 // step — see the note over poolTint there.
-var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room", "Building Site", "Clock Tower", "Rooftops", "Subway", "Harbour"]
+var BIOMES = ["Cavern", "Ruins", "Frost", "Foundry", "Jungle", "Ice Cave", "Spaceship", "Factory", "Skyscraper", "Trench", "Desert", "Data Center", "Library", "Mail Room", "Building Site", "Clock Tower", "Rooftops", "Subway", "Harbour", "The Cloud"]
 
 // A small job on the route gives each biome a premise beyond merely reaching
 // the door. These are deliberately one mechanism with different casts: an
@@ -172,6 +172,7 @@ var MISSION_SPECS = {
   "Rooftops":      { id: "neighbours", verb: "WALK THE NEIGHBOURS HOME", kind: "civilian", count: 3 },
   "Subway":        { id: "commuters", verb: "GET THE COMMUTERS ON THE TRAIN", kind: "civilian", count: 3 },
   "Harbour":       { id: "passengers", verb: "SEE THE PASSENGERS ASHORE", kind: "civilian", count: 3 },
+  "The Cloud":     { id: "sysadmins",  verb: "BRING THE SYSADMINS ON-PREM", kind: "civilian", count: 2 },
   // Up in the works since the last time it was wound. Nobody noticed.
   "Clock Tower": { id: "keepers", verb: "FREE THE CLOCKMAKERS",  kind: "civilian", count: 2 }
 }
@@ -1257,6 +1258,7 @@ function placePits(w, rng, corridors, last, hx, sealFrom, tower) {
   for (var rf = 0; rf < corridors.length; rf++) roughFloor(w, corridors[rf], rng, w.biome)
 }
 
+var CLOUD_STORMY = 0.85     // the share of Cloud levels with lightning
 function placeLevelHazards(w, rng, corridors, hazardCorridors) {
   placeDecor(w, rng, corridors)
   for (var hpi = 0; hpi < hazardCorridors.length; hpi++) {
@@ -1269,7 +1271,7 @@ function placeLevelHazards(w, rng, corridors, hazardCorridors) {
   // shark in the same stretch of corridor is not two problems, it is one
   // problem you cannot read.
   var weather = hazardsWeather(w.biome)
-  if (weather.length && rng() < 0.55) {
+  if (weather.length && rng() < (w.biome === "The Cloud" ? CLOUD_STORMY : 0.55)) {
     var wcorr = pick(rng, corridors.map(function (_, ix) { return ix }).filter(function (ix) {
       for (var hz = 0; hz < w.hazards.length; hz++) if (w.hazards[hz].corridor === ix) return false
       return true
@@ -1551,6 +1553,7 @@ var BIOME_MECHANISMS = {
   "Rooftops": placeZiplines,
   "Subway": placeTrains,
   "Harbour": placeFerries,
+  "The Cloud": cloudLining,
   "Clock Tower": placeGates
 }
 
@@ -2870,7 +2873,8 @@ var BIOME_SKINS = {
   "Clock Tower": skinClockTower,
   "Rooftops": skinRooftops,
   "Subway": skinSubway,
-  "Harbour": skinHarbour
+  "Harbour": skinHarbour,
+  "The Cloud": skinCloud
 }
 
 function skinSpaceship(w, rng) {
@@ -3271,6 +3275,70 @@ function skinDataCenter(w, rng) {
   // so they always stand beside one, and from no further draw on `rng`.
   w.updraft = new Uint8Array(COLS)
   for (x = 3; x < COLS - 3; x++) if ((x + offset) % pitch === 2) w.updraft[x] = 1
+}
+
+// The Cloud: banks of vapour, soft all the way through. Everything is DIRT,
+// with the lit top of each bank ORE (the silver lining) and a ROCK core where
+// a bank is thick, so a bash or a dig goes through like anywhere soft. Shape
+// is left exactly as generated: rounder banks are the drawing's business, and
+// a skin that moved floors would have to re-prove every route.
+//
+// The updrafts are the one place on the board where umbrellas are the point:
+// rising columns of air that hold a floater up (half its usual fall) and do
+// nothing at all for anyone without one — unlike the Data Center's, which
+// carry everybody. Pitch and offset come from the level number, not `rng`.
+var CLOUD_DRAFT_PITCH = 17
+var CLOUD_LIFT = 0.5        // a floater in a Cloud updraft falls at half umbrella speed
+function skinCloud(w, rng) {
+  var x, y
+  for (y = SKY; y < ROWS - 2; y++)
+    for (x = 3; x < COLS - 3; x++) {
+      if (at(w, x, y) === STEEL || !solid(w, x, y)) continue
+      var lining = !solid(w, x, y - 1)
+      var core = solid(w, x, y - 2) && solid(w, x, y + 2) && solid(w, x - 2, y) && solid(w, x + 2, y)
+      setCell(w, x, y, lining ? ORE : (core ? ROCK : DIRT))
+    }
+  w.updraft = new Uint8Array(COLS)
+  w.updraftLift = true
+  var offset = (w.level * 7) % CLOUD_DRAFT_PITCH
+  for (x = 4; x < COLS - 4; x++) if ((x + offset) % CLOUD_DRAFT_PITCH < 2) w.updraft[x] = 1
+}
+
+// The silver lining, laid once the level's shape is final (a mechanism runs
+// after carving and roughening; the skin runs before them, so its own lining
+// only caught a third of the tops). Material only: nothing moves.
+function cloudLining(w) {
+  for (var y = SKY; y < ROWS - 2; y++)
+    for (var x = 3; x < COLS - 3; x++)
+      if (solid(w, x, y) && at(w, x, y) !== STEEL && !solid(w, x, y - 1)) setCell(w, x, y, ORE)
+}
+
+// Lightning says what it did: every strike that takes somebody is named on
+// the ticker, and the first one each level says why the umbrella didn't help.
+function struckByLightning(w, ag) {
+  ag.killedBy = "lightning"
+  feedNote(w, w.struck ? agentTag(w, ag) + " · STRUCK BY LIGHTNING"
+    : "STRUCK BY LIGHTNING: " + agentTag(w, ag) + ". UMBRELLAS ARE NOT LIGHTNING RODS.")
+  w.struck = true
+}
+
+// The Cloud on the ticker: once a level each, the first one lost and the
+// first floater an updraft holds up. Read off the world, like the radio.
+function stepCloud(w) {
+  if (!w.updraftLift || (w.cloudLost && w.cloudLifted)) return
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (!w.cloudLost && ag.state === "dead" && ag.killedBy !== "lightning") {
+      w.cloudLost = true
+      feedNote(w, "YOUR FILES ARE IN THE CLOUD. SO IS " + agentTag(w, ag) + ".")
+      return
+    }
+    if (!w.cloudLifted && ag.drafted && ag.floater && ag.state === "fall") {
+      w.cloudLifted = true
+      feedNote(w, agentTag(w, ag) + " HAS GONE SERVERLESS")
+      return
+    }
+  }
 }
 
 // Sandstone laid down by wind: long gentle bands that rise and fall across the
@@ -4415,7 +4483,13 @@ var HAZARDS = [
 
   // An old wreck venting what is left in its tanks. `cycle` and vertical,
   // so it reads as the one place in the level where the water is going up.
-  { id: "vent",     name: "Memory Pressure", mech: "cycle", mount: "floor", reach: 0, charge: 28, fire: 26, rest: 62, w: 4, h: 6, only: ["Trench"] }
+  { id: "vent",     name: "Memory Pressure", mech: "cycle", mount: "floor", reach: 0, charge: 28, fire: 26, rest: 62, w: 4, h: 6, only: ["Trench"] },
+  // The Cloud's weather: lightning. A long, visible build-up (the cloud above
+  // darkens and crackles), a strike too quick to outrun, and a long rest. An
+  // umbrella is no help — umbrellas are not lightning rods, and nothing in
+  // the hazard rules lets one parry a cycle. Weather, so it comes on top of
+  // the level's ordinary hazard rather than instead of it.
+  { id: "lightning", name: "Flash Storage", mech: "cycle", mount: "ceiling", reach: 0, charge: 46, fire: 6, rest: 170, w: 3, h: 7, only: ["The Cloud"], weather: true }
 ]
 
 // Open flame and steam have no business in an ice cave, and the industrial
@@ -4966,6 +5040,7 @@ function hazardStrike(w, h) {
     w.hazardKills++
     h.kills = (h.kills || 0) + 1
     w.lastEvent = "hazard"
+    if (h.kind === "lightning") struckByLightning(w, ag)
   }
   for (var ei = 0; ei < w.enemies.length; ei++) {
     var en = w.enemies[ei]
@@ -5587,6 +5662,18 @@ function hitWall(w, ag) {
 
 // The ways past a wall that are not the toolbar's: a stair door or a ladder,
 // a hero's own move, steel (no way at all), or open water to swim.
+// The exit is below, within a short walk of this column, and there is a
+// corridor under it to land in.
+var DEAD_END_REACH = 10
+// The board's edge, or a skin of rock in front of it: nothing beyond.
+function deadEndAt(w, ax, dir, footY) {
+  return at(w, ax, footY) === STEEL || at(w, ax + dir, footY) === STEEL
+}
+
+function deadEndOverHome(w, ag) {
+  return exitBelow(w, ag) && Math.abs(goalX(w, ag) - ag.x) <= DEAD_END_REACH && !!corridorBelow(w, ag)
+}
+
 function wallBypassed(w, ag) {
   var footY = Math.floor(ag.y)
   var ax = Math.floor(ag.x) + ag.dir
@@ -5617,7 +5704,15 @@ function wallBypassed(w, ag) {
   // shut for at most 90 ticks of its 240.
   if (gateShutAt(w, ax, footY)) { ag.waitFor = 2; ag.still = 0; return true }
 
-  // Steel is the one honest "no". Nothing to try, so don't waste a skill on it.
+  // Steel is the one honest "no". Nothing to try on it, so don't waste a skill
+  // on it — but a dead end with the way home a few rows underfoot is a floor
+  // to go through, not a wall to walk away from. Level 2's middle floor ends
+  // at the board's edge four rows over the exit, and colonies that turned
+  // there walked the whole level back the long way round: 40-58 s before
+  // anyone was home, on a new visitor's second level. `spend`, so a hoarder
+  // keeps its thrift; startDescent pays as pay(w, skill), hence the wrapper.
+  if (deadEndAt(w, ax, ag.dir, footY) && deadEndOverHome(w, ag)
+      && startDescent(w, ag, function (w2, skill) { return spend(w2, ag, skill) }, true, true, true, true)) return true
   if (at(w, ax, footY) === STEEL) { turnAround(w, ag); return true }
 
   // Before any of the tools: if home is up or down and the water is open, the
@@ -5645,7 +5740,17 @@ function wallClimbable(w, ag, h, reach) {
 
 // The toolbar, in the order this agent's trait reaches for it. True when a
 // skill was spent and started.
+// The last ones out, with home below and behind them: no wall in front is on
+// the way home, and every tool spent on it takes them further off. Level 2's
+// last agent walked away from the hole by the exit, climbed the wall at the
+// end of the floor and the one above it, and the stall cutoff found it on the
+// top floor twenty seconds later (5 of 24 colonies).
+function walkingOffHome(w, ag) {
+  return lastOut(w) && exitBelow(w, ag) && !facingHome(w, ag)
+}
+
 function wallTools(w, ag, h, t) {
+  if (walkingOffHome(w, ag)) return false
   var trait = traitOf(ag)
   var wantUp = exitAbove(w, ag) && !liftRouted(w)
   var bashFirst = !wantUp && (ag.contrary ? !trait.bashFirst : trait.bashFirst)
@@ -5890,7 +5995,7 @@ function edgeDrop(w, ag, nx, depth, far) {
 
   // A drop in a Data Center updraft is no drop at all (see stepFall): the
   // colony steps off and lets the cold aisle carry it, and keeps its umbrella.
-  var drafted = w.updraft && w.updraft[Math.floor(nx)]
+  var drafted = w.updraft && w.updraft[Math.floor(nx)] && !w.updraftLift
   var wantsChute = !drafted && depth > killingFall(w) - trait.fallMargin
 
   if (!wantsChute) { ag.x = nx; startFall(w, ag); return }
@@ -6407,6 +6512,9 @@ var EVENTS = [
   { id: "fog", name: "Sea Fog",            biome: "Harbour", mech: "drift", what: "sight", ticks: 420 },
   { id: "highwater", name: "High Water",   biome: "Harbour", mech: "collapse", at: "floor", span: 6, deep: 2 },
   { id: "strike", name: "Dock Strike",     biome: "Harbour", mech: "blackout", mult: 0, ticks: 300 },
+  { id: "regiondown", name: "Region Outage", biome: "The Cloud", mech: "blackout", mult: 0, ticks: 300 },
+  { id: "condense", name: "Eventual Consistency", biome: "The Cloud", mech: "growth", span: 12, high: 2 },
+  { id: "evaporate", name: "Scale to Zero", biome: "The Cloud", mech: "collapse", at: "floor", span: 6, deep: 2 },
 
   // --- Clock Tower ---
   { id: "deadlock", name: "Deadlock",         biome: "Clock Tower", mech: "blackout", mult: 0, ticks: 280 },
@@ -6803,6 +6911,7 @@ function walkHazardAhead(w, ag, nx, cx, footY) {
 }
 
 function stepWalk(w, ag) {
+  comeBackToMine(w, ag)
   // The floor blown out from under a walker. advanceWalk only ever looks at
   // the cell ahead, so without this the agent read a cliff edge both ways and
   // turned on the spot in mid-air until the still rule bombed it: three at
@@ -7451,7 +7560,9 @@ function descentSpeed(w, ag, cx) {
   // column of rising air comes down at umbrella speed and lands like it had
   // one, without spending one. The Desert's wind and the Trench's water follow
   // the same rule — one field, read in one place.
-  if (w.updraft && w.updraft[cx]) { speed = Math.min(speed, FLOAT_SPEED); ag.drafted = true }
+  if (w.updraft && w.updraft[cx] && !w.updraftLift) { speed = Math.min(speed, FLOAT_SPEED); ag.drafted = true }
+  // The Cloud's lift only holds up an open umbrella, and holds it up well.
+  if (w.updraft && w.updraft[cx] && w.updraftLift && ag.floater) { speed = Math.min(speed, FLOAT_SPEED * CLOUD_LIFT); ag.drafted = true }
   return speed
 }
 
@@ -7824,6 +7935,19 @@ function plantMine(w, ag) {
   ag.idle = 0
   ag.turns = 0
   ag.dir = -ag.dir
+  // Clear of the blast, it comes back to the gap it is opening rather than
+  // walking on to the far end of the floor and back: on level 2 a last agent
+  // planted at a wall with no room on top and was 75 cells away when it blew.
+  // Turned back MINE_COMEBACK ticks in, the walk back lands after the bang.
+  ag.comeBackAt = w.ticks + MINE_COMEBACK
+  ag.comeBackDir = -ag.dir
+}
+
+var MINE_COMEBACK = 60
+function comeBackToMine(w, ag) {
+  if (ag.comeBackAt === undefined || w.ticks < ag.comeBackAt) return
+  if (ag.state === "walk" && ag.dir !== ag.comeBackDir) turnAround(w, ag)
+  ag.comeBackAt = undefined
 }
 
 
@@ -8764,8 +8888,39 @@ function borrowWallTools(w, ag) {
   var acting = w.acting
   w.acting = null
   var ok = wallTools(w, ag, wallHeight(w, ax, footY), wallThickness(w, ax, footY, ag.dir))
+      || bomberAsMine(w, ag)
   w.acting = acting
   return ok
+}
+
+// The last resort of a hero who is last out: the colony's bombers are no use
+// to anyone now, so one is laid as a mine at the wall instead of worn. Level
+// 109 (a Skyscraper since the Cloud) gives no miners or diggers, its bashers
+// are spent before the hero reaches the exit floor's six-thick wall, and the
+// hero paced in front of it until the stall cutoff in 21 of 24 colonies.
+// A tower's floor is steel, so the charge goes in at the foot of the wall
+// itself when it cannot go in the floor.
+function bomberAsMine(w, ag) {
+  var spot = mineReach(w, ag) && mineSpot(w, ag)
+  if (!spot || !take(w, "bomber")) return false
+  plantMine(w, ag)
+  var m = w.mines[w.mines.length - 1]
+  m.x = spot.x; m.y = spot.y
+  return true
+}
+
+function mineReach(w, ag) {
+  var depth = obstructionAhead(w, ag)
+  return depth >= 1 && depth <= MINE_RADIUS && !chargeNear(w, ag) && !(ag.mineCool > 0)
+}
+
+// The floor under the agent if a mine can go there, else the foot of the
+// wall ahead if that is not steel, else nowhere.
+function mineSpot(w, ag) {
+  var x = Math.floor(ag.x), footY = Math.floor(ag.y)
+  if (canPlantMine(w, ag)) return { x: x, y: footY + 1 }
+  var ax = x + ag.dir
+  return solid(w, ax, footY) && at(w, ax, footY) !== STEEL ? { x: ax, y: footY } : null
 }
 
 var HERO_WAIT = 130   // ticks of cooldown a hero will stand out at a wall toward home
@@ -10866,6 +11021,10 @@ function countPass(w, ag) {
 
 function condemn(w, ag) {
   if (ag.state === "bomb" || ag.state === "block" || ag.state === "camp" || ag.state === "saved") return
+  // Pacing in front of a door that is shut for a job nobody has started is
+  // waiting, not looping: the job gets descoped (see missionWaitedOut) and the
+  // door opens. Blowing them up first was how level 101 lost whole colonies.
+  if (ag.sawShut && w.mission && !w.mission.done && !w.mission.progress) return
   if (ag.state === "swim") return
   if (ag.waitFor > 0) return
 
@@ -11193,6 +11352,7 @@ function stepMission(w) {
     m.progress += Math.min(2, helping)
     if (m.kind === "alien") m.shotFor = 3
   }
+  if (!m.progress && missionWaitedOut(w, m)) { descopeMission(w, m); return }
   if (m.progress >= 4) {
     for (var ti = 0; ti < m.targets.length; ti++) {
       var t = m.targets[ti]
@@ -11208,6 +11368,33 @@ function stepMission(w) {
     m.openedAt = w.ticks
     w.lastEvent = "mission complete"
   }
+}
+
+// A mission nobody can reach. On level 101 the miners sit beyond two walls
+// that hang to within two rows of the floor, the bashers were spent upstairs,
+// and the colony stood at the shut door until the stall rules blew it up —
+// nobody home in 3 of 24 colonies. Once somebody has stood at the door for
+// MISSION_PATIENCE ticks with the mission untouched, it is descoped: the door
+// opens, the cages stay shut, and the ticker owns up to it. Counted from the
+// first time anybody reached the door, and only while nobody has made a start.
+var MISSION_PATIENCE = 450
+function missionWaitedOut(w, m) {
+  var e = w.exit, at = false
+  for (var i = 0; i < w.agents.length && !at; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state === "saved") continue
+    at = ag.x > e.x - 2 && ag.x < e.x + e.w + 2 && ag.y > e.y && ag.y < e.y + e.h + 1
+  }
+  if (at && m.shutSince === undefined) m.shutSince = w.ticks
+  return m.shutSince !== undefined && w.ticks - m.shutSince >= MISSION_PATIENCE
+}
+
+function descopeMission(w, m) {
+  m.done = true
+  m.descoped = true
+  m.openedAt = w.ticks
+  w.lastEvent = "mission descoped"
+  feedNote(w, "MISSION DESCOPED: " + m.verb + " MOVED TO NEXT SPRINT")
 }
 
 function stepFreedMission(w, m) {
@@ -11353,6 +11540,7 @@ function finishWorldStep(w, active, blockers, moving) {
   stepConflicts(w)
   stepAisles(w)
   stepLibrarians(w)
+  stepCloud(w)
   stepAgi(w)
   stepRadio(w)
   stepMission(w)

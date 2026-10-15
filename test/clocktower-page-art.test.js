@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [16, 35, 54, 73], layers = [D.drawDialHall, D.drawDialMotion]
+const levels = [16, 36, 56, 76], layers = [D.drawDialHall, D.drawDialMotion]
 const MAX_CALLS = 20000
 function sample(level = 16, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -183,7 +183,7 @@ test("original props and the entire gate cassette, shutter and dial remain reser
   ink.fillRect(-1, 10, 1, 1); ink.fillRect(10, 10, 1, 1)
 })
 test("dial glass precedes masonry and live movement precedes gates, umbrellas and exit", () => {
-  const { w, pal } = sample(35), ctx = canvas(800, 496).ctx
+  const { w, pal } = sample(36), ctx = canvas(800, 496).ctx
   let serial = 0, marks = {}
   ctx.fillRect = () => {
     assert.ok(++serial <= 100000)
@@ -230,7 +230,7 @@ test("dial light preserves opaque faces, shirts, eyes and umbrellas", () => {
 })
 test("original Clock Tower ground, fixtures, gates, pits, hazards and exit retain bytes", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "1629b96601b22e7f152f0a025b43bff5360392317d2cc97d6a0829e88afc812e"], [[2], "85b8fc35c3fba6dfb82b6a942d64f0fb988ccb066fee6fda14649655051e2126"]
+    [[undefined, 1], "7a7775c57d5ee2c3b18bc526e2a2f35170c1672e4b4ff0743c0d50840849b350"], [[2], "0326a21c4461c9353b99a7da7fc6b9ea8eb0a2c59e2029e1919574107abcdf3b"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)

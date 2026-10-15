@@ -438,6 +438,7 @@
 
   function afterFullscreen() {
     el.fullWord.textContent = isFullscreen() ? "on" : "off"
+    el.fullWord.parentNode.setAttribute("aria-pressed", isFullscreen() ? "true" : "false")
     fitBoard()
     render()
   }
@@ -477,6 +478,7 @@
     // while the first-visit tip (news.js) is saying "tap an agent" already.
     if (++levelsThisVisit <= 3 && !tipShowing()) world.feed.push({ t: 45, text: "TAP AN AGENT: WHO GETS HOME FIRST?" })
     world.reducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+    announce(levelAnnouncement(world))
     completionLine = ""
     lastTerrainVersion = 0
     rebuildPalette()
@@ -502,6 +504,7 @@
 
     if (world.done && completionLine === "") {
       completionLine = outcomeLine(world)
+      announce(reportAnnouncement(world))
       noteSightings(world)
       noteBet(world)
       startReplay(world)
@@ -763,6 +766,7 @@
 
     el.speedWord.textContent = SPEED_NAMES[speedIndex]
     el.whoWord.textContent = showLabels ? "on" : "off"
+    el.who.setAttribute("aria-pressed", showLabels ? "true" : "false")
     el.pauseWord.textContent = running ? "pause" : "resume"
     var lv = levelsCleared === 1 ? " level" : " levels"
     el.lifetime.textContent = compact(lifetimeSaved) + " home, " + levelsCleared + lv
@@ -814,6 +818,16 @@
       return Array.isArray(v) ? v.filter(function (id) { return typeof id === "string" }) : []
     } catch (e) { return null }
   }
+  // For screen readers: the start of each level and its result, in a polite
+  // live region — twice a level, never per frame. The board itself is a
+  // picture with a name; everything that matters on it is said here.
+  function levelAnnouncement(w) { return "Level " + w.level + ", " + w.biome + ". " + w.toRelease + " agents." }
+  function reportAnnouncement(w) {
+    return "Level " + w.level + " report: " + w.saved + " of " + w.toRelease + " home" + (w.lost ? ", " + w.lost + " lost." : ".")
+  }
+  function announce(text) { if (el.announce) el.announce.textContent = text }
+  window.AgentAnnounce = { level: levelAnnouncement, report: reportAnnouncement }
+
   function noteSightings(w) {
     var seen = loadSightings()
     if (seen === null) return
@@ -881,6 +895,7 @@
     saveState()
     Array.prototype.forEach.call(el.themes.children, function (b) {
       b.classList.toggle("on", b.dataset.theme === name)
+      b.setAttribute("aria-pressed", b.dataset.theme === name ? "true" : "false")
     })
   }
 
@@ -901,6 +916,7 @@
     if (wasPlaying) playAudio()
     Array.prototype.forEach.call(el.tracks.children, function (b, n) {
       b.classList.toggle("on", n === i)
+      b.setAttribute("aria-pressed", n === i ? "true" : "false")
     })
     renderAudio()
     saveState()
@@ -931,17 +947,21 @@
 
   function renderSfx() {
     if (!el.sfx) return
-    el.sfx.querySelector("span").textContent = window.AgentSfx && AgentSfx.isOn() ? "on" : "off"
+    var sfxOn = !!(window.AgentSfx && AgentSfx.isOn())
+    el.sfx.querySelector("span").textContent = sfxOn ? "on" : "off"
+    el.sfx.setAttribute("aria-pressed", sfxOn ? "true" : "false")
   }
 
   function renderAudio() {
     var playing = !el.player.paused && !el.player.ended
     el.playpause.innerHTML = playing ? "&#10073;&#10073;" : "&#9654;"
     el.playpause.classList.toggle("on", playing)
+    el.playpause.setAttribute("aria-pressed", playing ? "true" : "false")
   }
 
   function boot() {
     el.level = document.getElementById("level")
+    el.announce = document.getElementById("announce")
     el.biome = document.getElementById("biome")
     el.home = document.getElementById("home")
     el.bar = document.getElementById("bar")
@@ -982,6 +1002,7 @@
       b.textContent = name
       b.dataset.theme = name
       b.className = "theme" + (name === themeName ? " on" : "")
+      b.setAttribute("aria-pressed", name === themeName ? "true" : "false")
       b.addEventListener("click", function () { setTheme(name) })
       el.themes.appendChild(b)
     })
@@ -991,6 +1012,8 @@
       b.textContent = "\u266a " + (i + 1)
       b.className = "theme"
       b.title = "Soundtrack " + (i + 1)
+      b.setAttribute("aria-label", "Soundtrack " + (i + 1))
+      b.setAttribute("aria-pressed", "false")
       b.addEventListener("click", function () { setTrack(i, true) })
       el.tracks.appendChild(b)
     })
@@ -1086,6 +1109,9 @@
     document.addEventListener("keydown", function (e) {
       if (e.metaKey || e.ctrlKey || e.altKey) return
       var k = e.key.toLowerCase()
+      // Space and Enter on a focused button or link belong to it: a keyboard
+      // user tabbing to "next level" pressed Space and got a pause instead.
+      if ((k === " " || k === "enter") && e.target && /^(BUTTON|A|INPUT|SELECT|TEXTAREA|SUMMARY)$/.test(e.target.tagName)) return
       if (k === " " || e.code === "Space") { togglePause(); e.preventDefault() }
       else if (k === "arrowright" || k === "l" || k === "n") advance(1)
       else if (k === "arrowleft" || k === "h" || k === "p") advance(-1)

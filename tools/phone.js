@@ -29,7 +29,7 @@ export const VIEWS = [
   { name: "desktop", width: 1280, height: 900, mobile: false }
 ]
 const TARGET = 44
-const CMD_TIMEOUT = 20000
+const CMD_TIMEOUT = 10000      // active time a CDP command may take before it fails
 
 // root: another copy of the page (tools/ship.js's dist/). brotli: compress
 // text as Cloudflare does on the fly (about quality 5), for load timings.
@@ -143,7 +143,7 @@ export async function browser() {
   }
   api.cmd = (method, params = {}) => new Promise((resolve, reject) => {
     if (closed) { reject(Error("Headless browser is gone: " + method)); return }
-    const i = ++id, cancel = browserTimer(10000, () => { pending.delete(i); reject(Error("Headless browser command timed out: " + method)) })
+    const i = ++id, cancel = browserTimer(CMD_TIMEOUT, () => { pending.delete(i); reject(Error("Headless browser command timed out: " + method)) })
     pending.set(i, { resolve, reject, cancel }); ws.send(JSON.stringify({ id: i, method, params }))
   })
   api.close = async () => { ws.close(); await closeBrowser(proc, unit, profile) }

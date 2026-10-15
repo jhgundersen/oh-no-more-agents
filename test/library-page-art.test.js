@@ -5,7 +5,7 @@ import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
-const levels = [13, 32, 51, 70], layers = [D.drawReadingHall, D.drawReadingDust]
+const levels = [13, 33, 53, 73], layers = [D.drawReadingHall, D.drawReadingDust]
 const MAX_CALLS = 20000
 function sample(level = 13, name = "tokyo-night") {
   const w = S.generate(level, 0, level * 7919 + 13)
@@ -125,7 +125,7 @@ test("dust moves within lamp pools at a fixed cheap budget and clears all origin
 })
 
 test("warm backgrounds and motes precede original book walls, props, umbrellas and exit", () => {
-  const { w, pal } = sample(32), ctx = canvas(800, 496).ctx
+  const { w, pal } = sample(33), ctx = canvas(800, 496).ctx
   let serial = 0, marks = {}
   // The Library has many original shelf strokes. Check order as a stream,
   // rather than storing a complete terrain recording just to find four marks.
@@ -173,7 +173,7 @@ test("warm pools preserve opaque face, shirt, eye and umbrella pixels in all fiv
 
 test("original Library books, stacks, lamp dust, props, pits, hazards and exit retain bytes", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "0ef0b0c90297e87aec2bbaa9e167a08299cc9f448d7aeb7fce7a20c8c525c052"], [[2], "9b3d2301b0cf99b1da07367cc707ac011c1364f7586f92744ad824823665afc4"]
+    [[undefined, 1], "24d63043bac6994d83d4634d44bc4d23e4ff5c6193156420993a17b83fde0ce4"], [[2], "ac7d028ea26b9ec3df8c616beef3126d4a4910f2595f7f7ed56dda444949bba4"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)
@@ -193,7 +193,7 @@ test("original Library books, stacks, lamp dust, props, pits, hazards and exit r
 
 test("Deprecation Notice and Reindexing still edit terrain without relocating the reading room", () => {
   for (const id of ["weeding", "reindex"]) {
-    const { w, pal } = sample(51), c = w.corridors[0], ev = S.EVENTS.find(e => e.id === id)
+    const { w, pal } = sample(33), c = w.corridors[0], ev = S.EVENTS.find(e => e.id === id)
     const site = { c, x: 30 }, fx = { ...ev, x: 30, floorY: c.floorY, warnAt: 0, fireAt: 60, firedAt: -1 }
     w.ticks = 24
     const img = canvas(800, 496)
