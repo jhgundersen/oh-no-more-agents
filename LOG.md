@@ -8247,3 +8247,17 @@ starts about a quarter of the way down.
 - 256: no empty sightings strip.
 - 257: the ticker clears a phone's edge.
 - 258: this.
+
+## 259 — 2026-10-15 · Two page tests that only failed under load
+
+**Asked:** standing order: when dev tooling is slow or flaky, fix it.
+
+**Found:** the gate for 258 went red once. The standup and sweepstake page
+tests failed in the full parallel run and passed alone. Both slept a fixed
+200–400 ms for the page to move on (a level advancing, a tally written) and
+then asserted; under the full run's load the page sometimes hadn't got there.
+
+**Changed:** those waits now poll, up to 4–5 s, for the thing they assert. The
+sweepstake test also retries its click on a moving agent up to 12 times (was
+6). No assertion changed. Two consecutive full checks after the change are
+green.

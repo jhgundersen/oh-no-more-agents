@@ -71,7 +71,7 @@ test("on the page: the first tap is the pick (no nudge), later taps are pep talk
     assert.equal(await ev(`!document.getElementById("tip").hidden`), false)
     assert.ok((await ev(`AgentWorld().feed.map(f => f.text).join("|")`)).includes("WHO GETS HOME FIRST"))
     const click = async (x, y) => { await b.cmd("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 }); await b.cmd("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 }); await sleep(100) }
-    for (let i = 0; i < 6 && (await ev(`AgentWorld().bet`)) == null; i++) {
+    for (let i = 0; i < 12 && (await ev(`AgentWorld().bet`)) == null; i++) {
       await click(where.x, where.y)
       if ((await ev(`AgentWorld().bet`)) == null) { await sleep(300); where = { ...where, ...(await ev(`(() => { const w = AgentWorld(), a = w.agents.find(a => a.id === ${where.id}); const r = document.getElementById("board").getBoundingClientRect(), s = r.width / (w.k.COLS * w.k.CELL); return { x: r.left + a.x * w.k.CELL * s, y: r.top + ((a.y + 1) * w.k.CELL - 7) * s } })()`)) } }
     }
@@ -79,7 +79,8 @@ test("on the page: the first tap is the pick (no nudge), later taps are pep talk
     assert.ok(bet != null, "picked")
     assert.equal(await ev(`AgentWorld().peps || 0`), 0, "a pick is not a pep talk")
     await ev(`(() => { const w = AgentWorld(); while (!w.done) step(w) })()`)
-    await sleep(400)
+    // Polled, not slept: under the full parallel run the page can take a while.
+    for (let i = 0; i < 50 && !(await ev(`localStorage.getItem("oh-no-more-agents-sweepstake")`)); i++) await sleep(100)
     const tally = await ev(`localStorage.getItem("oh-no-more-agents-sweepstake")`)
     assert.equal(JSON.parse(tally).total, 1)
     assert.deepEqual(b.errors, [])
