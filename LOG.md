@@ -7740,3 +7740,40 @@ rather than pep talks, since watchers need to know what a tap does.
 **Tests:** `test/sfx.test.js` checks each trigger, one voice at a time, and
 silence with sfx off. The stand-in AudioContext's filters gained `Q`, and the
 AGI-replaces-the-chirp count now starts past the first home.
+
+## 249 — 2026-10-15 · First impressions
+
+**Asked:** open the page fresh (cleared storage) in headless Chromium at
+desktop and phone size, and watch levels 1–3 at normal speed through periodic
+screenshots (1 to 90 s). Note, as a new visitor, anything confusing, ugly, too
+busy or dead time. Fix the top 2–3 quick ones and log the rest.
+
+**What a new visitor sees:** level 1 (Cavern) starts dropping agents at about
+2 s. The first one is home at 14 s and the report card is up at 26 s, so it's
+well paced. Level 2 (Ruins) starts about 2 s after the card, and level 3
+arrives at about 85 s on the desktop.
+
+**Fixed:**
+1. **The tip never left.** "Tip: tap an agent." stayed on the board until
+   someone tapped. It was still there over the report card and halfway
+   through level 2. Now it also goes when its first level ends, or when the
+   page moves to another level, and that counts as seen (`tipOver`).
+2. **Said twice.** On a first visit the tip and the ticker's "TAP AN AGENT:
+   WHO GETS HOME FIRST?" were up at the same moment. While the tip shows, the
+   ticker hint stays quiet; levels 2 and 3 of the visit still get it.
+3. **"12 home, 1 levels"** in the footer is now "1 level" (and "1 agent" in
+   its title).
+
+**Logged, not fixed:**
+- **Dead time on level 2 (phone run, random colony):** 9 of 13 home at 60 s,
+  then four stragglers on the bottom floor across a pool from the exit. Still
+  9/13 at 90 s, so 30+ s with nothing changing. The desktop colony had one
+  straggler for 15 s. It's a play-test item; the colony seed wasn't captured,
+  so next time the first-look script should record `w.colonySeed`.
+- **The ticker on a phone** starts flush against the screen edge (the board
+  fills the width) and is small at 390 px. Readable, but cramped.
+- **The first report card** shows "0/7 SIGHTINGS" with seven grey icons,
+  which means little on a first visit. Maybe hide the strip until the first
+  sighting.
+- **The intro paragraph** is five lines on a phone, so the board starts
+  halfway down the first screen.

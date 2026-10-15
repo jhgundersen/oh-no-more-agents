@@ -27,6 +27,13 @@
   function tipDue(store) { return read(store, TIP_KEY) === null }
   function tipDone(store) { write(store, TIP_KEY, "1") }
 
+  // The first level the tip went up on is over.
+  var tipLevel = null
+  function tipOver(w) {
+    if (tipLevel === null) tipLevel = w.level
+    return w.done || w.level !== tipLevel
+  }
+
   function store() { try { return window.localStorage } catch (e) { return null } }
 
   function mount(doc) {
@@ -53,10 +60,17 @@
       var dismiss = function () { tip.hidden = true; tipDone(store()); if (board) board.removeEventListener("click", dismiss) }
       tip.addEventListener("click", function (e) { e.stopPropagation(); dismiss() })
       if (board) board.addEventListener("click", dismiss)
+      // Nor does it outstay the first level: a tip still on the board a
+      // minute later, over the next level, is clutter (first-look review).
+      var poll = setInterval(function () {
+        var w = window.AgentWorld && window.AgentWorld()
+        if (tip.hidden) { clearInterval(poll); return }
+        if (w && tipOver(w)) { dismiss(); clearInterval(poll) }
+      }, 500)
     }
   }
 
-  window.AgentNews = { NEWS: NEWS, unseen: unseen, markSeen: markSeen, tipDue: tipDue, tipDone: tipDone, mount: mount }
+  window.AgentNews = { NEWS: NEWS, unseen: unseen, markSeen: markSeen, tipDue: tipDue, tipDone: tipDone, mount: mount, tipOver: tipOver }
   if (typeof document !== "undefined") {
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { mount(document) })
     else mount(document)

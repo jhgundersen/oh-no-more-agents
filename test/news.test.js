@@ -38,3 +38,12 @@ test("the tip shows once; without storage everything still works", () => {
   assert.equal(N.unseen(broken), true)
   assert.equal(N.unseen(null), true)
 })
+
+test("the tip goes when its first level is over, or the page moves to another", () => {
+  const sb = { window: {} }
+  vm.runInNewContext(fs.readFileSync(new URL("../public/agents/news.js", import.meta.url), "utf8"), sb)
+  const { tipOver } = sb.window.AgentNews
+  assert.equal(tipOver({ level: 4, done: false }), false)
+  assert.equal(tipOver({ level: 4, done: true }), true)
+  assert.equal(tipOver({ level: 5, done: false }), true)
+})

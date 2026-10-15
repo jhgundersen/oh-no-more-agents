@@ -449,6 +449,12 @@
   // Every total the counter hands back passes through here: a round number
   // crossed (Outcome's milestoneFor) dresses the colony for the rest of the
   // session, starting with the level on screen.
+  function tipShowing() {
+    var store = null
+    try { store = window.localStorage } catch (e) {}
+    return !!(window.AgentNews && AgentNews.tipDue(store))
+  }
+
   function noteTotal(total) {
     var m = milestoneFor(globalSaved, total)
     globalSaved = total
@@ -467,8 +473,9 @@
     world.res = RES
     world.doneHold = DONE_HOLD
     if (milestone) world.milestone = milestone
-    // The first few levels of a visit say how the sweepstake works.
-    if (++levelsThisVisit <= 3) world.feed.push({ t: 45, text: "TAP AN AGENT: WHO GETS HOME FIRST?" })
+    // The first few levels of a visit say how the sweepstake works — not
+    // while the first-visit tip (news.js) is saying "tap an agent" already.
+    if (++levelsThisVisit <= 3 && !tipShowing()) world.feed.push({ t: 45, text: "TAP AN AGENT: WHO GETS HOME FIRST?" })
     world.reducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
     completionLine = ""
     lastTerrainVersion = 0
@@ -753,8 +760,9 @@
     el.speedWord.textContent = SPEED_NAMES[speedIndex]
     el.whoWord.textContent = showLabels ? "on" : "off"
     el.pauseWord.textContent = running ? "pause" : "resume"
-    el.lifetime.textContent = compact(lifetimeSaved) + " home, " + levelsCleared + " levels"
-    el.lifetime.title = lifetimeSaved.toLocaleString() + " agents home over " + levelsCleared + " levels"
+    var lv = levelsCleared === 1 ? " level" : " levels"
+    el.lifetime.textContent = compact(lifetimeSaved) + " home, " + levelsCleared + lv
+    el.lifetime.title = lifetimeSaved.toLocaleString() + (lifetimeSaved === 1 ? " agent" : " agents") + " home over " + levelsCleared + lv
     el.global.textContent = globalSaved === null
       ? "worldwide: offline"
       : "worldwide: " + compact(globalSaved) + " saved"
