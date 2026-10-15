@@ -725,7 +725,7 @@
     if (!world) return
     if (world.done || world.replaying) hideLevelTitle()
     if (window.AgentSeason) window.AgentSeason.dress(world)
-    drawActors(actorCtx, world, palette, { labels: showLabels, intro: false, feed: isFullscreen() })
+    drawActors(actorCtx, world, palette, { labels: showLabels, intro: false, feed: isFullscreen(), heldReport: reportHeld() })
     if (window.AgentSeason) window.AgentSeason.paint(actorCtx, world)
   }
 
@@ -841,6 +841,10 @@
   // at Brisk/fast-forward. No timer, animation, live-region chatter or per-frame
   // DOM rewrite; pausing leaves the latest line available to read.
   var captionWorld = null, captionNote = null, captionUntil = 0
+  function reportHeld() {
+    return !running && world && world.done && !world.replaying && !replay && !standup
+  }
+
   // Fullscreen hides the caption (index.html) and gives the board its
   // in-board ticker back: a reserved caption row cost a 720p kiosk its 2x.
   function renderCaption() {
@@ -848,8 +852,9 @@
     if (captionWorld !== world) { captionWorld = world; captionNote = null; captionUntil = 0 }
     var note = feedNotice(world), now = performance.now()
     if (note && note !== captionNote) { captionNote = note; captionUntil = now + 5000 }
-    var active = captionNote && !world.done && !world.replaying && !replay && !standup && (!running || now < captionUntil)
-    var text = active ? captionNote.text : ""
+    var held = reportHeld()
+    var active = held || captionNote && !world.done && !world.replaying && !replay && !standup && (!running || now < captionUntil)
+    var text = held ? "Report held · Space or tap to resume" : active ? captionNote.text : ""
     if (el.captionText.textContent !== text) {
       el.captionText.textContent = text
       el.caption.classList.toggle("empty", !active)
@@ -895,8 +900,9 @@
 
     // The result is the canvas's own report card now (drawLevelResults). This
     // overlay used to print the same count and a line of prose on top of it,
-    // and the two were unreadable through each other — so it is pause only.
-    el.overlay.style.display = running ? "none" : ""
+    // and the two were unreadable through each other. Hold a finished report
+    // without covering it; its resume hint uses the existing caption space.
+    el.overlay.style.display = running || reportHeld() ? "none" : ""
     el.overlayTitle.textContent = "PAUSED"
     el.overlayLine.textContent = "Space or click to resume"
 
@@ -1051,6 +1057,9 @@
 
   function togglePause() {
     running = !running
+    // A held report also lifts an in-progress closing wipe. Repaint on resume
+    // at exactly the same tick; no clock or simulation state is rewound.
+    if (world && world.done && !replay && !standup) paintActors()
     render()
   }
 
