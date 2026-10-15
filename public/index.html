@@ -25,7 +25,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="84496cb6">
+<meta name="build" content="bece4143">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
@@ -139,7 +139,7 @@
 			padding: 6px 10px; font-size: 10px; letter-spacing: 0.08em; cursor: pointer; white-space: nowrap;
 			background: var(--ink); color: var(--fg); border: 1px solid var(--accent); box-shadow: 0 2px var(--muted);
 		}
-		#tip[hidden], #news[hidden] { display: none; }
+		#tip[hidden], #news:not([open]) { display: none; }
 		.tour {
 			width: var(--board-w); max-width: 100%; box-sizing: border-box; display: flex; gap: 4px;
 			overflow-x: auto; overscroll-behavior-x: contain; padding: 2px 1px 4px; margin-top: -8px; scrollbar-width: thin;
@@ -166,10 +166,12 @@
 		#news-open.new .dot { display: inline-block; }
 		#news {
 			position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+			width: 100%; height: 100%; max-width: none; max-height: none; box-sizing: border-box; margin: 0; border: 0;
 			padding: 16px; background: rgba(0, 0, 0, 0.6); cursor: pointer;
 		}
+		#news::backdrop { background: transparent; }
 		.news-card {
-			max-width: 520px; width: 100%; box-sizing: border-box; padding: 16px 18px;
+			max-width: 520px; width: 100%; max-height: 100%; overflow: auto; box-sizing: border-box; padding: 16px 18px; cursor: default;
 			background: var(--panel); color: var(--fg); border: 2px solid var(--accent);
 			box-shadow: 0 0 0 2px var(--ink), 0 6px 0 2px var(--muted); image-rendering: pixelated;
 		}
@@ -177,7 +179,10 @@
 		.news-card ol { margin: 0; padding: 0; list-style: none; font-size: 11px; line-height: 1.5; }
 		.news-card li { padding: 5px 0; border-top: 1px dashed var(--edge); }
 		.news-card li::before { content: "> "; color: var(--accent); }
-		.news-close { margin-top: 10px; font-size: 9px; letter-spacing: 0.1em; color: var(--dim); text-align: right; }
+		.news-close {
+			display: block; margin: 10px 0 0 auto; padding: 7px 10px; font: inherit; font-size: 10px; letter-spacing: 0.1em;
+			color: var(--fg); background: var(--ink); border: 1px solid var(--accent); cursor: pointer;
+		}
 		#overlay-title { font-size: 16px; font-weight: 700; letter-spacing: 0.08em; }
 		#overlay-line { max-width: 560px; font-size: 12px; line-height: 1.45; color: #fff; opacity: 0.78; }
 
@@ -403,13 +408,13 @@
 	<div id="tour" class="tour" role="group" aria-label="Biome tour: jump to any of the biomes"></div>
 
 	<div class="news-row"><button id="daily" class="linkish daily" title="One level, one colony, the same for everyone today (UTC)"><canvas id="dailyBadge" width="16" height="16" aria-hidden="true"></canvas><span>colony of the day · <span id="dailyDate"></span></span><span class="daily-sub">Today's standup is mandatory.</span></button><button id="news-open" class="linkish" aria-haspopup="dialog">what's new<span class="dot" aria-label="new"></span></button></div>
-	<div id="news" role="dialog" aria-modal="true" aria-labelledby="news-title" hidden>
+	<dialog id="news" aria-modal="true" aria-labelledby="news-title">
 		<div class="news-card">
 			<div id="news-title">PATCH NOTES</div>
 			<ol></ol>
-			<div class="news-close">tap or esc to close</div>
+			<button id="news-close" class="news-close" type="button" aria-label="Close patch notes" autofocus>close · esc</button>
 		</div>
-	</div>
+	</dialog>
 
 	<div id="themes" role="group" aria-label="Colour theme"></div>
 
@@ -426,14 +431,14 @@
 		from them exactly as the bar widget does.
 	</p>
 
-	<script src="agents/Sim.js?v=3a10324e"></script>
+	<script src="agents/Sim.js?v=a049e3c9"></script>
 	<script src="agents/Draw.js?v=54dcef52"></script>
 	<script src="agents/Palette.js?v=ff1f4919"></script>
 	<script src="agents/Outcome.js?v=1105e622"></script>
 	<script src="agents/share.js?v=c3e48a0d"></script>
 	<script src="agents/sfx.js?v=13e9c6e5"></script>
 	<script src="agents/season.js?v=dbb629c3"></script>
-	<script src="agents/news.js?v=cfe62b0f"></script>
+	<script src="agents/news.js?v=11e53121"></script>
 	<script src="agents/web.js?v=e1c54de3"></script>
 
 </body>
