@@ -6360,7 +6360,7 @@ function drawWelcomeDoor(ctx,pal,x,y,ww,hh,power) {
   ctx.fillStyle=GAG_PAPER;ctx.fillRect(edge,y+2,0.5,hh-4)
 }
 // Tiny off-frame marks clip against current air, including after carving.
-// Each is at most three pixels, so four corners cover every touched cell.
+// Each is at most one cell wide/tall, so four corners cover every touched cell.
 function welcomeAirMark(ctx,w,x,y,width,height) {
   if (mechanismAir(w,x,y) && mechanismAir(w,x+width-0.5,y)
       && mechanismAir(w,x,y+height-0.5) && mechanismAir(w,x+width-0.5,y+height-0.5))
@@ -9230,7 +9230,93 @@ function drawPadPair(ctx, w, pal, p) {
   drawBeam(ctx, w, p.bx, p.by, since, 1)
 }
 
+// Page transporters: brass energiser coils and a bevelled landing plate.
+// The native machine and Mail Room tubes keep their original renderer.
+var TRANSPORT_BRASS="#b9a06c", TRANSPORT_SHADE="#4c4b42", TRANSPORT_WHITE="#e4fbff"
+function transporterGround(w,x,y) {
+  var k=w.k
+  return x>=0&&x<k.COLS&&y>=0&&y+1<k.ROWS&&w.terrain[(y+1)*k.COLS+x]!==k.EMPTY
+}
+// Small chunks inspect every touched terrain cell, including a narrow roof
+// between the rectangle's corners. Geometry is fixed, never a world scan.
+function transporterAir(ctx,w,x,y,width,height) {
+  for(var yy=0;yy<height;yy+=4)for(var xx=0;xx<width;xx+=4)
+    welcomeAirMark(ctx,w,x+xx,y+yy,Math.min(4,width-xx),Math.min(4,height-yy))
+}
+function drawPageTransporter(ctx,w,pal,x,y,charge) {
+  if(!transporterGround(w,x,y))return
+  var px=(x-1)*w.k.CELL,base=(y+1)*w.k.CELL,alpha=ctx.globalAlpha
+  var level=Math.floor(Math.max(0,Math.min(1,charge))*4),phase=w.reducedMotion?1:Math.floor(w.ticks/12)%4
+  ctx.save()
+  // The top remains at the old boots line; the bevel occupies the same
+  // two-pixel floor band as the old plate, so no new visual step is implied.
+  ctx.fillStyle=pal.rigDark;ctx.fillRect(px,base-1,12,3)
+  ctx.fillStyle=pal.steelShade;ctx.fillRect(px+1,base-2,10,1)
+  ctx.fillStyle=pal.steelEdge;ctx.fillRect(px+2,base-2,8,0.5)
+  ctx.fillStyle=TRANSPORT_BRASS;ctx.fillRect(px+1,base+1,10,0.5)
+  for(var side=0;side<2;side++)drawTransporterCoil(ctx,w,px+side*10,base,level,phase)
+  ctx.fillStyle=PAD_LIGHT
+  for(var lamp=0;lamp<4;lamp++) {
+    ctx.globalAlpha=alpha*(lamp<level?1:0.15)
+    ctx.fillRect(px+2+lamp*2,base,1.5,0.5)
+  }
+  ctx.globalAlpha=alpha*0.7;ctx.fillStyle=TRANSPORT_WHITE
+  transporterAir(ctx,w,px+4,base-3,4,0.5)
+  transporterAir(ctx,w,px+5,base-4,2,0.5)
+  ctx.restore()
+}
+function drawTransporterCoil(ctx,w,x,base,level,phase) {
+  var alpha=ctx.globalAlpha
+  ctx.fillStyle=TRANSPORT_SHADE;transporterAir(ctx,w,x,base-12,2,10)
+  ctx.fillStyle=TRANSPORT_BRASS;transporterAir(ctx,w,x+0.5,base-11,1,9)
+  for(var ring=0;ring<4;ring++) {
+    ctx.fillStyle=TRANSPORT_BRASS;transporterAir(ctx,w,x-0.5,base-10+ring*2,3,0.5)
+    ctx.fillStyle=PAD_LIGHT;ctx.globalAlpha=alpha*(ring<level?(ring===phase?1:0.45):0.12)
+    transporterAir(ctx,w,x+0.5,base-9.5+ring*2,1,0.5)
+  }
+  ctx.globalAlpha=alpha;ctx.fillStyle=transporterCapInk(level)
+  transporterAir(ctx,w,x,base-13,2,1)
+  ctx.fillStyle=TRANSPORT_WHITE;ctx.globalAlpha=alpha*0.7
+  transporterAir(ctx,w,x+0.5,base-13,0.5,0.5)
+  ctx.globalAlpha=alpha
+}
+function transporterCapInk(level) { return level===4?PAD_LIGHT:TRANSPORT_SHADE }
+function drawPageTransportBeam(ctx,w,x,y,age,way) {
+  if(age<0 || age>=PAD_FX_TICKS || !transporterGround(w,x,y))return
+  var px=(x-1)*w.k.CELL+1,base=(y+1)*w.k.CELL,alpha=ctx.globalAlpha
+  var power=w.reducedMotion?0.6:1-age/PAD_FX_TICKS
+  ctx.save();ctx.fillStyle=PAD_LIGHT;ctx.globalAlpha=alpha*0.12*power
+  transporterAir(ctx,w,px,base-18,10,16)
+  // In reduced motion this stays one steady light while the real passenger
+  // appears normally. No travelling rows, grains, or second receiving body.
+  if(w.reducedMotion){ctx.restore();return}
+  for(var band=0;band<3;band++) {
+    var phase=(age*1.5+band*5)%16,yy=base-2-(way<0?phase:16-phase)
+    ctx.fillStyle=PAD_LIGHT;ctx.globalAlpha=alpha*0.28*power
+    transporterAir(ctx,w,px,yy,10,1)
+    ctx.fillStyle=TRANSPORT_WHITE;ctx.globalAlpha=alpha*0.75*power
+    transporterAir(ctx,w,px+1,yy,8,0.5)
+  }
+  if(way<0)drawTransporterGhost(ctx,w,px+5,base,age,alpha)
+  ctx.fillStyle=PAD_LIGHT;ctx.globalAlpha=alpha*0.75*power
+  for(var grain=0;grain<6;grain++) {
+    var rise=(age+grain*3)%16
+    transporterAir(ctx,w,px+(grain*5%9),base-2-(way<0?rise:16-rise),0.5,1)
+  }
+  ctx.restore()
+}
+function drawTransporterGhost(ctx,w,cx,base,age,alpha) {
+  var scan=Math.floor(Math.min(1,age/PAD_CHARGE)*16)
+  for(var row=scan;row<BEAM_ROWS.length;row++) {
+    var half=BEAM_ROWS[row],y=base-SPRITE_PX+row
+    ctx.fillStyle=row===scan?TRANSPORT_WHITE:PAD_LIGHT;ctx.globalAlpha=alpha*0.85
+    transporterAir(ctx,w,cx-half,y,1,1);transporterAir(ctx,w,cx+half-1,y,1,1)
+    if(row<13&&half>1){ctx.globalAlpha=alpha*0.4;transporterAir(ctx,w,cx-half+1,y,half*2-2,1)}
+  }
+}
+
 function drawPad(ctx, w, pal, x, y, charge) {
+  if (w.res === 2) return drawPageTransporter(ctx,w,pal,x,y,charge)
   var C = w.k.CELL, px = (x - 1) * C, py = (y + 1) * C
   ctx.fillStyle = pal.rigDark
   ctx.fillRect(px, py - 1, C * 3, 3)
@@ -9261,6 +9347,7 @@ function drawPadLamps(ctx, w, px, py, charge) {
 
 // `way` -1 climbs out of the floor, +1 settles down onto it.
 function drawBeam(ctx, w, x, y, age, way) {
+  if (w.res === 2) return drawPageTransportBeam(ctx,w,x,y,age,way)
   var C = w.k.CELL, px = (x - 1) * C + 1, base = (y + 1) * C
   var fade = 1 - age / PAD_FX_TICKS, fine = (w.res || 1) >= 2
   ctx.save()
@@ -9315,6 +9402,7 @@ function drawBeamArrival(ctx, w, ag) {
     var p = w.pads[i], age = w.ticks - p.usedAt
     if (p.usedAt < 0 || p.who !== ag.id || age < 0 || age >= PAD_CHARGE) continue
     if (p.tube) return age < TUBE_TRAVEL
+    if (w.res === 2 && w.reducedMotion) return false
     ctx.save()
     drawBeamOutline(ctx, w, ag.x * w.k.CELL, (ag.y + 1) * w.k.CELL, age + 1, 1)
     ctx.restore()
