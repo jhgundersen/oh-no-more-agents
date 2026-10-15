@@ -21,5 +21,11 @@ jobs:
       # Ubuntu 24.04 blocks unprivileged user namespaces through AppArmor, so
       # Chromium's sandbox aborts at startup (SIGABRT) in every browser test.
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-      - run: chromium --version
+      # The first headless launch on a fresh runner builds caches and can miss
+      # a test's startup window; pay for it here. Also name the monospace font
+      # the page's caption falls back to.
+      - run: |
+          chromium --version
+          fc-match monospace
+          timeout 120 chromium --headless=new --disable-gpu --dump-dom about:blank > /dev/null
       - run: npm run check

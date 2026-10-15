@@ -10253,3 +10253,16 @@ failed. Chromium starts now, so the sandbox fix held. What was left:
   now loads every declared face up front, capped at 5 s.
 
 Local gate: 1549/1549, CRAP green.
+
+## 393 — 2026-10-15 · The check workflow, third pass
+Run 38791606208: 1547 passed, 2 failed.
+- a11y's first test missed even the 25 s window. It's the first file to
+  launch a browser, and it failed in both runs, so a cold first Chromium
+  launch looks likely. The workflow now warms Chromium once before the check.
+- hero-intros: a caption's text box still overflows on the runner. The
+  caption uses the system monospace font, so it depends on the machine; I
+  couldn't reproduce it here with Liberation, Nimbus or Adwaita Mono. The
+  assertion now prints both boxes and the text, and the workflow prints
+  `fc-match monospace`, so the next run says what to fix.
+
+Local gate: 1549/1549, CRAP green.
