@@ -9873,3 +9873,28 @@ renumbered and the page is re-stamped.
   max-age=31536000, immutable`.
 
 **Code:** Draw.js and web.js only, page resolution, no Sim.js change.
+
+## 381 — 2026-10-15 · Note: level 163's nukes (not fixed)
+
+After 373, level 163 had 3 nukes in 24 colonies, against 2 before. Traced
+salt 15:
+- **The wall:** nine agents are on the exit's floor at x50–70. A dirt block
+  6 thick (x71–76, rows 50–55) stands between them and the door at x82.
+- **The toolbar:** no bashers, no climbers; 3 miners, 18 bombers.
+- **Why nothing escalates:** the director fired once (t1466), and every
+  agent's `idle` stays under ~350 although they pace for 1,000+ ticks. So
+  neither `wallLastResort`'s half-patience charge nor the director ever
+  comes round again.
+- **What is resetting it:** something resets their progress mark (`markD`)
+  over and over. The likeliest causes are the mirages (22 "hallucinated an
+  exit" on this level, which move the goal) or the mission beacon. Not
+  confirmed.
+
+**Tried and reverted:** letting a mine chip at a wall deeper than its
+radius when the door is beyond it and no basher is left. The rule is
+sound, but it is never reached here, so the result was unchanged. Kept out
+until the reset is understood.
+
+**Next:** find what resets `markD` for pacing agents on 163 (log
+`goalMark` changes); a mirage that moves the goal every few hundred ticks
+would also explain other long pacing.
