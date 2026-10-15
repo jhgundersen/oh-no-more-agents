@@ -10042,3 +10042,83 @@ seed 5 no longer forms one within 5,000 ticks. `QUEUE_CASES` in
 by searching levels 1–60, so the cases still cover three biomes and both
 directions. The other two cases, and the contact sheet built from the first,
 are unchanged.
+
+## 386 — 2026-10-15 · Two to beam down (on a branch)
+
+**Choice:** the Spaceship's floor strips blended into its console trim. Watched
+real desktop/390px phone runs at Steady and Brisk, plus Christmas Ice Cave and
+Halloween Mail Room, before choosing recognisable transporter housings and a
+clearer beam. Branch `codex/transporter-art` starts from approved forecast
+`5822e88`, merged with local main `3d8f8a2`; both log histories are retained.
+Sim.js and Outcome.js match that merged main base; web.js remains the approved
+forecast host. No simulation change.
+
+**Changed:** at page resolution only, a bevelled landing plate sits between two
+brass coil housings. Four rings and lamps show the existing ten-tick recharge;
+a small cyan chase runs through the ready coils. Sending and receiving scan
+bands travel in opposite directions, with a soft column and half-pixel grains.
+Only the sending pad has a departing outline: the receiving effect follows the
+actual traveller, so there is no second body. Agents paint in front of the
+hardware. Reduced motion keeps the coils and light steady and shows the real
+arriving agent immediately. Support and small air-cell checks prevent machinery
+or beams surviving a missing floor or painting through a roof.
+
+Default/res 1 and res 3 transporters, and every Mail Room tube resolution, keep
+exact old pixels across five themes and beam ages. No new assets, world fields,
+RNG, timers, listeners or dependencies. Fixed work for the existing pair, with
+no world scan. Ship's conservative scanner classifies Draw.js safely; emitted
+growth **3,614 bytes / 1,102 gzip**.
+
+**Evidence:** `/tmp/codex-transporter-art/review/index.html` contains animated
+before/after departure and arrival strips for natural seed-3 transports on
+levels 27, 87 and 107, at native and page resolution. Exact recorded start ticks
+94 / 49 / 409; eight real offsets each, no invented passenger state. Current
+sheet `contact-sheet-d1be1160.png`, SHA-256
+`300eb9ac0b9982f453fa7ddd08a6cd1196b2641086417a9620b73d2f0cb465b2`.
+Canonical and stamped copies match; the manifest lists only this run's PNGs.
+
+The linked browser sheet has eight matched desktop/390px phone pairs, including
+Christmas and reduced-motion Halloween, with both pad details at 3x. World
+digests match for every pair, no horizontal overflow or browser exceptions.
+All 48 browser scene/detail hashes verify. Current browser sheet
+`contact-sheet-7af02df9.png`, SHA-256
+`edff872f1527fa38a14df8e68c8999c948a6e5af28c857674bde3508b4a6dc3a`.
+Viewed whole desktop/phone boards and the enlarged details. Draw `929bf28a`,
+web `09358f4b`, build `c044d8bc`.
+
+**Tools/performance:** the new bounded `tools/transporter-art.js` finds real uses
+within 4,000 ticks, caches terrain by version/resolution/theme and draws actors
+directly into small crops. All three strip sets plus sheet take **0.40s**,
+**153.5MB peak RSS**. The full browser comparison batch takes **8.64s**. Digest
+checks sample every actual render checkpoint and the final state, cutting the
+live test from **5.7s to 0.61s** without dropping a render/state comparison.
+Recorded drawing calls cap at 400; pixels compare by hashes, never buffer diffs.
+
+Locked `npm run fps` before/after, seed 3, six seconds at Brisk, levels 27 and
+107 from tick 200: both **60 median / 60 p5 fps**, **17ms worst**, **0% long
+tasks**. CPU **11/12% before**, **10/11% after** (measurement noise); matching
+start/end ticks, with 5/15 active characters and real transports in the window.
+No measured regression.
+
+**Validation:** locked focused checks **31/31**, **2.78s**. Frozen-source full
+`npm run check` with coverage: **1,544 passed, 0 failed**, **401.08s**, including
+Factory. CRAP **threshold 30 passed** using the same complete LCOV; maximum
+30.0. New runtime helpers score **2.0–11.0**, all 100% covered; the comparison
+orchestrator scores 14.0 at 100%, its crop cache 3.1 at 75%. Completion reported
+immediately. Source proof, stamp and staged/unstaged diff checks pass.
+
+Every heavy run used FIFO testlock. Persistent gate: two test workers,
+120-second timeouts, 2,048MB Node heap, `ulimit -v 6000000`, 3GB memory cap;
+**808.6MiB peak**, **7m49s wall time** including evidence/FPS/queueing. The
+single-file development test also used the heap/address-space caps. Logs,
+source proof, matched browser manifests and screenshots are under
+`/tmp/codex-transporter-art/`.
+
+**Next:** review/merge the branch. No push or deployment.
+
+## 387 — 2026-10-15 · Merged the transporter coils
+
+Reviewed and merged by the loop: codex/transporter-art (44ef025, entry 386),
+`--no-ff`, as approved. Codex's entry is renumbered and the page is
+re-stamped. Drawing only, with no Sim.js change; the branch also carried
+the already-merged forecast plate, which git folded in.
