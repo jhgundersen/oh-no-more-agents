@@ -7624,3 +7624,157 @@ give today's numbers, measured during 305–323:
 - `sim hazards`: 0.14 kills per placement.
 
 The old figures are kept alongside for comparison.
+
+## 329 — 2026-10-15 · Home on the metro (on a branch)
+
+**Branch:** `codex/train-art`, from current main when the pass began
+(`d5089cc`). Autonomous pick: the Subway's moving stock still looked like
+flat boxes beside the finished station. Give those little trains a vintage
+metro silhouette and a more physical ride home.
+
+**Watched first:** local desktop/phone Subway, Harbour ferries, Building Site
+crane rides and Clock Tower gates, Steady and Brisk, including Christmas
+Harbour and Halloween Subway. `/tmp/codex-moving-watch/watch.json` and its
+screenshots record the watch. Level 19's colony bypassed its ferry; level 39
+provided a real occupied crossing. Gates and crane riders already had more
+character; the metro body was the clearest next opportunity. No connected
+extension browser was exposed, so used the repo's bounded Chromium helper,
+throwaway profiles and ephemeral local server, with no counter API.
+
+**Art:** strictly res 2, through `drawPageMetro`. Stepped roof/ends, muted
+metal roof louvres, cream panels with fine stainless ribs, inset warm windows,
+pocket doors with handles, grounded bogies and rotating hub highlights.
+Whole-art-pixel ROM lettering replaces the tiny canvas-font HOME on the front
+car; the rear gets a small route-A badge rather than repeating the headline.
+One-car layouts retain HOME. Existing separate passenger silhouettes remain
+inside the windows, and an open door retracts into its pocket rather than
+covering a seated head.
+
+Head and tail lamps belong to the train's physical outer ends and swap for
+its empty return, including when there is only one car. Three faint headlight
+bands lie ahead of the actual leading end, clipped to current air. A half-
+pixel body bounce follows travel position, with a brief settling pose at the
+real stop. Wheels, couplers and the boarding/alighting step stay on their
+original floor; the door retains the exact existing open/closed decision,
+including pickups on the move. No extra boarding delay or simulation rule.
+
+All new solid paint uses the existing cell-sliced train ink, so foreground
+terrain still hides it. Lamps and body are painted before corridor agents;
+no warm wash goes over faces, suits or umbrellas. No RNG, history, timer,
+listener, world field, particle emitter or new public asset. Native res 1
+and the res-3 share-card path are pixel-identical. Harbour boats retain their
+own rendering path.
+
+**Reduced motion:** the entire train holds still when only idle/dwell clocks
+advance: no body bounce, settling, hub rotation or brake/speed strokes. Real
+travel, door state, passengers and steady directional lamps remain visible.
+The complete-car regression covers both directions and the single car.
+
+**Evidence:** `/tmp/codex-train-art/strips/index.html` animates real seed-3
+trips on levels **18, 38 and 78**, including opposite directions and the
+cramped one-car line. `strips/contact-sheet.png` pairs loaded/docked views;
+per-level `*-frames.png` sheets include native and page resolution. Eight
+selected milestones: occupied pickup, two rolling poses, genuine braking,
+dock, alighting, closed empty return and return acceleration. These are not
+equal-time frames, and the preview says so. Exact ticks, speeds, passenger
+counts and phases are in `strips/manifest.json`.
+
+`/tmp/codex-train-art/page-sheet.png` shows actual-CSS-size boards and 3x
+crops, with full screenshots in `before/` and `after/`. Six matched views:
+loaded desktop level 18, its docking on phone, empty desktop return on level
+38, Christmas one-car level 78 on phone, Halloween level 38 docking on phone,
+and reduced-motion level 18 on phone. The sheet includes the whole board on
+phones. Board/stage geometry and page-world digests match, there is no
+horizontal overflow, and every changed board pixel stays on the train floor.
+Metrics: `pages.json` / `presentation-check.json`. Baseline assets pinned to
+`d5089cc`.
+
+**Pipeline:** new `tools/train-art.js` finds naturally occupied runs within
+12,000 ticks, advances the real simulation through bounded milestones, caches
+terrain by version/resolution/palette, and paints actors straight into small
+translated crops. Tests compare them with full-frame crops. The complete
+**96-frame** comparison takes **0.65 s / 153 MB peak RSS**. Level 58's seed-3
+colony never rode, so the bounded fixture rejected it; level 78 both rides and
+covers the single car. A prototype braking selector could pick acceleration;
+it now waits for cruise before selecting the slowdown, with a regression that
+the sample is within ten cells of the destination. Browser scripts are syntax-
+checked before entering the queue; one browser captures all twelve page views,
+and composition reuses their PNGs with viewport-clipped phone crops.
+
+The older `subway-art` picture helper now hashes buffers and caps its paint
+recorder at 25,000 calls. Assertions compare compact hashes, preserving their
+checks without risking the enormous raw-buffer failure diff that previously
+took down the machine. New recorders are bounded too.
+
+**Cost:** one existing train, at most two cars, at most twelve existing rider
+silhouettes and three headlight bands. Body/hub poses use small shared tables
+and existing position/phase/timers. No filter or extra canvas in the game.
+Draw.js adds **1,424 gzip bytes** before shipping's comment strip.
+
+`npm run fps -- 18 38 --from-tick 400 --seconds 5 --speed 2 --json`, baseline
+and final page roots: both levels, both versions **60 FPS median and p5,
+17 ms worst, zero long-task time**. CPU: level 18 **12% / 12%**, level 38
+**11% / 12%**. Up to **13 / 12 cast members**. Windows cover about ticks
+400–628, including occupied running, braking, docking and return; not just the
+opening. The one-point CPU difference is a short sample, with ample headroom;
+no speedup claimed. Logs: `fps-before.log` / `fps-after.log`.
+
+**Focused:** the expanded set passed **41/41 in 4.75 s**, across new metro
+art, existing train art, station art, train mechanics and the Harbour
+cross-biome guard (initial set: 35/35 in 4.40 s). New checks cover unchanged native/share
+pixels in both directions and five palettes; bounded body motion; fixed wheel
+and step contacts; pocket-door clearance; correct end lamps and current-air
+spill; whole-pixel destination ink; complete reduced-motion steadiness; real
+read-only RNG-free journeys; foreground/edge clipping; crop/cache equivalence;
+and the bounded review generator. Existing passenger counts, moving boarding,
+terrain occlusion, walker layering and rendered/unrendered gameplay digests
+also pass. Native station snapshot unchanged; page snapshot deliberately
+updates for the reviewed train art. Sim.js is byte-identical to the branch base.
+
+**Cross-biome snapshot follow-up:** the first complete gate finished
+**1,384/1,385 passing in 333.49 s**. The one failure was an older metro
+component snapshot inside `harbour-art`, missed by the initial focused file
+list. It combined native and page bytes in one hash. Reconstructed that exact
+original hash from the saved renderer, then separated the resolutions: native
+before/after both **efb0d1ff…**, with only the reviewed page expectation changed.
+The complete proof is `component-proof.json`. No game source or evidence
+changed after that gate.
+
+That Harbour helper also now supplies compact pixel hashes and caps paint
+recording at 25,000 calls; its raw bytes remain solely for the compact
+component SHA assertion. The final focused set includes the Harbour guard.
+The failed gate is archived as `check-first.log` / `queue-first.log`. Its
+source/tests stayed frozen until all workers finished; only then were these
+test expectations/safe assertions revised.
+
+**Final full gate:** **1,385 passed, zero failures/cancellations/skips,
+334.90 s**, with coverage and Factory art included. CRAP threshold **30**
+passed using that same LCOV, maximum **30.0**. All new runtime helpers have
+100% coverage: `metroBodyBob` / `drawMetroDoors` **6.0**,
+`drawMetroHeadlight` **4.0**, `drawPageMetro` **3.0**, and the remaining
+body/window/lamp/wheel/sign helpers **1.0–3.0**. Both journey orchestration
+and comparison generation are **13.0**, at 100% coverage. Completion was
+reported immediately and the shared lock released.
+
+The rerun used the same persistent FIFO job caps: 3 GB real memory,
+2,048 MB Node heap, `ulimit -v 6000000`, two workers and 120-second per-test
+timeouts. Source/tests stayed frozen throughout each gate; CRAP reused the
+final coverage instead of starting another coverage run. Final logs:
+`/tmp/codex-train-art/check.log`, `crap.log`, `queue.log`.
+`npm run stamp`, its check and `git diff --check` pass. The screenshots and
+FPS still match the exact final game source; only test guards changed after
+the first gate.
+
+**Next:** review and merge this branch. No push or deployment from this pass.
+
+## 330 — 2026-10-15 · Merged the vintage trains
+
+Reviewed and merged by the loop: codex/train-art (79cd943, entry 329),
+`--no-ff`, as approved. Codex's entry is renumbered 329 and the page is
+re-stamped.
+- **Draw.js only,** behind the page resolution checks.
+- **Test digests:** an old station test hashed panel (res 1) and page
+  frames together, and Codex split it into one hash per resolution; the
+  panel's half is unchanged and only the page's moved.
+- **Memory safety:** the art tests now compare pixel hashes rather than raw
+  buffers, as AGENTS.md asks.

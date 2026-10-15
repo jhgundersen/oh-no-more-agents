@@ -16,11 +16,11 @@ function picture(w, draw) {
   const img = canvas(800, 496, "#000000"), calls = [], words = []
   img.ctx.setTransform(2, 0, 0, 2, 0, 0)
   const fill = img.ctx.fillRect.bind(img.ctx)
-  img.ctx.fillRect = (...args) => { calls.push([...args, img.ctx.fillStyle]); fill(...args) }
+  img.ctx.fillRect = (...args) => { assert.ok(calls.length < 25000, "bounded paint recording"); calls.push([...args, img.ctx.fillStyle]); fill(...args) }
   img.ctx.fillText = (...args) => words.push(args)
   img.ctx.fillStyle = "#123456"; img.ctx.globalAlpha = 0.8
   draw(img.ctx)
-  return { ...img, calls, words }
+  return { ...img, pixelHash: createHash("sha256").update(img.buf).digest("hex"), calls, words }
 }
 
 // No whole-frame pins: geometry, passenger visibility and layering are the
@@ -62,9 +62,9 @@ test("lit ferry portholes show separate silhouettes for every rider", () => {
     w.terrain.fill(w.k.EMPTY)
     const frames = [0, 1, 3, 6, 12, 18].map(count => {
       tr.riders = Array.from({ length: count }, (_, i) => i)
-      return picture(w, ctx => D.drawHarbourFerry(ctx, w, pal, tr)).buf
+      return picture(w, ctx => D.drawHarbourFerry(ctx, w, pal, tr)).pixelHash
     })
-    for (let i = 1; i < frames.length; i++) assert.notDeepEqual(frames[i], frames[i - 1], "passengers visible in assembled boat")
+    for (let i = 1; i < frames.length; i++) assert.notEqual(frames[i], frames[i - 1], "passengers visible in assembled boat")
   }
 })
 
@@ -77,7 +77,7 @@ test("gangway meets the boarding point at either quay; wake is confined to the s
       const g = D.harbourFerryDrawing(w, tr)
       const gangway = picture(w, ctx => D.drawHarbourGangway(ctx, g, true))
       assert.ok(gangway.calls.some(c => c[0] === g.x - 2 && c[1] === g.dockY - 1 && c[2] === 4))
-      assert.notDeepEqual(gangway.buf, picture(w, ctx => D.drawHarbourGangway(ctx, g, false)).buf)
+      assert.notEqual(gangway.pixelHash, picture(w, ctx => D.drawHarbourGangway(ctx, g, false)).pixelHash)
     }
     tr.x = (tr.ax + tr.bx) / 2
     for (const phase of ["run", "back", "wait", "drop"]) for (const v of [0, 0.4]) {
@@ -96,7 +96,7 @@ test("ferry detail is gated, the quay occludes its hull, and walkers are in fron
   tr.x = (tr.ax + tr.bx) / 2
   const coarse = picture(w, ctx => D.drawHarbourFerry(ctx, w, pal, tr))
   w.res = 2
-  assert.notDeepEqual(picture(w, ctx => D.drawHarbourFerry(ctx, w, pal, tr)).buf, coarse.buf)
+  assert.notEqual(picture(w, ctx => D.drawHarbourFerry(ctx, w, pal, tr)).pixelHash, coarse.pixelHash)
   const ag = S.spawn(w)
   Object.assign(ag, { x: tr.ax + 0.5, y: tr.y, dir: tr.dir, state: "walk" })
   w.agents = [ag]; tr.x = tr.ax
@@ -124,7 +124,7 @@ test("Harbour scenery, materials and event markers are read-only and animate", (
     const first = picture(w, ctx => D.drawHarbourMachines(ctx, w, pal))
     w.ticks = 301
     assert.equal(picture(w, ctx => D.drawHarbourHighWater(ctx, w, pal, fx)).calls.length, 0)
-    assert.notDeepEqual(picture(w, ctx => D.drawHarbourMachines(ctx, w, pal)).buf, first.buf)
+    assert.notEqual(picture(w, ctx => D.drawHarbourMachines(ctx, w, pal)).pixelHash, first.pixelHash)
     const p = w.pits[tr.pit]
     for (const ticks of [0, 100, 300]) { w.ticks = ticks; assert.ok(picture(w, ctx => D.drawHarbourSea(ctx, w, pal, p)).calls.length) }
     for (const patch of [{ x0: 20, x1: 21 }, { surfaceY: w.k.ROWS - 1 }])
@@ -134,17 +134,21 @@ test("Harbour scenery, materials and event markers are read-only and animate", (
   }
 })
 
-test("metro car art retains its seeded component bytes in every phase and resolution", () => {
-  // Captured from the saved pre-Harbour renderer on current Subway geometry.
-  const hash = createHash("sha256")
+test("metro components retain native bytes and the reviewed page art across every phase", () => {
+  // Cross-biome guard: split the original combined pin so native remains
+  // independently anchored to the saved pre-metro renderer.
   const first = S.BIOMES.indexOf("Subway") + 1
-  for (const level of [first, first + S.BIOMES.length]) for (const res of [1, 2]) {
-    const { w, pal } = sample(res, level)
-    const tr = w.trains[0]
-    for (const phase of ["wait", "run", "drop", "back"]) {
-      Object.assign(tr, { phase, t: 2, riders: [1, 2, 3], v: 0.4 })
-      hash.update(picture(w, ctx => D.drawSubwayTrain(ctx, w, pal, tr)).buf)
+  for (const [res, expected] of [
+    [1, "efb0d1fff4316dafc32fe04f8b7eb046ee60a57b76ae314bff1bbccfd740c9c4"], [2, "07ab26c4dd6e9d16713746e2e508f1e4fce1663d80f016189cee7680266e01bf"]
+  ]) {
+    const hash = createHash("sha256")
+    for (const level of [first, first + S.BIOMES.length]) {
+      const { w, pal } = sample(res, level), tr = w.trains[0]
+      for (const phase of ["wait", "run", "drop", "back"]) {
+        Object.assign(tr, { phase, t: 2, riders: [1, 2, 3], v: 0.4 })
+        hash.update(picture(w, ctx => D.drawSubwayTrain(ctx, w, pal, tr)).buf)
+      }
     }
+    assert.equal(hash.digest("hex"), expected)
   }
-  assert.equal(hash.digest("hex"), "0fa73ded5eabdb2d820599f5512c83eda31503edaa203e620246f8e5872e0f52")
 })

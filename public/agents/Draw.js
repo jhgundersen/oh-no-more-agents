@@ -14833,6 +14833,7 @@ function subwayTrainDrawing(w, tr) {
     cars: tail * C >= 54 ? 2 : 1, dir: tr.dir, open: tr.phase === "wait" || tr.phase === "drop" || subwayTrainBoarding(w, tr) }
 }
 function drawSubwayTrain(ctx, w, pal, tr) {
+  if (w.res === 2) return drawPageMetro(ctx, w, pal, tr)
   var g = subwayTrainDrawing(w, tr)
   ctx.save()
   // Slice at cell boundaries to keep foreground terrain in front of the train.
@@ -14850,6 +14851,139 @@ function drawSubwayTrain(ctx, w, pal, tr) {
   drawSubwayTrainFx(ctx, w, pal, tr, g)
   ctx.restore()
 }
+// Page-only vintage stock. The central door, wheels and lit step keep the
+// simulation's exact boarding/floor anchors; only the sprung body can bob.
+var METRO_ROOF = "#7d8988", METRO_EDGE = "#dce0cf", METRO_SHADE = "#969b8c"
+var METRO_WARM = "#f0d99d", METRO_TAIL = "#f28b78"
+var METRO_ROLL = [0,-0.5,0,0.5], METRO_SETTLE = [0.5,0.5,0,-0.5,0,0]
+function metroBodyBob(w, tr, open) {
+  if (w.reducedMotion) return 0
+  if (tr.phase === "drop") return METRO_SETTLE[tr.t] || 0
+  if (open || !(tr.v > 0.15)) return 0
+  return METRO_ROLL[Math.floor(Math.abs(tr.x) * 2) % 4]
+}
+function metroTravelDir(tr) { return tr.phase === "back" ? -tr.dir : tr.dir }
+function drawPageMetro(ctx, w, pal, tr) {
+  var g = subwayTrainDrawing(w, tr), bob = metroBodyBob(w, tr, g.open)
+  ctx.save()
+  var ink = { fillStyle: SUBWAY_INK, fillRect: function(x, y, width, height) {
+    ctx.fillStyle = this.fillStyle; subwayTrainRect(ctx, w, x, y, width, height)
+  } }
+  drawMetroHeadlight(ctx, w, tr, g)
+  for (var car = 0; car < g.cars; car++) {
+    var x = g.x - g.dir * car * 38, y = g.y + bob
+    drawMetroBody(ink, x, y)
+    drawSubwayPassengers(ink, tr, x, y, car, g.cars)
+    drawMetroDoors(ink, x, y, g.y, g.open)
+    drawMetroWheels(ink, w, pal, tr, x, g.y)
+    drawMetroEndLamps(ink, tr, x, y, car, g.cars)
+    drawMetroRollsign(ink, x, y, car)
+  }
+  if (!w.reducedMotion) drawSubwayTrainFx(ctx, w, pal, tr, g)
+  ctx.restore()
+}
+function drawMetroBody(ctx, x, y) {
+  // Stepped shoulders and tucked-under ends replace the rectangular box.
+  ctx.fillStyle = SUBWAY_INK
+  ctx.fillRect(x - 14, y - 22, 28, 1)
+  ctx.fillRect(x - 16, y - 21, 32, 2)
+  ctx.fillRect(x - 17, y - 19, 34, 2)
+  ctx.fillRect(x - 18, y - 17, 36, 11)
+  ctx.fillRect(x - 17, y - 6, 34, 2)
+  ctx.fillRect(x - 15, y - 4, 30, 1)
+  ctx.fillStyle = METRO_ROOF
+  ctx.fillRect(x - 14, y - 21.5, 28, 0.5)
+  ctx.fillRect(x - 16, y - 20, 32, 2)
+  ctx.fillStyle = SUBWAY_CREAM
+  ctx.fillRect(x - 16, y - 18, 32, 11)
+  ctx.fillRect(x - 17, y - 16, 34, 8)
+  ctx.fillStyle = METRO_EDGE
+  ctx.fillRect(x - 15, y - 18, 30, 1)
+  ctx.fillRect(x - 17, y - 16, 0.5, 8); ctx.fillRect(x + 16.5, y - 16, 0.5, 8)
+  ctx.fillStyle = SUBWAY_RED
+  ctx.fillRect(x - 16, y - 7, 32, 3)
+  ctx.fillRect(x - 17, y - 7, 34, 1)
+  ctx.fillStyle = METRO_SHADE
+  ctx.fillRect(x - 15, y - 8, 30, 0.5)
+  ctx.fillRect(x - 15, y - 4.5, 30, 0.5)
+  for (var side = -1; side <= 1; side += 2) drawMetroWindow(ctx, x + side * 9.5, y)
+  // Roof louvres and two fine stainless ribs catch the station lights.
+  ctx.fillStyle = SUBWAY_INK
+  for (var v = 0; v < 3; v++) {
+    ctx.fillRect(x - 13 + v * 1.5, y - 20, 0.5, 1)
+    ctx.fillRect(x + 10 + v * 1.5, y - 20, 0.5, 1)
+  }
+  ctx.fillStyle = METRO_EDGE
+  ctx.fillRect(x - 15, y - 5.5, 30, 0.5)
+}
+function drawMetroWindow(ctx, x, y) {
+  ctx.fillStyle = SUBWAY_INK; ctx.fillRect(x - 5, y - 16, 10, 8)
+  ctx.fillStyle = SUBWAY_GLASS; ctx.fillRect(x - 4.5, y - 15.5, 9, 7)
+  ctx.fillStyle = METRO_WARM; ctx.fillRect(x - 4, y - 15.5, 8, 1)
+  ctx.fillStyle = METRO_SHADE; ctx.fillRect(x - 4, y - 9, 8, 0.5)
+}
+function drawMetroDoors(ctx, x, y, floor, open) {
+  ctx.fillStyle = SUBWAY_INK; ctx.fillRect(x - 4.5, y - 17, 9, 14)
+  if (open) {
+    // Pocket doors retract behind the body, never across a seated face.
+    ctx.fillStyle = METRO_EDGE
+    ctx.fillRect(x - 4, y - 16, 0.5, 12); ctx.fillRect(x + 3.5, y - 16, 0.5, 12)
+  } else for (var side = -1; side <= 1; side += 2) {
+    var left = side < 0 ? x - 4 : x + 1
+    ctx.fillStyle = METRO_SHADE; ctx.fillRect(left, y - 16, 3, 12.5)
+    ctx.fillStyle = METRO_EDGE; ctx.fillRect(left, y - 16, 0.5, 12)
+    ctx.fillStyle = SUBWAY_INK; ctx.fillRect(left + 0.5, y - 15, 2, 5.5)
+    ctx.fillStyle = SUBWAY_GLASS; ctx.fillRect(left + 1, y - 14.5, 1, 4.5)
+    ctx.fillStyle = SUBWAY_RED; ctx.fillRect(left + 0.5, y - 7, 2.5, 2.5)
+    ctx.fillStyle = SUBWAY_INK; ctx.fillRect(left + 1.5, y - 9, 0.5, 1)
+  }
+  ctx.fillStyle = open ? METRO_WARM : METRO_SHADE
+  ctx.fillRect(x - 3, floor - 2, 6, 0.5) // the step never bounces off the platform
+  if (open) {
+    ctx.fillStyle = SUBWAY_YELLOW
+    ctx.fillRect(x - 4.5, y - 17, 1, 0.5); ctx.fillRect(x + 3.5, y - 17, 1, 0.5)
+  }
+}
+function drawMetroWheels(ctx, w, pal, tr, x, floor) {
+  ctx.fillStyle = SUBWAY_INK; ctx.fillRect(x - 15, floor - 3, 30, 1)
+  var turn = w.reducedMotion ? 0 : Math.floor(Math.abs(tr.x) * 4) % 4
+  for (var side = -1; side <= 1; side += 2) {
+    var wheel = x + side * 11
+    ctx.fillStyle = pal.rigDark; ctx.fillRect(wheel - 3, floor - 3, 6, 3)
+    ctx.fillStyle = METRO_ROOF; ctx.fillRect(wheel - 2, floor - 2, 4, 1.5)
+    ctx.fillStyle = METRO_EDGE; ctx.fillRect(wheel - 1.5 + turn * 0.5, floor - 1.5, 0.5, 0.5)
+  }
+  ctx.fillStyle = METRO_ROOF
+  ctx.fillRect(x - 20, floor - 3, 2, 0.5); ctx.fillRect(x + 18, floor - 3, 2, 0.5)
+}
+function drawMetroEndLamps(ctx, tr, x, y, car, cars) {
+  if (car === 0) drawMetroEndLight(ctx, x, y, tr.dir, metroTravelDir(tr) === tr.dir)
+  if (car === cars - 1) drawMetroEndLight(ctx, x, y, -tr.dir, metroTravelDir(tr) !== tr.dir)
+}
+function drawMetroEndLight(ctx, x, y, dir, head) {
+  ctx.fillStyle = SUBWAY_INK; ctx.fillRect(x + dir * 16 - 1, y - 8, 2, 3)
+  ctx.fillStyle = head ? METRO_WARM : METRO_TAIL
+  ctx.fillRect(x + dir * 16 - 0.5, y - 7.5, 1, 1.5)
+  ctx.fillStyle = METRO_EDGE; ctx.fillRect(x + dir * 16 - 0.5, y - 8, 1, 0.5)
+}
+function drawMetroRollsign(ctx, x, y, car) {
+  var half = car ? 3 : 9
+  ctx.fillStyle = SUBWAY_INK; ctx.fillRect(x - half, y - 22, half * 2, 6)
+  ctx.fillStyle = METRO_WARM; drawTransitionText(ctx, car ? "A" : "HOME", x, y - 21.5, 1)
+}
+function drawMetroHeadlight(ctx, w, tr, g) {
+  var dir = metroTravelDir(tr), car = tr.phase === "back" ? g.cars - 1 : 0
+  var nose = g.x - g.dir * car * 38 + dir * 18, alpha = ctx.globalAlpha
+  ctx.fillStyle = METRO_WARM
+  for (var band = 0; band < 3; band++) {
+    ctx.globalAlpha = alpha * (0.06 - band * 0.015)
+    var x = nose + dir * (band * 4 + 2), width = 4
+    if (dir < 0) x -= width
+    moteFineRect(ctx, w, x, g.y - 8 - band, width, 3 + band * 2)
+  }
+  ctx.globalAlpha = alpha
+}
+
 function subwayTrainRect(ctx, w, x, y, width, height) {
   var C = w.k.CELL, bottom = y + height, right = x + width
   for (var yy = y; yy < bottom;) {

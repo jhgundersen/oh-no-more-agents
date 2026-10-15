@@ -1,5 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
+import { createHash } from "node:crypto"
 import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
@@ -15,11 +16,11 @@ function picture(w, draw) {
   const img = canvas(800, 496, "#000000"), calls = [], words = []
   img.ctx.setTransform(2, 0, 0, 2, 0, 0)
   const fill = img.ctx.fillRect.bind(img.ctx)
-  img.ctx.fillRect = (...args) => { calls.push([...args, img.ctx.fillStyle]); fill(...args) }
+  img.ctx.fillRect = (...args) => { assert.ok(calls.length < 25000, "bounded paint recording"); calls.push([...args, img.ctx.fillStyle]); fill(...args) }
   img.ctx.fillText = (...args) => words.push(args)
   img.ctx.fillStyle = "#123456"; img.ctx.globalAlpha = 0.8
   draw(img.ctx)
-  return { ...img, calls, words }
+  return { ...img, buf: createHash("sha256").update(img.buf).digest("hex"), calls, words }
 }
 
 // Component properties, never whole-frame pins. Both directions and all
@@ -35,7 +36,8 @@ test("metro trains draw every phase at both resolutions without changing the wor
       assert.ok(img.calls.every(c => c.slice(0, 4).every(Number.isFinite) && c[2] > 0 && c[3] > 0))
       assert.equal(JSON.stringify(w), before)
       assert.equal(img.ctx.fillStyle, "#123456"); assert.equal(img.ctx.globalAlpha, 0.8)
-      assert.ok(img.words.some(c => c[0] === "HOME"))
+      if (res !== 2) assert.ok(img.words.some(c => c[0] === "HOME"))
+      else assert.ok(img.calls.some(c => c[4] === D.METRO_WARM), "page rollsign is pixel ink")
       if ((res || 1) === 1) for (const c of img.calls) for (const n of c.slice(0, 4)) assert.equal(n, Math.round(n), "coarse whole pixels")
     }
   }
@@ -55,7 +57,7 @@ test("train windows show exactly one silhouette per rider, including a full sing
       tr.riders = Array.from({ length: count }, (_, i) => i)
       frames.push(picture(w, ctx => D.drawSubwayTrain(ctx, w, pal, tr)).buf)
     }
-    for (let i = 1; i < frames.length; i++) assert.notDeepEqual(frames[i], frames[i - 1], "count remains visible in the assembled carriage")
+    for (let i = 1; i < frames.length; i++) assert.notEqual(frames[i], frames[i - 1], "count remains visible in the assembled carriage")
   }
 })
 
@@ -87,7 +89,7 @@ test("doors meet the boarding/alighting point, part for moving boarders and clos
   assert.equal(D.subwayTrainDrawing(w, tr).open, false, "empty return closes doors")
   const open = picture(w, ctx => D.drawSubwayDoors(ctx, 120, 120, true))
   const shut = picture(w, ctx => D.drawSubwayDoors(ctx, 120, 120, false))
-  assert.notDeepEqual(open.buf, shut.buf)
+  assert.notEqual(open.buf, shut.buf)
 })
 
 test("carriage fine detail is gated and foreground terrain occludes it", () => {
@@ -95,7 +97,7 @@ test("carriage fine detail is gated and foreground terrain occludes it", () => {
   const coarse = picture(w, ctx => D.drawSubwayTrain(ctx, w, pal, tr))
   w.res = 2
   const fine = picture(w, ctx => D.drawSubwayTrain(ctx, w, pal, tr))
-  assert.notDeepEqual(fine.buf, coarse.buf)
+  assert.notEqual(fine.buf, coarse.buf)
   assert.ok(fine.calls.some(c => c.slice(0, 4).some(n => n % 1)))
   w.terrain.fill(w.k.ROCK)
   assert.equal(picture(w, ctx => D.drawSubwayTrain(ctx, w, pal, tr)).calls.length, 0)
@@ -119,7 +121,7 @@ test("rails span the line, mark both platforms and add a fine third rail", () =>
   assert.deepEqual(coarse.words.map(c => c[0]), ["BOARD", "HOME"])
   assert.ok(coarse.calls.some(c => c[0] === Math.min(tr.ax, tr.bx) * 4 && c[2] === (Math.abs(tr.ax - tr.bx) + 1) * 4))
   w.res = 2
-  assert.notDeepEqual(picture(w, ctx => D.drawSubwayTrack(ctx, w, pal, tr)).buf, coarse.buf)
+  assert.notEqual(picture(w, ctx => D.drawSubwayTrack(ctx, w, pal, tr)).buf, coarse.buf)
 })
 
 test("the train is painted before the corridor walkers", () => {
@@ -147,9 +149,9 @@ test("station furniture, lights and event markers remain read-only", () => {
       w.ticks = ticks
       snapshots.push(picture(w, ctx => D.drawSubwayTube(ctx, w, pal, c, 0)).buf)
     }
-    assert.notDeepEqual(...snapshots, "tube flickers")
+    assert.notEqual(...snapshots, "tube flickers")
     w.eventBoost = 200; w.eventMult = 0
-    assert.notDeepEqual(picture(w, ctx => D.drawSubwayTube(ctx, w, pal, c, 0)).buf, snapshots[0], "signal failure dims tubes")
+    assert.notEqual(picture(w, ctx => D.drawSubwayTube(ctx, w, pal, c, 0)).buf, snapshots[0], "signal failure dims tubes")
     for (const mult of [0, 2]) {
       w.eventMult = mult
       const img = picture(w, ctx => D.drawSubwaySignal(ctx, w, pal, { zx0: 20, zx1: 22, zy0: 30 }, 1))

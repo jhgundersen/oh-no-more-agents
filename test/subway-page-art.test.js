@@ -254,9 +254,10 @@ test("station glow preserves opaque faces, shirts, eyes and umbrellas", () => {
     assert.ok(checked >= 30, "real opaque actor pixels compared")
   }
 })
-test("original Subway ground, fixtures, lights, rails and trains, pits, hazards and exit retain bytes", () => {
+// Native snapshot stays exact; page snapshot includes the vintage metro pass.
+test("Subway fixtures retain native bytes and the reviewed page metro art", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "00e80542611f9583b00e297eb0720c95b9006cf6b7db2f099b19da817ae2786f"], [[2], "b308153995c2ab7b71a544bdc0f6232bf5154844830edad092daa1764958635a"]
+    [[undefined, 1], "00e80542611f9583b00e297eb0720c95b9006cf6b7db2f099b19da817ae2786f"], [[2], "515a841182225ea00105db7379b50dce7ebea73a1f28356f4d7cd724ec645b8f"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)
