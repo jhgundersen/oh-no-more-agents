@@ -7056,3 +7056,96 @@ stall endings moved: 138 went from 5 to 8 of 24 and 81 now has 4. Those are
 agents who now get further and stop somewhere new.
 
 **Next:** level 138 (stalls and a clock-out), then 81.
+
+## 236 — 2026-10-15 · Maps and delays on the platform (on a branch)
+
+**Asked:** Subway page art, level 18, on `codex/subway` based on approved
+Rooftops `e140602`. Preserve the trains and gap/platform readout from 148–149;
+add tiled walls, coloured line stripes, a punning route map, torn posters,
+fluorescent flicker, a delayed departure board and yellow platform edges.
+
+**Changed:** res-2-only darker tiled wall bands, with teal, rose and blue line
+stripes below the original cable trays. A four-dot AGENT LINE map labels
+HEAP ST, LOOP, CACHE and HOME in half-pixel lettering. JOIN/404 posters have
+ragged bottom edges and curled paper scraps. A framed amber board reads
+NEXT: HOME / — DELAYED in full art-pixel letters, with bitmap colon and dash
+support local to these labels; the shared ROM font and other biomes are
+unchanged. Yellow half-pixel edge lines follow exposed surviving non-steel
+ground and stop at gaps. Walls remain lower contrast than walkable tile.
+
+All wall art, map, posters, board housing/first line, tube housings and soft
+lamp spill are cached. The only added animation is the board's delayed line
+and two tube filaments, with different flicker periods; Signal Failure dims
+them too. At most 150 small fills per live pass in the tests. A WeakMap stores
+selected static geometry by world/terrainVersion; live painting still rejects
+terrain and complete original fixture bounds, and version changes rebuild it.
+No scenery animation state, RNG or simulation writes.
+
+Original furniture, camera LEDs, poster bodies and their widest font titles,
+roundels, adverts, tunnels, booth, captive containers, hazards, pits and exit
+reserve their full bounds. Whole panels fit before any lettering is drawn;
+selected panels and tubes cannot overlap. Original train cars, riders, doors,
+platforms, rail/third rail, braking, signals, gap warnings, ambience, original
+lamps, events and exit recipes remain intact. No Sim.js or Palette.js changes;
+res 1 and unspecified resolution retain their original pixels.
+
+**Checked:** `npm run stamp`, bounded `npm run check`, and
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-subway-page/coverage-safe.sh` pass: **980** included tests in
+both check and coverage. Check took 90.44 s; coverage 129.48 s.
+Fourteen new bounded page-art tests cover biome/resolution gating, RNG and
+world writes, deterministic digests, half-pixel grid and context restoration,
+cached/separate complete fittings, exact private colon/dash glyphs, four map
+dots and contained labels, a readable board within the reported shoot crop,
+independent flicker and signal-failure dimming, cache invalidation, live work
+budgets and full air/reservation checks, five-theme wall/terrain contrast,
+edge integrity, whole original prop/title/booth bounds, paint order, unchanged
+opaque face/shirt/eye/canopy pixels, component digests and four 600-tick train
+playthroughs with matching complete world digests. CRAP: **0** functions at or above 30, maximum **29.3**. Thirteen of the
+fourteen new helpers have **100%** coverage; the live pass has **96.6%**
+and scores **18.1**, the highest of the added helpers.
+
+**Looked:** level 18, seed 3, tick 400 at 1× and actual `shoot.js crop 18`.
+The departure label is complete and clear of the reported fall/shooting path.
+Reviewed levels 18/37/56 at ticks 77/476 with native frames, 2× crops and 4×
+details in `/tmp/codex-subway-page/sheet.png`; level 75 in all five themes.
+`readability-sheet.png` pairs seven original hazards and open/furled umbrellas
+through idle/charge/fire/rest. `trains-sheet.png` follows an actual 199-step
+trip through waiting, running, drop, alighted and return, with riders' window
+silhouettes, open doors, platform alignment and the gap intact. Map/board
+phase crops are also saved in the same directory. Ran and viewed `npm run
+compare -- codex/subway 18 --seed 3 --ticks 400 --out
+/tmp/codex-subway-page/compare-main.png` from main, plus `--base
+codex/rooftops` into `compare-parent.png`. Both contain native full frames
+and automatically selected 2× crops; they took 0.31/0.32 s, peak child RSS
+about 101 MB.
+
+Seeded isolation: **1,080** identical other-biome frames, **60** identical
+Subway res-1/unspecified-res frames and **30** changed Subway res-2 frames:
+two layouts, ticks 77/240/600, five themes. Took **17.07 s**, peak RSS
+**202.5 MB**. Original component digests retain all ground, fixtures, lights,
+rails, trains, ambience, pits, hazards, booth and exit bytes.
+
+**Pipeline:** retained the fast rasterizer, zero-copy frame comparisons,
+bounded digest assertions, and one labelled sheet builder. New details use
+one seeded tick-400 world for panel phases and one bounded real train trip
+for the five ride poses, avoiding repeated full playthroughs. The timing
+harness primes terrain before timing actors, matching the page's cache path.
+Heap 2048 MB, `ulimit -v 6000000`, one check worker/two coverage workers,
+Factory art excluded. The host-aware queue pauses only our process tree while
+another full run is active. Pending logs and the all-phases completion marker
+prevent stale passes. No package/tool source changes or new slow pipeline step.
+
+**Measured:** warmed res-2 Node software rasterizer at tick 476, median of
+nine interleaved parent/branch batches of forty frames after tests/coverage.
+Level 18 actors **1.026 → 1.096 ms**, full terrain + actors
+**14.355 → 15.834 ms**; level 56 actors **0.959 → 1.007 ms**, full
+**16.792 → 17.860 ms**. Harbour control level 19 actors
+**0.969 → 0.968 ms**, full **9.174 → 9.176 ms**. Added live work costs
+about 48–70 microseconds in these frames. Terrain is cached in play; these
+are Node raster timings, not browser FPS.
+
+**Next:** ready for Subway art review. Commit on `codex/subway` only;
+no push or deployment.
+
+Reviewed and merged by the loop (with `npm run compare`). Subway: a readable `NEXT: HOME - DELAYED` board, an Agent Line map, wall stripes and posters; the trains are intact. One branch test asserted the shared font had no `:`; main added that glyph in 197 for the commit line on the report card, so the merge drops that one assertion and keeps the station's own glyph checks.

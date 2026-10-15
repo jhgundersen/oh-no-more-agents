@@ -211,6 +211,7 @@ function drawTerrain(ctx, w, pal) {
   drawWorksite(ctx, w)
   drawDialHall(ctx, w)
   drawNightCity(ctx, w)
+  drawStationHall(ctx, w)
   if (desertPage(w)) drawDesertRelics(ctx, w)
   if (w.biome === "Foundry") drawFoundryBackdrop(ctx, w, pal)
 
@@ -249,6 +250,8 @@ function drawTerrain(ctx, w, pal) {
   drawNightFixtures(ctx, w)
   drawNightSigns(ctx, w)
   drawNightSheen(ctx, w)
+  drawStationPanels(ctx, w)
+  drawStationEdge(ctx, w)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
   drawSea(ctx, w, pal)
@@ -2622,6 +2625,7 @@ function drawActors(ctx, w, pal, opts) {
   drawWorkDrums(ctx, w)
   drawDialMotion(ctx, w)
   drawNightWisps(ctx, w)
+  drawStationPulse(ctx, w)
   drawDrips(ctx, w, pal)
   drawMachines(ctx, w, pal)
   drawActiveEventAir(ctx, w, pal)
@@ -17862,6 +17866,224 @@ function drawNightWisps(ctx, w) {
       ctx.globalAlpha = 0.13 - Math.floor(age / 5) * 0.025
       if (abyssClear(w, x, y, 1.5, 0.5, boxes)) ctx.fillRect(x, y, 1.5, 0.5)
     }
+  }
+  ctx.restore()
+}
+
+// Page-only station fittings: static wall tiles, maps, paper and lamp spill;
+// the live pass paints only tube filaments and the board's delayed line.
+function stationPage(w) { return w.biome === "Subway" && (w.res || 1) >= 2 }
+var STATION_WALL = "#222a31"
+var STATION_TILE = "#303b42"
+var STATION_GROUT = "#4a565b"
+var STATION_PAPER = "#a0afa5"
+var STATION_AMBER = "#e3b86e"
+var STATION_LAMP = "#d2e2d2"
+var STATION_STRIPES = ["#4f8e94", "#99636e", "#607b9f"]
+var STATION_CACHE = new WeakMap()
+
+function stationReserved(w) {
+  var C = w.k.CELL, boxes = abyssReserved(w)
+  boxes.length -= w.decor.length
+  for (var d = 0; d < w.decor.length; d++) {
+    var p = w.decor[d], x = p.x * C, y = p.y * C
+    if (p.kind === "hang") boxes.push({ x: x + 0.5, y: y, width: 11.5, height: 7 })
+    else if (p.kind === "spire") boxes.push({ x: x - 2, y: y - 18, width: 24, height: 20 })
+    else if (p.kind === "clump") boxes.push({ x: x - 5, y: y - 4, width: 16, height: 8 })
+    else boxes.push({ x: x - 2, y: y - 4, width: 8, height: 8 })
+  }
+  for (var row = 0; row < w.corridors.length; row++) {
+    var c = w.corridors[row], floor = c.floorY * C, mid = Math.round((c.x0 + c.x1) * C / 2)
+    var sx = subwaySignX(w, c, mid), tunnel = (c.dir > 0 ? c.x1 - 5 : c.x0 + 1) * C
+    boxes.push({ x: sx - 12, y: floor - 21, width: 24, height: 14 })
+    boxes.push({ x: tunnel - 0.5, y: floor - 24.5, width: 19, height: 25 })
+    boxes.push({ x: mid - 26, y: floor - 23, width: 24, height: 4 })
+    for (var a = 0; a < 3; a++) {
+      var ax = mid - 76 + a * 67
+      if (Math.abs(ax + 6 - sx) > 25)
+        boxes.push({ x: ax - 0.5, y: floor - 20.5, width: 14, height: 14 })
+    }
+  }
+  if (w.enemyHatch) {
+    var h = w.enemyHatch
+    boxes.push({ x: h.x * C - 18, y: (h.y + 1) * C - 25, width: 36, height: 27 })
+  }
+  if (w.mission) for (var t = 0; t < w.mission.targets.length; t++) {
+    var target = w.mission.targets[t]
+    if (!target.freed && !target.dead)
+      boxes.push({ x: target.x * C - 14, y: target.y * C - 23, width: 28, height: 25 })
+  }
+  return boxes
+}
+function drawStationHall(ctx, w) {
+  if (!stationPage(w)) return
+  ctx.save()
+  var boxes = stationReserved(w), C = w.k.CELL
+  for (var row = 0; row < w.corridors.length; row++) {
+    var c = w.corridors[row], top = c.floorY * C - 24
+    for (var y = top; y < c.floorY * C - 2; y += 4) {
+      for (var x = c.x0 * C + ((y - top) % 8 ? 4 : 0); x < c.x1 * C - 8; x += 8) {
+        if (!assemblyUnreserved(boxes, x, y, 8, 4)) continue
+        ctx.fillStyle = STATION_WALL; ctx.globalAlpha = 1
+        ctx.fillRect(x, y, 8, 4)
+        ctx.fillStyle = STATION_TILE; ctx.globalAlpha = 0.55
+        ctx.fillRect(x + 0.5, y + 0.5, 7, 3)
+        ctx.fillStyle = STATION_GROUT; ctx.globalAlpha = 0.2
+        ctx.fillRect(x + 0.5, y + 0.5, 7, 0.5)
+      }
+    }
+    ctx.fillStyle = STATION_STRIPES[(row + w.level) % 3]; ctx.globalAlpha = 0.75
+    for (var strip = c.x0 * C; strip < c.x1 * C - 4; strip += 4)
+      if (assemblyUnreserved(boxes, strip, top + 7, 4, 1.5)) ctx.fillRect(strip, top + 7, 4, 1.5)
+  }
+  ctx.restore()
+}
+function stationPick(w, row, kind, width, height, offset, boxes) {
+  var c = w.corridors[row], C = w.k.CELL
+  for (var x = c.x0 * C + 8; x + width < c.x1 * C; x += 4) {
+    var b = { x: x, y: c.floorY * C - offset, width: width, height: height,
+      row: row, kind: kind, seed: w.level * 17 + row * 31 }
+    if (postalBoxClear(w, b, boxes)) { boxes.push(b); return b }
+  }
+  return null
+}
+function stationFindPanel(w, kind, width, height, firstRow, boxes) {
+  for (var i = 0; i < w.corridors.length; i++) {
+    var row = (firstRow + i) % w.corridors.length
+    var b = stationPick(w, row, kind, width, height, 16, boxes)
+    if (b) return b
+  }
+  return null
+}
+function stationLayout(w) {
+  var boxes = stationReserved(w), panels = [], tubes = []
+  var map = stationFindPanel(w, "map", 48, 14, 0, boxes)
+  var board = stationFindPanel(w, "board", 44, 14, 1, boxes)
+  if (map) panels.push(map)
+  if (board) panels.push(board)
+  for (var row = 0; row < w.corridors.length; row++) {
+    if (panels.some(function(b) { return b.row === row })) continue
+    var poster = stationPick(w, row, "poster", 13, 13, 17, boxes)
+    if (poster) panels.push(poster)
+  }
+  for (var i = 0; i < Math.min(2, w.corridors.length); i++) {
+    var tube = stationPick(w, i, "tube", 24, 3, 23, boxes)
+    if (tube) tubes.push(tube)
+  }
+  return { panels: panels, tubes: tubes }
+}
+function stationText(ctx, text, cx, y, size) {
+  var x = Math.round((cx - (text.length * 4 - 1) * size / 2) * 2) / 2
+  for (var i = 0; i < text.length; i++) {
+    var glyph = text[i] === ":" ? [0, 2, 0, 2, 0] :
+      text[i] === "—" ? [0, 0, 7, 0, 0] : TRANSITION_GLYPHS[text[i]] || TRANSITION_GLYPHS["?"]
+    drawTransitionGlyph(ctx, glyph, x + i * 4 * size, y, size)
+  }
+}
+function drawStationPanels(ctx, w) {
+  if (!stationPage(w)) return
+  ctx.save()
+  var layout = stationLayout(w)
+  STATION_CACHE.set(w, { version: w.terrainVersion, layout: layout })
+  for (var i = 0; i < layout.panels.length; i++) {
+    var b = layout.panels[i]
+    if (b.kind === "map") drawStationMap(ctx, b)
+    else if (b.kind === "board") drawStationBoard(ctx, b)
+    else drawStationPoster(ctx, b)
+  }
+  for (var t = 0; t < layout.tubes.length; t++) drawStationTube(ctx, w, layout.tubes[t])
+  ctx.restore()
+}
+function drawStationMap(ctx, b) {
+  ctx.fillStyle = STATION_WALL; ctx.globalAlpha = 1
+  ctx.fillRect(b.x, b.y, b.width, b.height)
+  ctx.fillStyle = STATION_PAPER; ctx.globalAlpha = 0.28
+  ctx.fillRect(b.x + 0.5, b.y + 0.5, b.width - 1, b.height - 1)
+  ctx.globalAlpha = 0.75
+  stationText(ctx, "AGENT LINE", b.x + 24, b.y + 1, 0.5)
+  ctx.fillStyle = STATION_STRIPES[b.row % 3]; ctx.globalAlpha = 1
+  ctx.fillRect(b.x + 8, b.y + 7, 34, 1)
+  var stops = [8, 20, 32, 42], names = ["HEAP ST", "LOOP", "CACHE", "HOME"]
+  for (var i = 0; i < stops.length; i++) {
+    ctx.fillStyle = STATION_PAPER; ctx.globalAlpha = 1
+    ctx.fillRect(b.x + stops[i] - 1, b.y + 6.5, 2, 2)
+    ctx.fillStyle = STATION_WALL
+    ctx.fillRect(b.x + stops[i] - 0.5, b.y + 7, 1, 1)
+    ctx.fillStyle = STATION_PAPER; ctx.globalAlpha = 0.75
+    stationText(ctx, names[i], b.x + stops[i], b.y + 10.5, 0.5)
+  }
+}
+function drawStationBoard(ctx, b) {
+  ctx.fillStyle = STATION_GROUT; ctx.globalAlpha = 1
+  ctx.fillRect(b.x, b.y, b.width, b.height)
+  ctx.fillStyle = STATION_WALL
+  ctx.fillRect(b.x + 0.5, b.y + 0.5, b.width - 1, b.height - 1)
+  ctx.fillStyle = STATION_AMBER; ctx.globalAlpha = 0.82
+  stationText(ctx, "NEXT: HOME", b.x + 22, b.y + 1, 1)
+  ctx.globalAlpha = 0.24
+  stationText(ctx, "— DELAYED", b.x + 22, b.y + 8, 1)
+}
+function drawStationPoster(ctx, b) {
+  ctx.fillStyle = STATION_WALL; ctx.globalAlpha = 1
+  ctx.fillRect(b.x, b.y, b.width, b.height)
+  ctx.fillStyle = STATION_PAPER; ctx.globalAlpha = 0.58
+  ctx.fillRect(b.x + 1, b.y + 1, 11, 8)
+  ctx.fillRect(b.x + 1, b.y + 9, 4, 2); ctx.fillRect(b.x + 7, b.y + 9, 5, 3)
+  ctx.fillStyle = STATION_STRIPES[b.row % 3]; ctx.globalAlpha = 0.85
+  ctx.fillRect(b.x + 2, b.y + 2, 9, 2)
+  ctx.fillStyle = STATION_WALL; ctx.globalAlpha = 0.85
+  stationText(ctx, b.seed % 2 ? "JOIN" : "404", b.x + 6.5, b.y + 5, 0.5)
+  ctx.fillStyle = STATION_PAPER; ctx.globalAlpha = 0.32
+  ctx.fillRect(b.x + 5, b.y + 9, 2, 0.5); ctx.fillRect(b.x + 7, b.y + 11.5, 3, 0.5)
+}
+function drawStationTube(ctx, w, b) {
+  ctx.fillStyle = STATION_GROUT; ctx.globalAlpha = 0.7
+  ctx.fillRect(b.x, b.y, b.width, b.height)
+  ctx.fillStyle = STATION_LAMP; ctx.globalAlpha = 0.2
+  ctx.fillRect(b.x + 2, b.y + 1, 20, 0.5)
+  var boxes = stationReserved(w)
+  for (var band = 0; band < 4; band++) {
+    ctx.globalAlpha = 0.055 - band * 0.009
+    for (var x = b.x - band; x < b.x + b.width + band; x += 2)
+      if (abyssClear(w, x, b.y + 3 + band, 2, 1, boxes)) ctx.fillRect(x, b.y + 3 + band, 2, 1)
+  }
+}
+function drawStationEdge(ctx, w) {
+  if (!stationPage(w)) return
+  ctx.save(); ctx.fillStyle = SUBWAY_YELLOW; ctx.globalAlpha = 0.66
+  var K = w.k
+  for (var row = K.SKY; row < K.ROWS; row++) for (var col = 2; col < K.COLS - 2; col++) {
+    var m = w.terrain[row * K.COLS + col]
+    if (m === K.EMPTY || m === K.STEEL || w.terrain[(row - 1) * K.COLS + col] !== K.EMPTY) continue
+    ctx.fillRect(col * K.CELL, row * K.CELL, K.CELL, 0.5)
+    if ((col + row + w.level) % 4 === 0) ctx.fillRect(col * K.CELL + 1, row * K.CELL + 0.5, 2, 0.5)
+  }
+  ctx.restore()
+}
+function drawStationPulse(ctx, w) {
+  if (!stationPage(w)) return
+  ctx.save()
+  var cached = STATION_CACHE.get(w)
+  var layout = cached && cached.version === w.terrainVersion ? cached.layout : stationLayout(w)
+  var boxes = stationReserved(w)
+  var ink = { fillStyle: STATION_AMBER, fillRect: function(x, y, width, height) {
+    if (!abyssClear(w, x, y, width, height, boxes)) return
+    ctx.fillStyle = this.fillStyle; ctx.fillRect(x, y, width, height)
+  } }
+  for (var i = 0; i < layout.panels.length; i++) {
+    var b = layout.panels[i]
+    if (b.kind !== "board" || !postalBoxClear(w, b, boxes)) continue
+    ctx.globalAlpha = (w.ticks + w.level * 13) % 150 < 132 ? 0.88 : 0.28
+    stationText(ink, "— DELAYED", b.x + 22, b.y + 8, 1)
+  }
+  ink.fillStyle = STATION_LAMP
+  var stopped = w.eventBoost > 0 && w.eventMult === 0
+  for (var t = 0; t < layout.tubes.length; t++) {
+    var tube = layout.tubes[t]
+    if (!postalBoxClear(w, tube, boxes)) continue
+    var phase = (w.ticks + w.level * 17 + t * 61) % (t ? 191 : 127)
+    ctx.globalAlpha = stopped || phase < 4 || (phase > 10 && phase < 13) ? 0.12 : 0.86
+    for (var x = 0; x < 20; x += 4) ink.fillRect(tube.x + 2 + x, tube.y + 1, 4, 0.5)
   }
   ctx.restore()
 }
