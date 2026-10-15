@@ -1002,6 +1002,8 @@ function newWorld(level, attempt, colonySeed) {
     outage: null,      // { at, len } when the lights will go out; purely visual, see rollOutage
     moments: [],       // the level's best bits, for the page's instant replay; see noteMoment
     homeOrder: [],     // ids in the order they got home, for the page's sweepstake
+    radioUsed: {},     // which of the radio's lines this level has had; see stepRadio
+    radioNext: 600,
     conflicts: 0,      // merge conflicts resolved, for the report card and sfx
     duck: null,        // the rubber duck, while there is one; see stepDuck
     ducked: 0,         // problems explained to it, for the report card
@@ -6940,6 +6942,61 @@ function pepTalk(w, ag) {
 }
 
 // ---------------------------------------------------------------------------
+// Office radio
+// ---------------------------------------------------------------------------
+// Now and then the ticker narrates what is actually on screen, in the voice of
+// a local station covering the office: somebody getting nowhere, a long float
+// down, a crowded ledge, the last one out. Each line at most once a level, no
+// more than one every RADIO_GAP ticks, never over a fresh ticker note, and from
+// the world alone — no random draws — so a replay or a shared link hears the
+// same broadcast. Nothing in the simulation reads it.
+var RADIO_GAP = 600       // ticks between lines
+var RADIO_QUIET = 150     // and none while another note is still fresh
+// Two takes on each, alternating by level number, so a line heard on one level
+// is not the line heard on the next.
+var RADIO_LINES = {
+  pacer:   ["HAS BEEN WALKING INTO THIS WALL SINCE TUESDAY", "IS DOING LAPS. NOBODY HAS TOLD THEM."],
+  drifter: ["IS TAKING THE SCENIC ROUTE DOWN", "IS DESCENDING AT THE SPEED OF A REORG"],
+  crowd:   ["OPEN-PLAN SEATING ON THE LEDGE. NOBODY ASKED FOR THIS.", "SIX AGENTS, ONE LEDGE, ZERO PLAN."],
+  meeting: ["HAS BEEN IN THE SAME MEETING FOR TEN SECONDS", "IS HOLDING THE DOOR. FOR EVERYONE. FOREVER."],
+  last:    ["IS THE LAST ONE IN. THE LIGHTS ARE ON A TIMER.", "IS LAST OUT. SOMEBODY HAS TO LOCK UP."],
+  half:    ["HALF THE TEAM IS HOME. THE OTHER HALF HAS THOUGHTS.", "HALF HOME ALREADY. SUSPICIOUSLY EFFICIENT."]
+}
+function radioLine(w, kind, who) {
+  var take = RADIO_LINES[kind][w.level % 2]
+  return "ON AIR: " + (who ? who + " " : "") + take
+}
+
+function stepRadio(w) {
+  if (w.done || !w.radioUsed || w.ticks < w.radioNext || w.ticks % 30 !== 0) return
+  var last = w.feed[w.feed.length - 1]
+  if (last && w.ticks - last.t < RADIO_QUIET) return
+  var heard = radioWorth(w)
+  if (!heard) return
+  w.radioUsed[heard.kind] = true
+  w.radioNext = w.ticks + RADIO_GAP
+  feedNote(w, radioLine(w, heard.kind, heard.ag ? agentTag(w, heard.ag) : ""))
+}
+
+// The first thing on screen worth a line that this level has not had.
+function radioWorth(w) {
+  var active = 0, lone = null, crowd = {}
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state === "saved") continue
+    active++; lone = ag
+    if (!w.radioUsed.pacer && ag.state === "walk" && ag.idle > 400) return { kind: "pacer", ag: ag }
+    if (!w.radioUsed.drifter && ag.state === "fall" && ag.floater && ag.fall > 18) return { kind: "drifter", ag: ag }
+    if (!w.radioUsed.meeting && ag.state === "block" && ag.blockHeld > 300) return { kind: "meeting", ag: ag }
+    if (ag.state === "walk") { var key = Math.floor(ag.y) + ":" + Math.floor(ag.x / 6); crowd[key] = (crowd[key] || 0) + 1 }
+  }
+  if (!w.radioUsed.crowd) for (var k in crowd) if (crowd[k] >= 6) return { kind: "crowd" }
+  if (!w.radioUsed.last && active === 1 && w.released >= w.toRelease && w.saved > 0) return { kind: "last", ag: lone }
+  if (!w.radioUsed.half && w.saved * 2 >= w.toRelease && w.ticks < 750) return { kind: "half" }
+  return null
+}
+
+// ---------------------------------------------------------------------------
 // Moments
 // ---------------------------------------------------------------------------
 // The level's best bits, for the page's instant replay: what happened, how
@@ -11128,6 +11185,7 @@ function finishWorldStep(w, active, blockers, moving) {
   stepDuck(w)
   stepConflicts(w)
   stepAgi(w)
+  stepRadio(w)
   stepMission(w)
   stepHazard(w)
   stepMines(w)

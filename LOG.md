@@ -6835,3 +6835,24 @@ when called and the coin until home; in headless Chromium the first tap is the
 pick with no pep talk, the ticker explains it, and a finished level tallies
 it). The pep-talk browser test notes that its first tap is now the pick.
 `npm run check` 1083/1083; CRAP under 30.
+
+## 232 — 2026-10-15 · The office radio
+
+The "office radio" idea, folded into the ticker rather than built beside it.
+Now and then a line narrates what is actually on screen — `ON AIR: AGENT 007
+HAS BEEN WALKING INTO THIS WALL SINCE TUESDAY` (someone getting nowhere for 400
+ticks), `… IS TAKING THE SCENIC ROUTE DOWN` (a long float), `OPEN-PLAN SEATING
+ON THE LEDGE. NOBODY ASKED FOR THIS.` (six on one ledge), `… HAS BEEN IN THE
+SAME MEETING FOR TEN SECONDS` (a blocker), `… IS THE LAST ONE IN. THE LIGHTS ARE
+ON A TIMER.`, `HALF THE TEAM IS HOME. THE OTHER HALF HAS THOUGHTS.` — each
+with a second take used on alternate levels. Each line at most once a level,
+one every 600 ticks at most, never over a ticker note less than five seconds
+old; about one line per level (levels 1–60 × 4: 1.08), at most three. Read
+from the world alone, no random draws, so an instant replay or a shared link
+hears the same broadcast, and nothing in the simulation reads it (a level plays
+identically without it). The AGI test now collects ticker lines as they appear,
+since the ticker keeps only the last few and the radio may have spoken since.
+
+**Tests:** `radio.test.js` (2: at most once each and far apart, within the
+ticker and the font, identical on a second run, changing nothing; what it
+notices, and quiet over a fresh note). `npm run check` 1085/1085; CRAP under 30.

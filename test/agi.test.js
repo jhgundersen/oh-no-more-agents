@@ -43,10 +43,13 @@ test("played to the end, the AGI is either home or lost, exactly once, with its 
   for (let level = 1; level <= 24; level++) {
     const w = S.generate(level, 0, level * 104729)
     w.agiRng = () => 0                         // always one, at the first release
-    while (!w.done && w.ticks < 6000) S.step(w)
+    // Collected as they appear: the ticker keeps only the last few, and the
+    // office radio may have spoken since.
+    const heard = new Set()
+    while (!w.done && w.ticks < 6000) { S.step(w); for (const f of w.feed) heard.add(f.text) }
     assert.ok(w.done, `level ${level} hung`)
     assert.ok(w.agiHome !== w.agiLost, `level ${level}: home or lost, not both, not neither`)
-    const notes = w.feed.map(f => f.text)
+    const notes = [...heard]
     if (w.agiHome) { home++; assert.ok(notes.some(t => /AGI ACHIEVED/.test(t))) }
     if (w.agiLost) { lost++; assert.ok(notes.some(t => /AGI LOST/.test(t))) }
     assert.ok(w.saved + w.lost <= w.released)
