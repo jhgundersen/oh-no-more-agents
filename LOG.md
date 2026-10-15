@@ -8607,3 +8607,103 @@ Reviewed and merged by the loop: codex/librarian-art (cd05177, entry 348),
 `--no-ff`, as approved. Codex's entry is renumbered 348 and the page is
 re-stamped. Drawing only, with no Sim.js change, and the native (res 1)
 pixels kept, per Codex's tests.
+
+## 350 — 2026-10-15 · A little local thunder (on a branch)
+
+**Chosen (autonomy):** Cloud lightning. Fresh local desktop/phone watches on
+levels 20, 40, 60 and 80, Steady/Brisk, Halloween/Christmas, showed how plain
+its little dark bar was beside the bank volumes. Branch `codex/storm-art`
+starts from current main `4088392` (librarian merged). Rendering only;
+no Sim.js, web.js, season, generation or hazard-timing changes.
+
+**Changed:** the page's storm has a small layered lilac/dark cumulus head,
+rounded underside, internal filaments that gather during charge, a thin
+jagged white channel with two short forks and a lilac halo, then a small
+scorch and fading contact glints. Each strike's channel is stable, seeded
+from its existing strike count, without global flashes or per-frame jitter.
+The original late full-column warning and its floor marker remain; the
+46-tick wind-up and six-tick fire are unchanged. Cached head fragments and
+all discharge marks are clipped to real air; the bolt stays within the real
+lethal column, and the scorch requires actual supporting ground. Existing
+page charge light now also inherits the host's layer opacity.
+
+Reduced motion keeps the complete storm head, steady progressive warning
+and the logical live strike; its bolt is still and loose contact sparks
+are suppressed. Agents, collars, eyes and umbrella rims remain opaque in
+front of the discharge. The old default/res-1 and share res-3 drawing is
+retained verbatim behind the page-only gate. Other biomes and updrafts are
+unchanged.
+
+**Evidence:** `/tmp/codex-storm-art/strips/index.html` animates the comparison;
+`contact-sheet.png` shows late charge, strike and recovery on levels 20, 40
+and 100. Each level's `*-frames.png` contains all twelve native/page poses,
+and `*-before-res2.png` / `*-after-res2.png` are the animation strips.
+The natural cycle starts at tick **170**, fires at **216**, rests at **222**;
+frames use offsets **0, 8, 16, 24, 32, 40, 45, 46, 49, 52, 56, 64**.
+The review gives each pose equal display time and explicitly says so; it
+also states the actual simulation durations. No hazard or agent was posed
+for the comparison.
+
+The **1640×4904** `/tmp/codex-storm-art/page-sheet.png` has actual CSS-size
+boards and 3× crops: desktop, 390 px phone, first/second/lower corridors,
+Halloween, Christmas, reduced-motion warning and reduced-motion fire.
+Full pages live in `before/` and `after/`. Browser assertions verify identical
+world digests and board/stage geometry, no horizontal page overflow or
+errors, and every changed pixel within the original/new lightning envelope.
+The initial general watch landed between strikes; the comparison tool seeks
+an actual charge onset so it never mistakes an idle frame for an action shot.
+
+**Tooling:** `tools/storm-art.js` seeks once, caches terrain separately for each
+renderer/resolution and draws translated actor crops. All **144** comparison
+frames take **0.88 s / 265.8 MB peak RSS**. The validated uppercase pixel-font
+helper keeps every sheet label legible. HTML links, complete frame sheets,
+strips and metadata are emitted together and guarded by the export test.
+All recorders and discovery loops are bounded; buffers are compared by hash.
+Syntax, core-name and stamp checks precede queueing, and the full gate records
+source hashes for an unchanged-source check at commit time.
+
+**Compatibility:** `native-proof.json` independently compares main's frozen
+renderer to this branch: aggregate **6678370a…** stays exact across five Cloud
+layouts, every palette, default/res-1/share-res-3, both motion preferences and
+ten idle/charge/fire/recovery poses. Forced lightning on the other nineteen
+biomes retains the old page drawing. Rendered/unrendered complete simulation
+JSON stays identical over 800 live ticks on all three comparison layouts.
+
+**Cost:** Draw.js adds **3,745 source bytes / 1,312 gzip bytes** before ship's
+comment strip. Head fragments are cached by world, geometry and terrain
+version, and refresh after carving. No new canvas, timers, RNG, retained
+particles or simulation state.
+
+Five-second Brisk real-page runs span the second storm on levels 20 and 100,
+from approximately ticks 550–780, up to 12 cast members. All four baseline/final
+runs hold **60 median / 60 p5 FPS, 17 ms worst, zero long-task time**. CPU is
+**11% / 11%** on 20 and **12% / 13%** on 100. No speedup claimed. Individual
+logs and `fps-summary.json` are in the evidence directory.
+
+**Focused:** **126/126 pass, 6.03 s**: independent native/share parity,
+page gating, actual phase boundaries, cached geometry clipped to air and terrain
+invalidation, bounded thin forks and a jagged main channel,
+steady late warning without a premature bolt, reduced-motion geometry,
+read-only/RNG-free paint and inherited opacity in every palette, full live
+digests, crop/cache parity, complete exports, and opaque faces/umbrellas
+inside the real live strike. Includes all original Cloud and hazard guards.
+
+
+The complete cost sweep is **179 rectangles maximum** for one storm across
+**4,704** valid phase-clock/motion/strike samples (`cost-valid.json`).
+
+**Full gate:** **1,455 passed, zero failures/cancellations/skips, 352.45 s**,
+including Factory art and coverage. CRAP threshold **30** passed from the same
+LCOV, maximum **30.0**. New runtime helpers score **2.0–12.1**; discharge is
+**91.7% covered**, all the others **100%**. The existing charge light is
+**4.0 / 100%**. Comparison orchestration is **12.0 / 100%**, scene discovery
+**6.0 / 90.9%**, cached frame drawing **3.1 / 75%**.
+Completion was reported immediately. Persistent FIFO validation used a **3 GB
+service cap**, **2,048 MB Node heap**, `ulimit -v 6000000`, two workers and
+120-second test timeouts; sampled peak was **796 MB**. Source/tests stayed
+frozen through the gate, source hashes still match, and CRAP reused coverage.
+Logs: `check.log`, `crap.log`, `queue.log` in the evidence directory.
+`npm run stamp`, its check and `git diff --check` pass.
+
+**Next:** review and merge this branch, then another free choice of atmosphere,
+motion or presentation. Commit on the branch only; no push or deployment.

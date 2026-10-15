@@ -6267,6 +6267,7 @@ function hzPressure(ctx, w, pal, h, g, x, y, color) {
 // hazard's own clock.
 var BOLT = "#f6f7ff", SCORCH = "#2b2630"
 function drawHzLightning(ctx, w, pal, h, geo) {
+  if (cloudPage(w)) return drawPageStorm(ctx,w,pal,h,geo)
   drawCloudCharge(ctx, w, pal, h, geo)
   var x0 = geo.x0, y0 = geo.y0, wide = geo.wide, cx = geo.cx, y1 = geo.y1
   ctx.save()
@@ -6306,6 +6307,93 @@ function drawHzLightning(ctx, w, pal, h, geo) {
     ctx.fillRect(cx - 1, y1 + 1, 2, 1)
   }
   ctx.restore()
+}
+
+// A small storm with volume, rather than a bar across the corridor. Cached
+// head fragments follow real air; the discharge stays inside the lethal column.
+var STORM_HEAD_CACHE = new WeakMap()
+var STORM_INKS = ["#292b40","#48465f","#65607d","#a79cbd"]
+function stormHeadLayout(w,g) {
+  var scene=STORM_HEAD_CACHE.get(w)
+  if (!scene || scene.version!==w.terrainVersion) {
+    scene={version:w.terrainVersion,heads:{}};STORM_HEAD_CACHE.set(w,scene)
+  }
+  var key=g.x0+":"+g.y0+":"+g.wide
+  if (scene.heads[key]) return scene.heads[key]
+  var x=g.x0,y=g.y0,W=g.wide,rects=[]
+  var shapes=[[-3,2,W+6,2,0],[-2,1,W+4,4,0],[0,0,W,6,0],[2,5,4,2,0],[W-5,5,4,1.5,0],
+    [-1,2,5,3,1],[3,1,W-6,5,1],[W-4,2,5,3,1],
+    [0,1,4,2,2],[W/2-2,0,4,3,2],[W-4,1,4,2,2],
+    [1,1,2,0.5,3],[W/2-1,0.5,2,0.5,3],[W-3,1.5,2,0.5,3]]
+  for(var i=0;i<shapes.length;i++) {
+    var r=shapes[i]
+    cloudFragments(w,{x:x+r[0],y:y+r[1],width:r[2],height:r[3],row:r[4]},false,rects)
+  }
+  scene.heads[key]=rects;return rects
+}
+function drawPageStorm(ctx,w,pal,h,g) {
+  ctx.save()
+  var alpha=ctx.globalAlpha
+  drawCloudCharge(ctx,w,pal,h,g)
+  var head=stormHeadLayout(w,g)
+  for(var i=0;i<head.length;i++) {
+    var r=head[i];ctx.fillStyle=STORM_INKS[r.row];ctx.fillRect(r.x,r.y,r.width,r.height)
+  }
+  if(g.winding) drawStormTension(ctx,w,h,g,alpha)
+  if(g.live) drawStormDischarge(ctx,w,h,g,alpha)
+  if(g.cool) drawStormAfterglow(ctx,w,h,g,alpha)
+  ctx.restore()
+}
+function drawStormTension(ctx,w,h,g,alpha) {
+  var energy=Math.max(0,(g.progress-0.35)/0.65)
+  if(!energy)return
+  ctx.fillStyle=BOLT;ctx.globalAlpha=alpha*(0.10+0.22*energy)
+  // The established steady full-column tell stays throughout late wind-up.
+  for(var row=g.y0+7;row<g.y1;row+=1)
+    moteFineRect(ctx,w,g.x0,row,g.wide,1)
+  ctx.globalAlpha=alpha*(0.3+0.5*energy);ctx.fillStyle=CLOUD_SILVER
+  var reach=1+Math.floor(energy*3)
+  drawStormTrace(ctx,w,g.cx-3,g.y0+3,g.cx,g.y0+3+reach,0.5)
+  drawStormTrace(ctx,w,g.cx+3,g.y0+2,g.cx,g.y0+3+reach,0.5)
+}
+function drawStormTrace(ctx,w,x0,y0,x1,y1,size) {
+  var steps=Math.max(1,Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0))*2))
+  for(var i=0;i<=steps;i++) {
+    var x=Math.round((x0+(x1-x0)*i/steps)*2)/2,y=Math.round((y0+(y1-y0)*i/steps)*2)/2
+    moteFineRect(ctx,w,x,y,size,0.5)
+  }
+}
+function drawStormDischarge(ctx,w,h,g,alpha) {
+  // One stable fork per strike: no full-board flash or frame-to-frame jitter.
+  var top=g.y0+6,bottom=g.y1-0.5,seed=h.fired||0
+  for(var pass=0;pass<2;pass++) {
+    ctx.fillStyle=pass?BOLT:CLOUD_LILAC;ctx.globalAlpha=alpha*(pass?1:0.28)
+    var px=g.cx,py=top,size=pass?1:2
+    for(var i=1;i<=5;i++) {
+      var nx=g.cx+(((i*5+seed*3)%7)-3)*0.5
+      var ny=Math.round((top+(bottom-top)*i/5)*2)/2
+      drawStormTrace(ctx,w,px,py,nx,ny,size)
+      if(i===2) drawStormTrace(ctx,w,nx,ny,g.x0+1,Math.min(bottom,ny+5),pass?0.5:1)
+      if(i===4) drawStormTrace(ctx,w,nx,ny,g.x1-1,Math.min(bottom,ny+3),pass?0.5:1)
+      px=nx;py=ny
+    }
+  }
+  if(!w.reducedMotion) {
+    ctx.fillStyle=BOLT;ctx.globalAlpha=alpha*(1-h.t/8)
+    moteFineRect(ctx,w,g.cx-3,g.y1-1.5,2,0.5)
+    moteFineRect(ctx,w,g.cx+2,g.y1-1,2,0.5)
+  }
+}
+function drawStormAfterglow(ctx,w,h,g,alpha) {
+  ctx.fillStyle=SCORCH;ctx.globalAlpha=alpha*g.cool
+  var C=w.k.CELL,col=Math.floor(g.cx/C),row=Math.floor(g.y1/C)
+  if(w.terrain[row*w.k.COLS+col]) {
+    ctx.fillRect(g.cx-2,g.y1,4,0.5);ctx.fillRect(g.cx-1,g.y1+0.5,2,0.5)
+  }
+  if(w.reducedMotion)return
+  ctx.fillStyle=CLOUD_SILVER;ctx.globalAlpha=alpha*g.cool*0.5
+  moteFineRect(ctx,w,g.cx-2,g.y1-1.5-Math.floor(h.t/4)*0.5,1,0.5)
+  moteFineRect(ctx,w,g.cx+2,g.y1-2-Math.floor(h.t/4)*0.5,0.5,0.5)
 }
 
 function hzImpact(ctx, pal, h, g, x, y, color) {
@@ -21169,15 +21257,15 @@ function drawCloudWeather(ctx,w,pal) {
 function drawCloudCharge(ctx,w,pal,h,g) {
   if (!cloudPage(w) || !g.winding) return
   ctx.save()
-  var energy=Math.max(0,(g.progress-0.35)/0.65)
-  ctx.globalAlpha=0.18+0.25*g.progress;ctx.fillStyle=CLOUD_LILAC
+  var energy=Math.max(0,(g.progress-0.35)/0.65),alpha=ctx.globalAlpha
+  ctx.globalAlpha=alpha*(0.18+0.25*g.progress);ctx.fillStyle=CLOUD_LILAC
   ctx.fillRect(g.x0-3,g.y0-1,g.wide+6,2)
   ctx.fillRect(g.x0-1,g.y0-2,g.wide+2,1)
   if (energy>0) {
-    ctx.globalAlpha=0.12+energy*0.13;ctx.fillStyle=CLOUD_SILVER
+    ctx.globalAlpha=alpha*(0.12+energy*0.13);ctx.fillStyle=CLOUD_SILVER
     ctx.fillRect(g.x0-2,g.y0+3,2,g.y1-g.y0-3)
     ctx.fillRect(g.x0+g.wide,g.y0+3,2,g.y1-g.y0-3)
-    ctx.globalAlpha=0.35+energy*0.3
+    ctx.globalAlpha=alpha*(0.35+energy*0.3)
     ctx.fillRect(g.x0,g.y1-0.5,g.wide,0.5)
   }
   ctx.restore()
