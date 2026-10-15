@@ -489,6 +489,60 @@
 
   function advance(delta) { newLevel(level + delta); saveState() }
 
+  // The tour: one tiny thumbnail per biome, painted from that biome's own
+  // palette in the current theme, so a visitor who never gets past level five
+  // can still see the Harbour or The Cloud. A jump is a move like prev/next:
+  // nothing is cleared and nothing is counted. It goes to that biome's next
+  // level after this one, so a tour moves forward through the game.
+  function tourLevel(from, biome, count) {
+    var l = from + 1
+    while ((l - 1) % count !== biome) l++
+    return l
+  }
+  window.AgentTour = { level: tourLevel }
+
+  function buildTour() {
+    if (!el.tour) return
+    el.tour.innerHTML = ""
+    BIOMES.forEach(function (name, i) {
+      var b = document.createElement("button")
+      b.className = "tour-stop"
+      b.title = name
+      b.setAttribute("aria-label", "Go to " + name)
+      var c = document.createElement("canvas")
+      c.width = 24; c.height = 16
+      b.appendChild(c)
+      b.addEventListener("click", function () { newLevel(tourLevel(level, i, BIOMES.length)); saveState(); render() })
+      el.tour.appendChild(b)
+    })
+    paintTour()
+  }
+
+  function paintTour() {
+    if (!el.tour) return
+    var t = THEMES[themeName]
+    Array.prototype.forEach.call(el.tour.children, function (b, i) {
+      var pal = build({ background: hex(t.background), foreground: hex(t.foreground), accent: hex(t.accent),
+        urgent: hex(t.urgent), muted: hex(t.muted) }, i + 1)
+      drawTourStop(b.firstChild.getContext("2d"), pal, i)
+    })
+  }
+
+  // Sky, the back wall, a bank of ground with a top edge of one of four
+  // shapes, and the way home lit at the right. Twenty of them tell apart.
+  function drawTourStop(c, pal, i) {
+    c.fillStyle = pal.skyLow; c.fillRect(0, 0, 24, 16)
+    c.fillStyle = pal.backDim; c.fillRect(0, 5, 24, 6)
+    c.fillStyle = pal.dirt; c.fillRect(0, 11, 24, 5)
+    c.fillStyle = pal.dirtEdge
+    for (var x = 0; x < 24; x++) {
+      var shape = i % 4, lift = shape === 1 ? (x >> 3) % 2 : shape === 2 ? (x % 4 < 2 ? 1 : 0) : shape === 3 ? (x % 6 === 2 ? 2 : 0) : 0
+      c.fillRect(x, 11 - lift, 1, 1 + lift)
+    }
+    c.fillStyle = pal.decorLit; c.fillRect(4 + (i * 5) % 12, 8, 2, 3)
+    c.fillStyle = pal.exitLight; c.fillRect(19, 7, 3, 4)
+  }
+
   function tick() {
     if (!world) return
     if (standup) { stepStandup(); return }
@@ -764,6 +818,11 @@
       node.cell.classList.toggle("spent", count === 0 && !recent)
     })
 
+    if (el.tour) Array.prototype.forEach.call(el.tour.children, function (b, i) {
+      var here = (world.level - 1) % BIOMES.length === i
+      b.classList.toggle("on", here)
+      if (here) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current")
+    })
     el.speedWord.textContent = SPEED_NAMES[speedIndex]
     el.whoWord.textContent = showLabels ? "on" : "off"
     el.who.setAttribute("aria-pressed", showLabels ? "true" : "false")
@@ -893,6 +952,7 @@
     paintTerrain()
     paintActors()
     saveState()
+    paintTour()
     Array.prototype.forEach.call(el.themes.children, function (b) {
       b.classList.toggle("on", b.dataset.theme === name)
       b.setAttribute("aria-pressed", b.dataset.theme === name ? "true" : "false")
@@ -961,6 +1021,7 @@
 
   function boot() {
     el.level = document.getElementById("level")
+    el.tour = document.getElementById("tour")
     el.announce = document.getElementById("announce")
     el.biome = document.getElementById("biome")
     el.home = document.getElementById("home")
@@ -996,6 +1057,7 @@
     loadPendingReports()
     loadPendingBatch()
     buildToolbar()
+    buildTour()
 
     THEME_ORDER.forEach(function (name) {
       var b = document.createElement("button")

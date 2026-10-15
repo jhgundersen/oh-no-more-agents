@@ -8841,3 +8841,40 @@ lock; no other full suite overlaps the final run.
 `codex/agent-art` only; no push, deployment or sibling sync.
 
 Reviewed and merged by the loop. Smoother walk and fall cycles at page resolution, and the umbrella held in the hand with a little sway; resolution 1 is unchanged, and the busy level holds 60 fps.
+
+## 270 — 2026-10-15 · The tour
+
+**Asked:** a biome picker, because most visitors only see the first few
+biomes. A compact strip near prev/next of 20 tiny pixel thumbnails, rendered
+once at startup from each biome's palette, with the current one highlighted.
+A click or tap jumps to that biome's next level, and jumping doesn't count as
+clearing. Keyboard accessible; on phones it scrolls in its own row with no
+page scroll. Add a patch-notes line.
+
+**Changed:**
+- **The strip.** `#tour` sits under the controls: one 24×16 thumbnail per
+  biome.
+- **The thumbnails.** Each is painted from that biome's own palette in the
+  current theme: sky, back wall, a bank of ground, one of four top-edge
+  shapes, a lit decor mark and the way home. They're repainted when the theme
+  changes.
+- **The jump.** A stop goes forward to that biome's next level after this one
+  (`AgentTour.level`). It's a move like prev/next, through `newLevel`: nothing
+  is cleared and nothing is counted.
+- **Accessibility.** Every stop is a button named "Go to <biome>", with
+  `aria-current` on the biome being played.
+- **Phones.** On a coarse pointer the stops are 44 px tall, and the row
+  scrolls sideways inside itself.
+- **Patch notes:** "Added: The Cloud, a 20th biome, and a tour strip to visit
+  all twenty. Bring an umbrella." The sightings line drops off to keep eight.
+
+**Tests:** `test/tour.test.js`, on a 390×844 phone, checks:
+- 20 stops, with the current one marked;
+- jumps go forward (from level 3 to the next Cavern is 21);
+- a tap on The Cloud plays level 20, and "0 home, 0 levels" stays;
+- no page scroll while the row scrolls;
+- every thumbnail painted;
+- no page errors.
+
+Local headless check at 1280×900 and 390×844: the strip fits the board's width
+on the desktop and scrolls on the phone.
