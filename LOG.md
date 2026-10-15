@@ -4959,3 +4959,25 @@ except one cross-reference rewritten from "see below" to `docs/checking.md`.
 Every line of the old LOG.md is in LOG.md or the archive. The one code comment
 that pointed at AGENTS.md's baselines (`tools/simcheck.js`) now points at
 `docs/checking.md`.
+
+**Deployed** at 05:46 after 271 (name="build" content="a5cbb381"), gated on a
+green full check through the test lock (1245 tests). It covers 262–271: the
+cast art, The Cloud and the re-skin of levels from 20 up, the mission descope,
+the cloud banks, level 109's hero, readable lightning, the test lock, the
+agent animation art, the tour and the AGENTS.md/LOG.md restructure.
+
+Verified on production:
+- **Level 20, read-only** (`?level=20&seed=3`, every non-GET to `/api/*`
+  failed in the browser; none were attempted), at 1280×900 and 390×844:
+  - The Cloud, with `updraftLift` on.
+  - Lightning present (idle at tick 500).
+  - "AGENT 002 IS FIRST HOME" on the ticker.
+  - Scalloped lilac banks, the ON-PREM door, rain, umbrella floaters.
+  - The tour strip with The Cloud marked.
+  - No page errors.
+- **`dist/`:** all scripts byte-identical to `dist/` (brotli, no comment
+  lines). The build agrees on page, repo and API (a5cbb381).
+- **Open tab:** a tab from the previous build (ba69eb43) reloaded into the new
+  one between levels.
+- **Share card and icons:** still 200, `image/png`, immutable, identical.
+- **No console or page errors.**
