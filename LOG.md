@@ -5407,3 +5407,36 @@ branch commit is gated on the final green check and CRAP results.
 deployment or sibling sync.
 
 Reviewed and merged by the loop. A pixel header logo with the umbrella hanger and the dreamer walking to a false EXIT; it fits 390 px.
+
+## 278 — 2026-10-15 · What the heap was; a smoke before each deploy
+
+**Asked:** (a) finish the heap investigation from 276: take the snapshot diff
+through the test lock across about 30 levels and name what retains the growth.
+Fix it if it's ours, or log why it plateaus. (b) Keep the soak in the toolbox:
+a 3-minute `npm run soak -- --minutes 3` smoke in the pre-deploy checklist,
+not the per-commit gate.
+
+**(a) Found:** heap snapshots after a forced GC at level 5 and at level 25,
+ten minutes apart at Brisk, aggregated by type:
+
+| What grew | Size | Objects |
+|---|---|---|
+| `(code)`: compiled code, bytecode and feedback | +3230 KB | +12293 |
+| `(native)` | +281 KB | |
+| Numbers, strings and object shapes | +42 KB together | |
+| Plain `Object`s | +6 KB | +149 |
+
+No world, canvas, array of samples, ticker line or closure grew in any number.
+The growth is V8 compiling code: Draw.js is 770 KB and most of it is per-biome
+art that runs only when its biome comes up. Every new biome the page reaches
+compiles its share for the first time. Levels 5 to 25 visit all twenty
+biomes, so the compiled set approaches its full size, which is why 276's curve
+flattened from 0.38 to 0.1 MB a minute. It isn't ours to free and it doesn't
+grow past the whole program. Nothing to fix; logged as the explanation.
+
+**(b) Changed:** `npm run smoke` is the 3-minute soak (15 s samples) through
+the test lock. AGENTS.md's deploy rule now says: before each deploy, the full
+check, then `npm run smoke`. It is not part of the per-commit gate. First run:
+levels 1–7, heap 5.2 MB, 524–540 nodes, 73–74 listeners, 24 canvases (the
+pixel logo added two), frame time 16.7 ms throughout, at most one live audio
+node at any sample. **Passed.**

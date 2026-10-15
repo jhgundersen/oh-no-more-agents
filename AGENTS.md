@@ -97,6 +97,10 @@ Each of these is here because breaking it once cost something real.
 - **Deploy from a clean tree, about hourly.** `npm run deploy` builds `dist/`
   from the working tree (`tools/ship.js`), so stash or commit first. Batch
   deploys roughly once an hour and log each one with the iterations it covers.
+  Before each deploy: the full check, then `npm run smoke` (a 3-minute soak:
+  page errors, growing heap/nodes/listeners/storage, piling audio nodes,
+  frame-time creep). Not part of the per-commit gate. `npm run soak --
+  --minutes 20` is the long version.
 
 ## Deeper notes
 
