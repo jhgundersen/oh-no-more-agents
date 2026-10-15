@@ -9624,6 +9624,37 @@ run of solid ground under the agent sits over a drop with no floor
 Built in a worktree (dev/163) while the main tree stayed clean for the
 17:25 deploy, and merged after it.
 
+## 374 — 2026-10-15 · The forecast, as copy for the title card
+
+**Asked:** compute the forecast line's text from the toolbar and biome in
+the core files, so Codex can draw it later. 369 proposed it; the umbrella
+stand went to Codex.
+
+**Built** (`Outcome.js`):
+- **`forecastLines(w)`** returns two lines from the fresh world:
+  `"FORECAST: <up to two conditions>"` and
+  `"<n>0% CHANCE OF <biome noun> · UMBRELLAS: <floaters>"`.
+- **Conditions,** rarest first: hostile contractors (an enemy roster), a
+  meeting at 3 (a mission), lifts running, mostly (a tower), scope changes
+  possible (scheduled events), then isolated, scattered or widespread
+  hazards, then sinkholes likely. Nearly every level has a pit, so that one
+  only fills a gap.
+- **A quiet level** gets "CLEAR SKIES, ALLEGEDLY". No floaters gets "NO
+  UMBRELLAS. GOOD LUCK".
+- **One noun per biome:** echoes, snow, black ice, overheating, shushing,
+  delays, fog, "RAIN, OBVIOUSLY" for the Cloud, and so on.
+- **The percentage** comes from the level number, so the same level always
+  gets the same forecast. Nothing is random, nothing is drawn, the world is
+  read only, and the lines are at most 56 characters.
+
+**Tests** (`test/forecast.test.js`):
+- every biome gets two well-formed, short, deterministic lines and leaves
+  the world untouched;
+- the conditions' order, the two-line cap, clear skies, and no umbrellas.
+
+**For Codex:** draw the two lines on the title card. It shows for 1.2 s
+today, which is short for two extra lines.
+
 ## 376 — 2026-10-15 · Deploy (17:27), and three branches merged after it
 
 **Deployed** build b96d79b5 (version 2f4594c8), replacing 4de7f9b0. It
