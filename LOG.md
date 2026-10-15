@@ -9294,3 +9294,113 @@ motion or presentation. Commit on the branch only; no push or deployment.
 Reviewed and merged by the loop: codex/queue-art (fa955f8, entry 364), `--no-ff`, as approved.
 Codex's entry is renumbered and the page is re-stamped. Drawing only, with
 no Sim.js change, and the native (res 1) pixels kept, per Codex's tests.
+
+## 366 — 2026-10-15 · Rising air you can see (on a branch)
+
+**Branch:** `codex/updraft-art`, from current main `9ef1b2d`. The supervisor's
+free pick after the duck: make the Cloud's rising air distinct from its rain.
+Live desktop/390 px phone watches at Steady/Brisk, plus Halloween and Christmas,
+showed umbrellas lingering in columns whose narrow streaks looked like rain.
+
+**Art:** Cloud res 2 only. Sparse pale cyan curls rise half an art pixel per
+tick through the real lift lanes, with a rounded leading curl and a fading
+trailing stroke. Adjacent lift cells share one curl, including narrow edge
+lanes. Even spacing wraps cleanly. Reduced motion freezes the entire cue.
+The old full-column wash is gone; lightning keeps its bright continuous
+warning and two-pixel strike core. Wind paints before hazards and agents.
+No change to their drawing, simulation, release timings, skills or RNG.
+
+**Cached and clipped:** a WeakMap holds a **387.5 KiB** half-pixel air mask per
+live world. It includes only actual empty updraft cells below the sky band,
+then excludes the existing cached cumulus outlines. New strokes stay off the scallops and cream
+walking rims as well as real ground. The old wash no longer tints air-cell
+contours. The ON-PREM artwork stays in place. Terrain edits and
+replacement terrain/updraft maps refresh it. Warm ticks neither scan terrain
+nor allocate geometry/canvases; there are no particle objects or new timers.
+The native panel, share renderer and Data Center retain the old path.
+
+**Natural action:** seed 3, Cloud **60 / tick 100**, **100 / tick 379**, and
+**120 / tick 101**. One bounded seek per fixture finds a real falling floater
+inside a real updraft; the twelve sampled offsets **0–64** show the catch,
+opening canopy and slow descent. No forced pose, skill or RNG stream. Review
+poses get equal display time, labelled; exact ticks/states are in the manifest.
+
+**Review:** `/tmp/codex-updraft-art/strips/index.html`, with fresh current sheet
+**contact-sheet-035a9cfd.png** and a byte-identical canonical `contact-sheet.png`.
+The manifest records drawing hash **6778dbed…** and sheet hash
+**82b8f515…**; its HTML links the stamped filename. Native/page frame
+strips and animated before/after pairs cover all three layouts. Sheet labels
+use the validated uppercase pixel font.
+
+`/tmp/codex-updraft-art/page-sheet.png` (**1640×4960**) pairs actual CSS-size
+boards and 3× crops: desktop catch, phone lift, third layout, late lightning
+wind-up, strike, Halloween, Christmas, reduced motion and the Data Center.
+Full pages are in `before/` and `after/`. Browser assertions verify matching
+complete world digests and board/stage geometry, no errors or sideways
+scrolling, and every changed pixel inside actual empty updraft cells.
+**Zero pixels change on the Data Center board.** Solid terrain and the sky
+band are unchanged. Open umbrellas stay clear against the moving air.
+
+**Compatibility:** independent saved-main/native aggregate **fbe5f481…** stays
+exact for default/res 1/share res 3 Cloud art and all Data Center resolutions,
+all five palettes, both motion settings and six clocks. Every full native
+frame strip also matches byte for byte (`native-strip-proof.json`). Real
+rendered/plain colonies retain identical complete JSON digests, lift behaviour
+and lightning outcomes. Separate foreground checks cover the late tell,
+strike, agent and a genuinely open canopy forty ticks into a natural lift.
+
+**Focused:** **33/33 pass, 5.44 s**. Twelve new guards cover those compatibility paths,
+natural lift/slowdown and bounded failure, cached mask/contour exclusions,
+refresh after carving or map replacement, no warm terrain reads, half-pixel
+clipping/fade safety, rising direction and clean wrap, static reduced motion,
+narrow edge lanes, unchanged foreground paint, read-only/RNG-free painting,
+complete live digests, crop/cache/theme parity and poisoned contact-sheet
+refresh. Includes the original Cloud and storm-art tests.
+
+**Tooling:** `tools/updraft-art.js` seeks once, fixes the crop to the initial
+position, caches terrain by version/resolution/theme and draws actor crops
+directly. Fractional floater coordinates are rounded to whole art-pixel crop
+origins and tested. **144** comparison frames take **0.83 s / 245.4 MiB peak RSS**.
+Exports regenerate canonical and source-stamped sheets together, with a
+poisoned-output guard; the review caption describes only the sampled action.
+
+**Cost:** **3,049 source bytes / 892 gzip bytes** added to Draw.js before ship's
+comment strip. Across **1,200** motion/clock samples on six real layouts, the
+old streaks take **856,640** rectangles versus **336,260** for curls; peak
+**847 → 350**. The cached mask replaces the old per-tick cell scans and broad
+wash. Five-second live Brisk comparisons on 60 (**16** cast, ticks **110–339**)
+and 100 (**13** cast, **372–600**) all hold **60 median / 60 p5 FPS, 17 ms
+worst, zero long-task time**. CPU is **12% / 12%** and **13% / 13%**. No FPS
+speedup claimed. Logs and `fps-summary.json` are in the evidence directory.
+
+**Full gate:** **1,481 passed, zero failures/cancellations/skips, 359.75 s**,
+including Factory art and coverage. CRAP threshold **30** passed on the same
+LCOV, maximum **30.0**. All six new runtime helpers have **100% coverage**,
+scores **2.0–10.0**; `drawUpdrafts` is **8.0 / 100%**. Review orchestration is
+**11.0 / 100%**, discovery **9.0 / 100%**, cached crops **3.1 / 75%**, export
+**2.0 / 100%**. Completion was reported immediately. The persistent FIFO run
+used a **3 GB service cap**, **2,048 MB Node heap**, `ulimit -v 6000000`, two
+workers and 120-second test timeouts; the service reported **783.3 MiB peak**.
+Sources/tests/tools stayed frozen through the fresh focused and full gates;
+all recorded hashes still match. CRAP reused only the final run's LCOV.
+Logs: `focused.log`, `check.log`, `crap.log`, `queue.log` and
+`memory-samples.log` in the evidence directory. `npm run stamp`, its check and
+`git diff --check` pass.
+
+**Next:** review and merge this branch, then another free choice of atmosphere,
+motion or presentation. Branch commit only; no push or deployment.
+
+## 367 — 2026-10-15 · Merged the updraft curls
+
+Reviewed and merged by the loop: codex/updraft-art (354b824, entry 366), `--no-ff`, as approved.
+Codex's entry is renumbered and the page is re-stamped. Drawing only, with
+no Sim.js change, and the native (res 1) pixels kept, per Codex's tests.
+
+Merge notes:
+- **LOG:** Codex's entry arrived titled "A little lift", a mangled header
+  like 294's; it is retitled.
+- **Draw.js:** both sides had appended functions at the end of the file, and
+  the conflict split a shared closing brace. Draw.js was rebuilt as main's
+  file plus exactly the branch's two changes (the `drawUpdrafts` hook and
+  the appended curl functions). The diff against main matches the branch's
+  own diff line for line, and `node --check` passes.
