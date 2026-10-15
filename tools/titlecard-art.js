@@ -21,37 +21,41 @@ async function navigate(b,ev,url){
  }
  throw Error('title card page did not become ready within three seconds')
 }
-async function titleView(b,ev,out,url,mobile,dpr){
+async function titleView(b,ev,out,url,mobile,dpr,phoneShots){
  await b.cmd('Emulation.setDeviceMetricsOverride',{width:mobile?390:1280,height:mobile?844:900,deviceScaleFactor:dpr,mobile})
  await b.cmd('Emulation.setTouchEmulationEnabled',{enabled:mobile})
  await navigate(b,ev,url)
  await ev('Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,1000))])')
  const metrics=await ev(`(()=>{
   document.getElementById('c-pause').click();document.getElementById('c-restart').click();
-  const w=AgentWorld();while(w.ticks<18)step(w);
+  const w=AgentWorld(),layout=levelTitleLayout(w);while(w.ticks<18)step(w);
   document.querySelector('#themes .theme.on').click();
   document.getElementById('overlay').style.visibility='hidden';
-  const c=document.getElementById('levelTitle'),r=document.getElementById('board').getBoundingClientRect();
+  const c=document.getElementById('levelTitle'),board=document.getElementById('board');
+  if(innerWidth<600)scrollTo(0,scrollY+board.getBoundingClientRect().top-32);
+  const r=board.getBoundingClientRect();
   for(const a of c.getAnimations()){a.pause();a.currentTime=300}
-  return{viewport:innerWidth,pageWidth:document.documentElement.scrollWidth,hidden:c.hidden,canvas:{width:c.width,height:c.height},board:{x:r.x,y:r.y,width:r.width,height:r.height},layout:levelTitleLayout(w),hatch:{x:w.hatch.x*4,y:w.hatch.y*4},level:w.level,biome:w.biome,ticks:w.ticks,subtitle:levelTitleSubtitle(w.level,w.biome)}
+  return{viewport:innerWidth,scrollY,viewportHeight:innerHeight,pageWidth:document.documentElement.scrollWidth,hidden:c.hidden,canvas:{width:c.width,height:c.height},board:{x:r.x,y:r.y,width:r.width,height:r.height},layout,hatch:{x:w.hatch.x*4,y:w.hatch.y*4},level:w.level,biome:w.biome,ticks:w.ticks,subtitle:levelTitleSubtitle(w.level,w.biome)}
  })()`)
- const name=`${mobile?'phone':'desktop'}-dpr${dpr}`
- const shot=await b.cmd('Page.captureScreenshot',{format:'png'})
+ const name=`${mobile?'phone':'desktop'}-dpr${dpr}${metrics.level===20?'':'-level'+metrics.level}`
+ const shot=await b.cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})
  fs.writeFileSync(path.join(out,name+'.png'),Buffer.from(shot.data,'base64'))
  const r=metrics.board
- const crop=await b.cmd('Page.captureScreenshot',{format:'png',clip:{x:r.x,y:r.y,width:r.width,height:r.height,scale:1}})
+ const x=Math.max(0,r.x),width=Math.min(r.x+r.width,metrics.viewport)-x
+ const crop=await b.cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip:{x,y:r.y+metrics.scrollY,width,height:r.height,scale:1}})
  fs.writeFileSync(path.join(out,name+'-board.png'),Buffer.from(crop.data,'base64'))
+ if(mobile&&dpr===1)phoneShots.push({level:metrics.level,biome:metrics.biome,png:crop.data})
  return{mobile,dpr,...metrics}
 }
 async function timingChecks(b,ev){
- const normal=await ev(`(()=>{document.getElementById('c-restart').click();const c=document.getElementById('levelTitle'),ctx=c.getContext('2d'),fill=ctx.fillRect;window.titleLivePaints=0;ctx.fillRect=function(...r){window.titleLivePaints++;return fill.apply(this,r)};return{duration:getComputedStyle(c).animationDuration,pointerEvents:getComputedStyle(c).pointerEvents,hidden:c.hidden,ariaHidden:c.getAttribute('aria-hidden')}})()`)
+ const normal=await ev(`(()=>{document.getElementById('c-restart').click();const c=document.getElementById('levelTitle'),ctx=c.getContext('2d'),fill=ctx.fillRect;window.titleLivePaints=0;window.titleSelections=0;const choose=levelTitleLayout;levelTitleLayout=function(w){window.titleSelections++;return choose(w)};ctx.fillRect=function(...r){window.titleLivePaints++;return fill.apply(this,r)};return{duration:getComputedStyle(c).animationDuration,pointerEvents:getComputedStyle(c).pointerEvents,hidden:c.hidden,ariaHidden:c.getAttribute('aria-hidden')}})()`)
  await sleep(850)
  const fading=await ev('Number(getComputedStyle(document.getElementById("levelTitle")).opacity)')
- const cached=await ev('window.titleLivePaints===0')
+ const cached=await ev('window.titleLivePaints===0&&window.titleSelections===0')
  await sleep(450)
  const expired=await ev('document.getElementById("levelTitle").hidden')
  // A theme repaint must neither change the world nor restart the fade.
- const pure=await ev(`(()=>{document.getElementById('c-pause').click();document.getElementById('c-restart').click();const a=JSON.stringify(AgentWorld());document.querySelector('#themes .theme.on').click();return a===JSON.stringify(AgentWorld())})()`)
+ const pure=await ev(`(()=>{document.getElementById('c-pause').click();document.getElementById('c-restart').click();const a=JSON.stringify(AgentWorld());window.titleSelections=0;document.querySelector('#themes .theme.on').click();return a===JSON.stringify(AgentWorld())&&window.titleSelections===0})()`)
  await b.cmd('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]})
  const reduced=await ev(`(()=>{document.getElementById('c-restart').click();return getComputedStyle(document.getElementById('levelTitle')).animationDuration})()`)
  await sleep(700)
@@ -87,9 +91,22 @@ async function exclusionChecks(ev){
  const next=await ev('!AgentWorld().done&&!document.getElementById("levelTitle").hidden')
  return{replay,report,meeting,next}
 }
+async function phoneSheet(ev,out,shots){
+ const png=await ev(`(async()=>{
+  const shots=${JSON.stringify(shots)},c=document.createElement('canvas');c.width=414;c.height=24+shots.length*284;
+  const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.fillStyle='#1a1b26';ctx.fillRect(0,0,c.width,c.height);
+  for(let i=0;i<shots.length;i++){
+   const y=12+i*284,im=new Image();im.src='data:image/png;base64,'+shots[i].png;await im.decode();
+   ctx.fillStyle='#c0caf5';drawTransitionText(ctx,'PHONE 390 PX · LEVEL '+shots[i].level+' · '+shots[i].biome.toUpperCase(),207,y,1.5);
+   ctx.drawImage(im,12,y+20);
+  }
+  return c.toDataURL().split(',')[1]
+ })()`)
+ fs.writeFileSync(path.join(out,'phone-sheet.png'),Buffer.from(png,'base64'))
+}
 export async function captureTitleCards(out){
  fs.mkdirSync(out,{recursive:true})
- const server=await serve(),records=[],exceptions=[]
+ const server=await serve(),records=[],exceptions=[],phoneShots=[]
  let b
  const url=`http://127.0.0.1:${server.address().port}/?level=20&seed=3`
  try{
@@ -97,7 +114,9 @@ export async function captureTitleCards(out){
   const ev=evaluator(b)
   b.onEvent=d=>{if(d.method==='Runtime.exceptionThrown'&&exceptions.length<20)exceptions.push(d.params.exceptionDetails.exception?.description||d.params.exceptionDetails.text)}
   await b.cmd('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]})
-  for(const mobile of[false,true])for(const dpr of[1,2])records.push(await titleView(b,ev,out,url,mobile,dpr))
+  for(const mobile of[false,true])for(const dpr of[1,2])records.push(await titleView(b,ev,out,url,mobile,dpr,phoneShots))
+  for(const level of[13,29])records.push(await titleView(b,ev,out,url.replace('level=20','level='+level),true,1,phoneShots))
+  await phoneSheet(ev,out,phoneShots)
   await navigate(b,ev,url)
   const timing=await timingChecks(b,ev),input=await inputChecks(b,ev),exclusions=await exclusionChecks(ev)
   const result={records,timing,input,exclusions,errors:b.errors,exceptions}

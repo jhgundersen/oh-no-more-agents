@@ -700,10 +700,11 @@
   // One cached image per level/theme. CSS fades only this transparent layer;
   // the hatch, first drop and input keep running underneath. Wall-clock time
   // makes the duration independent of game speed (and of pausing the game).
-  var titleTimer = 0
+  var titleTimer = 0, titleLayout = null
   function hideLevelTitle() {
     clearTimeout(titleTimer)
     titleTimer = 0
+    titleLayout = null
     var c = document.getElementById("levelTitle")
     if (c) c.hidden = true
   }
@@ -713,13 +714,14 @@
     if (!c || c.hidden || !world) return
     var ctx = c.getContext("2d")
     clearLayer(ctx, world)
-    drawLevelTitleCard(ctx, world, palette, (level - 1) % BIOMES.length)
+    drawLevelTitleCard(ctx, world, palette, (level - 1) % BIOMES.length, titleLayout)
   }
 
   function showLevelTitle() {
     hideLevelTitle()
     var c = document.getElementById("levelTitle")
     if (!c || world.done || world.replaying || replay || standup) return
+    titleLayout = levelTitleLayout(world)
     c.width = WIDTH * RES; c.height = HEIGHT * RES
     // Commit the hidden state so even rapid navigation restarts the fade.
     // This also works with the reduced-motion CSS exception.

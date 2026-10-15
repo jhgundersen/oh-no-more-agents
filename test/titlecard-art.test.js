@@ -27,12 +27,31 @@ test('twenty biome subtitle lists fit the pixel font, vary by visit, and use no 
  }
  assert.ok(D.levelTitleSubtitle(2,'unknown'))
 })
-test('card fits every hatch orientation with an unobstructed opening and first drop',()=>{
+test('compact placement is deterministic, clears hatch/exit, and minimises route overlap among twelve spots',()=>{
  for(let level=1;level<=400;level++){
-  const w=S.generate(level,0,3),r=D.levelTitleLayout(w),hy=w.hatch.y*4
-  assert.ok(r.x>=0&&r.y>=0&&r.x+r.width+3<=400&&r.y+r.height+3<=248)
-  assert.ok(r.y+r.height+3<hy-18||r.y>hy+40,`level ${level}: hatch opening and first falling body clear`)
+  const w=S.generate(level,0,3),before=hash(JSON.stringify(w)),r=D.levelTitleLayout(w),size=D.levelTitleSize(w),keep=D.levelTitleKeepClear(w)
+  assert.ok(r.x>=12&&r.y>=28&&r.x+r.width<=388&&r.y+r.height<=236)
+  assert.equal(r.height,w.bossPost?36:30);assert.equal(r.width,size.width)
+  assert.ok(r.width<330,'width hugs the longer line, rather than the whole board')
+  for(const rect of keep)assert.equal(D.levelTitleOverlap(r,rect),0,`level ${level}: hatch opening, first drop and exit clear`)
+  assert.deepEqual(r,D.levelTitleLayout(w));assert.equal(hash(JSON.stringify(w)),before)
+  const candidates=D.levelTitleCandidates(w,size);assert.equal(candidates.length,12)
+  assert.ok(candidates.every(c=>D.levelTitleScore(w,r,keep)<=D.levelTitleScore(w,c,keep)))
  }
+})
+test('placement favours an empty pocket over ground, and moves away when that pocket contains a portal',()=>{
+ const w=S.generate(13,0,3),k=w.k,size=D.levelTitleSize(w),pocket=D.levelTitleCandidates(w,size)[2]
+ w.hatch={x:5,y:3};w.exit={x:88,y:51,w:5,h:7};w.terrain.fill(k.ROCK)
+ for(let y=Math.floor(pocket.y/4);y<Math.ceil((pocket.y+pocket.height+24)/4);y++)
+  for(let x=Math.floor(pocket.x/4);x<Math.ceil((pocket.x+pocket.width)/4);x++)w.terrain[y*k.COLS+x]=k.EMPTY
+ assert.deepEqual(D.levelTitleLayout(w),pocket)
+ w.exit={x:Math.floor((pocket.x+20)/4),y:Math.floor((pocket.y+10)/4),w:5,h:5}
+ const moved=D.levelTitleLayout(w)
+ assert.notDeepEqual(moved,pocket);assert.equal(D.levelTitleOverlap(moved,D.levelTitleKeepClear(w)[1]),0)
+ const surface=S.generate(1,0,3);surface.terrain.fill(k.EMPTY)
+ for(let x=0;x<k.COLS;x++)surface.terrain[30*k.COLS+x]=k.ROCK
+ assert.ok(D.levelTitleCellCost(surface,20,30)>D.levelTitleCellCost(surface,20,29))
+ assert.ok(D.levelTitleCellCost(surface,20,29)>D.levelTitleCellCost(surface,20,20))
 })
 test('cached page cards are crisp, theme aware, bounded and read-only; replay/results draw nothing',()=>{
  const random=Math.random
@@ -53,7 +72,7 @@ test('cached page cards are crisp, theme aware, bounded and read-only; replay/re
    assert.equal(first,hash(b.buf))
    count=0;const boss={...w,bossPost:true,bossName:null};D.drawLevelTitleCard(c,boss,pal,level-1)
    count=0;D.drawLevelTitleCard(c,{...w,done:true},pal,level-1);D.drawLevelTitleCard(c,{...w,replaying:true},pal,level-1);assert.equal(count,0)
-   assert.ok(r.height>=58)
+   assert.ok(r.height<=36)
   }
  }finally{Math.random=random}
 })
@@ -80,7 +99,8 @@ test('page title card fades on wall clock, skips without consuming a tap, exclud
  try{
   const r=await captureTitleCards(out)
   assert.deepEqual(r.errors,[],r.exceptions.join("\n"))
-  for(const v of r.records){assert.equal(v.hidden,false);assert.equal(v.pageWidth,v.viewport);assert.equal(v.canvas.width,800);assert.equal(v.canvas.height,496);const scale=v.board.width/400,left=v.board.x+v.layout.x*scale;assert.ok(left>=0&&left+(v.layout.width+3)*scale<=v.viewport);assert.equal(v.ticks,18);assert.equal(v.biome,'The Cloud')}
+  for(const v of r.records){assert.equal(v.hidden,false);assert.equal(v.pageWidth,v.viewport);assert.equal(v.canvas.width,800);assert.equal(v.canvas.height,496);const scale=v.board.width/400,left=v.board.x+v.layout.x*scale;assert.ok(left>=0&&left+(v.layout.width+3)*scale<=v.viewport);assert.equal(v.ticks,18);assert.equal(v.biome,S.BIOMES[(v.level-1)%20]);if(v.mobile){assert.ok(v.board.y>=0&&v.board.y+v.board.height<=v.viewportHeight);assert.ok(v.scrollY>0)}}
+  assert.equal(r.records.length,6);const sheet=fs.readFileSync(path.join(out,'phone-sheet.png'));assert.equal(sheet.readUInt32BE(16),414);assert.equal(sheet.readUInt32BE(20),876)
   assert.equal(r.timing.normal.duration,'1.2s');assert.equal(r.timing.normal.pointerEvents,'none');assert.equal(r.timing.normal.ariaHidden,'true');assert.equal(r.timing.normal.hidden,false)
   assert.ok(r.timing.fading>0&&r.timing.fading<1);assert.equal(r.timing.cached,true);assert.equal(r.timing.expired,true);assert.equal(r.timing.pure,true);assert.equal(r.timing.reduced,'0.6s');assert.equal(r.timing.reducedExpired,true);assert.equal(r.timing.reset,true)
   assert.deepEqual(r.input,{skipped:true,resumed:true});assert.deepEqual(r.exclusions.replay,{hidden:true,active:true});assert.equal(r.exclusions.report,true);assert.equal(r.exclusions.meeting.hidden,true);assert.equal(r.exclusions.meeting.done,true);assert.equal(r.exclusions.next,true)

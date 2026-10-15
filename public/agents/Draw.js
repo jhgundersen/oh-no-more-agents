@@ -3064,40 +3064,97 @@ function levelTitleSubtitle(level, biome) {
   return lines[Math.abs(visit) % lines.length]
 }
 
-function levelTitleLayout(w) {
-  var width = w.k.COLS * w.k.CELL, height = w.k.ROWS * w.k.CELL
-  var h = w.bossPost ? 68 : 58
-  return { x: 20, y: w.hatch.y * w.k.CELL < height / 2 ? height - h - 24 : 40, width: width - 40, height: h }
+function levelTitleSize(w) {
+  var title = "LEVEL " + w.level + " · " + w.biome.toUpperCase()
+  var subtitle = levelTitleSubtitle(w.level, w.biome).toUpperCase()
+  var warning = w.bossPost ? "WARNING · " + (w.bossName || "THE MODERATOR") : ""
+  var titleSize = title.length > 46 ? 1 : 1.5
+  var textWidth = Math.max((title.length * 4 - 1) * titleSize, (subtitle.length * 4 - 1) * 1.5, warning.length * 4 - 1)
+  return { title: title, subtitle: subtitle, warning: warning, titleSize: titleSize,
+    width: Math.ceil(textWidth) + 46, height: w.bossPost ? 36 : 30 }
 }
 
-function drawLevelTitleCard(ctx, w, pal, icon) {
+// Twelve bounded choices. Position is settled once at level creation; neither
+// actors nor the clock affect it. Upper choices also leave the tip/HUD clear.
+function levelTitleCandidates(w, size) {
+  var width = w.k.COLS * w.k.CELL, height = w.k.ROWS * w.k.CELL
+  var xs = [14, Math.round((width - size.width) / 2), width - size.width - 14]
+  var ys = [48, 94, 142, height - size.height - 16], spots = []
+  for (var y = 0; y < ys.length; y++) for (var x = 0; x < xs.length; x++)
+    spots.push({ x: xs[x], y: ys[y], width: size.width, height: size.height })
+  return spots
+}
+
+function levelTitleKeepClear(w) {
+  var C = w.k.CELL, h = w.hatch, e = w.exit
+  return [{ x: h.x * C - 24, y: h.y * C - 18, width: 48, height: 62 },
+    { x: e.x * C - 8, y: e.y * C - 12, width: e.w * C + 16, height: e.h * C + 24 }]
+}
+
+function levelTitleOverlap(a, b) {
+  return Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) *
+    Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y))
+}
+
+// Terrain interiors are less costly than a walking surface or the sixteen
+// pixels above it where an agent's body will be. All solid materials count
+// alike; colour is never a route. Read only, and only while choosing the card.
+function levelTitleCellCost(w, x, y) {
+  var k = w.k, at = y * k.COLS + x
+  if (w.terrain[at] !== k.EMPTY)
+    return y > 0 && w.terrain[at - k.COLS] === k.EMPTY ? 40 : 1
+  for (var down = 1; down <= 4 && y + down < k.ROWS; down++)
+    if (w.terrain[at + down * k.COLS] !== k.EMPTY) return 12
+  return 0
+}
+
+function levelTitleScore(w, r, keep) {
+  var C = w.k.CELL, cost = 0
+  for (var i = 0; i < keep.length; i++) cost += levelTitleOverlap(r, keep[i]) * 100000
+  for (var y = Math.floor(r.y / C); y < Math.ceil((r.y + r.height) / C); y++)
+    for (var x = Math.floor(r.x / C); x < Math.ceil((r.x + r.width) / C); x++)
+      cost += levelTitleCellCost(w, x, y)
+  return cost
+}
+
+function levelTitleLayout(w) {
+  var spots = levelTitleCandidates(w, levelTitleSize(w)), keep = levelTitleKeepClear(w)
+  var best = spots[0], low = Infinity
+  // The level breaks equal scores without a random draw or colony dependence.
+  for (var i = 0; i < spots.length; i++) {
+    var spot = spots[(i + w.level) % spots.length], score = levelTitleScore(w, spot, keep)
+    if (score < low) { best = spot; low = score }
+  }
+  return best
+}
+
+function drawLevelTitleCard(ctx, w, pal, icon, layout) {
   if (w.done || w.replaying) return
-  var r = levelTitleLayout(w), cx = r.x + 218
-  var title = "LEVEL " + w.level + " · " + w.biome.toUpperCase()
+  var r = layout || levelTitleLayout(w), size = levelTitleSize(w)
+  var cx = r.x + 38 + (r.width - 46) / 2
   ctx.save()
-  ctx.fillStyle = pal.hatchMouth
-  ctx.fillRect(r.x + 3, r.y + 3, r.width, r.height)
-  ctx.fillStyle = pal.dirtEdge
-  ctx.fillRect(r.x + 2, r.y, r.width - 4, r.height)
-  ctx.fillRect(r.x, r.y + 2, r.width, r.height - 4)
+  var alpha = ctx.globalAlpha
+  // One translucent fill, not stacked plates that become opaque together.
+  ctx.globalAlpha = alpha * 0.82
   ctx.fillStyle = pal.cardBack
-  ctx.fillRect(r.x + 2, r.y + 2, r.width - 4, r.height - 4)
-  ctx.fillStyle = pal.decorLit
-  ctx.fillRect(r.x + 8, r.y + 2, r.width - 16, 0.5)
-  ctx.fillStyle = pal.rockEdge
-  ctx.fillRect(r.x + 8, r.y + r.height - 4, r.width - 16, 1)
+  ctx.fillRect(r.x + 0.5, r.y + 0.5, r.width - 1, r.height - 1)
+  ctx.globalAlpha = alpha * 0.85
+  ctx.fillStyle = pal.dirtEdge
+  ctx.fillRect(r.x, r.y, r.width, 0.5)
+  ctx.fillRect(r.x, r.y + r.height - 0.5, r.width, 0.5)
+  ctx.fillRect(r.x, r.y, 0.5, r.height)
+  ctx.fillRect(r.x + r.width - 0.5, r.y, 0.5, r.height)
+  ctx.globalAlpha = alpha
   ctx.save()
-  ctx.translate(r.x + 12, r.y + 12)
-  ctx.scale(2, 2)
+  ctx.translate(r.x + 6, r.y + (r.height - 16) / 2)
   drawTourIcon(ctx, pal, icon)
   ctx.restore()
   ctx.fillStyle = pal.label
-  drawTransitionText(ctx, title, cx, r.y + 13, title.length > 33 ? 1.5 : 2)
-  ctx.fillStyle = pal.label
-  drawTransitionText(ctx, levelTitleSubtitle(w.level, w.biome).toUpperCase(), cx, r.y + 33, 1.5)
-  if (w.bossPost) {
+  drawTransitionText(ctx, size.title, cx, r.y + 5, size.titleSize)
+  drawTransitionText(ctx, size.subtitle, cx, r.y + 17, 1.5)
+  if (size.warning) {
     ctx.fillStyle = pal.urgent
-    drawTransitionText(ctx, "WARNING · " + (w.bossName || "THE MODERATOR"), cx, r.y + 51, 1)
+    drawTransitionText(ctx, size.warning, cx, r.y + 27, 1)
   }
   ctx.restore()
 }
