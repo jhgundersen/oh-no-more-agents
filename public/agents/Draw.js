@@ -5265,6 +5265,15 @@ function skyNameWidth(w, width) {
   return width
 }
 
+// The page can spell the same introduction out at reading size between live
+// notices. Keep the sky card intact for native/fullscreen hosts.
+function skyCardCaption(w) {
+  if (!w || !w.special || !w.specialSpec) return ""
+  var sp = w.specialSpec, facts = SPECIAL_FACTS[sp.id] || [""]
+  var fact = facts[(w.factPick || 0) % facts.length]
+  return sp.name + (fact ? " · " + fact : "")
+}
+
 function drawSkyCardText(ctx, w, pal, box) {
   var sp = w.specialSpec, textBox = skyCardTextBox(box)
   ctx.textAlign = "left"

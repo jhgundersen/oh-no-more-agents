@@ -84,7 +84,7 @@ test('report pause holds its clock, resumes by Space/tap, and excludes gameplay,
    return{lifted:held!==closing,resumed,restored,unchanged,rewrites,tapped,newLevel:!AgentWorld().done}
   })()`)
   assert.deepEqual(closing,{lifted:true,resumed:true,restored:true,unchanged:true,rewrites:0,tapped:true,newLevel:true})
-  assert.deepEqual(await state(),{overlay:true,hint:'',pause:'resume'},'navigation clears report hold')
+  assert.deepEqual(await state(),{overlay:true,hint:await ev('skyCardCaption(AgentWorld())'),pause:'resume'},'navigation clears report hold')
   // Fullscreen reserves no caption row; its existing resume control remains.
   await open('level=20&full=1')
   const full=await ev(`(()=>{const w=AgentWorld();w.done=true;w.doneTicks=20;w.moments=[];document.getElementById('who').click();document.getElementById('who').click();return{caption:getComputedStyle(document.getElementById('eventCaption')).display,control:getComputedStyle(document.getElementById('c-pause')).display}})()`)
@@ -107,7 +107,7 @@ test('report pause holds its clock, resumes by Space/tap, and excludes gameplay,
   assert.deepEqual(await state(),{overlay:true,hint:'',pause:'resume'},'standup is not a report hold')
   await ev("document.getElementById('board').click()")
   assert.equal(await ev('AgentWorld().level'),6,'tap still skips standup')
-  assert.deepEqual(await state(),{overlay:true,hint:'',pause:'resume'})
+  assert.deepEqual(await state(),{overlay:true,hint:await ev('skyCardCaption(AgentWorld())'),pause:'resume'})
   assert.deepEqual(b.errors,[])
  }finally{await b.close();await new Promise(r=>server.close(r))}
 })

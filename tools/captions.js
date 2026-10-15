@@ -42,7 +42,7 @@ const MEASURE=`(()=>{
    textBox:rect(text),scrollHeight:text.scrollHeight,hidden:caption.getAttribute('aria-hidden'),live:caption.getAttribute('aria-live')},
   board:rect(document.getElementById('board')),stage:rect(document.getElementById('stage')),width:innerWidth,height:innerHeight,pageWidth:document.documentElement.scrollWidth}
 })()`
-async function lifecycle(ev){
+export async function captionLifecycle(ev){
  return ev(`(()=>{
   const w=AgentWorld(),c=document.getElementById('eventCaption'),text=document.getElementById('eventText'),
    refresh=()=>{document.getElementById('speed').click();document.getElementById('speed').click();document.getElementById('speed').click()},
@@ -57,7 +57,7 @@ async function lifecycle(ev){
    // Pausing permits reading indefinitely; a resume expires on wall time.
    now+=4900;document.getElementById('c-pause').click();results.at4900=text.textContent;
    w.ticks+=1000;refresh();results.fastForward=text.textContent;
-   now+=101;refresh();results.expired=text.textContent;
+   now+=101;refresh();results.expired=text.textContent;results.profile=typeof skyCardCaption==='function'?skyCardCaption(w):'';
    document.getElementById('c-pause').click();
    w.feed=[{t:w.ticks,text:'AGENT 006 · RICOCHET'}];refresh();now+=10000;refresh();results.paused=text.textContent;
    w.feed=[{t:w.ticks,text:'AGENT 001 IS FIRST HOME'}];w.season={note:{t:w.ticks,text:'AGENT 001 IS HOME FOR THE HOLIDAYS'}};refresh();results.season=text.textContent;
@@ -67,42 +67,46 @@ async function lifecycle(ev){
    w.feed=[{t:w.ticks,text:radioLine(w,'pacer','SPECULATIVE DECODER')}];refresh();
    const r=text.getBoundingClientRect(),a=c.getBoundingClientRect();results.longFits=r.y>=a.y&&r.bottom<=a.bottom;
    results.live=c.getAttribute('aria-live');results.role=c.getAttribute('role');
-   document.getElementById('c-next').click();results.navigation=text.textContent;
+   document.getElementById('c-next').click();results.navigation=text.textContent;results.nextProfile=typeof skyCardCaption==='function'?skyCardCaption(AgentWorld()):'';
   }finally{performance.now=originalNow}
   return results
  })()`)
 }
-export async function captureCaptions(out,{root,checks=false,before}={}){
+export async function captureCaptions(out,{root,checks=false,before,views=CAPTION_VIEWS,setup,heading,actualSize=false}={}){
  fs.mkdirSync(out,{recursive:true})
  const server=await serve({root}),b=await browser(),ev=evaluator(b),records=[]
  try{
   const base='http://127.0.0.1:'+server.address().port
-  for(const v of CAPTION_VIEWS){
+  for(const v of views){
    await openView(b,ev,base,v)
-   const record=await ev(MEASURE)
+   const record=setup?await setup(ev,v):await ev(MEASURE)
    const shot=await b.cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})
    fs.writeFileSync(path.join(out,v.name+'.png'),Buffer.from(shot.data,'base64'));records.push({name:v.name,...record})
   }
-  const result={records,errors:b.errors,lifecycle:checks?await lifecycle(ev):null}
-  if(before)await comparisonSheet(b,ev,out,before)
+  const result={records,errors:b.errors,lifecycle:typeof checks==='function'?await checks(ev,b):checks?await captionLifecycle(ev):null}
+  if(before)await comparisonSheet(b,ev,out,before,views,heading,actualSize)
   fs.writeFileSync(path.join(out,'metrics.json'),JSON.stringify(result,null,2))
   return result
  }finally{await b.close();await new Promise(r=>server.close(r))}
 }
-async function comparisonSheet(b,ev,out,before){
- const pictures=CAPTION_VIEWS.map(v=>({name:v.name,images:[before,out].map(dir=>'data:image/png;base64,'+fs.readFileSync(path.join(dir,v.name+'.png')).toString('base64'))}))
+async function comparisonSheet(b,ev,out,before,views,heading,actualSize){
+ const pictures=views.map(v=>({name:v.name,images:[before,out].map(dir=>'data:image/png;base64,'+fs.readFileSync(path.join(dir,v.name+'.png')).toString('base64'))}))
  const png=await ev(`(async()=>{
-  const rows=${JSON.stringify(pictures)},c=document.createElement('canvas');c.width=1320;c.height=2500;
+  const rows=${JSON.stringify(pictures)},c=document.createElement('canvas');
+  const load=src=>new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=src});
+  for(const row of rows)row.images=await Promise.all(row.images.map(load));
+  const column=${actualSize}?Math.max(...rows.flatMap(r=>r.images.map(i=>i.width)))+20:660;c.width=column*2+20;
+  c.height=70+rows.reduce((n,r)=>n+Math.max(...r.images.map(i=>(r.name==='halloween'||r.name==='christmas'?315:i.height)*(${actualSize}?1:Math.min(1,640/i.width))))+44,0);
   const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.fillStyle='#1a1b26';x.fillRect(0,0,c.width,c.height);
-  x.font='14px monospace';x.fillStyle='#f3ead9';x.fillText('COLONY EVENT CAPTIONS · BEFORE / AFTER · seed 3, tick 400',20,24);
+  x.font='14px monospace';x.fillStyle='#f3ead9';x.fillText(${JSON.stringify(heading||'COLONY EVENT CAPTIONS · BEFORE / AFTER · seed 3, tick 400')},20,24);
   let y=50;
   for(const row of rows){
-   x.fillStyle='#f3ead9';x.fillText(row.name.toUpperCase()+' · BEFORE',20,y);x.fillText('AFTER',680,y);y+=12;
-   const images=await Promise.all(row.images.map(src=>new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=src})));
+   x.fillStyle='#f3ead9';x.fillText(row.name.toUpperCase()+' · BEFORE',20,y);x.fillText('AFTER',20+column,y);y+=12;
+   const images=row.images;
    let height=0;
    for(let j=0;j<2;j++){
-    const i=images[j],crop=row.name==='halloween'||row.name==='christmas',sy=crop?240:0,sh=crop?315:i.height,scale=Math.min(1,640/i.width);
-    x.drawImage(i,0,sy,i.width,sh,20+j*660,y,i.width*scale,sh*scale);height=Math.max(height,sh*scale)
+    const i=images[j],crop=row.name==='halloween'||row.name==='christmas',sy=crop?240:0,sh=crop?315:i.height,scale=${actualSize}?1:Math.min(1,640/i.width);
+    x.drawImage(i,0,sy,i.width,sh,20+j*column,y,i.width*scale,sh*scale);height=Math.max(height,sh*scale)
    }y+=height+32;
   }
   return c.toDataURL('image/png').split(',')[1]
