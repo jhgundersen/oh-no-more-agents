@@ -16,6 +16,7 @@ import fs from "node:fs"
 import http from "node:http"
 import os from "node:os"
 import path from "node:path"
+import zlib from "node:zlib"
 import { spawn } from "node:child_process"
 import { fileURLToPath } from "node:url"
 
@@ -29,12 +30,21 @@ export const VIEWS = [
 ]
 const TARGET = 44
 
-export function serve() {
+// root: another copy of the page (tools/ship.js's dist/). brotli: compress
+// text as Cloudflare does on the fly (about quality 5), for load timings.
+export function serve({ root = ROOT, brotli = false } = {}) {
   const server = http.createServer((req, res) => {
     const url = decodeURIComponent(req.url.split("?")[0])
-    const file = path.join(ROOT, url === "/" ? "index.html" : url)
-    if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return }
-    res.writeHead(200, { "content-type": TYPES[path.extname(file)] || "application/octet-stream" })
+    const file = path.join(root, url === "/" ? "index.html" : url)
+    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end(); return }
+    const type = TYPES[path.extname(file)] || "application/octet-stream"
+    if (brotli && /text|javascript|json|svg/.test(type) && /\bbr\b/.test(req.headers["accept-encoding"] || "")) {
+      const body = zlib.brotliCompressSync(fs.readFileSync(file), { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 } })
+      res.writeHead(200, { "content-type": type, "content-encoding": "br" })
+      res.end(body)
+      return
+    }
+    res.writeHead(200, { "content-type": type })
     fs.createReadStream(file).pipe(res)
   })
   return new Promise(resolve => server.listen(0, "127.0.0.1", () => resolve(server)))

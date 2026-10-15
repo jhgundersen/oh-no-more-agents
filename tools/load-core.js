@@ -20,16 +20,23 @@ export function loadCore(name) { return loadCoreFrom(AGENTS, name) }
 
 // The same, from another copy of the core files — tools/compare.js renders a
 // git ref's Draw.js beside main's without checking either out.
-export function loadCoreFrom(dir, name) {
+// The names come from `namesFrom` when given (a file whose column 0 is the top
+// level): tools/ship.js strips indentation, so a shipped copy's nested vars
+// sit at column 0 too.
+export function loadCoreFrom(dir, name, namesFrom) {
   const file = path.join(dir, name)
   const src = fs.readFileSync(file, "utf8")
+  const names = exportedNames(namesFrom ? fs.readFileSync(namesFrom, "utf8") : src)
+  const wrapped = "(function(){" + src + "\nreturn {" + names.join(",") + "}})"
+  return vm.runInThisContext(wrapped, { filename: file })()
+}
+
+function exportedNames(src) {
   const fns = [...src.matchAll(/^function\s+([A-Za-z0-9_]+)\s*\(/gm)].map(m => m[1])
   const consts = [...src.matchAll(/^var\s+([A-Z][A-Z0-9_]*)\s*=/gm)].map(m => m[1])
   // And the later names in `var A = 1, B = 2` — they were silently missing,
   // and a test reading one got undefined (OUTAGE_RESOLVED, STANDUP_TURN).
   for (const line of src.match(/^var [^\n]*/gm) || [])
     for (const m of line.matchAll(/,\s*([A-Z][A-Z0-9_]*)\s*=(?!=)/g)) consts.push(m[1])
-  const names = [...new Set([...fns, ...consts])]
-  const wrapped = "(function(){" + src + "\nreturn {" + names.join(",") + "}})"
-  return vm.runInThisContext(wrapped, { filename: file })()
+  return [...new Set([...fns, ...consts])]
 }

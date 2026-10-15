@@ -7,3 +7,4 @@ shots/
 .crapper/
 .metrics/
 coverage/
+dist/

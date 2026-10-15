@@ -7494,3 +7494,80 @@ browser FPS.
 no push or deployment.
 
 Reviewed and merged by the loop (with `npm run compare`). Harbour: varied containers, a lighthouse, shimmer on the water and the sky band restored. This completes the page-art pass: all 19 biomes now have their own page art. Patch notes have a line for it.
+
+## 244 — 2026-10-15 · Page weight: ship the code, not the prose
+
+**Asked:** a page-weight health pass. Measure transfer size on production
+(br/gzip as Cloudflare serves it). In headless Chromium with 4× CPU and a
+Fast 3G / Slow 4G network, measure time to the first frame of the board,
+script parse/compile time and long tasks on load. Make it `npm run loadtime`.
+If the throttled phone's first frame is over ~2 s, propose and, if clearly
+worth it, implement the smallest dependency-free fix with identical digests.
+
+**Tool:** `tools/loadtime.js` (`npm run loadtime`).
+- **Transfer:** reads each script's bytes off the wire as production sends
+  them.
+- **Load:** a cold-cache 390×844 phone, CPU 4×, on DevTools' Fast 3G (562.5
+  ms, 1.44 Mbps; newer DevTools calls it Slow 4G) and Fast 4G. It reports the
+  first frame with a world on the board, FCP and DOMContentLoaded. From a
+  trace it gives per-script main-thread compile, streamed (background)
+  compile and evaluation, plus the long tasks before the first frame.
+- **Modes:** `--local` serves `public/` with brotli at Cloudflare's level, and
+  `--dist` serves the shipped copy. POSTs to the API are refused, as in the
+  production checks.
+
+**Before (production, build f279cc1a):**
+- **Wire:** 390 KB of 1340 KB raw. Draw.js is 198 KB (753 raw) and Sim.js
+  149 KB (469 raw). Cloudflare's on-the-fly brotli is about quality 5.
+- **Fast 3G:** first frame 3.8 s (FCP 1.4 s).
+- **Fast 4G:** first frame 1.0 s.
+- **Main thread:** no long tasks before the first frame, and main-thread
+  compile is about 1 ms. V8 parses the big files on a background thread while
+  they stream in, so load is bound purely by the network.
+
+**Options weighed:**
+- *Lazily loaded per-biome art.* The biome-named drawing is under a third of
+  Draw.js and the rest is shared helpers. It would also need a loader and
+  fallbacks in a file the Omarchy panel shares. Too big for this pass.
+- *Precompressing at brotli 11.* Needs the Worker to serve encoded bodies by
+  hand, for about 17%.
+- *Dropping comments.* The source is heavily commented: 41% of Sim.js is
+  whole-line comments. They cost bandwidth and no CPU, and the browser throws
+  them away.
+
+**Changed:** `tools/ship.js`.
+- **The build.** `npm run deploy` now builds `dist/` and Wrangler serves it.
+  It is a copy of `public/` whose scripts drop only comment-only lines and
+  leading indentation. Nothing is renamed, reordered or minified; the source,
+  the repo and the Omarchy panel keep every comment.
+- **Safety.** A small scanner (quotes, template literals with `${}`, block
+  comments, regex literals) leaves any line that starts inside a literal as it
+  is. Today no line in the page's scripts does. Every shipped file passes
+  `node --check`.
+- **Testing.** `test/ship.test.js` plays ten levels to the end with the
+  shipped Sim and the source, with identical results. It renders one level
+  per biome (all 19) with the shipped Draw and the source and gets identical
+  bytes. It also checks the scanner on the tricky cases, the exported names
+  and the build.
+- **Tooling.** `loadCoreFrom` can take its export names from the source,
+  because a dedented copy has nested `var`s at column 0. `npm run dev` serves
+  `public/` directly.
+
+**After (local br server at Cloudflare's level, same throttling, 3 runs):**
+
+| | Source | Shipped |
+|---|---|---|
+| Fast 3G first frame | 3.5 s | 2.7 s |
+| Fast 4G first frame | 0.91 s | 0.76 s |
+| Draw.js on the wire | 198 KB | 136 KB |
+| Sim.js on the wire | 149 KB | 67 KB |
+| Scripts total on the wire | about 384 KB | about 245 KB |
+| Streamed compile, Fast 4G | 704 ms | 364 ms |
+
+Production numbers follow after the next deploy.
+
+**Not under 2 s on Fast 3G yet.** Before any script byte arrives, FCP is
+already 1.3 s: DNS, TLS and the HTML over a 562 ms round trip. Getting under
+2 s would mean roughly halving the script bytes again, and that is the lazy
+per-biome art split above. Proposed as a separate pass if wanted. On Fast 4G
+the first frame is well under a second.

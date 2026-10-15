@@ -30,6 +30,10 @@ Production is `https://oh-no-more-agents.com`.
 - `migrations/` — ordered production migrations; never rewrite one that may
   already have been applied.
 - `public/_headers` — cache lifetimes for the assets Workers serves.
+- `tools/ship.js` — `npm run deploy` first builds `dist/` (a copy of `public/`
+  whose scripts drop comment-only lines and indentation, nothing else) and
+  Wrangler serves that. Edit `public/`, never `dist/`; `npm run dev` serves
+  `public/` directly. `npm run loadtime` measures what a throttled phone gets.
 - `wrangler.jsonc` — Worker bindings and production custom-domain routes.
 
 ## Working conventions
