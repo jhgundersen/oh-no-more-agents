@@ -5517,3 +5517,18 @@ link with `full=1`, a daily link with `full=1`, a shared link with
 `fullscreen`, a shared link with `full=0` (stays off), and plain `?full`. In
 each case it checks the faux-fullscreen stage, the colony that loaded, and the
 cleaned address.
+
+## 283 — 2026-10-15 · Fast-forward is heard on every tick (review finding 5)
+
+**Asked:** review finding 5 (P3). With sound on, fast-forward's extra steps
+weren't observed by `sfx.js`. Cues that fire on an exact tick (the outage's
+power-down and power-up, a fuse's "oh no" at 40) were lost when that tick was
+one of the skipped ones.
+
+**Changed:** `fastForward` calls `AgentSfx.observe` after each of its extra
+steps, as the normal tick does after its one. `sfx.js` keeps its own
+real-time gaps per sound, so 4× steps don't mean 4× noise.
+
+**Tests:** in `test/fastforward.test.js` (fails without the fix), level 109's
+stalled colony is driven on the page through `fastForward` with the observer
+wrapped. All 4904 ticks are observed, and it did fast-forward.

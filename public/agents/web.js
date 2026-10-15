@@ -593,6 +593,10 @@
     w.fastForward = ffQuiet > FF_QUIET
     for (var i = 1; w.fastForward && i < FF_STEPS && !w.done; i++) {
       step(w)
+      // Every step is heard: the outage's power-down and up, and a fuse's
+      // "oh no", are cued on an exact tick, and a skipped tick lost them
+      // (review 2026-10-15, finding 5). sfx.js keeps its own real-time gaps.
+      if (window.AgentSfx) AgentSfx.observe(w)
       if (progressMark(w) !== ffMark) { w.fastForward = false; ffMark = progressMark(w); ffQuiet = 0 }
     }
   }
