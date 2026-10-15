@@ -6827,3 +6827,21 @@ based on 1081c49), `--no-ff`, as approved. Codex's entry is renumbered from
 
 **Merge check:** against the branch, the merged code differs only in main's
 own 305 and 308 (Sim.js) and the mission test's seeds.
+
+## 313 — 2026-10-15 · Deploy (10:44)
+
+**Deployed** build 1e1a7406 (version d5579b3b), replacing f45a1cb9. It
+covers 303–310:
+- the readable report card;
+- the wall blocker standing down (305);
+- the clear held report;
+- fired blasts at their own height (308);
+- the readable standup.
+
+**Before:** the last gate (1,362 tests), then `npm run smoke` on the clean
+tree, which passed (3 min, levels 1–7). 311 and 312 were stashed so they
+ride the next deploy, as asked.
+
+**After:** `npm run verify -- --previous f45a1cb9` passed: shipped files,
+build agreement, the open tab reloading, level 20, `?daily&full=1`, Next
+during a standup, and the patch notes by keyboard (5 counter writes refused).
