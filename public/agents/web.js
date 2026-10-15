@@ -860,14 +860,50 @@
 
   // Fullscreen hides the caption (index.html) and gives the board its
   // in-board ticker back: a reserved caption row cost a 720p kiosk its 2x.
+  // Out of office: an agent lost leaves an auto-reply in the caption. One at a
+  // time (a nuke does not get forty), never more often than every three
+  // seconds, the same reply for the same agent on the same level. Page-only:
+  // the simulation's own feed is untouched, since its radio times itself on it.
+  var captionFeed = null, replyAt = -Infinity
+  var AUTO_REPLIES = [
+    "OUT OF OFFICE. LIMITED ACCESS TO GRAVITY.",
+    "AUTO-REPLY: I AM CURRENTLY OUT OF SCOPE.",
+    "OUT OF OFFICE UNTIL THE NEXT RELEASE.",
+    "AUTO-REPLY: PLEASE CONTACT MY REPLACEMENT.",
+    "OUT OF OFFICE. RESPONSES MAY BE DELAYED.",
+    "AUTO-REPLY: I HAVE BEEN GARBAGE COLLECTED.",
+    "OUT OF OFFICE: RETURNED 404.",
+    "AUTO-REPLY: CONTEXT WINDOW CLOSED.",
+    "OUT OF OFFICE. ON A PERMANENT BREAK.",
+    "AUTO-REPLY: THIS PROCESS HAS EXITED."
+  ]
+  function autoReply(w, now) {
+    var first = null
+    for (var i = 0; i < w.agents.length; i++) {
+      var ag = w.agents[i]
+      if (!ag.gone || ag.state === "saved" || ag.replied) continue
+      ag.replied = true
+      if (!first) first = ag
+    }
+    if (!first || w.done || now === -Infinity || now - replyAt < 3000) return ""
+    replyAt = now
+    return agentTag(w, first) + " · " + AUTO_REPLIES[(first.id + w.level) % AUTO_REPLIES.length]
+  }
+
   function renderCaption() {
     if (!el.caption) return
     if (captionWorld !== world) {
-      captionWorld = world; captionNote = null; captionUntil = 0
+      captionWorld = world; captionNote = null; captionUntil = 0; captionFeed = null; replyAt = -Infinity
       captionProfile = skyCardCaption(world)
+      autoReply(world, -Infinity)      // losses from before we were watching get no reply
     }
     var note = feedNotice(world), now = performance.now()
-    if (note && note !== captionNote) { captionNote = note; captionUntil = now + 5000 }
+    var fresh = note && note !== captionFeed
+    if (fresh) { captionFeed = note; captionNote = note; captionUntil = now + 5000 }
+    // A fresh event outranks an auto-reply landing in the same frame, and
+    // nobody answers mail while the game is paused.
+    var reply = autoReply(world, fresh || !running ? -Infinity : now)
+    if (reply) { captionNote = { text: reply }; captionUntil = now + 4000 }
     var held = reportHeld()
     var available = !world.done && !world.replaying && !replay && !standup
     var event = available && captionNote && (!running || now < captionUntil)

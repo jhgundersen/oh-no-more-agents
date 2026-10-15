@@ -10163,3 +10163,39 @@ stake, and it is logic and page text, not art.
 - `test/incidents.test.js`: the line's thresholds, the record, the reset,
   no line on res 1, and the warning colour.
 - `test/a11y.test.js` accepts the optional sentence.
+
+## 389 — 2026-10-15 · Out-of-office replies
+
+**Chosen (autonomy, something new for watchers):** a lost agent leaves an
+auto-reply in the caption line under the board, e.g. "AGENT 001 · OUT OF
+OFFICE. RESPONSES MAY BE DELAYED." Losses are the moments a watcher
+notices, and this makes each one a joke.
+
+**Built** (web.js, the page only):
+- **`autoReply`:** when an agent is newly gone without being saved, the
+  caption shows `agentTag` plus one of ten replies ("LIMITED ACCESS TO
+  GRAVITY", "I HAVE BEEN GARBAGE COLLECTED", "RETURNED 404", "CONTEXT WINDOW
+  CLOSED", …). The reply is picked by agent id and level, so a replay says
+  the same thing. It holds for 4 s.
+- **Limits:**
+  - one reply at a time, never more often than every 3 s (a nuke does not
+    get forty);
+  - none for losses from before the page started watching a world;
+  - none while paused;
+  - a fresh event note in the same frame wins.
+- **The sim's own feed is untouched,** because its radio times itself on
+  the feed and a page-side note there would move the radio lines.
+- **Fullscreen** hides the caption row (295), so no replies there; the
+  board's own ticker continues.
+- **Patch notes:** "Added: out-of-office replies. Lost agents leave an
+  auto-reply under the board." It replaces the tour line, which the tour
+  strip says for itself; the list stays at eight.
+
+**Checked:**
+- **Headless on the local page at 390×844:** removing an agent showed
+  "AGENT 001 · OUT OF OFFICE. RESPONSES MAY BE DELAYED."; a second loss
+  inside 3 s left it in place.
+- **The caption and hero-intro tests caught two priority slips,** both now
+  fixed:
+  - a reply had claimed the caption from a fresh "RICOCHET";
+  - a reply appeared in a paused capture.
