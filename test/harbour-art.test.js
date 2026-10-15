@@ -16,11 +16,11 @@ function picture(w, draw) {
   const img = canvas(800, 496, "#000000"), calls = [], words = []
   img.ctx.setTransform(2, 0, 0, 2, 0, 0)
   const fill = img.ctx.fillRect.bind(img.ctx)
-  img.ctx.fillRect = (...args) => { calls.push([...args, img.ctx.fillStyle]); fill(...args) }
+  img.ctx.fillRect = (...args) => { assert.ok(calls.length < 25000, "bounded paint recording"); calls.push([...args, img.ctx.fillStyle]); fill(...args) }
   img.ctx.fillText = (...args) => words.push(args)
   img.ctx.fillStyle = "#123456"; img.ctx.globalAlpha = 0.8
   draw(img.ctx)
-  return { ...img, calls, words }
+  return { ...img, pixelHash: createHash("sha256").update(img.buf).digest("hex"), calls, words }
 }
 
 // No whole-frame pins: geometry, passenger visibility and layering are the
@@ -62,9 +62,9 @@ test("lit ferry portholes show separate silhouettes for every rider", () => {
     w.terrain.fill(w.k.EMPTY)
     const frames = [0, 1, 3, 6, 12, 18].map(count => {
       tr.riders = Array.from({ length: count }, (_, i) => i)
-      return picture(w, ctx => D.drawHarbourFerry(ctx, w, pal, tr)).buf
+      return picture(w, ctx => D.drawHarbourFerry(ctx, w, pal, tr)).pixelHash
     })
-    for (let i = 1; i < frames.length; i++) assert.notDeepEqual(frames[i], frames[i - 1], "passengers visible in assembled boat")
+    for (let i = 1; i < frames.length; i++) assert.notEqual(frames[i], frames[i - 1], "passengers visible in assembled boat")
   }
 })
 
@@ -77,7 +77,7 @@ test("gangway meets the boarding point at either quay; wake is confined to the s
       const g = D.harbourFerryDrawing(w, tr)
       const gangway = picture(w, ctx => D.drawHarbourGangway(ctx, g, true))
       assert.ok(gangway.calls.some(c => c[0] === g.x - 2 && c[1] === g.dockY - 1 && c[2] === 4))
-      assert.notDeepEqual(gangway.buf, picture(w, ctx => D.drawHarbourGangway(ctx, g, false)).buf)
+      assert.notEqual(gangway.pixelHash, picture(w, ctx => D.drawHarbourGangway(ctx, g, false)).pixelHash)
     }
     tr.x = (tr.ax + tr.bx) / 2
     for (const phase of ["run", "back", "wait", "drop"]) for (const v of [0, 0.4]) {
@@ -96,7 +96,7 @@ test("ferry detail is gated, the quay occludes its hull, and walkers are in fron
   tr.x = (tr.ax + tr.bx) / 2
   const coarse = picture(w, ctx => D.drawHarbourFerry(ctx, w, pal, tr))
   w.res = 2
-  assert.notDeepEqual(picture(w, ctx => D.drawHarbourFerry(ctx, w, pal, tr)).buf, coarse.buf)
+  assert.notEqual(picture(w, ctx => D.drawHarbourFerry(ctx, w, pal, tr)).pixelHash, coarse.pixelHash)
   const ag = S.spawn(w)
   Object.assign(ag, { x: tr.ax + 0.5, y: tr.y, dir: tr.dir, state: "walk" })
   w.agents = [ag]; tr.x = tr.ax
@@ -124,7 +124,7 @@ test("Harbour scenery, materials and event markers are read-only and animate", (
     const first = picture(w, ctx => D.drawHarbourMachines(ctx, w, pal))
     w.ticks = 301
     assert.equal(picture(w, ctx => D.drawHarbourHighWater(ctx, w, pal, fx)).calls.length, 0)
-    assert.notDeepEqual(picture(w, ctx => D.drawHarbourMachines(ctx, w, pal)).buf, first.buf)
+    assert.notEqual(picture(w, ctx => D.drawHarbourMachines(ctx, w, pal)).pixelHash, first.pixelHash)
     const p = w.pits[tr.pit]
     for (const ticks of [0, 100, 300]) { w.ticks = ticks; assert.ok(picture(w, ctx => D.drawHarbourSea(ctx, w, pal, p)).calls.length) }
     for (const patch of [{ x0: 20, x1: 21 }, { surfaceY: w.k.ROWS - 1 }])
