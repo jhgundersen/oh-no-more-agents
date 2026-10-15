@@ -95,3 +95,16 @@ test("a floater can parry a round in mid-air; a faller without an open umbrella 
     assert.equal(S.umbrellaParries(w, ag, ag.x + 10), false)
   }
 })
+
+test("a walker with an umbrella parries about two shots in three (BROLLY_PARRY)", () => {
+  assert.equal(S.BROLLY_PARRY, 65)
+  let up = 0, n = 0
+  for (let t = 0; t < 200; t++) for (let id = 0; id < 20; id++) {
+    const w = S.generate(1, 0, 3)
+    w.ticks = t; w.agents = []
+    const ag = Object.assign(S.spawn(w), { id, state: "walk", ownBrolly: true })
+    if (S.umbrellaParries(w, ag, ag.x + 5)) up++
+    n++
+  }
+  assert.ok(Math.abs(up / n - 0.65) < 0.03, `${up} of ${n}`)
+})
