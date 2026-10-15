@@ -17,7 +17,7 @@
   var last = {}            // sound name -> time it last played (ms)
   var seen = null          // what the previous tick looked like
 
-  var GAPS = { chime: 600, zing: 120, whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0, clang: 200, radio: 800, jingle: 600, dream: 400, wake: 300, busy: 1500, served: 90, agi: 600, agiHome: 0, agiLost: 0, quack: 300, plop: 300, pep: 120, murmur: 300, conflict: 400, powerdown: 0, powerup: 0 }
+  var GAPS = { chime: 600, zing: 120, whoosh: 150, scuffle: 110, pop: 70, tink: 90, pew: 55, bang: 70, boom: 160, home: 90, down: 120, fanfare: 0, clang: 200, radio: 800, jingle: 600, dream: 400, wake: 300, busy: 1500, served: 90, agi: 600, agiHome: 0, agiLost: 0, quack: 300, plop: 300, pep: 120, murmur: 300, conflict: 400, powerdown: 0, powerup: 0, letsgo: 4000, ohno: 2500, yippee: 0 }
 
   function ensure() {
     if (ctx) return ctx
@@ -63,6 +63,73 @@
     g.gain.exponentialRampToValueAtTime(0.001, t + len)
     s.connect(f); f.connect(g); g.connect(master)
     s.start(t); s.stop(t + len + 0.02)
+  }
+
+  // Voices: three squeaky little words, in the spirit of a certain 1991 game.
+  // Not speech — a buzzy source through two band-pass "formants" per vowel,
+  // with a pitch contour, so a syllable reads as a vowel and the run of them
+  // as a phrase. Pitched up like something small and determined. Only one
+  // voice at a time: a second one while the first is talking is dropped.
+  var VOWELS = { e: [530, 1840], o: [570, 840], i: [270, 2290], n: [250, 1200], a: [730, 1090] }
+  var SQUEAK = 1.55          // every formant, up: small, high, cute
+  var voiceUntil = 0         // ctx time the current voice finishes
+  var VOICE_VOL = 0.55       // about as loud as the other cues, peak for peak
+
+  // One syllable: vowel v, pitch sliding f0 -> f1 over len seconds, at `at`.
+  function syllable(v, f0, f1, len, vol, at) {
+    var t = ctx.currentTime + at
+    var src = ctx.createOscillator(), g = ctx.createGain()
+    src.type = "sawtooth"
+    src.frequency.setValueAtTime(f0, t)
+    src.frequency.exponentialRampToValueAtTime(f1, t + len)
+    g.gain.setValueAtTime(0.001, t)
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.015)
+    g.gain.setValueAtTime(vol, t + len * 0.7)
+    g.gain.exponentialRampToValueAtTime(0.001, t + len)
+    for (var k = 0; k < 2; k++) {
+      var f = ctx.createBiquadFilter()
+      f.type = "bandpass"; f.frequency.value = VOWELS[v][k] * SQUEAK; f.Q.value = k ? 9 : 6
+      src.connect(f); f.connect(g)
+    }
+    g.connect(master)
+    src.start(t); src.stop(t + len + 0.02)
+  }
+
+  // A consonant: a short hiss (s, t) or a click (p, g).
+  function consonant(kind, at) {
+    var t = ctx.currentTime + at
+    var s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain()
+    s.buffer = noiseBuf
+    f.type = kind === "s" ? "highpass" : "bandpass"
+    f.frequency.value = kind === "s" ? 5000 : kind === "p" ? 1200 : 2200
+    var len = kind === "s" ? 0.06 : 0.02
+    g.gain.setValueAtTime(kind === "s" ? 0.2 : 0.3, t)
+    g.gain.exponentialRampToValueAtTime(0.001, t + len)
+    s.connect(f); f.connect(g); g.connect(master)
+    s.start(t); s.stop(t + len + 0.02)
+  }
+
+  // Words as [kind, ...] steps: ["v", vowel, f0, f1, len] or ["c", kind, len].
+  var WORDS = {
+    letsgo: [["v", "e", 420, 460, 0.09], ["c", "s", 0.07], ["c", "g", 0.03], ["v", "o", 520, 380, 0.22]],
+    ohno: [["v", "o", 470, 400, 0.16], ["v", "n", 330, 330, 0.05], ["v", "o", 440, 300, 0.26]],
+    yippee: [["v", "i", 420, 480, 0.08], ["c", "p", 0.05], ["v", "i", 480, 720, 0.28]]
+  }
+
+  function speak(word, pitch) {
+    var at = 0, steps = WORDS[word], p = pitch || 1
+    for (var i = 0; i < steps.length; i++) {
+      var st = steps[i]
+      if (st[0] === "v") { syllable(st[1], st[2] * p, st[3] * p, st[4], VOICE_VOL, at); at += st[4] }
+      else { consonant(st[1], at); at += st[2] }
+    }
+    voiceUntil = ctx.currentTime + at
+  }
+
+  // A voice only when nobody else is talking.
+  function say(name, pitch) {
+    if (!on || !ctx || ctx.currentTime < voiceUntil) return
+    if (ready(name)) speak(name, pitch)
   }
 
   var SOUNDS = {
@@ -125,6 +192,13 @@
     return n
   }
 
+  // Bombs this far from going off say so first.
+  var OHNO_AT = 40
+  function lit(w) {
+    for (var i = 0; i < w.agents.length; i++) if (!w.agents[i].gone && w.agents[i].state === "bomb" && w.agents[i].fuse === OHNO_AT) return true
+    return false
+  }
+
   function snapshot(w) {
     var open = {}, shots = 0, enemyShots = 0
     for (var i = 0; i < w.agents.length; i++) {
@@ -149,7 +223,8 @@
       saved: w.saved, lost: w.lost, parries: w.umbrellaSaves || 0, done: w.done,
       dreams: w.hallucinations || 0, wakes: count(w, "wokeAt"), served: count(w, "servedAt"),
       limited: w.rateLimited || 0, agi: w.agiId >= 0, agiHome: !!w.agiHome, agiLost: !!w.agiLost,
-      duck: !!w.duck, ducked: w.ducked || 0, peps: w.peps || 0, conflicts: w.conflicts || 0
+      duck: !!w.duck, ducked: w.ducked || 0, peps: w.peps || 0, conflicts: w.conflicts || 0,
+      released: w.released || 0, lit: lit(w)
     }
   }
 
@@ -181,6 +256,12 @@
     if (now.conflicts > was.conflicts) play("conflict")
     if (w.outage && w.ticks === w.outage.at) play("powerdown")
     if (w.outage && w.ticks === w.outage.at + w.outage.len) play("powerup")
+    // The voices. Let's go as the hatch lets the first one out; oh no a
+    // moment before a bomb; yippee for the first one home, higher if it is
+    // the AGI.
+    if (now.released > 0 && was.released === 0) say("letsgo")
+    if (now.lit) say("ohno")
+    if (now.saved > 0 && was.saved === 0) say("yippee", now.agiHome ? 1.4 : 1)
     // The AGI's own cue takes the place of the ordinary one for that agent.
     if (now.agiHome && !was.agiHome) play("agiHome")
     else if (now.saved > was.saved) play("home")
@@ -200,5 +281,5 @@
   // For the page's own moments that are not in a world, like the standup.
   function cue(name) { if (SOUNDS[name]) play(name) }
 
-  window.AgentSfx = { observe: observe, setOn: setOn, isOn: function () { return on }, wake: wake, cue: cue }
+  window.AgentSfx = { observe: observe, setOn: setOn, isOn: function () { return on }, wake: wake, cue: cue, WORDS: WORDS }
 })()

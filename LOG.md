@@ -7698,3 +7698,45 @@ The `finally` was never reached either.
   because under the full parallel run it didn't always get there in time.
 
 **Measured:** full check 1159/1159 green in 24 s.
+
+## 248 — 2026-10-15 · Let's go! Oh no! Yippee!
+
+**Asked:** a Lemmings homage in sound. With sfx on, three tiny squeaky voice
+clips synthesised in sfx.js (WebAudio, no files, formant-ish chirps with a
+pitch contour so they read as words; retro and cute, not real speech):
+- "Let's go!" when the hatch opens;
+- "Oh no!" just before a bomb goes off;
+- "Yippee!" for the first agent home, higher-pitched for the AGI.
+
+Rate-limited, never more than one voice at a time, respecting the sfx toggle.
+Add a patch-notes line.
+
+**Changed:** `sfx.js` gets a tiny voice synth.
+- **Vowels.** A syllable is a sawtooth gliding between two pitches, run
+  through two band-pass filters at that vowel's formants (e, o, i, n). The
+  formants are raised by 1.55 so it sounds small and squeaky. It has a quick
+  attack, a hold and an exponential fade.
+- **Consonants** are a short high hiss (s) or a band-passed click (p, g).
+- **Words** are data (`WORDS`):
+  - let's go: le-ts-g-o, falling at the end;
+  - oh no: o-n-o, falling;
+  - yippee: yi-p-pee, rising.
+- **Triggers** are read off the world like every other cue:
+  - let's go as `released` goes from 0 to 1;
+  - oh no when a bomb's fuse reaches 40 ticks (about 1.3 s before the bang);
+  - yippee as `saved` goes from 0 to 1, at 1.4× pitch when it's the AGI.
+- **Limits.** A voice is dropped while another is still talking. Let's go has
+  a 4 s gap and oh no 2.5 s. With sfx off nothing plays.
+
+**Levels:** rendered in Chromium's OfflineAudioContext, the words peak at
+0.036–0.042 (RMS 0.012), next to the pep chirp's 0.026. At first they peaked
+around 0.06, mostly the "s" hiss, so the voice level and the consonants were
+brought down.
+
+**Patch notes:** "Added: voices, with sound on. Let's go, oh no, yippee. Any
+resemblance is a tribute." The list stays at eight; the "new paint" line went
+rather than pep talks, since watchers need to know what a tap does.
+
+**Tests:** `test/sfx.test.js` checks each trigger, one voice at a time, and
+silence with sfx off. The stand-in AudioContext's filters gained `Q`, and the
+AGI-replaces-the-chirp count now starts past the first home.

@@ -15,13 +15,13 @@ function load() {
     createOscillator() { const n = new Node(); n.frequency = new Param(); played.push("osc"); return n }
     createBuffer(c, len) { return { getChannelData: () => new Float32Array(len) } }
     createBufferSource() { played.push("noise"); return new Node() }
-    createBiquadFilter() { const n = new Node(); n.frequency = {}; return n }
+    createBiquadFilter() { const n = new Node(); n.frequency = {}; n.Q = {}; return n }
     resume() {}
   }
   let clock = 0
   const sandbox = { window: { AudioContext: Ctx }, performance: { now: () => (clock += 1000) }, Math }
   vm.runInNewContext(fs.readFileSync(new URL("../public/agents/sfx.js", import.meta.url), "utf8"), sandbox)
-  return { sfx: sandbox.window.AgentSfx, played }
+  return { sfx: sandbox.window.AgentSfx, played, sandbox, clock: () => clock }
 }
 
 function world() {
@@ -101,7 +101,7 @@ test("the AGI's homecoming replaces the ordinary home chirp rather than adding t
   const count = change => {
     const { sfx, played } = load()
     sfx.setOn(true)
-    const w = { ...world(), ticks: 50, agiId: 4 }
+    const w = { ...world(), ticks: 50, agiId: 4, saved: 1 }      // not the first home: no yippee
     sfx.observe(w); change(w); sfx.observe(w)
     return played.length
   }
@@ -138,4 +138,34 @@ test("an outage winds down and back up", () => {
   assert.ok(down > 0)
   w.ticks = 420; sfx.observe(w)
   assert.ok(played.length > down)
+})
+
+test("voices: let's go as the first one drops, oh no before a bomb, yippee for the first home", () => {
+  const cases = [
+    ["letsgo", w => { w.released = 1 }],
+    ["ohno", w => { w.agents.push({ state: "bomb", fuse: 40 }) }],
+    ["yippee", w => { w.saved = 1 }]
+  ]
+  for (const [name, change] of cases) {
+    const { sfx, played } = load()
+    sfx.setOn(true)
+    const w = { ...world(), ticks: 50, released: 0 }
+    sfx.observe(w); sfx.observe(w)
+    change(w); sfx.observe(w)
+    const syllables = sfx.WORDS[name].filter(s => s[0] === "v").length
+    assert.ok(played.filter(p => p === "osc").length >= syllables, name)
+  }
+})
+
+test("one voice at a time, and nothing at all with sfx off", () => {
+  const { sfx, played } = load()
+  const w = { ...world(), ticks: 50, released: 0 }
+  sfx.observe(w); w.released = 1; sfx.observe(w)
+  assert.equal(played.length, 0, "off")
+  sfx.setOn(true)
+  const v = { ...world(), ticks: 50, released: 0 }
+  sfx.observe(v); v.released = 1; sfx.observe(v)
+  const after = played.length
+  v.agents.push({ state: "bomb", fuse: 40 }); sfx.observe(v)
+  assert.equal(played.length, after, "still saying let's go: oh no is dropped")
 })

@@ -5,10 +5,11 @@
 // gets one dismissible tip on the board. Both remember in localStorage and
 // carry on without it. Web-only, like share.js.
 (function () {
-  // Eight at most: when a line is added, the oldest drops off the end.
+  // Eight at most: when a line is added, the oldest (or least useful to a
+  // watcher: keep the ones that say what a tap does) drops off.
   var NEWS = [
+    { id: "2026-10-15-voices", text: "Added: voices, with sound on. Let's go, oh no, yippee. Any resemblance is a tribute." },
     { id: "2026-10-15-librarian", text: "Added: a librarian in the Library, hot and cold aisles in the Data Center. Both have notes." },
-    { id: "2026-10-15-biomes", text: "Added: new paint in all 19 biomes. The agents have not noticed." },
     { id: "2026-10-15-halloween", text: "Added: Halloween, Oct 24 to Nov 1. Same agents, worse lighting." },
     { id: "2026-10-15-replay", text: "Added: instant replay. The level's best moment, again, because nobody saw it the first time." },
     { id: "2026-10-15-sweepstake", text: "Added: sweepstake. Tap an agent before anyone's home to back it. It will not try any harder." },
