@@ -8993,3 +8993,95 @@ Reviewed and merged by the loop: codex/storm-art (5ca585d, two commits,
 entries 356–357), `--no-ff`, as approved after one revision. Codex's entries
 are renumbered and the page is re-stamped. Drawing only, with no Sim.js
 change.
+
+## 359 — 2026-10-15 · A good listener (on a branch)
+
+**Branch:** `codex/duck-art`, from current main `7dbe994` (merged storm art).
+The supervisor's free pick after the 429 sign: give the debugging duck some
+character. Live desktop/390 px phone watches, Steady/Brisk and both seasonal
+previews showed a yellow block bobbing rapidly while looking away from its
+speaker. The tiny prop had fallen behind the polished cast.
+
+**Art:** page res 2 only. A rounded rubber toy six art pixels square, tucked tail,
+crescent wing, gold belly seam, pale crown/back highlight, orange bill and
+black eye. A floor duck faces its nearest living ordinary colleague on the
+same floor; its drop ends in a half-pixel bounce and it settles on the ledge.
+In hand it turns toward the speaker, breathes through one quieter half-pixel
+lift, blinks, and dips its head during the existing “OH!” revelation. The
+Debug hero uses the same toy, with its own existing 30-tick timer. Reduced
+motion disables the drop, bounce, lift, blink and nod. No new speech, timers,
+particles, assets, simulation fields or RNG; no Sim/web changes.
+
+**Real scenes:** seed 11 throughout. Library 13 drops at tick **726**, pickup
+**729**, explains through **776**; Data Center 12 drops **971**, pickup **976**;
+Spaceship 7 drops **535**, pickup **553**, facing left. All use ordinary
+simulation, no forced duck RNG, state or action. Rare Debug hero poses get
+component coverage; they are not presented as a naturally found action.
+
+**Review:** `/tmp/codex-duck-art/strips/index.html` animates twelve natural
+poses from drop through pickup, explanation, nod and departure, with exact
+ticks recorded in `manifest.json`. Equal review time per pose is labelled.
+The current contact sheet is **`contact-sheet-82cde37e.png`**, and the canonical
+`contact-sheet.png` is byte-identical, refreshed by the same export. Manifest
+source hash **837fdbae…**, sheet hash **e179a4ca…**. Frame sheets include native
+res 1 and page res 2. Labels use the validated uppercase pixel font.
+
+`/tmp/codex-duck-art/page-sheet.png` (**1640×4904**) pairs actual CSS-size boards
+with 3× crops: phone floor toy, desktop listening, phone “OH!”, reverse-facing
+Spaceship, server-rack backdrop, Halloween, Christmas and reduced motion.
+Original full pages are in `before/` and `after/`. Every differing browser
+pixel is inside the union of the old/new six-pixel toy envelopes. Complete
+world digests and board/stage geometry match; no errors or horizontal overflow.
+Agents, umbrellas, hazards, speech bubbles and scenery keep their original paint.
+
+**Compatibility:** `native-proof.json` compares the saved main renderer with
+the branch: aggregate **63e07ee6…** is exact across default/native res 1 and
+share res 3, all five palettes, both motion settings, drops, both held forms
+and directions, and the original gag primitive. All three complete native frame strips also
+match byte for byte (`native-strip-proof.json`). Live rendered/plain colonies
+retain identical complete JSON digests through all three real conversations.
+The strict page-res gate leaves the Omarchy drawing unchanged.
+
+**Focused:** **28/28 pass, 5.47 s**, including all original duck and gag guards.
+Ten new tests cover natural pickup timing and completed explanations; exact
+native/share parity; six-pixel bounds and mirrored paint; context/fade safety;
+floor-facing eligibility; settle/blink/nod timing; reduced-motion stability;
+all twenty biomes/five themes; read-only, deterministic, RNG-free painting;
+complete live digests; crop/cache parity through carving; and poisoned/stale
+sheet refresh with matching source/image stamps.
+
+**Tooling:** `tools/duck-art.js` finds each natural duck once, caches terrain by
+version/resolution/theme and draws translated actor crops directly. **144**
+frames render in **0.90 s / 197.4 MiB peak RSS**. Canonical and content-stamped
+contact sheets are always regenerated together and the review HTML links the
+current stamped file, retaining the fix for the stale storm-sheet issue. A
+bounded paint recorder records actual browser toy positions for the pixel
+union check. No unbounded fixture search or raw-buffer assertion diff.
+
+**Cost:** **2,737 source bytes / 898 gzip bytes** added to Draw.js before ship's
+comment strip; **15 rectangles per toy**, sampled over **600** natural
+phase/motion frames. One short cast scan for the single untaken floor toy,
+constant work for a held toy; no terrain scan or canvas allocation per frame.
+
+Five-second live Brisk FPS comparisons: Spaceship 7 / seed 11 around ticks
+**528–757**, up to **16** cast, **12% CPU before/after**; Data Center 12 / seed 11
+at **960–1192**, **11% / 11%**. All four samples hold **60 median / 60 p5 FPS,
+17 ms worst, zero long-task time**. No speedup claimed. Logs and
+`fps-summary.json` are in the evidence directory.
+
+**Full gate:** **1,479 passed, zero failures/cancellations/skips, 363.27 s**,
+including Factory art and coverage. CRAP threshold **30** passed on the same
+LCOV, maximum **30.0**. All five new runtime helpers have **100% coverage**,
+scores **2.0–11.0**; existing floor/held dispatchers **5.0 / 100%**. Review
+scene orchestration is **15.0 / 100%**, discovery **4.0 / 100%**, crop rendering
+**3.1 / 75%**, export **2.0 / 100%**. Completion was reported immediately.
+The persistent FIFO run used a **3 GB service cap**, **2,048 MB Node heap**,
+`ulimit -v 6000000`, two workers and 120-second test timeouts; the service
+reported **771.2 MiB peak memory**. Source/tests/tools stayed frozen through
+evidence and validation; all recorded hashes still match. One full coverage
+run supplied CRAP, avoiding a second heavy suite. Logs: `check.log`, `crap.log`,
+`queue.log` and `memory-samples.log` in the evidence directory. `npm run stamp`,
+its check and `git diff --check` pass.
+
+**Next:** review and merge this branch, then another free choice of atmosphere,
+motion or presentation. Branch commit only; no push or deployment.
