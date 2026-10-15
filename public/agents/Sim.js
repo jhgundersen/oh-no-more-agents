@@ -523,10 +523,22 @@ function agentOccupiesCell(w, x, y, except) {
 // before moving anybody so the operation is all-or-nothing. Deeper body hits,
 // active workers and blocked headroom are not safe to rearrange; the builder
 // waits for those in stepBuild instead.
+// Where the next agent out of the hatch appears (spawn: feet at hatch.y +
+// AGENT_H), for as long as anyone is still to come. A brick there puts the
+// newcomer inside it: on level 129 a bridge laid across the hatch's drop at
+// t355 caught the last one out, the hero, in a one-row slot under the bricks,
+// where it turned every tick until the loop rule bombed it — in 18 of 24
+// colonies (LOG 319). A brick just below the feet is a floor and is fine.
+function inHatchMouth(w, x, y) {
+  if (w.released >= w.toRelease) return false
+  return Math.abs(x - w.hatch.x) <= 1 && y > w.hatch.y && y <= w.hatch.y + AGENT_H
+}
+
 function makeBuildRoom(w, cells, builder) {
   var lifts = {}
   for (var ci = 0; ci < cells.length; ci++) {
     var cell = cells[ci]
+    if (inHatchMouth(w, cell.x, cell.y)) return false
     for (var i = 0; i < w.agents.length; i++) {
       var ag = w.agents[i]
       if (ag === builder || ag.gone || ag.state === "saved") continue

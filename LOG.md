@@ -7201,3 +7201,43 @@ digs the tunnel; it still stops at a bottomless lip and at steel.
 - **Playtest 1–200:** the 137 and 180 flags are gone; 129 shows 2/8 stall
   cutoffs where it showed 1/8.
 - **`sim hazards`:** unchanged.
+
+## 319 — 2026-10-15 · No bricks in the hatch's mouth while anyone is still to come
+
+**Chosen (autonomy):** level 129 (Skyscraper). 20 agents written off over 24
+colonies, one or two in nearly every colony, and the worst colony got 31% home.
+
+**Traced** (salt 2): it is the level's hero, a Bulwark, condemned at
+(14.5, 52) at t409 in colony after colony. It turned on every tick in place.
+- **Where it was:** in a one-row slot between the floor at row 53 and a row
+  of bricks at row 51, x10–16.
+- **How it got there:** builder 7 laid those bricks at t355, bridging at row
+  50 across the drop under the release hatch at (14, 47). The hero is the
+  last one out, at t390, and `spawn` puts a newcomer's feet at
+  `hatch.y + AGENT_H` (row 51) whatever is there. It was born inside the
+  bridge.
+
+**Changed:** `inHatchMouth`. While `released < toRelease`, `makeBuildRoom`
+refuses a brick in the cells where the next agent appears: x within 1 of the
+hatch, rows `hatch.y + 1` to `hatch.y + AGENT_H`. A brick just below the
+newcomer's feet is a floor, so that is still allowed. The builder waits as
+it does for traffic, and after 15 tries it turns round.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 129, 24 colonies: home | 86% | 90% |
+| Level 129: written off | 20 | 3 |
+| Level 129: worst colony | 31% | 75% |
+| Level 129: nukes | 1 | 0 |
+| Level 129: stall cutoffs | 2 | 4 |
+| `npm run sim play` | 2,958/3,113 home | 2,972/3,129 (neutral share), 200/200 cleared, no hangs |
+| `sim hazards` | — | unchanged |
+
+- **The stall cutoffs:** each strands one straggler. In salt 7 it rode a lift
+  to the floor at row 40 and wandered there, away from the hatch: survivors
+  meeting the tower's routing problem, not this rule.
+
+**Next:** that straggler, a lone agent on a tower floor that never takes the
+lift on up.
