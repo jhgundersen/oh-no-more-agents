@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import fs from "node:fs"
-import { judge, parseArgs, print, VIEWS } from "../tools/phone.js"
+import { activePort, judge, parseArgs, print, VIEWS } from "../tools/phone.js"
 
 // tools/phone.js: the judgement and the report. The browser half needs
 // Chromium and is exercised by running `npm run phone`.
@@ -70,4 +70,13 @@ test("end to end in Chromium: a phone view is captured and measured", { skip: !c
     assert.equal(r.metrics.viewport.w, 844)
     assert.deepEqual(r.notes, [], "the landscape layout fits a thumb")
   } finally { await b.close(); server.close(); fs.rmSync(out, { recursive: true, force: true }) }
+})
+
+test("the browser's port is the one Chromium wrote into its own profile, never a guess", () => {
+  const dir = fs.mkdtempSync("/tmp/port-")
+  try {
+    assert.equal(activePort(dir), null, "not listening yet")
+    fs.writeFileSync(dir + "/DevToolsActivePort", "40123\n/devtools/browser/abc\n")
+    assert.equal(activePort(dir), 40123)
+  } finally { fs.rmSync(dir, { recursive: true, force: true }) }
 })

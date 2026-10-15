@@ -6374,3 +6374,28 @@ passed, levels 2–11.
 - Nodes, listeners and canvases were flat. Frames held at 16.7 ms.
 - The heap rose from 3.5 to 6.1 MB, the same shape as earlier smokes (the V8
   plateau from 278).
+
+## 301 — 2026-10-15 · Each test browser gets its own port
+
+**Seen:** the first gate for 300 failed two browser tests at once:
+- "every fifth level ends in a standup" saw the level go from 4 to 1;
+- the soak test's browser was "gone".
+
+Both passed alone. A page dropping to level 1 is not slowness. The soak's
+page starts at level 1, and the journal showed `--remote-debugging-port=9756`
+launched four times in that window.
+
+**Cause:** `tools/phone.js` chose the DevTools port as 9300 plus a random
+number below 500, and a full run starts around twenty browsers in parallel. A
+browser that loses the race for a port fails to bind, so its test's discovery
+reaches the other browser's `/json`. That test then drives someone else's
+page, and is cut off when the owner closes it. This explains the flaky page
+tests seen before ("under load"), which were widened to longer polls in 279,
+293 and the replay wait.
+
+**Fixed:** Chromium is started with `--remote-debugging-port=0`, so it binds
+a free port itself. It writes that port to `DevToolsActivePort` in its
+throwaway profile, and `browserTargets` reads it from there (`activePort`,
+exported). Six browsers launched at once each answered with their own page
+id. A unit test covers reading the file. The longer polls stay; they cost
+nothing when the page is quick.

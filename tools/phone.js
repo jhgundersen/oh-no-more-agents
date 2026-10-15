@@ -71,12 +71,20 @@ function launchBrowser(args, profile) {
   proc.on("error", e => { proc.launchError = e.message })
   return { proc, unit }
 }
-async function browserTargets(port, proc) {
+// The port Chromium bound for itself (--remote-debugging-port=0), written to
+// the profile once it listens. A port picked here at random once let two
+// parallel tests collide: the second browser failed to bind and its test drove
+// the first test's page (LOG 301).
+export function activePort(profile) {
+  try { return Number(fs.readFileSync(path.join(profile, "DevToolsActivePort"), "utf8").split("\n")[0]) || null } catch { return null }
+}
+async function browserTargets(profile, proc) {
   var spent = 0, last = Date.now()
   for (let i = 0; i < 60 && spent < 10000; i++) {
     spent += Math.min(600, Date.now() - last); last = Date.now()
     if (proc.launchError || proc.exitCode !== null || proc.signalCode) throw Error("Headless browser exited at startup: " + (proc.launchError || proc.signalCode || proc.exitCode))
-    try {
+    const port = activePort(profile)
+    if (port) try {
       const tabs = await (await fetch(`http://127.0.0.1:${port}/json`, { signal: AbortSignal.timeout(400) })).json()
       if (tabs.some(t => t.type === "page")) return tabs
     } catch { /* not listening yet */ }
@@ -120,12 +128,12 @@ async function closeBrowser(proc, unit, profile) {
 }
 
 export async function browser() {
-  const port = 9300 + Math.floor(Math.random() * 500), profile = fs.mkdtempSync(path.join(os.tmpdir(), "phone-"))
-  const { proc, unit } = launchBrowser(["--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), "phone-"))
+  const { proc, unit } = launchBrowser(["--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`,
     "--mute-audio", "--hide-scrollbars", "about:blank"], profile)
   let ws
   try {
-    const tabs = await browserTargets(port, proc)
+    const tabs = await browserTargets(profile, proc)
     ws = await browserSocket(tabs.find(t => t.type === "page").webSocketDebuggerUrl)
   } catch (e) { await closeBrowser(proc, unit, profile); throw e }
   let id = 0, closed = false
