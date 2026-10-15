@@ -8076,3 +8076,84 @@ Outcome and share assets remain unchanged. No temporary browsers remain.
 
 **Next:** ready for Christmas art review. Commit on `codex/christmas-art` only;
 no push, deployment or sibling sync.
+
+## 254 — 2026-10-15 · The cast gets its kit (on a branch)
+
+Page-resolution art on `codex/cast-art`, from approved `codex/christmas-art`
+(`4d9f727`). The red team gets squared oxblood service jackets, pale chevrons,
+headsets and a readable pistol slide/front sight. Scope Creep has a folded
+violet cloak, planted bipod and a larger blue scope lens; its glint brightens
+through the actual aim. The Moderator's steel pauldrons have gold edging,
+the visor powers up with the pistol, and the slung ban-hammer carries an
+engraved red minus. Its hammer stays slung: there is no invented hammer attack.
+Bouncers get stronger lapels, cuffs and signet rings, a glint on the stop palm
+and shades, and a brief follow-through from `threwAt`. The Head Bouncer's
+crown and chain are separate from its five HP pips; the crown now follows the
+actual heavy stride and stagger instead of floating at the original head.
+Drone, operator, xeno and hostile diver kit receive matching page detail.
+
+The eight-tick gun discharge now has a short travelling round and local impact
+spark at res 2. A return streak requires both a dated `ricochet` defeat and a
+facing, held umbrella; ordinary parries get none. Backup's booth has a caged
+red beacon, aerial and stepped signal rings while the existing reserve is
+pending; reduced motion holds its warning steady. Cloud Provider remains
+friendly blue/white: tailored coat with a cloud badge, a rolled canopy ready
+only when its existing cooldown is near a hand-out and a recipient is nearby,
+a paper-tied spinning delivery, and a ribbed blue/white cloud umbrella on its
+actual `height` descent. All tells read existing states, timers or stamps.
+No simulation clocks, fields, random draws or rules were added.
+
+**Looked:** `/tmp/codex-cast-art/final/contact-sheet.png` covers 25 action
+fixtures on real seeded terrain, with before/after at res 1 and res 2, 100
+native full frames, native crops and a separate comparison row per scene.
+The fixtures stage existing action poses and are labelled in the
+manifest. `actual-play.png` adds nine unmodified-play comparisons: ordinary
+aim (16/583), sniper aim (9/931), Moderator aim (7/571), Head Bouncer stop
+(28/552), Backup call/arrival (30/368 and 125/510), Provider hand-out/descent
+(61/193 and 61/511), and a real ricochet (129/663), all seed 3. Ordinary
+Bouncer stop/throw are on the fixture sheet. `live-biomes.png` and 76 native
+live frames cover every biome at tick 400. Reviewed native 400×248 and
+800×496 images and pixel crops; floors, original hazards, colony faces,
+umbrellas, exits and HP strips remain legible.
+
+**Isolation:** 345 panel frames are byte-identical to approved Christmas art
+(25 fixtures × five palettes × unspecified/res 1, plus nineteen live biomes
+× five palettes). The detail-dispatch refactor is also byte-identical in 250
+fixture frames across both resolutions and five palettes. All 190 terrain
+comparisons also match (nineteen biomes, five palettes, both resolutions). The final probe took 4.15 s, peak RSS
+285 MB under the 256 MB renderer heap. Complete gameplay digests match
+rendered/unrendered play through 600 ticks in all nineteen biomes. Tests also
+cover finite/grid-aligned poses, both facings, actual aim phases, the crown's
+pose attachment, reserve expiry, recipient eligibility and dated ricochets.
+Sim, Palette, seasonal code and numbered share/icon assets are unchanged.
+
+**Pipeline and cost:** the comparison command simulates no repeated timelines
+and caches one unchanged terrain image for each fixture/resolution, shared
+by before and after; all sheets/images take 1.56 s, peak RSS 191 MB. Recordings
+are bounded and frame assertions use SHA hashes rather than raw-buffer diffs.
+A measured slow corner in the tied-umbrella effect was replaced with exact
+quarter-turn coordinate swaps: 0.00419 → 0.00350 ms per effect (about 16%).
+Five interleaved warmed batches of one hundred res-2 actor frames give mean
+before/after increase **0.018 ms**, maximum **0.173 ms** across the 25 scenes.
+Examples: ordinary aim 0.798 → 0.818 ms; sniper aim 1.875 → 1.812 ms;
+Moderator aim 1.113 → 1.141 ms; Bouncer throw 1.796 → 1.850 ms; Provider
+hand-out 0.541 → 0.556 ms. These are Node software-raster measurements,
+not browser FPS. Longer warmed batches replace the noisy
+twenty-frame spot probe; raw measurements remain in the task directory.
+
+**Validation:** `npm run stamp` is current. Final capped `npm run check`
+passes **1,188 tests**, zero failures/skips, in **170.82 s**; final capped
+coverage passes **1,188 tests**, zero failures/skips, in **247.98 s**.
+`npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-cast-art/coverage-safe.sh` passes: highest score **30.0**, new
+drawing helpers at most **15.0**, comparison command **5.0** (fixture helper
+**10.0**). Provider paint belongs in the existing res-2 detail pass: this
+keeps `drawAgent` at complexity **27**, CRAP **27.06**, with identical pixels.
+Full runs use 2048 MB Node heaps under `ulimit -v 6000000`, Factory art excluded,
+one worker for check/two for coverage, 120-second test timeouts, and host-aware
+serialization. The guard pauses only this branch's run when a foreign suite
+starts. Final source hashes match those validated; no simulation or asset
+changes slipped in.
+
+**Next:** ready for cast art review. Commit on `codex/cast-art` only; no push,
+deployment or sibling sync.

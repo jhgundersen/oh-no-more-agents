@@ -5162,6 +5162,7 @@ function drawEnemyHatch(ctx, w, pal, opts) {
 // call goes out as rings of signal over the roof.
 function drawBackupLamp(ctx, w, pal, x, y) {
   if (!w.backupAt || !w.reinforcements || w.done) return
+  if ((w.res || 1) >= 2) { drawCastBackup(ctx, w, x, y); return }
   var lit = Math.floor(w.ticks / 6) % 2 === 0
   ctx.fillStyle = lit ? pal.urgent : pal.hatchMouth
   ctx.fillRect(x + 5, y - 12, 3, 2)
@@ -7568,6 +7569,7 @@ function drawProvisionFx(ctx, w, pal, fx) {
   // Hand height to hand height, the arc kept low enough for a six-row corridor.
   var y = Math.round((fx.fromY - 2 + (fx.toY - fx.fromY) * p) * C - Math.sin(p * Math.PI) * 5)
   var spin = Math.floor(age / 3) % 4
+  if ((w.res || 1) >= 2) { drawCastParcel(ctx, w, pal, x, y, spin); return }
   ctx.fillStyle = (w.specialSpec && w.specialSpec.robe) || pal.umbrella
   if (spin % 2) ctx.fillRect(x - 3, y, 7, 1)
   else ctx.fillRect(x, y - 3, 1, 7)
@@ -9276,7 +9278,9 @@ function drawEnemy(ctx, w, pal, en, opts) {
   var oy = Math.round((en.y + 1) * w.k.CELL) - SPRITE_PX - m.bob
   var fn = en.boss && en.kind !== "bouncer" ? drawModerator : (ENEMY_DRAW[en.kind] || drawGunner)
   fn(ctx, w, pal, en, ox, oy, en.dir, m)
-  if (en.boss && en.kind === "bouncer") drawHeadBouncerCrown(ctx, en, ox, oy)
+  if (en.boss && en.kind === "bouncer" && (w.res || 1) < 2)
+    drawHeadBouncerCrown(ctx, en, ox, oy)
+  if ((w.res || 1) >= 2) drawCastEnemyKit(ctx, w, en, ox, oy, en.dir)
   drawEnemyQuip(ctx, w, pal, en, ox, oy)
   if (opts && opts.labels) drawEnemyLabel(ctx, w, en, ox, oy)
   ctx.globalAlpha = 1
@@ -9296,6 +9300,7 @@ function drawModerator(ctx, w, pal, en, ox, oy, dir, m) {
   drawModeratorPlate(ctx, w, bx, by, dir)
   drawModeratorHead(ctx, w, bx, by, dir)
   drawModeratorCrown(ctx, w, bx, by - 1, dir, reel ? 1 : 0)
+  if ((w.res || 1) >= 2) drawCastModerator(ctx, en, bx, by, dir)
   var gunY = en.state === "aim" || en.shotFor > 0 ? 6 : 8
   // Keep the gun at the ordinary muzzle, even while the armour reels away.
   drawGunnerWeapon(ctx, w, en, ox, oy, dir, gunY)
@@ -9567,7 +9572,12 @@ function drawBouncer(ctx, w, pal, en, ox, oy, dir, m) {
   drawEnemyFeet(ctx, w, en, ox, oy, dir, heavy, 13, BOUNCER_BLACK)
   drawBouncerBody(ctx, w, bx, by, dir)
   drawBouncerHead(ctx, w, bx, by, dir)
-  drawBouncerArms(ctx, w, bx, by, dir, reel, bouncerPalm(w, en))
+  var palm = bouncerPalm(w, en)
+  drawBouncerArms(ctx, w, bx, by, dir, reel, palm)
+  if ((w.res || 1) >= 2) {
+    drawCastBouncer(ctx, w, en, bx, by, dir, reel, palm)
+    if (en.boss) drawCastCrown(ctx, bx, by)
+  }
   if (hurt >= 0 && hurt < 6) drawBouncerFlash(ctx, bx, by, dir, hurt)
   drawBouncerPips(ctx, en, ox, oy)
 }
@@ -9720,6 +9730,7 @@ function drawEnemyDefeat(ctx, w, pal, en) {
   if (!en.gone || en.diedAt === undefined) return
   var age = w.ticks - en.diedAt
   if (age < 0 || age >= ENEMY_DEFEAT_TICKS) return
+  if ((w.res || 1) >= 2) drawCastRicochet(ctx, w, en, age)
   var draw = Object.prototype.hasOwnProperty.call(ENEMY_DEFEAT_DRAW, en.kind)
     ? ENEMY_DEFEAT_DRAW[en.kind] : drawDefeatGunner
   ctx.save()
@@ -10147,6 +10158,7 @@ function drawEnemyTell(ctx, en, x, y, dir, aimTicks) {
 function drawEnemySight(ctx, w, en, x, y) {
   if (en.state !== "aim" && !(en.shotFor > 0)) return
   var firing = en.shotFor > 0
+  if (firing && (w.res || 1) >= 2) { drawCastRound(ctx, w, en, x, y); return }
   ctx.globalAlpha = firing ? Math.min(1, en.shotFor / 4) : 0.45 + ((en.timer >> 2) % 2) * 0.25
   ctx.fillStyle = firing ? "#ffe68a" : "#ff5268"
   var tx = Math.round(en.lineTo * w.k.CELL), ty = Math.round((en.lineY + 0.5) * w.k.CELL)
@@ -10312,6 +10324,7 @@ function drawSniper(ctx, w, pal, en, ox, oy, dir, m) {
   var mx = dir > 0 ? rifleX + (posted ? 12 : 10) : rifleX - 1
   var my = oy + (posted ? 12 : 9)
   drawEnemyTell(ctx, en, mx, my, dir, 36)
+  if ((w.res || 1) >= 2) drawCastAim(ctx, en, mx, my, dir, 36)
   drawEnemySight(ctx, w, en, mx, my)
   drawEnemyDischarge(ctx, en, mx, my, dir, false)
   if (en.state === "reload" && !en.shotFor) {
@@ -10359,7 +10372,9 @@ function drawGunnerWeapon(ctx, w, en, ox, oy, dir, gunY) {
     blit(ctx, ox, oy, dir, 8, gunY + 2, 2, 1)
   }
   var mx = dir > 0 ? ox + 11 : ox - 4
+  if ((w.res || 1) >= 2) drawCastPistol(ctx, w, en, ox, oy, dir, gunY)
   drawEnemyTell(ctx, en, mx, oy + gunY, dir, 8)
+  if ((w.res || 1) >= 2) drawCastAim(ctx, en, mx, oy + gunY, dir, 8)
   drawEnemySight(ctx, w, en, mx, oy + gunY)
   drawEnemyDischarge(ctx, en, mx, oy + gunY, dir, false)
 }
@@ -10533,6 +10548,7 @@ function drawEnemyDiverWeapon(ctx, w, en, ox, oy, dir, big) {
     ctx.fillRect(dir > 0 ? gunX + 3 : gunX + len - 5, gunY + 2, 2, 1)
   }
   drawEnemyTell(ctx, en, mx, gunY, dir, big ? 46 : 8)
+  if ((w.res || 1) >= 2) drawCastAim(ctx, en, mx, gunY, dir, big ? 46 : 8)
   drawEnemyDischarge(ctx, en, mx, gunY, dir, true)
   if (big) drawEnemySpear(ctx, w, en, mx, gunY, dir)
   else drawEnemySight(ctx, w, en, mx, gunY)
@@ -10940,6 +10956,7 @@ function drawGearBalloon(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
 // Cloud Provider's way down: under an umbrella twice the width of anybody
 // else's, in its own colour, held high with both hands, swaying as it comes.
 function drawGearBrolly(ctx, w, pal, ag, ox, oy, dir, robe, hair, fr) {
+  if ((w.res || 1) >= 2) { drawCastCloudCanopy(ctx, w, pal, ag, ox, oy, robe, hair, fr); return }
   var sway = Math.round(Math.sin((fr.hp || 0) * Math.PI * 4) * 1.4)
   var top = oy - 12, left = ox - 6 + sway
   ctx.fillStyle = robe
@@ -11859,6 +11876,8 @@ function drawAgentDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, squash, robe,
   drawTraitDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, idle)
   drawWorkTools(ctx, w, pal, ag, ox, oy, dir)
   drawSkillDetail(ctx, w, pal, ag, ox, oy, dir)
+  if (ag.special === "cloudprovider")
+    drawCastProvider(ctx, w, pal, ag, ox, oy, dir, drop)
 }
 
 function drawAgentEffects(ctx, w, pal, ag, ox, oy, dir, hair, st, C) {
@@ -18649,5 +18668,377 @@ function drawChristmasTree(ctx, w, boxes) {
   ctx.fillStyle = "#e6c26b"; ctx.fillRect(x, foot - 15, 1, 3); ctx.fillRect(x - 1, foot - 14, 3, 1)
   ctx.fillRect(x - 2, foot - 9, 1, 1); ctx.fillRect(x + 2, foot - 5, 1, 1)
   ctx.fillStyle = "#d45b65"; ctx.fillRect(x + 1, foot - 8, 1, 1); ctx.fillRect(x - 3, foot - 5, 1, 1)
+  ctx.restore()
+}
+
+// The page's cast: kit silhouettes and dated tells. The panel keeps the
+// original sprites; no clocks, RNG or actor fields are owned by the renderer.
+function drawCastEnemyKit(ctx, w, en, x, y, d) {
+  if (en.boss || en.kind === "bouncer") return
+  if (en.kind === "gun" && !w.submerged) drawCastGuard(ctx, x, y, d)
+  else if (en.kind === "sniper") drawCastMarksman(ctx, en, x, y, d)
+  else if (en.kind === "operator") drawCastRadio(ctx, en, x, y, d)
+  else if (en.kind === "drone") drawCastDrone(ctx, en, x, y, d)
+  else if (en.kind === "xeno") drawCastXeno(ctx, en, x, y, d)
+  else if (w.submerged || en.kind === "harpoon") drawCastDiver(ctx, x, y, d)
+}
+
+function drawCastGuard(ctx, x, y, d) {
+  ctx.fillStyle = "#3a1221"
+  blitFine(ctx, x, y, d, 0, 7, 8, 1.5)       // squared service jacket
+  blitFine(ctx, x, y, d, 2, 8, 4, 4)
+  ctx.fillStyle = "#ba4b58"
+  blitFine(ctx, x, y, d, 0, 7, 2, 0.5)
+  blitFine(ctx, x, y, d, 6, 7, 2, 0.5)
+  blitFine(ctx, x, y, d, 1, 8, 1, 3)
+  ctx.fillStyle = "#8f1f35"
+  blitFine(ctx, x, y, d, 0, 7.5, 2, 2.5)
+  blitFine(ctx, x, y, d, 6, 7.5, 2, 2)
+  blitFine(ctx, x, y, d, 2.5, 8.5, 3, 2.5)    // overlapping armour plates
+  ctx.fillStyle = "#d9d7cf"
+  blitFine(ctx, x, y, d, 2.5, 8, 1, 0.5)
+  blitFine(ctx, x, y, d, 3.5, 8.5, 1, 0.5)    // red team's chevron
+  ctx.fillStyle = "#e0b649"
+  blitFine(ctx, x, y, d, 4.5, 11, 1, 0.5)
+  ctx.fillStyle = "#58152b"
+  blitFine(ctx, x, y, d, 0, 1.5, 1.5, 2)      // headset, behind the face
+  ctx.fillStyle = "#ff5268"
+  blitFine(ctx, x, y, d, 0, 1.5, 1, 0.5)
+  ctx.fillStyle = "#d9d7cf"
+  blitFine(ctx, x, y, d, 6, 5.5, 1.5, 0.5)    // jaw/microphone
+}
+
+function drawCastPistol(ctx, w, en, x, y, d, gunY) {
+  ctx.fillStyle = en.boss ? "#e0b649" : "#8a8a99"
+  blitFine(ctx, x, y, d, 6.5, gunY, 4.5, 0.5)
+  ctx.fillStyle = "#b6b6c5"
+  blitFine(ctx, x, y, d, 10, gunY - 0.5, 0.5, 0.5) // front sight
+  ctx.fillStyle = "#58152b"
+  blitFine(ctx, x, y, d, 7.5, gunY + 2.5, 1, 2)
+  if (en.state !== "aim") return
+  ctx.fillStyle = "#d9d7cf"
+  blitFine(ctx, x, y, d, 9, gunY + 2, 1.5, 0.5)  // supporting knuckles
+}
+
+// A closing bracket and steady white core in the latter half of the actual
+// aim. Reduced motion still gets the same warning, with no decorative blink.
+function drawCastAim(ctx, en, x, y, d, span) {
+  if (en.state !== "aim" || en.throttled > 0) return
+  var late = en.timer >= span / 2, reach = late ? 1.5 : 3
+  ctx.fillStyle = late ? "#ffe68a" : "#ff5268"
+  ctx.fillRect(x + d * reach - 0.5, y - 2, 1, 0.5)
+  ctx.fillRect(x + d * reach - 0.5, y + 2, 1, 0.5)
+  ctx.fillStyle = late ? "#ffffff" : "#ffd0d6"
+  ctx.fillRect(x - 0.5, y - 0.5, 1, 1)
+}
+
+function drawCastMarksman(ctx, en, x, y, d) {
+  var prone = en.state === "camp" || en.state === "aim" || en.state === "reload"
+  var rx = d > 0 ? x + (prone ? 10 : 6) : x - (prone ? 12 : 7)
+  var sy = y + (prone ? 10 : 7), lens = d > 0 ? rx + 7 : rx + 4
+  ctx.fillStyle = "#856796"
+  if (prone) {
+    ctx.fillStyle = "#55406f"
+    ctx.fillRect(x + 2, y + 10, 5, 2)
+    ctx.fillStyle = "#856796"
+    ctx.fillRect(x + 2, y + 10, 4, 0.5)
+    ctx.fillRect(d > 0 ? x + 8 : x, y + 8.5, 3, 0.5)
+    ctx.fillRect(x + 1, y + 10.5, 6, 0.5)
+    ctx.fillRect(x + 3, y + 11, 4, 0.5)
+    ctx.fillRect(d > 0 ? x + 8 : x, y + 9, 3, 0.5)
+    ctx.fillRect(rx + 3, y + 13, 0.5, 2)      // planted bipod
+    ctx.fillRect(rx + 8, y + 13, 0.5, 2)
+  } else ctx.fillRect(x + 2, y + 6, 1, 6)
+  ctx.fillStyle = "#8a8a99"
+  ctx.fillRect(rx, sy + 1, prone ? 12 : 10, 0.5)
+  ctx.fillStyle = "#16161b"
+  ctx.fillRect(rx + 3, sy - 1, 5, 1.5)        // unmistakable long scope
+  ctx.fillStyle = "#9fd6ff"
+  ctx.fillRect(lens, sy - 1, 1, 1.5)
+  if (en.state !== "aim" || en.throttled > 0) return
+  ctx.fillStyle = en.timer >= 18 ? "#ffffff" : "#ff5268"
+  ctx.fillRect(lens - 0.5, sy - 1, 2, 0.5)
+  ctx.fillRect(lens + 0.5, sy - 2, 0.5, 2.5) // scope catches the light before fire
+}
+
+function drawCastModerator(ctx, en, x, y, d) {
+  ctx.fillStyle = "#16161b"
+  blitFine(ctx, x, y, d, -2, 6, 2, 4)
+  blitFine(ctx, x, y, d, 8, 6, 2, 4)
+  ctx.fillStyle = "#8a8a99"
+  blitFine(ctx, x, y, d, -1.5, 5.5, 4, 2)
+  blitFine(ctx, x, y, d, 6.5, 5.5, 3, 2)
+  ctx.fillStyle = "#4a4a55"
+  blitFine(ctx, x, y, d, -1, 6.5, 3.5, 1)
+  blitFine(ctx, x, y, d, 7, 6.5, 2.5, 1)
+  ctx.fillStyle = "#e0b649"
+  blitFine(ctx, x, y, d, -1, 5.5, 3.5, 0.5) // gilded pauldrons
+  blitFine(ctx, x, y, d, 6.5, 5.5, 2.5, 0.5)
+  ctx.fillStyle = "#d9d7cf"
+  blitFine(ctx, x, y, d, 2.5, 9, 0.5, 1.5)
+  blitFine(ctx, x, y, d, 5.5, 9, 0.5, 1.5)
+  ctx.fillStyle = "#58152b"
+  blitFine(ctx, x, y, d, 3, 10.5, 3, 0.5)
+  ctx.fillStyle = "#25252b"
+  blitFine(ctx, x, y, d, -3, 2, 3.5, 1)       // engraved minus: the ban hammer
+  ctx.fillStyle = "#ff5268"
+  blitFine(ctx, x, y, d, -2.5, 2, 2.5, 0.5)
+  ctx.fillStyle = "#ffe68a"
+  blitFine(ctx, x, y, d, -3.5, 1, 0.5, 1.5)
+  if (en.state !== "aim" || en.throttled > 0) return
+  ctx.fillStyle = en.timer >= 4 ? "#ffffff" : "#ff5268"
+  blitFine(ctx, x, y, d, 5, 1, 2.5, 0.5)      // visor powers up with the pistol
+}
+
+function drawCastBouncer(ctx, w, en, x, y, d, reel, palm) {
+  ctx.fillStyle = "#e1bd9f"
+  blitFine(ctx, x, y, d, 2, 2.5, 1, 0.5)      // cheek / square chin
+  blitFine(ctx, x, y, d, 5.5, 2, 1.5, 0.5)
+  ctx.fillStyle = "#ba4b58"
+  blitFine(ctx, x, y, d, -1, 5, 2, 2)
+  blitFine(ctx, x, y, d, 8, 5, 2, 2)
+  blitFine(ctx, x, y, d, 1, 6.5, 1, 1.5)
+  blitFine(ctx, x, y, d, 7, 6.5, 1, 1.5)
+  if (en.boss) {
+    ctx.fillStyle = "#e0b649"
+    blitFine(ctx, x, y, d, -1, 4.5, 3, 0.5)
+    blitFine(ctx, x, y, d, 7.5, 4.5, 2.5, 0.5)
+  }
+  ctx.fillStyle = "#d9d7cf"
+  blitFine(ctx, x, y, d, 1, 9, 1.5, 0.5)      // immaculate cuffs
+  blitFine(ctx, x, y, d, 7.5, 8, 1.5, 0.5)
+  if (reel) return
+  var thrown = en.threwAt === undefined ? 99 : w.ticks - en.threwAt
+  if (thrown >= 0 && thrown < 8) drawCastThrowHand(ctx, x, y, d, thrown)
+  if (!palm) return
+  ctx.fillStyle = "#ffffff"
+  blitFine(ctx, x, y, d, 5, 0, 1.5, 0.5)      // shades glint before contact
+  blitFine(ctx, x, y, d, 12, 3, 1.5, 0.5)
+  ctx.fillStyle = "#e0b649"
+  blitFine(ctx, x, y, d, 12, 5, 1.5, 0.5)     // signet ring on the stop hand
+}
+
+function drawCastThrowHand(ctx, x, y, d, age) {
+  var reach = age < 4 ? 2 : 1
+  ctx.fillStyle = "#5e1424"
+  blitFine(ctx, x, y, d, 8, 6, 4 + reach, 2)
+  ctx.fillStyle = "#d9d7cf"
+  blitFine(ctx, x, y, d, 11 + reach, 6, 0.5, 2)
+  ctx.fillStyle = "#c9a28a"
+  blitFine(ctx, x, y, d, 12 + reach, 5.5, 2, 2.5)
+}
+
+function drawCastCrown(ctx, x, y) {
+  ctx.fillStyle = "#78552b"
+  ctx.fillRect(x + 1, y - 2, 6, 1)
+  ctx.fillStyle = "#e0b649"
+  ctx.fillRect(x + 1, y - 3, 6, 1)
+  ctx.fillRect(x + 1, y - 4, 1, 1); ctx.fillRect(x + 3, y - 4, 2, 1); ctx.fillRect(x + 6, y - 4, 1, 1)
+  ctx.fillStyle = "#ffe68a"
+  ctx.fillRect(x + 1.5, y - 3, 5, 0.5)
+  ctx.fillStyle = "#ff5268"
+  ctx.fillRect(x + 3.5, y - 2.5, 1, 0.5)
+  ctx.fillStyle = "#e0b649"
+  ctx.fillRect(x + 1, y + 8, 1, 0.5); ctx.fillRect(x + 2, y + 8.5, 1, 0.5)
+  ctx.fillRect(x + 3, y + 9, 2, 1); ctx.fillRect(x + 5, y + 8.5, 1, 0.5); ctx.fillRect(x + 6, y + 8, 1, 0.5)
+  ctx.fillStyle = "#ffe68a"
+  ctx.fillRect(x + 3.5, y + 9, 1, 0.5)
+}
+
+function drawCastRadio(ctx, en, x, y, d) {
+  ctx.fillStyle = "#f0b34f"
+  ctx.fillRect(x + 2, y + 6, 5, 0.5)
+  ctx.fillStyle = "#171920"
+  var cx = d > 0 ? x + 8 : x
+  ctx.fillRect(cx, y + 9, 4, 3)
+  ctx.fillStyle = en.timer >= 144 ? "#ff5268" : "#86d8e8"
+  ctx.fillRect(cx + 0.5, y + 9.5, 2, 1)
+  ctx.fillStyle = "#d9d7cf"
+  ctx.fillRect(cx + 3, y + 10.5, 0.5, 0.5)
+  ctx.fillRect(x - 1, y + 7.5, 0.5, 4)
+}
+
+function drawCastDrone(ctx, en, x, y, d) {
+  ctx.fillStyle = "#34313a"
+  ctx.fillRect(x + 3, y + 6, 6, 1)
+  ctx.fillStyle = "#d9d7cf"
+  ctx.fillRect(x + 3, y + 6, 1, 3)
+  ctx.fillStyle = en.targetId && !en.throttled ? "#ff5268" : "#86d8e8"
+  ctx.fillRect(d > 0 ? x + 8 : x + 3, y + 7, 2, 2)
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(d > 0 ? x + 9 : x + 3, y + 7, 0.5, 0.5)
+}
+
+function drawCastXeno(ctx, en, x, y, d) {
+  ctx.fillStyle = "#9df59a"
+  blitFine(ctx, x, y, d, 10, 7, 3, 0.5)
+  ctx.fillStyle = "#24472b"
+  blitFine(ctx, x, y, d, 8, 10.5, 2, 2)
+  if (!en.targetId || en.touchCool > 0) return
+  ctx.fillStyle = "#f2f2e6"
+  blitFine(ctx, x, y, d, 12, 9.5, 2, 0.5)
+  blitFine(ctx, x, y, d, 12.5, 10, 0.5, 1)
+}
+
+function drawCastDiver(ctx, x, y, d) {
+  ctx.fillStyle = "#ba4b58"
+  ctx.fillRect(x + 1, y + 6, 2, 0.5); ctx.fillRect(x + 6, y + 6, 2, 0.5)
+  ctx.fillStyle = "#e4bd62"
+  ctx.fillRect(x + 1.5, y + 2, 0.5, 3)
+  ctx.fillStyle = "#d9d7cf"
+  ctx.fillRect(d > 0 ? x + 6 : x + 2, y + 3, 0.5, 0.5)
+  ctx.fillStyle = "#16161b"
+  ctx.fillRect(x + 3, y + 8, 3, 2)
+  ctx.fillStyle = "#ff5268"
+  ctx.fillRect(x + 3.5, y + 8.5, 2, 0.5)
+}
+
+// Shot flight uses the already-stamped eight-tick discharge, never a new
+// projectile. The aim line keeps its original target and the impact stays local.
+function drawCastRound(ctx, w, en, x, y) {
+  var tx = Math.round(en.lineTo * w.k.CELL), ty = Math.round((en.lineY + 0.5) * w.k.CELL)
+  var age = 8 - en.shotFor, p = Math.min(1, age / 3)
+  var bx = Math.round((x + (tx - x) * p) * 2) / 2
+  var by = Math.round((y + (ty - y) * p) * 2) / 2
+  var d = tx >= x ? 1 : -1
+  ctx.save()
+  if (age < 3) {
+    ctx.fillStyle = "#ff8a35"
+    ctx.fillRect(bx - d * 3 - 0.5, by, 3, 0.5)
+    ctx.fillStyle = "#ffe68a"
+    ctx.fillRect(bx - 1, by - 0.5, 2, 1)
+  } else {
+    ctx.globalAlpha = en.shotFor / 8
+    ctx.fillStyle = "#ffe68a"
+    ctx.fillRect(tx - 1.5, ty - 0.5, 3, 1)
+    ctx.fillRect(tx - 0.5, ty - 1.5, 1, 3)
+  }
+  ctx.restore()
+}
+
+// Only a dated ricochet defeat and a freshly raised, facing canopy can make
+// a return streak. Ordinary parries never acquire a fictitious reflected shot.
+function drawCastRicochet(ctx, w, en, age) {
+  if (en.diedBy !== "ricochet" || age > 5) return
+  var best = null, dist = Infinity
+  for (var i = 0; i < (w.agents || []).length; i++) {
+    var ag = w.agents[i], dx = (en.x - ag.x) * ag.brollyDir
+    if (ag.gone || !(ag.brollyFor > 0) || dx <= 0 || Math.abs(ag.y - en.y) > 3) continue
+    if (dx < dist) { best = ag; dist = dx }
+  }
+  if (!best) return
+  var C = w.k.CELL, p = Math.min(1, age / 3)
+  var startX = best.x + best.brollyDir * 2
+  var x = Math.round((startX + (en.x - startX) * p) * C)
+  var y = Math.round((best.y - 1.5 + (en.y - best.y) * p) * C)
+  ctx.save(); ctx.globalAlpha = (6 - age) / 6
+  ctx.fillStyle = "#ffe68a"
+  ctx.fillRect(x - 2, y - 0.5, 4, 1)
+  ctx.fillStyle = "#ffffff"
+  ctx.fillRect(x - 0.5, y - 1.5, 1, 3)
+  ctx.restore()
+}
+
+function drawCastBackup(ctx, w, x, y) {
+  var lit = w.reducedMotion || Math.floor(w.ticks / 6) % 2 === 0
+  ctx.save()
+  ctx.fillStyle = "#16161b"
+  ctx.fillRect(x + 3.5, y - 14, 5, 4)       // caged red beacon, fixed to booth
+  ctx.fillRect(x + 5.5, y - 18, 0.5, 4)    // radio aerial
+  ctx.fillStyle = lit ? "#ff5268" : "#58152b"
+  ctx.fillRect(x + 4, y - 13.5, 4, 2.5)
+  ctx.fillStyle = "#d9d7cf"
+  ctx.fillRect(x + 4, y - 14, 4, 0.5)
+  if (lit) {
+    ctx.fillStyle = "#ffd0d6"; ctx.fillRect(x + 5, y - 13.5, 1.5, 0.5)
+    ctx.fillStyle = "#ff5268"; ctx.globalAlpha = 0.16
+    ctx.fillRect(x + 2, y - 15, 8, 6)
+  }
+  var ring = w.reducedMotion ? 1 : Math.floor(w.ticks / 4) % 3
+  ctx.fillStyle = "#ff5268"; ctx.globalAlpha = 0.65 - ring * 0.15
+  for (var side = -1; side <= 1; side += 2) {
+    var rx = x + 6 + side * (4 + ring * 2)
+    ctx.fillRect(rx, y - 18 - ring, 0.5, 2 + ring * 2)
+    ctx.fillRect(rx - side, y - 19 - ring, 1, 0.5)
+  }
+  ctx.restore()
+}
+
+// Quarter turns are exact coordinate swaps: no transform/trigonometry in
+// this small, frequent hand-out, and no near-zero rotated canvas edges.
+function drawCastParcel(ctx, w, pal, x, y, spin) {
+  ctx.save()
+  ctx.fillStyle = "#243b78"; drawCastParcelPiece(ctx, x, y, spin, -1, -3.5, 2, 7)
+  ctx.fillStyle = "#7aa2f7"; drawCastParcelPiece(ctx, x, y, spin, -0.5, -3.5, 0.5, 6)
+  ctx.fillStyle = "#eef1f8"; drawCastParcelPiece(ctx, x, y, spin, -1, 0, 2, 1)
+  ctx.fillStyle = pal.umbrellaStem
+  drawCastParcelPiece(ctx, x, y, spin, -0.5, 3.5, 0.5, 1.5)
+  drawCastParcelPiece(ctx, x, y, spin, 0, 4.5, 1, 0.5)
+  ctx.restore()
+}
+
+function drawCastParcelPiece(ctx, x, y, spin, rx, ry, wide, tall) {
+  if (spin === 1) ctx.fillRect(x - ry - tall, y + rx, tall, wide)
+  else if (spin === 2) ctx.fillRect(x - rx - wide, y - ry - tall, wide, tall)
+  else if (spin === 3) ctx.fillRect(x + ry, y - rx - wide, tall, wide)
+  else ctx.fillRect(x + rx, y + ry, wide, tall)
+}
+
+function castProviderReady(w, ag) {
+  if (ag.state !== "walk" || !(ag.cool > 0 && ag.cool <= 16)) return false
+  for (var i = 0; i < (w.agents || []).length; i++) {
+    var a = w.agents[i]
+    if (a !== ag && !a.gone && !a.special && !a.ownBrolly && a.state === "walk" &&
+        Math.abs(a.x - ag.x) <= 14 && Math.abs(a.y - ag.y) < 2) return true
+  }
+  return false
+}
+
+function drawCastProvider(ctx, w, pal, ag, x, y, d, drop) {
+  if (ag.state !== "walk" && ag.state !== "fall" && ag.state !== "height") return
+  ctx.fillStyle = "#243b78"
+  blitFine(ctx, x, y, d, 1, 9 + drop, 1, 4)
+  ctx.fillStyle = "#9fd6ff"
+  blitFine(ctx, x, y, d, 1, 7 + drop, 1.5, 0.5)
+  blitFine(ctx, x, y, d, 5.5, 7 + drop, 1.5, 0.5)
+  ctx.fillStyle = "#eef1f8"
+  blitFine(ctx, x, y, d, 4, 9 + drop, 2, 1)   // tiny cloud stitched on the coat
+  blitFine(ctx, x, y, d, 4.5, 8.5 + drop, 1, 0.5)
+  var ready = castProviderReady(w, ag)
+  if (!ready && !(ag.provisionFor > 16)) return
+  ctx.fillStyle = "#4f6bd8"
+  blitFine(ctx, x, y, d, 7, 8 + drop, 3, 1.5) // arm with a rolled canopy ready
+  ctx.fillStyle = "#eef1f8"
+  blitFine(ctx, x, y, d, 9, 7.5 + drop, 1, 1)
+  if (ready) {
+    ctx.fillStyle = "#7aa2f7"
+    blitFine(ctx, x, y, d, 10, 5 + drop, 1, 5)
+    ctx.fillStyle = "#ffffff"
+    blitFine(ctx, x, y, d, 10, 6 + drop, 1, 0.5)
+  }
+}
+
+function drawCastCloudCanopy(ctx, w, pal, ag, x, y, robe, hair, fr) {
+  var sway = w.reducedMotion ? 0 : Math.round(Math.sin((fr.hp || 0) * Math.PI * 4) * 2) / 2
+  var left = x - 6 + sway, top = y - 12
+  ctx.save()
+  ctx.fillStyle = "#243b78"
+  ctx.fillRect(left + 3, top, 14, 1); ctx.fillRect(left + 1, top + 1, 18, 2)
+  ctx.fillRect(left, top + 3, 20, 3)
+  ctx.fillStyle = robe
+  ctx.fillRect(left + 3, top + 0.5, 14, 1.5); ctx.fillRect(left + 1, top + 2, 18, 3.5)
+  ctx.fillStyle = "#7aa2f7"
+  ctx.fillRect(left + 3, top + 1, 13, 0.5)
+  ctx.fillRect(left + 4, top + 2, 0.5, 3); ctx.fillRect(left + 14.5, top + 2, 0.5, 3)
+  ctx.fillStyle = hair
+  ctx.fillRect(left, top + 5.5, 20, 0.5)
+  ctx.fillRect(left, top + 6, 2, 1); ctx.fillRect(left + 9, top + 6, 2, 1); ctx.fillRect(left + 18, top + 6, 2, 1)
+  ctx.fillRect(left + 9.5, top - 1, 1, 1)
+  ctx.fillRect(left + 8, top + 2.5, 4, 1.5); ctx.fillRect(left + 9, top + 2, 2, 0.5) // cloud
+  ctx.fillStyle = pal.umbrellaStem
+  var shaft = x + 4 + sway / 2
+  shaft = Math.round(shaft * 2) / 2
+  ctx.fillRect(shaft, top + 6, 0.5, 8)
+  ctx.fillStyle = hair; ctx.fillRect(shaft - 0.5, top + 13, 1.5, 0.5)
   ctx.restore()
 }
