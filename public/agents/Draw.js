@@ -2661,17 +2661,13 @@ function drawActors(ctx, w, pal, opts) {
 // the sky band, so the hero's card and event warnings stay readable.
 function drawReplayTag(ctx, w, pal) {
   var C = w.k.CELL, W = w.k.COLS * C, H = w.k.ROWS * C, top = w.k.SKY * C + 2
-  ctx.save()
-  ctx.globalAlpha = 0.55
-  ctx.fillStyle = "#000000"
-  ctx.fillRect(0, H - 6, W, 6)
+  ctx.save(); ctx.globalAlpha = 0.55; ctx.fillStyle = "#000000"; ctx.fillRect(0, H - 6, W, 6)
   ctx.globalAlpha = 1
-  ctx.fillStyle = pal.rigDark
-  ctx.fillRect(4, top, 70, 11)
-  ctx.fillStyle = (w.ticks >> 3) % 2 ? "#ff3b3b" : "#7a1c1c"
-  ctx.fillRect(7, top + 4, 3, 3)
-  ctx.fillStyle = "#f4f4ec"
-  drawTransitionText(ctx, "INSTANT REPLAY", 43, top + 3, 1)
+  drawGagPanel(ctx, 4, top, 76, 13, pal.label, pal.rigDark)
+  ctx.fillStyle = !w.reducedMotion && (w.ticks >> 3) % 2 ? "#ff4d57" : "#b73542"
+  ctx.fillRect(8, top + 4, 3, 4); ctx.fillRect(7, top + 5, 5, 2)
+  ctx.fillStyle = GAG_PAPER; ctx.fillRect(8, top + 4, 1, 1)
+  drawTransitionText(ctx, "INSTANT REPLAY", 46, top + 4, 1)
   ctx.restore()
 }
 
@@ -2711,36 +2707,23 @@ function drawOutage(ctx, w, pal) {
 }
 function drawOutageGlows(ctx, w, pal) {
   var C = w.k.CELL, e = w.exit
+  ctx.save()
   ctx.fillStyle = pal.exitLight
-  ctx.fillRect(e.x * C + 2, (e.y + e.h) * C - 2, e.w * C - 4, 1)          // the threshold still lit
-  for (var h = 0; h < w.hazards.length; h++) {
-    var hz = w.hazards[h]
-    if (hz.wrecked) continue
-    ctx.fillStyle = pal.urgent
-    ctx.fillRect(Math.round((hz.zx0 + hz.zx1) / 2 * C), Math.round(hz.zy0 * C), 2, 2)
-  }
-  for (var i = 0; i < w.agents.length; i++) {
-    var ag = w.agents[i]
-    if (ag.gone || ag.state === "saved") continue
-    var x = Math.round(ag.x * C), y = Math.round((ag.y + 1) * C) - SPRITE_PX
-    ctx.fillStyle = pal.label
-    ctx.fillRect(x - 3, y + 2, 6, 1)                                     // hat brim
-    ctx.fillStyle = "#ffffff"
-    ctx.fillRect(x + (ag.dir > 0 ? 0 : -2), y + 4, 1, 1)                 // eyes
-    ctx.fillRect(x + (ag.dir > 0 ? 2 : 0), y + 4, 1, 1)
-  }
+  ctx.fillRect(e.x * C + 1, (e.y + e.h) * C - 2, e.w * C - 2, 1)
+  ctx.fillRect(e.x * C + 1, (e.y + e.h) * C - 6, 1, 4)
+  ctx.fillRect((e.x + e.w) * C - 2, (e.y + e.h) * C - 6, 1, 4)
+  for (var h = 0; h < w.hazards.length; h++) drawOutageLamp(ctx, w, pal, w.hazards[h])
+  for (var i = 0; i < w.agents.length; i++) drawOutageEyes(ctx, w, pal, w.agents[i])
+  ctx.restore()
 }
 // Just under the sky band: the sky is where event warnings and the hero's card
 // live, and on production an event warning covered the status line.
 function drawStatusBanner(ctx, w, pal, text, ink, W) {
-  var width = text.length * 4 + 14, left = Math.round(W / 2 - width / 2), top = w.k.SKY * w.k.CELL + 2
+  var width = text.length * 4 + 18, left = Math.round(W / 2 - width / 2), top = w.k.SKY * w.k.CELL + 2
   ctx.globalAlpha = 1
-  ctx.fillStyle = pal.rigDark
-  ctx.fillRect(left, top, width, 11)
-  ctx.fillStyle = ink
-  ctx.fillRect(left + 4, top + 4, 3, 3)                                  // the status dot
-  ctx.fillStyle = "#f4f4ec"
-  drawTransitionText(ctx, text, W / 2 + 4, top + 3, 1)
+  drawGagPanel(ctx, left, top, width, 13, pal.label, pal.rigDark)
+  ctx.fillStyle = ink; ctx.fillRect(left + 4, top + 5, 4, 3); ctx.fillRect(left + 5, top + 4, 2, 5)
+  ctx.fillStyle = GAG_PAPER; drawTransitionText(ctx, text, W / 2 + 5, top + 4, 1)
 }
 
 // A dreamer's exit. The same lit mouth as the real one, so it is believable
@@ -2750,26 +2733,26 @@ function drawStatusBanner(ctx, w, pal, text, ink, W) {
 // the panel draws it the same as the page.
 var MIRAGE_DOOR_W = 22, MIRAGE_DOOR_H = 18
 function drawMirage(ctx, w, pal, m) {
-  var C = w.k.CELL
-  var left = Math.round((m.x + 0.5) * C - MIRAGE_DOOR_W / 2), foot = (m.y + 1) * C
-  var age = w.ticks - m.born
-  var fading = m.popped >= 0 ? (w.ticks - m.popped) / 24 : 0   // MIRAGE_FADE in Sim.js
-  if (fading >= 1) return
-  var rise = Math.min(1, age / 18)                    // it shimmers into being
+  var C = w.k.CELL, left = Math.round((m.x + 0.5) * C - MIRAGE_DOOR_W / 2), foot = (m.y + 1) * C
+  var age = w.ticks - m.born, fading = m.popped >= 0 ? (w.ticks - m.popped) / 24 : 0
+  if (age < 0 || fading >= 1) return
+  var rise = Math.min(1, age / 18), alpha = rise * (1 - fading)
   ctx.save()
   for (var row = 0; row < MIRAGE_DOOR_H; row += 2) {
-    var wave = Math.round(Math.sin(w.ticks * 0.21 + row * 0.9) * (1 + fading * 6))
-    var lit = row / MIRAGE_DOOR_H
-    ctx.globalAlpha = (0.32 + lit * 0.48) * rise * (1 - fading) * (0.85 + 0.15 * Math.sin(w.ticks * 0.5))
-    ctx.fillStyle = lit > 0.5 ? pal.exitGlow : pal.exitDeep
-    var shrink = Math.floor(fading * MIRAGE_DOOR_W / 2)
-    if (MIRAGE_DOOR_W - shrink * 2 > 0)
-      ctx.fillRect(left + wave + shrink, foot - MIRAGE_DOOR_H + row, MIRAGE_DOOR_W - shrink * 2, 2)
+    var wave = w.reducedMotion ? 0 : Math.round(Math.sin(w.ticks * 0.16 + row * 0.7) * (1 + fading * 6))
+    var shrink = Math.floor(fading * MIRAGE_DOOR_W / 2), width = MIRAGE_DOOR_W - shrink * 2
+    if (width <= 0) continue
+    var x = left + wave + shrink, y = foot - MIRAGE_DOOR_H + row
+    ctx.globalAlpha = alpha * (0.4 + row / MIRAGE_DOOR_H * 0.35)
+    ctx.fillStyle = pal.exitDeep; ctx.fillRect(x, y, width, 2)
+    ctx.fillStyle = pal.exitLight
+    ctx.globalAlpha = alpha * (row % 4 ? 0.8 : 0.45)
+    ctx.fillRect(x, y, Math.min(2, width), 1); ctx.fillRect(x + width - Math.min(2, width), y + 1, Math.min(2, width), 1)
   }
-  // A sign over the door, in case there was any doubt.
-  ctx.globalAlpha = 0.9 * rise * (1 - fading)
-  ctx.fillStyle = pal.exitLight
-  ctx.fillRect(left + 7, foot - MIRAGE_DOOR_H - 3, 8, 2)
+  ctx.globalAlpha = alpha * 0.9
+  ctx.fillStyle = pal.rigDark; ctx.fillRect(left + 1, foot - 18, 20, 7)
+  ctx.fillStyle = pal.exitLight; drawTransitionText(ctx, "EXIT", left + 11, foot - 17, 1)
+  ctx.fillStyle = pal.exitGlow; ctx.globalAlpha = alpha * 0.5; ctx.fillRect(left + 3, foot - 1, 16, 1)
   ctx.restore()
 }
 
@@ -2777,23 +2760,21 @@ function drawMirage(ctx, w, pal, m) {
 // there while the queue drains, and drops away once it has. Red for the code,
 // the colony's own label colour for the post. Whole art pixels.
 function drawRateLimitSign(ctx, w, pal, rl) {
-  var C = w.k.CELL
-  var cx = Math.round(rl.x * C), foot = (rl.y + 1) * C
-  var age = w.ticks - rl.at
-  var gone = rl.clearAt >= 0 ? w.ticks - rl.clearAt : 0
-  var pop = Math.min(1, age / 6)                               // springs up
-  var drop = Math.max(0, gone - 18)                           // and sinks away
-  var top = foot - Math.round(30 * pop) + drop * 2
-  if (top >= foot - 4) return
+  var C = w.k.CELL, cx = Math.round(rl.x * C), foot = (rl.y + 1) * C
+  var age = w.ticks - rl.at, gone = rl.clearAt >= 0 ? w.ticks - rl.clearAt : 0
+  var top = foot - Math.round(30 * Math.min(1, age / 6)) + Math.max(0, gone - 18) * 2
+  if (age < 0 || top >= foot - 4) return
   ctx.save()
-  ctx.fillStyle = pal.rigDark
-  ctx.fillRect(cx, top + 9, 1, foot - top - 9)                 // the post
-  ctx.fillRect(cx - 9, top - 1, 19, 11)                        // plate shadow
-  ctx.fillStyle = gone > 0 ? pal.label : pal.urgent
-  ctx.fillRect(cx - 8, top, 17, 9)
-  ctx.fillStyle = "#ffffff"
-  // Blink for the first second, steady after.
-  if (age > 30 || Math.floor(age / 5) % 2 === 0) drawTransitionText(ctx, "429", cx + 1, top + 2, 1)
+  var pole = foot - top - 9
+  if (pole > 0) {
+    ctx.fillStyle = pal.rigDark; ctx.fillRect(cx - 1, top + 9, 3, pole)
+    ctx.fillStyle = pal.label; ctx.fillRect(cx, top + 9, 1, pole)
+  }
+  drawGagPanel(ctx, cx - 11, top - 1, 23, 12, pal.rigDark, gone > 0 ? pal.label : pal.urgent)
+  ctx.fillStyle = "#f4f4ec"
+  ctx.fillRect(cx - 9, top + 1, 1, 1); ctx.fillRect(cx + 9, top + 1, 1, 1)
+  if (w.reducedMotion || age > 30 || Math.floor(age / 5) % 2 === 0) drawTransitionText(ctx, "429", cx + 1, top + 3, 1)
+  ctx.fillStyle = pal.rigDark; ctx.fillRect(cx - 3, foot - 1, 7, 1)
   ctx.restore()
 }
 
@@ -2813,17 +2794,8 @@ var RUBBER_DROP = 10
 function drawFloorDuck(ctx, w, d) {
   var C = w.k.CELL, age = w.ticks - d.at
   var foot = (d.y + 1) * C, x = Math.round((d.x + 0.5) * C) - 3
-  var lift = age < RUBBER_DROP ? Math.round((RUBBER_DROP - age) * 1.6) : (age < RUBBER_DROP + 4 ? 1 : (age >> 4) % 2)
-  var y = foot - 5 - lift
-  ctx.save()
-  ctx.fillStyle = DUCK_YELLOW
-  ctx.fillRect(x, y + 2, 5, 3)                 // body
-  ctx.fillRect(x + 2, y, 2, 2)                 // head
-  ctx.fillStyle = DUCK_BEAK
-  ctx.fillRect(x + 4, y + 1, 1, 1)
-  ctx.fillStyle = "#1a1a20"
-  ctx.fillRect(x + 3, y, 1, 1)
-  ctx.restore()
+  var lift = w.reducedMotion ? 0 : (age < RUBBER_DROP ? Math.round((RUBBER_DROP - age) * 1.6) : (age < RUBBER_DROP + 4 ? 1 : (age >> 4) % 2))
+  ctx.save(); drawGagDuck(ctx, x, foot - 6 - lift, 1, w.res); ctx.restore()
 }
 
 function drawActorFixtures(ctx, w, pal) {
@@ -3090,14 +3062,15 @@ var SIGHTINGS = [
 ]
 
 var SIGHTING_ICONS = {
-  agi: function (ctx, x, y) { ctx.fillStyle = AGI_GOLD; ctx.fillRect(x + 2, y, 3, 3); ctx.fillRect(x + 1, y + 3, 5, 4) },
-  dreamer: function (ctx, x, y) { ctx.fillStyle = "#9ad0ff"; ctx.fillRect(x + 1, y, 5, 1); ctx.fillRect(x + 1, y, 1, 7); ctx.fillRect(x + 5, y, 1, 7) },
-  queue: function (ctx, x, y) { ctx.fillStyle = "#e0566b"; ctx.fillRect(x, y + 1, 7, 5); ctx.fillStyle = "#ffffff"; ctx.fillRect(x + 1, y + 3, 1, 1); ctx.fillRect(x + 3, y + 3, 1, 1); ctx.fillRect(x + 5, y + 3, 1, 1) },
-  duck: function (ctx, x, y) { ctx.fillStyle = DUCK_YELLOW; ctx.fillRect(x, y + 3, 6, 3); ctx.fillRect(x + 3, y + 1, 3, 2); ctx.fillStyle = DUCK_BEAK; ctx.fillRect(x + 6, y + 2, 1, 1) },
-  conflict: function (ctx, x, y) { ctx.fillStyle = "#f4f4ec"; drawTransitionGlyph(ctx, TRANSITION_GLYPHS["<"], x, y + 1, 1); drawTransitionGlyph(ctx, TRANSITION_GLYPHS[">"], x + 4, y + 1, 1) },
-  outage: function (ctx, x, y) { ctx.fillStyle = "#04050a"; ctx.fillRect(x, y, 7, 7); ctx.fillStyle = "#ffffff"; ctx.fillRect(x + 2, y + 3, 1, 1); ctx.fillRect(x + 4, y + 3, 1, 1) },
-  milestone: function (ctx, x, y) { ctx.fillStyle = PARTY[0]; ctx.fillRect(x + 3, y, 1, 2); ctx.fillRect(x + 2, y + 2, 3, 2); ctx.fillRect(x + 1, y + 4, 5, 3) }
+  agi: function(ctx, x, y) { drawSightingIcon(ctx, "agi", x, y) },
+  dreamer: function(ctx, x, y) { drawSightingIcon(ctx, "dreamer", x, y) },
+  queue: function(ctx, x, y) { drawSightingIcon(ctx, "queue", x, y) },
+  duck: function(ctx, x, y) { drawSightingIcon(ctx, "duck", x, y) },
+  conflict: function(ctx, x, y) { drawSightingIcon(ctx, "conflict", x, y) },
+  outage: function(ctx, x, y) { drawSightingIcon(ctx, "outage", x, y) },
+  milestone: function(ctx, x, y) { drawSightingIcon(ctx, "milestone", x, y) }
 }
+
 function sightingLine(id) {
   for (var i = 0; i < SIGHTINGS.length; i++) if (SIGHTINGS[i].id === id) return SIGHTINGS[i].name + " - " + SIGHTINGS[i].pun
   return id.toUpperCase()
@@ -3110,7 +3083,7 @@ function drawSightings(ctx, w, pal, cx, at) {
     var have = s.seen.indexOf(id) >= 0, fresh = s.fresh.indexOf(id) >= 0
     if (fresh) { ctx.fillStyle = AGI_GOLD; ctx.fillRect(x - 2, y - 2, 11, 11) ; ctx.fillStyle = pal.cardBack; ctx.fillRect(x - 1, y - 1, 9, 9) }
     ctx.save()
-    ctx.globalAlpha = have ? 1 : 0.22
+    ctx.globalAlpha = have ? 1 : 0.38
     SIGHTING_ICONS[id](ctx, x, y)
     ctx.restore()
   }
@@ -3266,6 +3239,7 @@ function drawStandup(ctx, w, pal, s) {
   drawTransitionText(ctx, "DAILY STANDUP", W / 2, 14, 2)
   ctx.fillStyle = pal.label        // decorDim all but vanished on the floor colour
   drawTransitionText(ctx, "TAP OR CLICK TO SKIP", W / 2, H - 12, 1)
+  drawStandupRoom(ctx, pal, floor)
   drawSprintBoard(ctx, pal, W - 92, floor - 70)
   var n = s.speakers.length, cx = W / 2 - 30
   var talking = s.t < STANDUP_INTRO ? -1 : Math.floor((s.t - STANDUP_INTRO) / STANDUP_TURN)
@@ -3282,6 +3256,7 @@ function drawStandup(ctx, w, pal, s) {
     var p = spots[k], sp = s.speakers[p.i]
     var ag = { id: sp.id, trait: sp.trait, agi: sp.agi, x: p.x / C, y: p.y / C - 1,
       dir: p.x < cx ? 1 : -1, state: "wait", anim: (s.t + p.i * 7) % 64, still: 0, waitFor: 0 }
+    drawStandupSpeakerMark(ctx, pal, p.x, p.y, p.i === talking)
     drawAgent(ctx, { k: w.k, res: w.res, ticks: s.t + p.i * 31, level: w.level, biome: "" }, pal, ag, {})
     if (p.i === talking) bubble = p
   }
@@ -3292,32 +3267,29 @@ function drawStandup(ctx, w, pal, s) {
 // the last one, because it is that kind of sprint.
 var STICKY = ["#f2d860", "#8fd0f2", "#f29fb8"]
 function drawSprintBoard(ctx, pal, x, y) {
-  ctx.fillStyle = pal.rockEdge
-  ctx.fillRect(x - 1, y - 1, 82, 46)
-  ctx.fillStyle = "#e9e9e2"
-  ctx.fillRect(x, y, 80, 44)
-  ctx.fillStyle = pal.decorDim
-  ctx.fillRect(x + 26, y + 3, 1, 38); ctx.fillRect(x + 53, y + 3, 1, 38)
+  drawGagPanel(ctx, x - 1, y - 1, 82, 56, pal.rockEdge, "#e9e9e2")
+  ctx.fillStyle = pal.rigDark; ctx.fillRect(x + 2, y + 8, 76, 1)
+  drawTransitionText(ctx, "TODO", x + 13, y + 2, 1); drawTransitionText(ctx, "DOING", x + 40, y + 2, 1); drawTransitionText(ctx, "DONE", x + 67, y + 2, 1)
+  ctx.fillStyle = "#aab1b2"; ctx.fillRect(x + 26, y + 10, 1, 41); ctx.fillRect(x + 53, y + 10, 1, 41)
   var notes = [[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 1], [2, 3]]
   for (var i = 0; i < notes.length; i++) {
-    ctx.fillStyle = STICKY[i % STICKY.length]
-    ctx.fillRect(x + 4 + notes[i][0] * 27, y + 4 + notes[i][1] * 10, 8, 7)
+    var nx = x + 4 + notes[i][0] * 27, ny = y + 12 + notes[i][1] * 10
+    ctx.fillStyle = "#91979b"; ctx.fillRect(nx + 1, ny + 1, 9, 7)
+    ctx.fillStyle = STICKY[i % STICKY.length]; ctx.fillRect(nx, ny, 9, 7)
+    ctx.fillStyle = "#687476"; ctx.fillRect(nx + 2, ny + 2, 5, 1); ctx.fillRect(nx + 2, ny + 4, 3, 1)
   }
 }
 
 function drawStandupBubble(ctx, pal, x, foot, lines, W) {
   var wide = 0
   for (var i = 0; i < lines.length; i++) wide = Math.max(wide, lines[i].length * 4 - 1)
-  var bw = wide + 8, bh = lines.length * 8 + 4
+  var bw = wide + 10, bh = lines.length * 8 + 6
   var left = Math.round(Math.max(4, Math.min(W - bw - 4, x - bw / 2))), top = foot - bh - 4
-  ctx.fillStyle = pal.rigDark
-  ctx.fillRect(left - 1, top - 1, bw + 2, bh + 2)
-  ctx.fillStyle = "#f4f4ec"
-  ctx.fillRect(left, top, bw, bh)
-  ctx.fillRect(Math.round(x) - 1, top + bh, 3, 2)              // the tail
-  ctx.fillRect(Math.round(x), top + bh + 2, 1, 1)
-  ctx.fillStyle = "#16161c"
-  for (var j = 0; j < lines.length; j++) drawTransitionText(ctx, lines[j], left + bw / 2, top + 3 + j * 8, 1)
+  drawGagPanel(ctx, left, top, bw, bh, pal.rigDark, GAG_PAPER)
+  ctx.fillStyle = pal.rigDark; ctx.fillRect(Math.round(x) - 1, top + bh - 1, 3, 4)
+  ctx.fillStyle = GAG_PAPER; ctx.fillRect(Math.round(x), top + bh - 1, 1, 3)
+  ctx.fillStyle = GAG_INK
+  for (var j = 0; j < lines.length; j++) drawTransitionText(ctx, lines[j], left + bw / 2, top + 4 + j * 8, 1)
 }
 
 function drawLevelTransition(ctx, w, pal) {
@@ -6951,7 +6923,7 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   // handed the same umbrella every playthrough — the same trick the colony
   // itself uses, and it costs no draw from the trait stream to do it here.
   var brolly = brollyColour(w, pal, ag), bat = batBrolly(w, ag)
-  if (bat) brolly = bat
+  if (bat) { drawBatUmbrella(ctx, w, pal, ox, oy, w.reducedMotion ? 0 : flex, bat); return }
 
   if ((w.res || 1) >= 2) drawFloatingUmbrella(ctx, w, pal, ag, ox, oy, flex, brolly)
   else {
@@ -6972,7 +6944,6 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   blit(ctx, ox, oy, 1, -2, -8, 2, 1)
   blit(ctx, ox, oy, 1, 9, -8, 2, 1)
   }
-  if (bat) drawBatEars(ctx, ox, oy, flex, bat)
 }
 
 // A season (web-only season.js) may hand some floaters a bat-wing umbrella:
@@ -7257,10 +7228,13 @@ function quipFor(w, ag) {
   return best
 }
 
-function bubbleClear(w, left, top, width) {
-  var C = w.k.CELL, rects = []
+function bubbleClear(w, left, top, width, height) {
+  height = height || 10
   if (!w.k || !w.k.CELL) return top
+  var C = w.k.CELL, rects = []
   if (w.exit) rects.push([w.exit.x * C - 2, w.exit.y * C - 4, (w.exit.x + w.exit.w) * C + 2, (w.exit.y + w.exit.h) * C])
+  var sign = gagRateLimitRect(w)
+  if (sign) rects.push(sign)
   var hazards = w.hazards || []
   for (var i = 0; i < hazards.length; i++) {
     var h = hazards[i]
@@ -7268,7 +7242,7 @@ function bubbleClear(w, left, top, width) {
   }
   for (var r = 0; r < rects.length; r++) {
     var b = rects[r]
-    if (left < b[2] && left + width > b[0] && top < b[3] && top + 10 > b[1]) top = Math.min(top, b[1] - 11)
+    if (left < b[2] && left + width > b[0] && top < b[3] && top + height > b[1]) top = Math.min(top, b[1] - height - 1)
   }
   return top
 }
@@ -7290,8 +7264,10 @@ function drawEnemyQuip(ctx, w, pal, en, ox, oy) {
 }
 
 function drawQuip(ctx, w, pal, ag, ox, oy) {
-  if ((w.res || 1) < 2 || ag.gone || ag.state === "saved" || w.done) return
+  if (ag.gone || ag.state === "saved" || w.done) return
+  if ((w.res || 1) < 2 && !gagTalkAtOne(w, ag)) return
   var q = quipFor(w, ag)
+  if ((w.res || 1) < 2 && (!q || !gagQuipAtOne(q.text))) return
   if (q && quipAllowed(w, ag, q)) drawBubble(ctx, w, pal, q, ox, oy)
 }
 
@@ -7314,21 +7290,23 @@ function quipAllowed(w, ag, q) {
 }
 
 function drawBubble(ctx, w, pal, q, ox, oy) {
-  var width = q.text.length * 4 + 3, cx = ox + SPRITE_W / 2, top = oy - 13 - (q.lift || 0)
-  var left = Math.round(cx - width / 2)
-  // Never over the way home or a danger: lifted clear of either, or not shown.
-  top = bubbleClear(w, left, top, width)
-  if (top < 1) return
+  var width = q.text.length * 4 + 5, W = (w.k && w.k.COLS || 100) * (w.k && w.k.CELL || 4)
+  var cx = Math.round(ox + SPRITE_W / 2), conflict = q.text === "<<<<<<<" || q.text === ">>>>>>>"
+  var top = Math.round(oy - 13 - (conflict ? 0 : q.lift || 0))
+  var left = conflict ? gagConflictLeft(w, q, cx, width, W) : Math.max(1, Math.min(W - width - 2, Math.round(cx - width / 2)))
+  var sign = gagRateLimitRect(w)
+  if (sign && !conflict && left < sign[2] && left + width > sign[0] && top < sign[3] && top + 13 > sign[1])
+    left = sign[2] + width + 4 < W ? sign[2] + 3 : Math.max(1, sign[0] - width - 3)
+  top = bubbleClear(w, left - 1, top - 1, width + 2, 13) + 1
+  if (top < 2) return
   ctx.save()
   ctx.globalAlpha = Math.min(1, (QUIP_TICKS - (w.ticks - q.at)) / 8)
-  ctx.fillStyle = pal.rigDark
-  ctx.fillRect(left - 1, top - 1, width + 2, 9)
-  ctx.fillStyle = "#f4f4ec"
-  ctx.fillRect(left, top, width, 7)
-  ctx.fillRect(cx - 1, top + 7, 2, 1)                 // the tail
-  ctx.fillRect(cx - 0.5, top + 8, 1, 1)
-  ctx.fillStyle = q.ink || "#16161c"
-  drawTransitionText(ctx, q.text, cx, top + 1, 1)
+  drawGagPanel(ctx, left, top, width, 9, pal.rigDark, GAG_PAPER)
+  var tail = Math.max(left + 2, Math.min(left + width - 3, cx))
+  ctx.fillStyle = pal.rigDark; ctx.fillRect(tail - 1, top + 8, 3, 3)
+  ctx.fillStyle = GAG_PAPER; ctx.fillRect(tail, top + 8, 1, 2)
+  ctx.fillStyle = gagBubbleInk(q)
+  drawTransitionText(ctx, q.text, left + width / 2, top + 2, 1)
   ctx.restore()
 }
 
@@ -7450,19 +7428,13 @@ function drawReloadTrail(ctx, w, fx) {
 var DUCK_YELLOW = "#ffd23f", DUCK_BEAK = "#ff8a1f"
 // The Debug hero's own duck, or the level's rubber duck while somebody is
 // explaining the problem to it.
-function drawHeldDuck(ctx, ag, ox, oy, dir) {
-  if (ag.debugFor > 0) drawDuck(ctx, ag, ox, oy, dir)
-  else if (ag.explainFor > 0) drawDuck(ctx, { debugFor: ag.explainFor }, ox, oy, dir)
+function drawHeldDuck(ctx, ag, ox, oy, dir, res) {
+  if (ag.debugFor > 0) drawDuck(ctx, ag, ox, oy, dir, res)
+  else if (ag.explainFor > 0) drawDuck(ctx, { debugFor: ag.explainFor }, ox, oy, dir, res)
 }
-function drawDuck(ctx, ag, ox, oy, dir) {
-  var bob = (ag.debugFor >> 2) % 2, x = dir > 0 ? ox + 8 : ox - 5, y = oy + 3 - bob
-  ctx.fillStyle = DUCK_YELLOW
-  ctx.fillRect(x, y + 2, 5, 3)                                  // body
-  ctx.fillRect(x + (dir > 0 ? 2 : 1), y, 2, 2)                  // head
-  ctx.fillStyle = DUCK_BEAK
-  ctx.fillRect(dir > 0 ? x + 4 : x, y + 1, 1, 1)
-  ctx.fillStyle = "#1a1a20"
-  ctx.fillRect(x + (dir > 0 ? 3 : 1), y, 1, 1)
+function drawDuck(ctx, ag, ox, oy, dir, res) {
+  var bob = (ag.debugFor >> 2) % 2, x = dir > 0 ? ox + 8 : ox - 6, y = oy + 2 - bob
+  ctx.save(); drawGagDuck(ctx, x, y, dir, res); ctx.restore()
 }
 
 // The duck's effect (Sim's debugFx): a squeak of rings off the duck, and over
@@ -7470,21 +7442,18 @@ function drawDuck(ctx, ag, ox, oy, dir) {
 // a "?" if all the duck could do was listen.
 function drawDebugFx(ctx, w, fx) {
   var age = w.ticks - fx.t, C = w.k.CELL
-  if (age > 40) return
-  ctx.globalAlpha = 1 - age / 40
+  if (age < 0 || age > 40) return
+  ctx.save(); ctx.globalAlpha = 1 - age / 40
   ctx.fillStyle = DUCK_YELLOW
   for (var r = 0; r < 2; r++) {
-    var rr = 3 + r * 3 + age * 0.3
-    for (var a = 0; a < 8; a++)
-      ctx.fillRect(Math.round(fx.fromX * C + Math.cos(a / 8 * Math.PI * 2) * rr), Math.round((fx.fromY - 3) * C + Math.sin(a / 8 * Math.PI * 2) * rr * 0.6), 1, 1)
+    var rr = 3 + r * 3 + (w.reducedMotion ? 0 : age * 0.25)
+    for (var a = 0; a < 6; a++) ctx.fillRect(Math.round(fx.fromX * C + Math.cos(a / 6 * Math.PI * 2) * rr), Math.round((fx.fromY - 3) * C + Math.sin(a / 6 * Math.PI * 2) * rr * 0.6), 1, 1)
   }
-  var bx = Math.round(fx.x * C) - 1, by = Math.round((fx.y - 5) * C) - age * 0.15
-  ctx.fillStyle = "#ffffff"
-  ctx.fillRect(bx - 2, by - 7, 7, 8)                             // the bubble
-  ctx.fillStyle = "#1a1a20"
-  if (fx.helped && age > 10) { ctx.fillRect(bx + 1, by - 6, 1, 4); ctx.fillRect(bx + 1, by - 1, 1, 1) }
-  else { ctx.fillRect(bx, by - 6, 3, 1); ctx.fillRect(bx + 2, by - 5, 1, 1); ctx.fillRect(bx + 1, by - 4, 1, 2); ctx.fillRect(bx + 1, by - 1, 1, 1) }
-  ctx.globalAlpha = 1
+  var bx = Math.round(fx.x * C), by = Math.round((fx.y - 5) * C - (w.reducedMotion ? 0 : age * 0.1))
+  drawGagPanel(ctx, bx - 4, by - 8, 9, 10, GAG_INK, GAG_PAPER)
+  ctx.fillStyle = GAG_INK
+  drawTransitionGlyph(ctx, TRANSITION_GLYPHS[fx.helped && age > 10 ? "!" : "?"], bx - 1, by - 6, 1)
+  ctx.restore()
 }
 
 // Package Manager's delivery (Sim's restockFx): a parcel thrown up off its
@@ -11585,7 +11554,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   drawReleaseRing(ctx, pal, ag, ox, oy, w.ticks)
   if (ag.netFor > 0) drawNetThrow(ctx, w, ag, ox, oy, dir, hair)
   if (ag.reloadFor > 0) drawReloadSign(ctx, ag, ox, oy, hair)
-  drawHeldDuck(ctx, ag, ox, oy, dir)
+  drawHeldDuck(ctx, ag, ox, oy, dir, w.res)
   drawCampShot(ctx, w, pal, ag, ox, oy, dir, st, w.k.CELL)
 
   // No special borrows the colony's umbrella. At a lethal height each carries
@@ -11646,6 +11615,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   if (libraryShelfPose(w, ag)) drawShelfGrip(ctx, w, pal, ag, ox, oy, dir, robe)
 
   drawAgentMarks(ctx, w, pal, ag, ox, oy, dir, st, bodyDrop)
+  drawAgentGagFinish(ctx, w, pal, ag, ox, oy, st, dir, bodyDrop)
 
   if (heightBodySaved) ctx.restore()
   drawVictory(ctx, w, ag, ox, oy, dir, robe, skin, st)
@@ -11660,18 +11630,16 @@ function drawAgent(ctx, w, pal, ag, opts) {
 // and go around it — whole pixels, so the panel shows it as well as the page.
 // Each spark is a pure function of the tick and the agent's id.
 var AGI_GOLD = "#d9a826", AGI_SPARK = "#fff3b0"
-var AGI_SPARKS = [[-1, 2], [9, 4], [0, 10], [10, 11], [4, -2], [-2, 7]]
+var AGI_SPARKS = [[-3, 2], [11, 3], [-3, 11], [11, 12], [4, -4], [4, 18]]
 function drawAgiSparkle(ctx, w, ag, ox, oy) {
   if (ag.state === "saved" && ag.fade > 10) return
+  if (!ag.agi) { drawPepSparkle(ctx, w, ag, ox, oy); return }
   ctx.save()
-  ctx.fillStyle = AGI_SPARK
   for (var i = 0; i < AGI_SPARKS.length; i++) {
-    var phase = (w.ticks + ag.id * 13 + i * 11) % 36
+    var phase = w.reducedMotion ? i * 6 : (w.ticks + ag.id * 13 + i * 11) % 36
     if (phase >= 8) continue
-    var sx = ox + AGI_SPARKS[i][0], sy = oy + AGI_SPARKS[i][1]
     ctx.globalAlpha = phase < 4 ? 1 : 0.5
-    ctx.fillRect(sx, sy, 1, 1)
-    if (phase >= 2 && phase < 6) { ctx.fillRect(sx - 1, sy, 1, 1); ctx.fillRect(sx + 1, sy, 1, 1); ctx.fillRect(sx, sy - 1, 1, 1); ctx.fillRect(sx, sy + 1, 1, 1) }
+    drawGagSpark(ctx, ox + AGI_SPARKS[i][0], oy + AGI_SPARKS[i][1], AGI_SPARK, phase >= 2 && phase < 6)
   }
   ctx.restore()
 }
@@ -11689,18 +11657,20 @@ function drawAgentGlitter(ctx, w, ag, ox, oy) {
 // the million. Whole pixels, a pure function of the agent's id.
 var PARTY = ["#ff5f8a", "#5fd0ff", "#ffd23f", "#8cff6a", "#c58bff"]
 function drawPartyHat(ctx, kind, ag, ox, oy) {
-  var cx = ox + 4, top = oy - 4
+  var cx = ox + 4, top = oy - 7, colour = kind === "hundred" || kind === "million" ? "#ffd23f" : PARTY[(ag.id || 0) % PARTY.length]
   ctx.save()
+  ctx.fillStyle = GAG_INK
   if (kind === "million") {
-    ctx.fillStyle = "#ffd23f"
-    ctx.fillRect(cx - 2, top + 2, 5, 2)
-    ctx.fillRect(cx - 2, top, 1, 2); ctx.fillRect(cx, top, 1, 2); ctx.fillRect(cx + 2, top, 1, 2)
+    ctx.fillRect(cx - 4, top + 1, 9, 6)
+    ctx.fillStyle = colour; ctx.fillRect(cx - 3, top + 4, 7, 2)
+    ctx.fillRect(cx - 3, top + 1, 1, 3); ctx.fillRect(cx, top, 1, 4); ctx.fillRect(cx + 3, top + 1, 1, 3)
+    ctx.fillStyle = "#ff5f8a"; ctx.fillRect(cx, top + 4, 1, 1)
   } else {
-    ctx.fillStyle = kind === "hundred" ? "#ffd23f" : PARTY[(ag.id || 0) % PARTY.length]
-    ctx.fillRect(cx - 1, top + 2, 3, 2)
-    ctx.fillRect(cx, top, 1, 2)
-    ctx.fillStyle = "#ffffff"
-    ctx.fillRect(cx, top - 1, 1, 1)                 // the pompom
+    ctx.fillRect(cx - 3, top + 4, 7, 3); ctx.fillRect(cx - 2, top + 2, 5, 2); ctx.fillRect(cx - 1, top, 3, 2)
+    ctx.fillStyle = colour
+    ctx.fillRect(cx - 2, top + 4, 5, 2); ctx.fillRect(cx - 1, top + 2, 3, 2); ctx.fillRect(cx, top + 1, 1, 1)
+    ctx.fillStyle = GAG_PAPER; ctx.fillRect(cx - 1, top + 3, 2, 1); ctx.fillRect(cx + 1, top + 4, 1, 1)
+    ctx.fillRect(cx, top - 1, 1, 1)
   }
   ctx.restore()
 }
@@ -11721,18 +11691,20 @@ function drawBetCoin(ctx, w, ox, oy) {
 
 // And a burst of confetti out of the hatch as the first agent drops in.
 var CONFETTI_TICKS = 70
+var CONFETTI_VECTORS = Array.from({ length: 48 }, function(_, i) { return [Math.sin(i * 2.3) * 1.4, -0.5 - (i % 5) * 0.15] })
 function drawConfetti(ctx, w) {
   var age = w.ticks - w.firstReleaseAt, C = w.k.CELL
   if (!(age >= 0 && age < CONFETTI_TICKS) || !w.hatch) return
-  var n = w.milestone.kind === "ten" ? 24 : 48
-  var hx = (w.hatch.x + 0.5) * C, hy = (w.hatch.y + 2) * C
+  var n = w.milestone.kind === "ten" ? 24 : 48, hx = (w.hatch.x + 0.5) * C, hy = (w.hatch.y + 2) * C
   ctx.save()
   for (var i = 0; i < n; i++) {
-    var vx = Math.sin(i * 2.3) * 1.4, vy = -0.5 - (i % 5) * 0.15      // a soft pop, then down across the board
-    var x = Math.round(hx + vx * age), y = Math.round(hy + vy * age + 0.035 * age * age)
+    var v = CONFETTI_VECTORS[i], motion = w.reducedMotion ? 12 : age
+    var x = Math.round(hx + v[0] * motion), y = Math.round(hy + v[1] * motion + 0.035 * motion * motion)
     ctx.globalAlpha = Math.min(1, (CONFETTI_TICKS - age) / 20)
     ctx.fillStyle = PARTY[i % PARTY.length]
-    ctx.fillRect(x, y, (i + age >> 2) % 2 ? 2 : 1, 1)
+    var edge = (i + (w.reducedMotion ? 0 : age) >> 2) % 2
+    ctx.fillRect(x, y, edge ? 2 : 1, edge ? 1 : 2)
+    if (i % 8 === 0) { ctx.fillStyle = GAG_PAPER; ctx.fillRect(x, y, 1, 1) }
   }
   ctx.restore()
 }
@@ -18351,4 +18323,151 @@ function drawPortLighthouse(ctx, b) {
   ctx.fillRect(x - 5, base - 1, 10, 1)
   ctx.fillStyle = "#b7ac7e"; ctx.fillRect(x - 3, base - 18, 6, 3)
   ctx.fillStyle = "#e4d39b"; ctx.fillRect(x - 2, base - 17, 1, 1); ctx.fillRect(x + 1, base - 17, 1, 1)
+}
+// Shared gag primitives: whole-pixel silhouettes first, tiny page accents last.
+var GAG_INK = "#16161c", GAG_PAPER = "#f4f4ec"
+function drawGagPanel(ctx, x, y, width, height, edge, paper) {
+  ctx.fillStyle = edge
+  ctx.fillRect(x + 1, y, width - 2, height); ctx.fillRect(x, y + 1, width, height - 2)
+  ctx.fillStyle = paper; ctx.fillRect(x + 1, y + 1, width - 2, height - 2)
+}
+function drawGagDuck(ctx, x, y, dir, res) {
+  ctx.fillStyle = "#a66a13"; ctx.fillRect(x + 1, y + 5, 4, 1)
+  ctx.fillStyle = DUCK_YELLOW; ctx.fillRect(x + 1, y + 2, 5, 3); ctx.fillRect(x, y + 2, 1, 2)
+  ctx.fillRect(x + (dir > 0 ? 3 : 1), y, 2, 3)
+  ctx.fillStyle = "#fff0a1"; ctx.fillRect(x + 2, y + 3, 2, 1)
+  ctx.fillStyle = DUCK_BEAK; ctx.fillRect(dir > 0 ? x + 5 : x, y + 1, 1, 1)
+  ctx.fillStyle = GAG_INK; ctx.fillRect(x + (dir > 0 ? 4 : 1), y, 1, 1)
+  if ((res || 1) >= 2) { ctx.fillStyle = "#fff7cc"; ctx.fillRect(x + 3, y + 2.5, 1, 0.5) }
+}
+function gagQuipAtOne(text) {
+  return ["SO BASICALLY", "OH!", "<<<<<<<", ">>>>>>>", "REBASED", "AFTER YOU", "200 OK", "EXIT!", "OH."].indexOf(text) >= 0 || PEP_TEXT.indexOf(text) >= 0
+}
+function gagBubbleInk(q) {
+  if (q.ink) return q.ink
+  if (q.text === "<<<<<<<") return "#356a84"
+  if (q.text === ">>>>>>>") return "#93602d"
+  return GAG_INK
+}
+function drawGagSpark(ctx, x, y, colour, cross) {
+  ctx.fillStyle = colour; ctx.fillRect(x, y, 1, 1)
+  if (!cross) return
+  ctx.fillRect(x - 1, y, 1, 1); ctx.fillRect(x + 1, y, 1, 1)
+  ctx.fillRect(x, y - 1, 1, 1); ctx.fillRect(x, y + 1, 1, 1)
+}
+function drawPepSparkle(ctx, w, ag, ox, oy) {
+  var age = w.ticks - ag.pepAt
+  if (age < 0 || age >= PEP_GLOW) return
+  ctx.save(); ctx.globalAlpha = 1 - age / PEP_GLOW
+  var rise = w.reducedMotion ? 0 : Math.floor(age / 6)
+  drawGagSpark(ctx, ox - 4, oy + 3 - rise, "#9ce6c3", true)
+  drawGagSpark(ctx, ox + 11, oy + 1 - rise, GAG_PAPER, false)
+  drawGagSpark(ctx, ox + 11, oy + 9 - rise, "#9ce6c3", false)
+  ctx.restore()
+}
+function drawAgentGagFinish(ctx, w, pal, ag, ox, oy, st, dir, drop) {
+  if (!ag.agi && !(ag.queueFor > 0)) return
+  var idle = ag.queueFor > 0 ? agentIdle(w, ag) : null
+  ctx.save()
+  if (ag.agi && ["walk", "wait", "block"].indexOf(st) >= 0) {
+    ctx.globalAlpha = w.reducedMotion ? 0.4 : 0.25 + 0.25 * ((w.ticks + ag.id * 11) % 40 < 10)
+    ctx.fillStyle = AGI_SPARK; ctx.fillRect(ox + (dir > 0 ? 6 : 1), oy + 8 + drop, 1, 4)
+  }
+  if (idle && idle.kind === "queue" && idle.pose === "tap") {
+    ctx.globalAlpha = 1; ctx.fillStyle = GAG_PAPER; ctx.fillRect(ox + (dir > 0 ? 8 : -3), oy + 10, 3, 2)
+    ctx.fillStyle = pal.urgent; ctx.fillRect(ox + (dir > 0 ? 9 : -2), oy + 10, 1, 1)
+  }
+  ctx.restore()
+}
+function drawOutageLamp(ctx, w, pal, h) {
+  if (h.wrecked) return
+  var x = Math.round((h.zx0 + h.zx1) / 2 * w.k.CELL), y = Math.round(h.zy0 * w.k.CELL)
+  ctx.save(); ctx.globalAlpha *= 0.25; ctx.fillStyle = pal.urgent; ctx.fillRect(x - 1, y - 1, 4, 4)
+  ctx.globalAlpha *= 4; ctx.fillRect(x, y, 2, 2); ctx.restore()
+}
+function drawOutageEyes(ctx, w, pal, ag) {
+  if (ag.gone || ["saved", "dead", "train", "hooked", "zip", "brawl"].indexOf(ag.state) >= 0) return
+  var C = w.k.CELL, car = ag.state === "ride" && w.lifts && w.lifts[ag.liftIx]
+  var x = Math.round(ag.x * C), y = Math.round((car && !car.stairs ? car.car : ag.y + 1) * C) - SPRITE_PX
+  var arc = throwArc(w, ag, C); x += arc.dx; y += eventFloatBob(w, ag) - arc.lift
+  ctx.save(); ctx.fillStyle = pal.label; ctx.globalAlpha *= 0.55; ctx.fillRect(x - 3, y + 2, 6, 1)
+  ctx.globalAlpha /= 0.55
+  ctx.fillStyle = !w.reducedMotion && (w.ticks + ag.id * 19) % 97 < 4 ? "#8592a6" : "#ffffff"
+  ctx.fillRect(x + (ag.dir > 0 ? 0 : -2), y + 4, 1, 1); ctx.fillRect(x + (ag.dir > 0 ? 2 : 0), y + 4, 1, 1)
+  ctx.fillStyle = pal.shirt; ctx.globalAlpha *= 0.3; ctx.fillRect(x - 1, y + 7, 2, 1); ctx.restore()
+}
+function drawBatUmbrella(ctx, w, pal, ox, oy, flex, colour) {
+  ctx.fillStyle = pal.umbrellaStem
+  blit(ctx, ox, oy, 1, 4, -6, 1, 7)
+  ctx.fillStyle = "#a393bc"
+  blit(ctx, ox, oy, 1, 2, -12 - flex, 5, 1); blit(ctx, ox, oy, 1, 0, -11 - flex, 9, 1)
+  blit(ctx, ox, oy, 1, -2, -10 - flex, 13, 2)
+  blit(ctx, ox, oy, 1, -4, -9, 2, 3); blit(ctx, ox, oy, 1, 11, -9, 2, 3)
+  ctx.fillStyle = colour
+  blit(ctx, ox, oy, 1, 1, -10 - flex, 7, 2); blit(ctx, ox, oy, 1, -2, -9, 13, 2)
+  blit(ctx, ox, oy, 1, -3, -8, 2, 3); blit(ctx, ox, oy, 1, 10, -8, 2, 3)
+  blit(ctx, ox, oy, 1, 0, -7, 3, 1); blit(ctx, ox, oy, 1, 6, -7, 3, 1); blit(ctx, ox, oy, 1, 3, -7, 3, 2)
+  drawBatEars(ctx, ox, oy - 1, flex, colour)
+  ctx.fillStyle = "#e1c47b"; blit(ctx, ox, oy, 1, 3, -10 - flex, 1, 1); blit(ctx, ox, oy, 1, 5, -10 - flex, 1, 1)
+  if ((w.res || 1) >= 2) { ctx.fillStyle = "#d4c6df"; blit(ctx, ox, oy, 1, -1, -10.5 - flex, 2, 0.5); blit(ctx, ox, oy, 1, 8, -10.5 - flex, 2, 0.5) }
+}
+function drawStandupRoom(ctx, pal, floor) {
+  ctx.fillStyle = pal.rigDark; ctx.fillRect(28, 54, 68, 4); ctx.fillRect(28, 58, 2, floor - 58)
+  ctx.fillStyle = pal.rockEdge; ctx.fillRect(45, 72, 12, 12)
+  ctx.fillStyle = "#d8dedb"; ctx.fillRect(46, 73, 10, 10)
+  ctx.fillStyle = GAG_INK; ctx.fillRect(50, 75, 1, 5); ctx.fillRect(51, 79, 3, 1)
+  ctx.fillStyle = pal.rockShade; ctx.fillRect(64, 98, 28, 25)
+  ctx.fillStyle = pal.label; drawTransitionText(ctx, "SPRINT", 78, 103, 1)
+  ctx.fillRect(72, 112, 3, 1); ctx.fillRect(78, 112, 3, 1); ctx.fillRect(72, 116, 3, 1)
+}
+function drawStandupSpeakerMark(ctx, pal, x, y, active) {
+  if (!active) return
+  ctx.save(); ctx.globalAlpha = 0.3; ctx.fillStyle = pal.decorLit
+  ctx.fillRect(Math.round(x) - 6, Math.round(y), 12, 1); ctx.fillRect(Math.round(x) - 4, Math.round(y) + 1, 8, 1)
+  ctx.restore()
+}
+var GAG_ICON_PIXELS = {
+  agi: ["...s...", "..ggg..", "..gkg..", ".ggwgg.", ".ggkgg.", ".ggggg.", ".gg.gg."],
+  dreamer: ["..bbb..", ".bb.bb.", ".b.k.b.", ".b.k.b.", ".b.k.b.", ".b...b.", ".bbbbb."],
+  queue: [".rrrrr.", "rwwwwwr", "rwkwkwr", "rwwwwwr", ".rrrrr.", "...k...", "..kkk.."],
+  duck: [".......", "...yy..", "...yko.", ".yyyyy.", "yyssyy.", ".yyyy..", "..oo..."],
+  conflict: ["..b.o..", ".b...o.", "b..k..o", ".b...o.", "..b.o..", ".......", "..www.."],
+  outage: [".kkkkk.", "kkkkkkk", "kkkkkkk", "kkwkwkk", "kkkkkkk", "kkkskkk", ".kkkkk."],
+  milestone: ["...w...", "...r...", "..rrr..", "..rwr..", ".rrrrr.", ".rwwrr.", "kkkkkkk"]
+}
+var GAG_ICON_INK = { k: "#16161c", w: "#f4f4ec", g: "#d9a826", s: "#fff3b0", b: "#8bc7ef", r: "#e0566b", y: "#ffd23f", o: "#ff8a1f" }
+function drawSightingIcon(ctx, id, x, y) {
+  var rows = GAG_ICON_PIXELS[id]
+  for (var r = 0; r < rows.length; r++) for (var col = 0; col < 7; col++) {
+    var ink = GAG_ICON_INK[rows[r][col]]
+    if (ink) { ctx.fillStyle = ink; ctx.fillRect(x + col, y + r, 1, 1) }
+  }
+}
+
+function gagConflictLeft(w, q, cx, width, W) {
+  var sum = 0, n = 0, agents = w.agents || []
+  for (var i = 0; i < agents.length; i++) {
+    var ag = agents[i]
+    if (!ag.gone && ag.conflictAt === q.at) { sum += ag.x * w.k.CELL; n++ }
+  }
+  var middle = Math.round(Math.max(width + 3, Math.min(W - width - 3, n ? sum / n : cx)))
+  return q.text === "<<<<<<<" ? middle - width - 2 : middle + 2
+}
+
+var GAG_NATIVE_STAMPS = ["duckAt", "conflictAt", "rebasedAt", "pepAt", "queuedAt", "servedAt", "dreamtAt", "wokeAt"]
+function gagTalkAtOne(w, ag) {
+  for (var i = 0; i < GAG_NATIVE_STAMPS.length; i++) {
+    var at = ag[GAG_NATIVE_STAMPS[i]]
+    if (at !== undefined && w.ticks >= at && w.ticks - at < 66) return true
+  }
+  return false
+}
+
+// Keep queue dialogue beside its sign before trying to lift it into the sky.
+function gagRateLimitRect(w) {
+  var rl = w.rateLimit
+  if (!rl) return null
+  var C = w.k.CELL, age = w.ticks - rl.at, gone = rl.clearAt >= 0 ? w.ticks - rl.clearAt : 0
+  var foot = (rl.y + 1) * C, top = foot - Math.round(30 * Math.min(1, age / 6)) + Math.max(0, gone - 18) * 2
+  return age >= 0 && top < foot - 4 ? [rl.x * C - 12, top - 2, rl.x * C + 13, top + 12] : null
 }
