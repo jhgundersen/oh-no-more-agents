@@ -386,3 +386,27 @@ test("a planter clears the blast and then comes back to the gap, not on to the f
   const back = (39.5 - ag.x) / S.walkStep(ag, w)
   assert.ok(back > 90 - S.MINE_COMEBACK, "arriving after the bang")
 })
+
+test("a mission nobody can reach is descoped once the colony has waited at the door, and nobody is condemned for waiting", () => {
+  // Level 101 (a Cavern mission level): the miners sit beyond two walls that
+  // hang to within two rows of the floor, with the bashers spent upstairs.
+  let w = null
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    const c = S.generate(101, 0, seed * 104729)
+    while (!c.done && c.ticks < 6000) S.step(c)
+    if (c.mission && c.mission.descoped) { w = c; break }
+  }
+  assert.ok(w, "some colony meets an unreachable mission")
+  assert.ok(w.saved > 0, "and still gets home")
+  assert.ok(w.feed.some(f => /^MISSION DESCOPED: .+ MOVED TO NEXT SPRINT$/.test(f.text)))
+  assert.ok(w.mission.targets.every(t => !t.freed), "the cages stay shut")
+  // Waiting at a shut door for a job nobody has started is not a loop.
+  const v = S.generate(101, 0, 1)
+  const ag = Object.assign(S.spawn(v), { sawShut: true, state: "walk" })
+  v.mission = v.mission || { done: false, progress: 0, targets: [] }
+  v.mission.done = false; v.mission.progress = 0
+  const bombs = v.skills.bomber
+  S.condemn(v, ag)
+  assert.equal(ag.state, "walk")
+  assert.equal(v.skills.bomber, bombs)
+})

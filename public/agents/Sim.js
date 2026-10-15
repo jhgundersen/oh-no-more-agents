@@ -10980,6 +10980,10 @@ function countPass(w, ag) {
 
 function condemn(w, ag) {
   if (ag.state === "bomb" || ag.state === "block" || ag.state === "camp" || ag.state === "saved") return
+  // Pacing in front of a door that is shut for a job nobody has started is
+  // waiting, not looping: the job gets descoped (see missionWaitedOut) and the
+  // door opens. Blowing them up first was how level 101 lost whole colonies.
+  if (ag.sawShut && w.mission && !w.mission.done && !w.mission.progress) return
   if (ag.state === "swim") return
   if (ag.waitFor > 0) return
 
@@ -11307,6 +11311,7 @@ function stepMission(w) {
     m.progress += Math.min(2, helping)
     if (m.kind === "alien") m.shotFor = 3
   }
+  if (!m.progress && missionWaitedOut(w, m)) { descopeMission(w, m); return }
   if (m.progress >= 4) {
     for (var ti = 0; ti < m.targets.length; ti++) {
       var t = m.targets[ti]
@@ -11322,6 +11327,33 @@ function stepMission(w) {
     m.openedAt = w.ticks
     w.lastEvent = "mission complete"
   }
+}
+
+// A mission nobody can reach. On level 101 the miners sit beyond two walls
+// that hang to within two rows of the floor, the bashers were spent upstairs,
+// and the colony stood at the shut door until the stall rules blew it up —
+// nobody home in 3 of 24 colonies. Once somebody has stood at the door for
+// MISSION_PATIENCE ticks with the mission untouched, it is descoped: the door
+// opens, the cages stay shut, and the ticker owns up to it. Counted from the
+// first time anybody reached the door, and only while nobody has made a start.
+var MISSION_PATIENCE = 450
+function missionWaitedOut(w, m) {
+  var e = w.exit, at = false
+  for (var i = 0; i < w.agents.length && !at; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state === "saved") continue
+    at = ag.x > e.x - 2 && ag.x < e.x + e.w + 2 && ag.y > e.y && ag.y < e.y + e.h + 1
+  }
+  if (at && m.shutSince === undefined) m.shutSince = w.ticks
+  return m.shutSince !== undefined && w.ticks - m.shutSince >= MISSION_PATIENCE
+}
+
+function descopeMission(w, m) {
+  m.done = true
+  m.descoped = true
+  m.openedAt = w.ticks
+  w.lastEvent = "mission descoped"
+  feedNote(w, "MISSION DESCOPED: " + m.verb + " MOVED TO NEXT SPRINT")
 }
 
 function stepFreedMission(w, m) {

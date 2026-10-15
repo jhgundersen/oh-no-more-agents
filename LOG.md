@@ -8576,3 +8576,35 @@ from level numbers that meant a biome under `% 19`:
 - **The Cloud's exit** got a minimal page-resolution pass so every biome has
   one; the real one is Codex's.
 - **The event-duration mirror** knows Region Outage (300 ticks).
+
+## 264 — 2026-10-15 · Descoping a mission nobody can reach
+
+**Asked:** (from 263) level 101, re-skinned to a Cavern mission level, had
+nobody home in 3 of 24 colonies.
+
+**Found:** the mission's miners sit beyond two walls that hang to within two
+rows of the floor, and the colony had spent its bashers upstairs. Nobody
+could reach the miners, so the door stayed shut. The colony arrived at it and
+paced between the door and a wall. The loop rule took that for a loop and
+blew them up one at a time, all fifteen, by about tick 1470.
+
+**Changed:**
+- **Descope.** Once anybody has reached the shut door, the mission gets
+  `MISSION_PATIENCE` (450 ticks). If nobody has made any progress on it by
+  then, it's descoped (`descopeMission`): the door opens, the cages stay
+  shut, and the ticker says "MISSION DESCOPED: FREE THE MINERS MOVED TO NEXT
+  SPRINT".
+- **No condemning.** An agent that has found the door shut is not condemned
+  as a looper while the mission is untouched. The descope guarantees the door
+  opens, so waiting can't hang the level.
+
+**Measured:**
+- **Level 101:** colonies that lost all 15 now get 12–14 home.
+- **Playtest 1-150 × 24 with The Cloud:** home 94.33% → 94.50%, nobody-home
+  runs 3 → 0. Level 101 239 → 307, level 51 360 → 382, no level worse by 5 or
+  more.
+
+The rule applies to every mission level, not just re-skinned ones.
+`test/stragglers.test.js` covers it: a colony meets the unreachable mission,
+it gets descoped, agents still get home, the cages stay shut, and a waiting
+agent isn't condemned. The test fails without the change.
