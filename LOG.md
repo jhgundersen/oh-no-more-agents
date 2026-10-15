@@ -8132,3 +8132,39 @@ floor:
 
 The route was always there; the one-tick "stuck" reading used to end the
 level before the straggler could use it. Nothing more to do.
+
+## 339 — 2026-10-15 · A slide stuck in a one-cell pocket is handed back
+
+**Chosen (autonomy):** level 304 (Foundry) "ran out the clock" in the
+301–440 sweep. Over 16 colonies, 2 were nuked with 4–5 of 13 home.
+
+**Traced** (salt 3): eight agents were in `slide` (crouching under a low
+roof) at x56–57, row 52, for about 1,900 ticks until the clock. The pocket
+under the brickwork is one cell wide.
+- **What they did:** each agent stepped 0.38 one way, bumped, reversed,
+  stepped back, and bumped again.
+- **Why nothing ended it:** `stepSlide` hands a slider back to walking after
+  3 reversals in a row (`slideStuck`, from level 509). But every successful
+  step in between reset the count, so it rocked between 0 and 1 for ever, in
+  the one state the stall rules never look at.
+
+**Changed:** reversals are counted by distance. A reversal less than 2
+cells from the previous one (`slideFrom`) adds to `slideStuck`; a longer
+crawl starts the count again at 1. The count is cleared when the slider
+stands up. At 3 it is handed back to walking, as before, where
+`forceEscape` and the stuck rules can see it.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 304, 16 colonies: home | 91% | 92% |
+| Level 304: nukes | 2 | 1 |
+| Level 304: worst colony | 31% | 38% |
+| Level 304: written off | 3 | 10 |
+| `npm run sim play` | 2,976/3,129, 39 s | identical |
+| Playtest 1–440 | — | only the 304 clock flag goes; nothing new |
+
+The write-offs rise because agents sealed in the pocket are now seen and
+cleared, where before they rocked until the nuke. The level loses about as
+many, sooner.

@@ -9672,21 +9672,31 @@ function stepSlide(w, ag) {
     // and that is where they stayed. Hand it back to walking after both ends
     // have been tried: a wall is something bashers and diggers have answers to,
     // and forceEscape can see it again.
-    ag.slideStuck = (ag.slideStuck || 0) + 1
+    //
+    // Counted by distance, not by consecutive bumps: in a pocket one cell
+    // wide every short step in between succeeded and reset the count, so on
+    // level 304 eight agents rocked in place under a brick for 1,900 ticks
+    // until the clock (LOG 339). A reversal less than two cells from the last
+    // one is the same pocket.
+    var span = ag.slideFrom === undefined ? Infinity : Math.abs(ag.x - ag.slideFrom)
+    ag.slideStuck = span < 2 ? (ag.slideStuck || 0) + 1 : 1
+    ag.slideFrom = ag.x
     if (ag.slideStuck >= 3) {
       ag.slideStuck = 0
+      ag.slideFrom = undefined
       ag.state = "walk"
       ag.timer = 0
     }
     return
   }
-  ag.slideStuck = 0
 
   ag.x = nx
   ag.anim++
   if (headroom(w, cx, footY)) {
     ag.state = "walk"
     ag.timer = 0
+    ag.slideStuck = 0
+    ag.slideFrom = undefined
   }
 }
 
