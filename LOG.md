@@ -7583,3 +7583,12 @@ re-stamped.
   panel's digest (5df232c9…). Only the page digest was re-baselined, by
   Codex.
 - **Reduced motion:** no sway and no lamp flash.
+
+## 326 — 2026-10-15 · Level 204 after 323: noise, not a regression
+
+323 recorded level 204 at 93% → 90% over 12 colonies. I replayed 24
+colonies against the Sim.js before 323 (eec1def~1) and the one after. 17 end
+differently: the change moves when rescues and cutoffs happen, so single runs
+scatter both ways. Salt 8 went from 16/16 to 12/16 and salt 22 from 10/16 to
+16/16. Over the 17 that differ, the total home goes from 246 to 248. Nothing
+to fix.
