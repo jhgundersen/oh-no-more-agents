@@ -11232,12 +11232,26 @@ function condemn(w, ag) {
   ag.condemned = true
 }
 
+// Ticks of actual work, by kind, for the page's Employee of the Level (Draw's
+// employeeLine). Bookkeeping only: nothing in the simulation reads it.
+var WORK_STATES = { build: 1, bash: 1, dig: 1, climb: 1, block: 1, bomb: 1 }
+function tallyWork(ag) {
+  var kind = WORK_STATES[ag.state] ? ag.state : (ag.state === "fall" && ag.floater ? "float" : "")
+  if (!kind) return
+  // Drifting under an umbrella is the least strenuous job in the building.
+  var effort = kind === "float" ? 0.25 : 1
+  if (!ag.work) ag.work = {}
+  ag.work[kind] = (ag.work[kind] || 0) + effort
+  ag.workTicks = (ag.workTicks || 0) + effort
+}
+
 function stepAgents(w) {
   var counts = { active: 0, blockers: 0, moving: 0 }
   for (var i = 0; i < w.agents.length; i++) {
     var ag = w.agents[i]
     if (ag.gone) continue
     var outcome = stepOneAgent(w, ag)
+    tallyWork(ag)
     if (outcome === "door") { counts.active++; counts.moving++ }
     else if (outcome === "on") tallyAgent(w, counts, ag)
   }

@@ -3581,6 +3581,36 @@ function battleLine(w) {
 // every frame shows the same line every frame.
 var REPORT_CHARS = 64   // the widest row the plate holds (256px of 272)
 var COMMIT_MAX = 64      // characters, hash included: 255px of a 272px plate
+// The agent who put in the most hours (Sim's tallyWork), and what for. A
+// level where nobody had to lift a finger has no employee: it was a meeting.
+var EMPLOYEE_CITATIONS = {
+  build: ["BUILT THE PIPELINE", "SHIPPED INFRASTRUCTURE, LITERALLY", "LAID THE FOUNDATIONS FOR Q4"],
+  bash: ["BROKE DOWN THE SILOS", "MOVED FAST, BROKE WALLS", "REMOVED SEVERAL BLOCKERS BY HAND"],
+  dig: ["WENT DEEP ON THE ROOT CAUSE", "DUG INTO THE LEGACY CODE", "FOUND THE BOTTOM OF THE STACK"],
+  climb: ["SCALED VERTICALLY", "ESCALATED APPROPRIATELY", "CLIMBED THE LADDER WITHOUT ONE"],
+  block: ["HELD THE LINE IN EVERY MEETING", "SAID NO, PRODUCTIVELY", "A BLOCKER, IN THE GOOD SENSE"],
+  float: ["GRACEFUL DEGRADATION", "SOFT LANDING, ZERO DOWNTIME", "TOOK THE CLOUD LITERALLY"],
+  bomb: ["TOOK THE BLAST RADIUS PERSONALLY", "AN EXPLOSIVE REFACTOR", "BURNED OUT, BRILLIANTLY"]
+}
+var EMPLOYEE_MIN = 24   // ticks of work before anyone is worth a plaque
+function employeeOfLevel(w) {
+  var best = null
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if ((ag.workTicks || 0) >= EMPLOYEE_MIN && (!best || ag.workTicks > best.workTicks)) best = ag
+  }
+  return best
+}
+function employeeLine(w) {
+  var ag = employeeOfLevel(w)
+  if (!ag) return ""
+  var kind = "", most = 0
+  for (var k in ag.work) if (ag.work[k] > most) { most = ag.work[k]; kind = k }
+  var who = ag.special && w.specialSpec ? w.specialSpec.name.toUpperCase() : "AGENT " + ("00" + ag.id).slice(-3)
+  var said = EMPLOYEE_CITATIONS[kind], line = "EMPLOYEE OF THE LEVEL: " + who + ". " + said[ag.id % said.length]
+  return ag.state === "saved" ? line + "." : line + " (POSTHUMOUS)."
+}
+
 function commitLine(w) {
   var type = w.saved >= w.toRelease ? "FEAT" : w.saved === 0 ? "REVERT" : w.nuking ? "HOTFIX" : "FIX"
   var subject = w.saved >= w.toRelease ? "SHIP ALL " + w.toRelease + " AGENTS HOME"
@@ -3709,6 +3739,9 @@ function reportRows(w, pal) {
   var battle = battleLine(w)
   if (battle) rows.push({ text: battle, colour: pal.warn, step: 12 })
   var mvp = battle ? mvpLine(w) : ""
+  // No fight, no MVP: the page names its Employee of the Level instead, so a
+  // card never carries both. The panel's small card keeps its rows.
+  if (!mvp && (w.res || 1) >= 2) mvp = employeeLine(w)
   if (mvp) rows.push({ text: mvp, colour: pal.decorLit, step: 12 })
   var brolly = brollyLine(w)
   // On the fight line when both fit: one row fewer on a busy card.

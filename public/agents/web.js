@@ -990,6 +990,15 @@
   function levelAnnouncement(w) { return "Level " + w.level + ", " + w.biome + ". " + w.toRelease + " agents." }
   function reportAnnouncement(w) {
     return "Level " + w.level + " report: " + w.saved + " of " + w.toRelease + " home" + (w.lost ? ", " + w.lost + " lost." : ".")
+      + spokenEmployee(w)
+  }
+  // The card's Employee of the Level, in sentence case for a screen reader.
+  function spokenEmployee(w) {
+    var line = typeof employeeLine === "function" && w.res >= 2 ? employeeLine(w) : ""
+    if (!line) return ""
+    return " " + line.toLowerCase().replace(/(^|\. )([a-z])/g, function (m, a, b) { return a + b.toUpperCase() })
+      .replace(/\bagent (\d)/, "Agent $1")
+      .replace(w.specialSpec ? w.specialSpec.name.toLowerCase() : "\u0000", w.specialSpec ? w.specialSpec.name : "")
   }
   function announce(text) { if (el.announce) el.announce.textContent = text }
   window.AgentAnnounce = { level: levelAnnouncement, report: reportAnnouncement }

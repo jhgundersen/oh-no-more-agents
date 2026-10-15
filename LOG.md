@@ -9434,3 +9434,54 @@ files.
 **Tool change:** `shipped()` now starts from `currentPage`, which polls the
 page for up to a minute until it carries the repo's build, alongside 359's
 `apiBuild`. `test/verify.test.js` passes.
+
+## 369 — 2026-10-15 · Employee of the Level
+
+**Asked:** switch from fixing to creating. Propose three features for
+watchers, pick one, build it.
+
+**Proposed:**
+1. **Employee of the Level:** the report names the hardest-working agent,
+   with an AI-pun citation for its main job.
+2. **A lost-umbrella office at the exit:** a stand filling with one furled
+   umbrella per agent home.
+3. **A pre-level forecast** on the title card ("SCATTERED AGENTS, 40%
+   CHANCE OF RECURSION").
+
+**Picked 1:** it gives a watcher one colleague to root for each level, and
+it is logic and copy rather than page art, which stays with Codex.
+
+**Built:**
+- **Sim.js, bookkeeping only:** `tallyWork` adds each tick an agent spends
+  working (build, bash, dig, climb, block, bomb) to `ag.work[kind]` and
+  `ag.workTicks`. Floating counts a quarter, since an umbrella is not a
+  shift. Nothing in the simulation reads it; `sim play` is identical
+  (2,965/3,113).
+- **Draw.js, the page only:**
+  - `employeeOfLevel` picks the agent with the most work (at least 24
+    ticks; a level where nobody worked has no employee).
+  - `employeeLine` names it ("AGENT 007", or a hero by name) and picks a
+    citation for its main kind of work by id, e.g. "SHIPPED
+    INFRASTRUCTURE, LITERALLY", "ESCALATED APPROPRIATELY", "SAID NO,
+    PRODUCTIVELY", "GRACEFUL DEGRADATION". One who did not make it gets
+    "(POSTHUMOUS)".
+  - The line takes the MVP row on cards without a fight, so a card never
+    carries both. The page card wraps it. The panel's small card is
+    unchanged.
+- **Screen readers:** the result announcement adds the same line in
+  sentence case.
+- **Patch notes:** "Added: Employee of the Level on every report. The
+  plaque is real. The raise is not." It replaces the librarian line, the
+  least useful to a watcher; the list stays at eight.
+
+**Checked:** level 58's page card rendered and read: the line wraps over two
+rows under the verdict.
+
+**Tests:** `test/employee.test.js` covers:
+- the tally doesn't change outcomes;
+- the line's format, the hardest worker winning, and no line when nobody
+  worked;
+- res 1 cards stay unchanged;
+- floats count a quarter.
+
+`test/a11y.test.js` accepts the optional sentence.

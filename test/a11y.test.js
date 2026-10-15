@@ -40,7 +40,7 @@ test("screen reader and keyboard: announced levels and results, named canvas, pr
     // The result, once, when the level ends.
     await ev(`(() => { const w = AgentWorld(); while (!w.done) step(w) })()`)
     for (let i = 0; i < 40 && !/report/.test(await ev(`document.getElementById("announce").textContent`)); i++) await sleep(50)
-    assert.match(await ev(`document.getElementById("announce").textContent`), /^Level \d+ report: \d+ of \d+ home(, \d+ lost)?\.$/)
+    assert.match(await ev(`document.getElementById("announce").textContent`), /^Level \d+ report: \d+ of \d+ home(, \d+ lost)?\.( Employee of the level: .+\.)?$/)
     assert.deepEqual(b.errors, [])
   } finally { await b.close(); server.close() }
 })
