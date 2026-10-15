@@ -6655,3 +6655,57 @@ based on ee2e8fb), `--no-ff`, as approved.
 - **No code was lost on either side.** Against the branch, the merged code
   differs only in main's own 305, the wall-blocker change in Sim.js and the
   seed list in the mission test.
+
+## 308 — 2026-10-15 · A fan's blast is its own height, not the corridor's
+
+**Chosen (autonomy):** the next flag in the 1–200 playtest was "level 72:
+65% home". A level that loses a third of every colony reads as broken.
+
+**Traced** (level 72, Data Center, 12 colonies):
+- **Not loops:** nothing was condemned. 54 agents died to fixtures, 51 of
+  them to the Hot Aisle at x74 on the floor at row 47.
+- **What killed them:** 22 died climbing the wall out of its corridor, 23
+  falling past, and 7 walking.
+- **The pattern across the game:** `npm run sim hazards` has the Hot Aisle as
+  the deadliest fixture: 1.53 kills per placement, with the sentry next at
+  0.93, against 0.20 overall.
+
+**Cause:** the hot aisle, sentry and frostjet all hit through `catchFired`.
+It counted an agent as in the blast when its feet were within `CORR_H` (6)
+rows of the fixture's floor, above or below. The blast runs along the floor
+and is the fixture's height: 4 rows, which is `zy0..zy1`, the zone the
+fixture already declares. So a climber whose whole body was above the fan
+died, and so in principle did an agent in the corridor underneath. The
+zone's own comment says a danger reaching through the floor "is a danger in
+two places".
+
+**Tried first:** the sentry's timing for the Hot Aisle (warning 34, blast
+14). Level 72 only went from 68% to 74%, because climbers and fallers can't
+answer a warning anyway. Reverted.
+
+**Changed** (`catchFired`): the agent's body rows
+(`ay - AGENT_H + 1 .. ay`) must overlap the blast rows. Avoidance
+(`hazardCovers`) is unchanged and still steers clear of the whole corridor
+band, which is the cautious side.
+
+**Measured** (`sim hazards`, kills per placement):
+
+| Fixture | Before | After |
+|---|---|---|
+| Hot Aisle | 1.53 | 0.67 |
+| Sentry | 0.93 | 0.13 |
+| All | 0.20 | 0.14 |
+
+- **Level 72** (12 colonies): 68% → 75% home. Climbing deaths 22 → 2.
+  Fallers through the blast rows still die (22), which is what a blast at
+  that height should do. Walkers 7 → 16, because more of them live long
+  enough to meet it. Deaths overall 54 → 42.
+- **Other Data Center levels** (52, 92, 112, 132): unchanged.
+- **`npm run sim play`:** 2,951/3,111 home in 207 attempts, against
+  2,969/3,139 in 209. That is fewer retries and a slightly higher share home;
+  200/200 cleared, no hangs.
+- **Playtest 1–200:** the level-72 flag is gone and nothing new is flagged.
+
+**Next:** on level 72 the colony drops off floor 37 into the Hot Aisle's
+reach at x66–69. An agent at an edge could time its drop to the fan's rest,
+the way walkers already wait at a current.

@@ -4650,9 +4650,14 @@ var HAZARD_REACHES = {
 }
 
 // These attacks leave the fixture instead of magically filling its box.
+// The blast runs along the floor and is the fixture's height, not the
+// corridor's: an agent whose body is wholly above it (climbing the wall out,
+// dropping in from the floor above) or below the floor is not in it. Counting
+// the whole corridor, a hot aisle on level 72 killed climbers and fallers
+// passing six rows over its fan, 51 deaths in 12 colonies (LOG 308).
 function catchFired(w, h, ag, g) {
   var ahead = (ag.x - g.mid) * h.dir
-  return g.same && ahead >= 0 && ahead <= g.spec.reach
+  return g.same && g.ay >= h.zy0 && g.ay - AGENT_H + 1 <= h.zy1 && ahead >= 0 && ahead <= g.spec.reach
 }
 
 function catchProjectiles(w, h, ag, g) {
