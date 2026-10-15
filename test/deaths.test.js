@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf } from "../tools/render.js"
 
+const same = (a, b) => Buffer.from(a.buffer, a.byteOffset, a.byteLength).equals(Buffer.from(b.buffer, b.byteOffset, b.byteLength))
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
 const causes = ["boom", "red team", "hazard", "drone strike", "fell", "splat", "crushed", "turned", "stand down", "", "unknown", "constructor", "__proto__"]
 const theme = themeOf("tokyo-night"), pal = P.build(theme.theme, 1)
@@ -40,10 +41,10 @@ for (const cause of causes) {
           rect(x, y, width, height)
         }
         assert.doesNotThrow(() => D.drawDeath(img.ctx, w, pal, ag))
-        if (age < 0 || age >= D.DEATH_TICKS || cause === "fell") assert.deepEqual(img.buf, blank, "no pixels outside the window / below world")
-        else assert.notDeepEqual(img.buf, blank, "visible death pose")
+        if (age < 0 || age >= D.DEATH_TICKS || cause === "fell") assert.ok(same(img.buf, blank), "no pixels outside the window / below world")
+        else assert.ok(!same(img.buf, blank), "visible death pose")
         const belowBoots = 60 * (res || 1) * img.W * 3
-        assert.deepEqual(img.buf.subarray(belowBoots), blank.subarray(belowBoots), "death stays above the last boot line")
+        assert.ok(same(img.buf.subarray(belowBoots), blank.subarray(belowBoots)), "death stays above the last boot line")
         assert.equal(img.ctx.fillStyle, "#123456", "restore colour")
         assert.equal(img.ctx.globalAlpha, 0.7, "restore opacity")
         // Also catches a leaked translation or mirror on the shared context.
@@ -60,7 +61,7 @@ test("living, saved, and unstamped agents have no death drawing", () => {
   for (const fields of [{ gone: false }, { state: "saved" }, { diedAt: undefined }]) {
     const img = picture(1), blank = img.buf.slice()
     D.drawDeath(img.ctx, w, pal, { gone: true, state: "dead", diedAt: 0, diedBy: "splat", x: 10, y: 14, dir: 1, ...fields })
-    assert.deepEqual(img.buf, blank)
+    assert.ok(same(img.buf, blank))
   }
 })
 
@@ -78,12 +79,12 @@ test("actor pass dispatches deaths, expires them, and never changes the world", 
       const img = canvas(400 * res, 248 * res, theme.background)
       D.drawActors(img.ctx, w, pal, {})
       assert.equal(JSON.stringify(w), before)
-      if (cause === "fell") assert.deepEqual(img.buf, blank.buf)
-      else assert.notDeepEqual(img.buf, blank.buf)
+      if (cause === "fell") assert.ok(same(img.buf, blank.buf))
+      else assert.ok(!same(img.buf, blank.buf))
       ag.diedAt = 100 - D.DEATH_TICKS
       const expired = canvas(400 * res, 248 * res, theme.background)
       D.drawActors(expired.ctx, w, pal, {})
-      assert.deepEqual(expired.buf, blank.buf)
+      assert.ok(same(expired.buf, blank.buf))
     }
     w.agents = []
   }
@@ -109,7 +110,7 @@ test("once the window has passed, the dead draw nothing", () => {
       const without = canvas(400 * scale, 248 * scale, theme.background)
       D.drawTerrain(without.ctx, w, colours); D.drawActors(without.ctx, w, colours, {})
       w.agents = all
-      assert.deepEqual(withDead.buf, without.buf, `level ${level} at ${ticks}`)
+      assert.ok(same(withDead.buf, without.buf), `level ${level} at ${ticks}`)
     }
   } finally { Math.random = random }
 })

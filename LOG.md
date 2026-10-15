@@ -8157,3 +8157,100 @@ changes slipped in.
 
 **Next:** ready for cast art review. Commit on `codex/cast-art` only; no push,
 deployment or sibling sync.
+
+## 255 — 2026-10-15 · The colony finds its stride (on a branch)
+
+Art pass on `codex/agent-art`, based on approved `codex/cast-art` (`5b4905a`).
+Ordinary dry agents at exactly res 2 use eight gait poses, half-pixel travel
+and hat/torso bob, lifted passing feet, moving cuffs and a half-pixel tie flap.
+The face, white collar, dark suit, hat and planted boot line remain the same
+cast. Fall arms and trailing feet alternate; floating agents hold the shaft
+beside the face while the canopy flexes and unfolds in eighths. Closing takes
+the canopy outside the face, narrows it, then lowers it into the carried cane;
+the last closing frame is exactly the furled umbrella.
+
+Climbing adds intermediate reaches and bent knees while the existing wall
+contact stays fixed. Six pick poses, seven spade poses and six brick-laying
+poses coordinate head/torso, sleeve, palm and tool. Mining has no mining state:
+the actual rule plants a charge and turns the walker away. Its existing
+150-tick cooldown supplies a six-tick crouch/recovery; the existing charge gets
+only small rivets and a fuse LED. Blockers breathe through the outstretched
+hands with feet planted; existing idle fidgets stay. Shot/splat deaths get
+half-pixel recoil and settling within the original death window; other causes
+retain their art. Saved agents take small steps toward the actual exit and
+wave while fading, instead of rising away from its floor.
+
+**Review:** `/tmp/codex-agent-art/final/index.html` is the animated before/after
+viewer; `contact-sheet.png` and fourteen `<action>-comparison.png` sheets show
+eight frames at res 1 and 2, with separate native strips/frames. Reproduce with
+`node --max-old-space-size=256 tools/agent-art.js --base 5b4905a --out
+/tmp/codex-agent-art/final`. Includes walk, fall, opening/floating/closing,
+climb, dig, actual mine planting, bash, build, block, shot/splat deaths and exit.
+The final bundle takes 1.22 s, peak RSS 159 MB. `traits.png` checks every trait
+in both facings; `live-biomes.png` and native `live/` pairs show all nineteen
+biomes at seed 3/tick 400. Reviewed sheets and live frames at page and native
+scale: faces, umbrellas, tools, ground contacts, original hazards and exits
+remain distinct against light and dark terrain.
+
+**Isolation:** 8,736 action frames at unspecified/res 1/res 3 are byte-identical
+to approved cast art (fourteen actions, eight phases, two facings, thirteen
+trait looks). All 5,824 excluded hero/diver action frames also match. All 95
+native live frames and 190 terrain frames match across nineteen biomes and
+five palettes. The probe takes 8.65 s, peak RSS 308 MB under a 256 MB renderer
+heap. Complete rendered/unrendered gameplay digests match through 600 ticks in
+all nineteen biomes. Tests cover deterministic read-only drawing without RNG,
+half-pixel local poses, actual mine timing, planted blocker feet, folding-to-cane
+continuity, reduced secondary motion, real exit direction, unknown death keys,
+comparison dimensions, cache pixel equivalence and the animated viewer. The
+rest-schedule test now permits only the three bounded hand-breath poses and
+checks fixed head/boots; the umbrella recorder uses a real one-pixel canvas
+context and checks all eight closing ages and restored alpha. The
+exact res-2 gate also preserves the immutable res-3 share card. No Sim,
+Palette, season, numbered share or icon asset changes.
+
+**Cost:** scan levels 1–400, seed 3, at thirty-tick intervals up to tick 1500:
+the busiest sampled frame is Cavern level 324/tick 570, eighteen colleagues
+and three enemies. This is a sampled stress case, not a claim about every
+possible colony. `npm run fps -- 324 --seed 3 --from-tick 450 --seconds 10
+--speed 2 --json` measures normal live play, with the baseline served using
+`--root /tmp/codex-agent-art/before/public`. Both versions reach the 21-character
+peak, stay on level 324 through roughly tick 907, and hold median/p5 **60/60 fps**
+with **0% long tasks**. The clean reversed-order repeat gives before/after CPU
+**24%/23%**, worst frame **17/17 ms**. The first pair was noisier (CPU 10%/24%,
+worst 17/50 ms); retained with raw results rather than treated as a precise
+speedup. Five warmed interleaved batches of 500 actor frames at the peak give
+**1.187 → 1.255 ms**, **+0.068 ms** per frame in the Node software renderer.
+
+**Pipeline:** the default ten-second FPS probe used to hit the CDP command's
+ten-second timeout. It now collects bounded four-second windows on the same
+live run, disconnects observers, rejects bad samples and reports seed, start/end
+level/tick and maximum cast. New seed/from-tick/root flags make before/after
+repeatable; warm-up observes the page clock without mutating its world. Unit
+checks cover chunk aggregation/error paths and an actual seeded browser sample.
+Action comparisons cache static terrain and reuse canvases, cutting the initial
+5.23-second render to 1.22 seconds. Animation pose tables are shared rather than
+allocated per agent. Death-frame assertions use zero-copy buffer equality with
+short failure messages, including below-boot, expired and whole-world checks;
+no multi-megabyte assertion diffs. Early shared-machine attempts exposed stale wall-clock deadlines after long
+pauses and a queue guard that was too broad about brief child tests. The final
+run uses the supervisor's shared FIFO lock (`afa5be9` on main), via
+`node /home/jonh/jonh.no/oh-no-more-agents/tools/testlock.js run -- <command>`;
+the temporary process-scanning guard is retired. The final full check collects
+LCOV in the same run, and CRAP reads it with `--use-existing-coverage`. This
+removes the duplicate full-suite run while retaining syntax, stamps, all
+selected tests, coverage and the threshold check.
+
+**Validation:** `npm run stamp` is current. The final shared-lock
+`npm run check` with `--experimental-test-coverage` passes **1,198 tests**,
+zero failures/skips, in **219.01 s**, and writes the final `coverage/lcov.info`.
+It uses a 2048 MB Node heap under `ulimit -v 6000000`, the established two-worker
+coverage cap, 120-second test timeouts and an explicit file list excluding
+`test/factory-art.test.js`. Shared-lock `npm run crap -- --threshold 30
+--use-existing-coverage` passes, highest score **30.0**. New motion helpers
+score at most **10.0**, comparison command **7.0**, fixture helper **15.0**;
+`drawAgent` remains below the threshold at **26.1**. Final source hashes match
+those checked and covered. Full/coverage/CRAP work now takes the shared FIFO
+lock; no other full suite overlaps the final run.
+
+**Next:** ready for ordinary-agent animation review. Commit on
+`codex/agent-art` only; no push, deployment or sibling sync.

@@ -3407,6 +3407,7 @@ function drawActorMines(ctx, w, pal) {
     ctx.font = "bold 9px monospace"
     ctx.textAlign = "center"
     ctx.fillText(String(Math.ceil(mine.fuse / 30)), mx, my - 9)
+    if (w.res === 2) drawPageCharge(ctx, w, pal, mine, mx, my)
   }
 }
 
@@ -3525,7 +3526,7 @@ function drawDeath(ctx, w, pal, ag) {
   ctx.translate(Math.round(ag.x * w.k.CELL), Math.round((ag.y + 1) * w.k.CELL))
   ctx.scale(ag.dir === -1 ? -1 : 1, 1)
   ctx.globalAlpha = Math.min(1, (DEATH_TICKS - age) / 10)
-  draw(ctx, w, pal, age)
+  if (!drawPageDeath(ctx, w, pal, ag, age)) draw(ctx, w, pal, age)
   ctx.restore()
 }
 
@@ -6855,6 +6856,7 @@ function drawIdleTie(ctx, w, pal, ox, oy, dir, robe, phase) {
 }
 
 function drawAgentBody(ctx, w, pal, ag, ox, oy, dir, robe, skin, st, bodyDrop, walkLead, squash, idle) {
+  if (drawPageAgentBody(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop, idle)) return
   if ((w.res || 1) >= 2 && st === "bomb") return drawBombPose(ctx, w, pal, ag, ox, oy, dir, robe)
   if (idle) return drawIdleBody(ctx, w, pal, ag, ox, oy, dir, robe, bodyDrop, idle)
   if (st === "height" && ag.heightMode === "cushion") return drawPoseTucked(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop)
@@ -6862,7 +6864,7 @@ function drawAgentBody(ctx, w, pal, ag, ox, oy, dir, robe, skin, st, bodyDrop, w
   if (st === "saved") return drawAgentHome(ctx, w, pal, ag, ox, oy, dir, robe, skin)
   var pose = AGENT_POSES[st]
   if (pose) return pose(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop)
-  drawAgentWalk(ctx, ag, ox, oy, dir, robe, skin, walkLead, squash, bodyDrop, st === "walk", w)
+  drawAgentWalk(ctx, ag, ox, oy, dir, robe, skin, walkLead, squash, bodyDrop, st === "walk", w, pal)
 }
 
 function drawPoseClimb(ctx, w, pal, ag, ox, oy, dir, robe, st, bodyDrop) {
@@ -7083,6 +7085,7 @@ function drawUmbrellaFolding(ctx, w, pal, ag, ox, oy) {
   if ((w.res || 1) < 2 || ag.brollyClosedAt === undefined) return false
   var age = w.ticks - ag.brollyClosedAt
   if (age < 0 || age >= BROLLY_FOLD) return false
+  if (pageMotionAgent(w, ag)) { drawPageFold(ctx, w, pal, ag, ox, oy, age); return true }
   var spread = Math.max(0.25, 1 - age / (BROLLY_FOLD - 2))
   drawUmbrellaFine(ctx, pal, ox, oy + age * 0.5, 0, brollyColour(w, pal, ag), spread)
   ctx.fillStyle = pal.umbrellaStem
@@ -7233,7 +7236,9 @@ function drawCampShot(ctx, w, pal, ag, ox, oy, dir, st, C) {
 
 // Walking. The torso stretches down to the hips whatever the bob, so the
 // legs stay planted while the chest rises and falls above them.
-function drawAgentWalk(ctx, ag, ox, oy, dir, robe, skin, walkLead, squash, bodyDrop, walking, w) {
+function drawAgentWalk(ctx, ag, ox, oy, dir, robe, skin, walkLead, squash, bodyDrop, walking, w, pal) {
+  if (pageMotionAgent(w, ag) && walking && !squash)
+    return drawPageWalk(ctx, w, pal, ag, ox, oy, dir, robe, skin, walkLead, bodyDrop)
   var look = agentTraitLook(w, ag)
   var pixel = look ? blitFine : blit
   walkLead = traitStride(w, ag, walkLead)
@@ -7456,7 +7461,7 @@ function drawAgentHome(ctx, w, pal, ag, ox, oy, dir, robe, skin) {
 // in two-tone panels with the ribs running out to the tips, a lit rim, a
 // ferrule on top. `flex` lifts the crown the way the
 // coarse canopy's centre lifts, so it still breathes.
-function drawUmbrellaFine(ctx, pal, ox, oy, flex, brolly, spread) {
+function drawUmbrellaFine(ctx, pal, ox, oy, flex, brolly, spread, noStem) {
   spread = spread === undefined ? 1 : spread
   var cx = ox + 4.5, top = oy - 11 - flex * 0.5 + Math.round((1 - spread) * 6) / 2, base = oy - 7
   var radius = Math.round(6.5 * spread * 2) / 2
@@ -7479,7 +7484,7 @@ function drawUmbrellaFine(ctx, pal, ox, oy, flex, brolly, spread) {
     ctx.fillRect(cx + rib * radius - (rib > 0 ? 0.5 : 0), base + 0.5, 0.5, 1)
   ctx.fillRect(cx - 0.5, top - 1, 1, 1)                     // ferrule
   ctx.fillStyle = pal.umbrellaStem
-  ctx.fillRect(cx - 0.5, base + 0.5, 1, 6.5)                // shaft
+  if (!noStem) ctx.fillRect(cx - 0.5, base + 0.5, 1, 6.5)    // shaft
 }
 
 // The throw: both arms out toward where the net went, and a line of cord
@@ -8719,7 +8724,7 @@ function traitHeadOffset(w, ag) {
 }
 function traitStride(w, ag, lead) {
   var look = agentTraitLook(w, ag)
-  return look ? lead * look.stride : lead
+  return look ? Math.round(lead * look.stride * 2) / 2 : lead
 }
 function drawTraitDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, idle) {
   var look = agentTraitLook(w, ag)
@@ -8849,14 +8854,17 @@ function drawAgentUprightFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, rob
   ctx.fillStyle = pal.shirt
   blitFine(ctx, ox, oy, dir, 3, ty, 2, 1.5)                 // shirt front
   ctx.fillStyle = pal.eye
-  blitFine(ctx, ox, oy, dir, 3.75, ty - 0.5, 0.5, 0.5)      // the knot
-  blitFine(ctx, ox, oy, dir, 3.75, ty, 0.5, 2.5)            // the tie
+  if (!drawPageTie(ctx, w, pal, ag, ox, oy, dir, ty)) {
+    blitFine(ctx, ox, oy, dir, 3.75, ty - 0.5, 0.5, 0.5)    // the knot
+    blitFine(ctx, ox, oy, dir, 3.75, ty, 0.5, 2.5)          // the tie
+  }
   ctx.fillStyle = pal.lapel
   blitFine(ctx, ox, oy, dir, 2.5, ty, 0.5, 1.5)             // lapels
   blitFine(ctx, ox, oy, dir, 5, ty, 0.5, 1.5)
   blitFine(ctx, ox, oy, dir, 4.5, ty + 3.5, 0.5, 0.5)       // buttons
   blitFine(ctx, ox, oy, dir, 4.5, ty + 5, 0.5, 0.5)
   if (ag.state !== "walk") return
+  if (pageMotionAgent(w, ag) && !squash) { drawPageWalkShoes(ctx, w, pal, ag, ox, oy, dir, lead); return }
   // Shoes: the last row of each leg, with a toe forward of the heel.
   ctx.fillStyle = pal.eye
   var stride = traitStride(w, ag, lead)
@@ -8941,6 +8949,7 @@ function climbContacts(w, ag, ox, dir) {
   var phase = (ag.anim >> 2) % 4
   var face = (Math.floor(ag.x) + dir + (dir < 0 ? 1 : 0)) * w.k.CELL
   var x = dir > 0 ? face - ox : ox + SPRITE_W - face
+  if (pageMotionAgent(w, ag)) return pageClimbContacts(ag, x)
   return { x: Math.round(x * 2) / 2, hand: [2, 2, 5, 5][phase],
     other: [7, 6, 3, 3][phase], knee: [12, 10, 10, 12][phase] }
 }
@@ -8977,6 +8986,7 @@ function drawClimbContactDetail(ctx, w, pal, ag, ox, oy, dir) {
 }
 
 function drawBracedBlocker(ctx, w, pal, ag, ox, oy, dir, robe, idle) {
+  if (pageMotionAgent(w, ag) && !(idle && idle.pose)) return drawPageBlock(ctx, w, pal, ag, ox, oy, dir, robe)
   ctx.save()
   var toe = idle && idle.pose === "tap" && idle.phase % 12 < 6 ? 1 : 0
   ctx.fillStyle = robe
@@ -9056,6 +9066,7 @@ function drawBombFuse(ctx, w, pal, ag, ox, oy, dir) {
 }
 
 function drawFloatingUmbrella(ctx, w, pal, ag, ox, oy, flex, brolly) {
+  if (pageMotionAgent(w, ag)) return drawPageFloat(ctx, w, pal, ag, ox, oy, brolly)
   ctx.save()
   // fall is distance: the first cell under load unfolds over several ticks.
   var spread = Math.min(1, Math.max(0.25, Math.ceil((ag.fall - 2) * 4) / 4))
@@ -9071,7 +9082,8 @@ function drawFloatingUmbrella(ctx, w, pal, ag, ox, oy, flex, brolly) {
 function drawFloatGrip(ctx, w, pal, ag, ox, oy, dir) {
   if (!ag.floater || !(ag.fall > 2)) return
   ctx.fillStyle = pal.skin
-  blitFine(ctx, ox, oy, 1, 3.5, 4, 1.5, 1)
+  if (pageMotionAgent(w, ag)) blitFine(ctx, ox, oy, dir, 7.5, 7.5, 1.5, 1)
+  else blitFine(ctx, ox, oy, 1, 3.5, 4, 1.5, 1)
 }
 
 var SKILL_DETAIL_DRAW = { climb: drawClimbContactDetail, bomb: drawBombFuse, fall: drawFloatGrip }
@@ -9094,7 +9106,7 @@ function drawWorkTools(ctx, w, pal, ag, ox, oy, dir) {
   var draw = WORK_TOOL_DRAW[ag.state]
   if (!draw) return
   ctx.save()
-  draw(ctx, pal, ag, ox, oy, dir)
+  draw(ctx, pal, ag, ox, oy, dir, w)
   ctx.restore()
 }
 
@@ -9109,7 +9121,8 @@ function drawWorkHandle(ctx, pal, ox, oy, dir, x0, y0, x1, y1, color) {
   }
 }
 
-function drawWorkBash(ctx, pal, ag, ox, oy, dir) {
+function drawWorkBash(ctx, pal, ag, ox, oy, dir, w) {
+  if (pageMotionAgent(w, ag)) return drawPagePick(ctx, pal, ag, ox, oy, dir)
   var strike = ag.timer % 6 >= 3
   var handY = strike ? 11 : 9
   var headX = strike ? 12 : 9, headY = strike ? 9 : 4
@@ -9129,7 +9142,8 @@ function drawWorkBash(ctx, pal, ag, ox, oy, dir) {
   blitFine(ctx, ox, oy, dir, 8, handY, 1.5, 1)
 }
 
-function drawWorkDig(ctx, pal, ag, ox, oy, dir) {
+function drawWorkDig(ctx, pal, ag, ox, oy, dir, w) {
+  if (pageMotionAgent(w, ag)) return drawPageSpade(ctx, pal, ag, ox, oy, dir)
   var lift = ag.timer % 7 >= 4
   var bladeX = lift ? 11 : 9, bladeY = lift ? 11 : 15
   drawWorkHandle(ctx, pal, ox, oy, dir, 7, lift ? 10 : 12, bladeX, bladeY)
@@ -9154,6 +9168,7 @@ function builderLoad(ag) {
 }
 
 function drawWorkingBuilder(ctx, w, pal, ag, ox, oy, dir, robe) {
+  if (pageMotionAgent(w, ag)) return drawPageBuilder(ctx, w, pal, ag, ox, oy, dir, robe)
   if ((w.res || 1) < 2) return
   ctx.save()
   var load = builderLoad(ag)
@@ -9181,7 +9196,12 @@ function drawWorkingBuilder(ctx, w, pal, ag, ox, oy, dir, robe) {
   ctx.restore()
 }
 
-function drawFineDig(ctx, pal, ag, ox, oy, dir, drop) {
+function drawFineDig(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w) {
+  if (pageMotionAgent(w, ag)) {
+    drawFineSuit(ctx,pal,ox,oy,dir,7+drop)
+    drawFineShoes(ctx,pal,ox,oy,dir,2,15.5,4,15.5,2)
+    return
+  }
   drawFineSuit(ctx, pal, ox, oy, dir, 7 + drop)
   // Alternate the grip inside the two coarse sleeves on the stroke clock.
   var grip = (ag.timer % 6) < 3 ? 0 : 0.5
@@ -9194,7 +9214,8 @@ function drawFineDig(ctx, pal, ag, ox, oy, dir, drop) {
   drawFineShoes(ctx, pal, ox, oy, dir, 2, 15.5, 4, 15.5, 2)
 }
 
-function drawFineFall(ctx, pal, ag, ox, oy, dir) {
+function drawFineFall(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w) {
+  if (pageMotionAgent(w, ag)) return drawPageFallDetail(ctx, w, pal, ag, ox, oy, dir)
   drawFineSuit(ctx, pal, ox, oy, dir, 7)
   ctx.fillStyle = pal.skin
   blitFine(ctx, ox, oy, dir, 0.5, 4.5, 0.5, 1)
@@ -11612,7 +11633,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   if (ag.state === "hooked") return drawHookedAgent(ctx, w, pal, ag, opts)
   var k = w.k
   var C = k.CELL
-  var ox = Math.round(ag.x * C) - SPRITE_W / 2
+  var ox = pageAgentX(w, ag)
   var dir = ag.dir
   var st = ag.state
   // At page resolution the body stays outside the face, with palms on it.
@@ -11627,18 +11648,18 @@ function drawAgent(ctx, w, pal, ag, opts) {
   var rideCar = st === "ride" && w.lifts && w.lifts[ag.liftIx] && !w.lifts[ag.liftIx].stairs
   var oy = rideCar
     ? Math.round(w.lifts[ag.liftIx].car * C) - SPRITE_PX
-    : Math.round((ag.y + 1) * C) - SPRITE_PX
+    : pageAgentY(w, ag)
   oy += eventFloatBob(w, ag)
   drawThrowLanding(ctx, w, pal, ag)
   var thrown = throwArc(w, ag, C)
-  ox += thrown.dx
+  ox += thrown.dx + pageHomeStep(w, ag)
   oy -= thrown.lift
 
   if (st === "saved") {
     // A short rise and fade into the portal, so getting home reads as an
     // arrival rather than an agent simply blinking out.
     ctx.globalAlpha = Math.max(0, 1 - ag.fade / 14)
-    oy -= ag.fade + (ag.fade < 7 ? Math.round(Math.sin(ag.fade / 7 * Math.PI) * 2) : 0)
+    oy -= agentHomeLift(w, ag)
   }
 
   var colors = agentDrawColors(w, pal, ag, st)
@@ -11720,8 +11741,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   // Upright poses only — on a slide or a sprawl the shoulders are not up there.
   if (st !== "saved" && st !== "slide" && st !== "stunned" && st !== "webup") {
     ctx.fillStyle = lapel
-    blit(ctx, ox, oy, dir, 1, 7 + bodyDrop, 1, 1)
-    blit(ctx, ox, oy, dir, 6, 7 + bodyDrop, 1, 1)
+    drawAgentShoulders(ctx, w, ag, ox, oy, dir, bodyDrop)
   }
 
   drawAgentDetail(ctx, w, pal, ag, ox, oy, dir, bodyDrop, walkLead, squash, robe, idle)
@@ -11853,7 +11873,7 @@ function agentDrawColors(w, pal, ag, st) {
 }
 
 function agentDrawMotion(w, ag, st, idle) {
-  var walkLead = [0, 1, 0, -1][(ag.anim >> 2) % 4]
+  var walkLead = AGENT_COARSE_GAIT[(ag.anim >> 2) % 4]
   var squash = st === "walk" ? landSquash(w, ag) : 0
   var bob = st === "walk" && !w.submerged && !squash && walkLead === 0 ? 1 : 0
   var bodyDrop = st === "slide" ? 4 : ((st === "dig" || st === "camp") ? 2 : squash - bob)
@@ -11861,7 +11881,7 @@ function agentDrawMotion(w, ag, st, idle) {
   if (idle && st === "walk") { walkLead = 0; squash = 0; bodyDrop = 0 }
   if ((w.res || 1) >= 2 && st === "bomb") bodyDrop = bombCrouch(ag)
 
-  return { lead: walkLead, squash: squash, drop: bodyDrop }
+  return pageAgentMotion(w, ag, st, idle, { lead: walkLead, squash: squash, drop: bodyDrop })
 }
 
 function drawAgentDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, squash, robe, idle) {
@@ -11992,7 +12012,8 @@ function drawAgentHead(ctx, w, pal, ag, ox, oy, dir, hair, skin, st, bodyDrop) {
     ctx.fillStyle = pal.shirt
     var collarLift = (!agentIdleKind(ag) && w.submerged && (st === "walk" || st === "swim"))
       ? Math.round(Math.sin(ag.anim * 0.22) * 1.2) : 0
-    blit(ctx, ox, oy, dir, 3, 6 + bodyDrop + collarLift, 2, 4)
+    var collarPixel = pageMotionAgent(w, ag) ? blitFine : blit
+    collarPixel(ctx, ox, oy, dir, 3, 6 + bodyDrop + collarLift, 2, 4)
   }
 
   if (w.season && w.season.hats === "santa" && !w.milestone && st !== "saved") {
@@ -12004,7 +12025,7 @@ function drawAgentHead(ctx, w, pal, ag, ox, oy, dir, hair, skin, st, bodyDrop) {
 
 function drawAgentDryHead(ctx, w, pal, ag, ox, oy, dir, hair, skin, bodyDrop) {
   var look = traitHeadOffset(w, ag)
-  var pixel = agentTraitLook(w, ag) ? blitFine : blit
+  var pixel = pageMotionAgent(w, ag) || agentTraitLook(w, ag) ? blitFine : blit
   ox += dir * look.x
   bodyDrop += look.y
   ctx.fillStyle = hair
@@ -19041,4 +19062,284 @@ function drawCastCloudCanopy(ctx, w, pal, ag, x, y, robe, hair, fr) {
   ctx.fillRect(shaft, top + 6, 0.5, 8)
   ctx.fillStyle = hair; ctx.fillRect(shaft - 0.5, top + 13, 1.5, 0.5)
   ctx.restore()
+}
+
+// Page animation uses the simulation's existing clocks. Eight small key poses
+// replace four held ones; the panel and the immutable res-3 share card keep
+// their original art. Shared tables avoid per-agent frame/particle allocation.
+var AGENT_COARSE_GAIT = [0,1,0,-1]
+var AGENT_BASH_DROP = [0,0,0.5,1,0.5,0]
+var AGENT_DIG_DROP = [2,2,1.5,1,1,1.5,2]
+var AGENT_MINE_DROP = [2,1.5,1,0.5,0,0]
+var AGENT_BLOCK_BREATH = [0,0,0.5,0.5,0,0,-0.5,-0.5]
+var AGENT_HOME_LIFT = [0,0.5,1,0.5,0,0.5,1,0.5]
+var AGENT_HOME_WAVE = [0,0.5,1,0.5]
+var AGENT_FALL_FEET = [[0.5,0],[0,0.5]]
+var AGENT_GAIT = [[0,-1,0,0,0],[0.5,-0.5,0,0,0.5],[1,0,0.5,0,0.5],[0.5,-0.5,0.5,0,0],
+  [0,-1,0,0,0],[-0.5,-0.5,0,0,-0.5],[-1,0,0,0.5,-0.5],[-0.5,-0.5,0,0.5,0]]
+var AGENT_PICK = [[8,4,9],[9,4.5,9],[11,6.5,10],[12,9,11],[11.5,10,11],[9.5,7,10]]
+var AGENT_SPADE = [[9,15,12.5],[9.5,14.5,12],[10,13,11.5],[11,11.5,11],[11,10.5,10.5],[10,12,11.5],[9.5,14,12]]
+var AGENT_BRICK = [[8,9],[8.5,9.5],[9.5,11],[10.5,12.5],[11,14],[10,14]]
+var AGENT_CLIMB = [[2,7,12],[2,6.5,11],[2.5,6,10],[4,4.5,10],[5,3,10],[5,3,10.5],[4,3.5,12],[2.5,5,12]]
+function pageMotionAgent(w, ag) { return !!w && w.res === 2 && !ag.special && !w.submerged }
+function pageGait(ag) { return AGENT_GAIT[((ag.anim || 0) >> 1) % 8] }
+function pageMineAge(ag) { return ag.mineCool > 144 ? Math.max(0, 150 - ag.mineCool) : -1 }
+
+function pageAgentMotion(w, ag, st, idle, m) {
+  if (!pageMotionAgent(w, ag) || idle) return m
+  if (st === "walk" && !m.squash) {
+    var gait = pageGait(ag), mine = pageMineAge(ag)
+    m.lead = gait[0]; m.drop = gait[1]
+    if (mine >= 0) { m.lead = 0; m.drop = AGENT_MINE_DROP[mine] }
+  } else if (st === "bash") m.drop = AGENT_BASH_DROP[(ag.timer || 0) % 6]
+  else if (st === "dig") m.drop = AGENT_DIG_DROP[(ag.timer || 0) % 7]
+  return m
+}
+
+function drawPageWalk(ctx, w, pal, ag, x, y, d, robe, skin, lead, drop) {
+  var gait = pageGait(ag), stride = traitStride(w, ag, lead), look = agentTraitLook(w, ag)
+  ctx.fillStyle = robe
+  blitFine(ctx,x,y,d,1,7+drop,6,6-drop)
+  blitFine(ctx,x,y,d,2+stride,13,2,3-gait[2])
+  blitFine(ctx,x,y,d,4-stride,13,2,3-gait[3])
+  if (look && look.arms) return
+  var mine = pageMineAge(ag)
+  if (mine >= 0 && mine < 3) {
+    blitFine(ctx,x,y,d,-0.5,9+drop,1.5,3)
+    ctx.fillStyle = skin; blitFine(ctx,x,y,d,-0.5,12+drop,1.5,0.5)
+  } else if (ag.ownBrolly) {
+    blitFine(ctx,x,y,d,6,8+drop,1.5,2)
+    blitFine(ctx,x,y,d,6.5,9,1.5,1)
+    ctx.fillStyle = skin
+    blitFine(ctx,x,y,d,6.5,9,1.5,0.5)
+    blitFine(ctx,x,y,d,lead,11+drop,1,1)
+  } else {
+    blitFine(ctx,x,y,d,6,8+drop,1.5,2.5)
+    ctx.fillStyle = skin
+    blitFine(ctx,x,y,d,6-lead,10.5+drop,1,1)
+    blitFine(ctx,x,y,d,lead,11+drop,1,1)
+  }
+}
+function drawPageWalkShoes(ctx, w, pal, ag, x, y, d, lead) {
+  var gait=pageGait(ag),stride=traitStride(w,ag,lead)
+  drawFineShoes(ctx,pal,x,y,d,2+stride,15.5-gait[2],4-stride,15.5-gait[3],2)
+}
+function drawPageTie(ctx, w, pal, ag, x, y, d, top) {
+  if (!pageMotionAgent(w,ag)) return false
+  var flap = ag.state === "walk" && !w.reducedMotion ? pageGait(ag)[4] : 0
+  blitFine(ctx,x,y,d,3.5,top-0.5,0.5,0.5)
+  blitFine(ctx,x,y,d,3.5,top,0.5,1)
+  blitFine(ctx,x,y,d,3.5+flap,top+1,0.5,1.5)
+  return true
+}
+
+var PAGE_AGENT_BODY = { fall: drawPageFall, bash: drawPageBash, dig: drawPageDig, saved: drawPageHome }
+function drawPageAgentBody(ctx,w,pal,ag,x,y,d,robe,st,drop,idle) {
+  if (!pageMotionAgent(w,ag) || idle) return false
+  var draw=Object.prototype.hasOwnProperty.call(PAGE_AGENT_BODY,st)?PAGE_AGENT_BODY[st]:null
+  if (!draw) return false
+  draw(ctx,w,pal,ag,x,y,d,robe,drop)
+  return true
+}
+function pageFallFeet(ag) {
+  var beat=((ag.anim||0)>>1)%8
+  return AGENT_FALL_FEET[beat<4?0:1]
+}
+function drawPageFall(ctx,w,pal,ag,x,y,d,robe) {
+  var feet=pageFallFeet(ag),lift=pageGait(ag)[0]
+  ctx.fillStyle=robe
+  blitFine(ctx,x,y,d,1,7,6,6)
+  if (ag.floater && ag.fall>2) {
+    blitFine(ctx,x,y,d,0,8+lift,1.5,3)
+    blitFine(ctx,x,y,d,6,7,2,3)
+    blitFine(ctx,x,y,d,7,7,2,1.5)
+  } else {
+    blitFine(ctx,x,y,d,0,4+lift,2,4-lift)
+    blitFine(ctx,x,y,d,6,4-lift,2,4+lift)
+  }
+  blitFine(ctx,x,y,d,2-feet[0],13,2,3-feet[0])
+  blitFine(ctx,x,y,d,4+feet[1],13,2,3-feet[1])
+}
+function drawPageFallDetail(ctx,w,pal,ag,x,y,d) {
+  var feet=pageFallFeet(ag),lift=pageGait(ag)[0]
+  drawFineSuit(ctx,pal,x,y,d,7)
+  ctx.fillStyle=pal.skin
+  if (ag.floater && ag.fall>2) {
+    blitFine(ctx,x,y,d,7.5,7.5,1.5,1)
+    blitFine(ctx,x,y,d,0.5,10.5+lift,1,1)
+  } else {
+    blitFine(ctx,x,y,d,0.5,4.5+lift,0.5,1)
+    blitFine(ctx,x,y,d,7,4.5-lift,0.5,1)
+  }
+  drawFineShoes(ctx,pal,x,y,d,2-feet[0],15.5-feet[0],4+feet[1],15.5-feet[1],2)
+}
+function pageClimbContacts(ag,x) {
+  var row=AGENT_CLIMB[((ag.anim||0)>>1)%8]
+  return {x:Math.round(x*2)/2,hand:row[0],other:row[1],knee:row[2]}
+}
+
+function drawPageBash(ctx,w,pal,ag,x,y,d,robe,drop) {
+  var stroke=AGENT_PICK[(ag.timer||0)%6]
+  ctx.fillStyle=robe
+  blitFine(ctx,x,y,d,1,7+drop,6,6-drop)
+  blitFine(ctx,x,y,d,6,8+drop,1.5,stroke[2]-7-drop)
+  blitFine(ctx,x,y,d,7,stroke[2],2.5,1)
+  blitFine(ctx,x,y,d,2,13,2,3);blitFine(ctx,x,y,d,4,13,2,3)
+}
+function drawPagePick(ctx,pal,ag,x,y,d) {
+  var stroke=AGENT_PICK[(ag.timer||0)%6],hx=stroke[0],hy=stroke[1],hand=stroke[2]
+  drawWorkHandle(ctx,pal,x,y,d,8,hand,hx,hy)
+  ctx.fillStyle=pal.steelShade;blitFine(ctx,x,y,d,hx-2,hy,5,1.5)
+  ctx.fillStyle=pal.steelEdge;blitFine(ctx,x,y,d,hx-2,hy,5,0.5)
+  blitFine(ctx,x,y,d,hx-2.5,hy+0.5,0.5,1);blitFine(ctx,x,y,d,hx+3,hy+0.5,0.5,1)
+  ctx.fillStyle=pal.eye;blitFine(ctx,x,y,d,hx,hy+0.5,1,1)
+  ctx.fillStyle=pal.shirt;blitFine(ctx,x,y,d,7,hand,1,0.5)
+  ctx.fillStyle=pal.skin;blitFine(ctx,x,y,d,8,hand,1.5,1)
+}
+function drawPageDig(ctx,w,pal,ag,x,y,d,robe,drop) {
+  var hand=AGENT_SPADE[(ag.timer||0)%7][2]
+  ctx.fillStyle=robe
+  blitFine(ctx,x,y,d,1,7+drop,6,5)
+  blitFine(ctx,x,y,d,0,10+drop,2,2)
+  blitFine(ctx,x,y,d,6,10+drop,2,Math.max(0.5,hand-9-drop))
+  blitFine(ctx,x,y,d,2,14,4,2)
+}
+function drawPageSpade(ctx,pal,ag,x,y,d) {
+  var row=AGENT_SPADE[(ag.timer||0)%7],bx=row[0],by=row[1],hand=row[2]
+  drawWorkHandle(ctx,pal,x,y,d,7,hand,bx,by)
+  ctx.fillStyle=pal.steelShade;blitFine(ctx,x,y,d,bx-1,by,3,2);blitFine(ctx,x,y,d,bx-0.5,by+2,2,0.5)
+  ctx.fillStyle=pal.steelEdge;blitFine(ctx,x,y,d,bx-1,by,1,1.5);blitFine(ctx,x,y,d,bx-0.5,by+2,2,0.5)
+  ctx.fillStyle=pal.rigDark;blitFine(ctx,x,y,d,bx+0.5,by+0.5,0.5,1)
+  ctx.fillStyle=pal.shirt;blitFine(ctx,x,y,d,6.5,hand-0.5,1,0.5)
+  ctx.fillStyle=pal.skin;blitFine(ctx,x,y,d,7,hand,1.5,1)
+}
+function drawPageBuilder(ctx,w,pal,ag,x,y,d,robe) {
+  var row=AGENT_BRICK[(ag.timer||0)%6],bx=row[0],by=row[1]
+  ctx.save();ctx.fillStyle=robe
+  blitFine(ctx,x,y,d,1,7,6,6);blitFine(ctx,x,y,d,2,13,2,3);blitFine(ctx,x,y,d,4,13,2,3)
+  blitFine(ctx,x,y,d,6,8.5,1.5,by-7);blitFine(ctx,x,y,d,7,by,bx-6,1)
+  ctx.fillStyle=pal.shirt;blitFine(ctx,x,y,d,bx-1,by+0.5,1,0.5)
+  ctx.fillStyle=pal.dirtEdge;blitFine(ctx,x,y,d,bx,by,4.5,1.5)
+  ctx.fillStyle=pal.dirt;blitFine(ctx,x,y,d,bx,by+0.5,4,0.5)
+  ctx.fillStyle=pal.dirtShade;blitFine(ctx,x,y,d,bx+4,by+0.5,0.5,1)
+  blitFine(ctx,x,y,d,bx,by+1,4,0.5);blitFine(ctx,x,y,d,bx+2,by+0.5,0.5,0.5)
+  ctx.fillStyle=pal.skin;blitFine(ctx,x,y,d,bx,by+1.5,2,0.5)
+  ctx.restore()
+}
+function drawPageBlock(ctx,w,pal,ag,x,y,d,robe) {
+  var breath=w.reducedMotion?0:AGENT_BLOCK_BREATH[Math.floor(w.ticks/8+ag.id)%8]
+  ctx.save();ctx.fillStyle=robe
+  blitFine(ctx,x,y,d,1,7,6,6)
+  blitFine(ctx,x,y,d,0,13,3,1.5);blitFine(ctx,x,y,d,5,13,3,1.5)
+  blitFine(ctx,x,y,d,0,14,2,2);blitFine(ctx,x,y,d,6,14,2,2)
+  blitFine(ctx,x,y,d,-2,8+breath,3,2);blitFine(ctx,x,y,d,7,8-breath,3,2)
+  ctx.fillStyle=pal.shirt
+  blitFine(ctx,x,y,d,-2,8.5+breath,0.5,1);blitFine(ctx,x,y,d,9.5,8.5-breath,0.5,1)
+  ctx.fillStyle=pal.skin
+  blitFine(ctx,x,y,d,-3,8+breath,1,2);blitFine(ctx,x,y,d,10,8-breath,1,2)
+  drawFineShoes(ctx,pal,x,y,d,0,15.5,6,15.5,2);ctx.restore()
+}
+
+function drawPageFloat(ctx,w,pal,ag,x,y,brolly) {
+  var spread=Math.min(1,Math.max(0.25,Math.ceil((ag.fall-2)*8)/8))
+  var flex=w.reducedMotion?0:Math.round(Math.sin(w.ticks*0.13+ag.id*1.7)*2)/2
+  var sway=w.reducedMotion?0:Math.round(Math.sin(w.ticks*0.09+ag.id*1.7)*2)/2
+  ctx.save()
+  drawUmbrellaFine(ctx,pal,x+sway,y,flex*2,brolly,spread,true)
+  var grip=ag.dir>0?8:-0.5
+  drawWorkHandle(ctx,pal,x,y,1,4+sway,-6.5,grip,8,pal.umbrellaStem)
+  ctx.restore()
+}
+function drawPageFold(ctx,w,pal,ag,x,y,age) {
+  if (age===BROLLY_FOLD-1) { drawFurledBrolly(ctx,w,pal,ag,x,y); return }
+  var t=age/(BROLLY_FOLD-1),ease=t*t*(3-2*t)
+  var spread=Math.max(0.125,Math.round((1-ease)*8)/8)
+  var down=Math.round(Math.max(0,(ease-0.25)/0.75)*17*2)/2
+  var outer=ag.dir>0?5:-6,inner=ag.dir>0?2.5:-4
+  var back=Math.max(0,(ease-0.85)/0.15)
+  var side=Math.round((outer*Math.min(1,ease*3)+(inner-outer)*back)*2)/2
+  ctx.save()
+  drawUmbrellaFine(ctx,pal,x+side,y+down,0,brollyColour(w,pal,ag),spread,true)
+  drawWorkHandle(ctx,pal,x,y,1,4+side,-6.5+down,ag.dir>0?7:1,9,pal.umbrellaStem)
+  ctx.restore()
+}
+
+function pageHomeStep(w,ag) {
+  if (!pageMotionAgent(w,ag) || ag.state!=="saved" || !w.exit) return 0
+  var dx=(w.exit.x+w.exit.w/2-ag.x)*w.k.CELL
+  return Math.round(Math.max(-3,Math.min(3,dx))*Math.min(1,ag.fade/10)*2)/2
+}
+function agentHomeLift(w,ag) {
+  if (pageMotionAgent(w,ag)) return AGENT_HOME_LIFT[ag.fade%8]
+  return ag.fade+(ag.fade<7?Math.round(Math.sin(ag.fade/7*Math.PI)*2):0)
+}
+function drawPageHome(ctx,w,pal,ag,x,y,d,robe) {
+  var stride=AGENT_GAIT[ag.fade%8][0]
+  ctx.fillStyle=robe
+  blitFine(ctx,x,y,d,1,7,6,6)
+  blitFine(ctx,x,y,d,2+stride,13,2,3);blitFine(ctx,x,y,d,4-stride,13,2,3)
+  blitFine(ctx,x,y,d,0,9,1.5,3)
+  var wave=AGENT_HOME_WAVE[Math.floor(ag.fade/2)%4]
+  blitFine(ctx,x,y,d,6,4,1.5,5)
+  ctx.fillStyle=pal.skin;blitFine(ctx,x,y,d,7+wave,2.5,1,1.5)
+  ctx.fillStyle=pal.shirt;blitFine(ctx,x,y,d,3,7,2,1.5)
+  ctx.fillStyle=pal.eye;blitFine(ctx,x,y,d,3.5,8,0.5,2)
+  ctx.fillStyle=pal.lapel;blitFine(ctx,x,y,d,1,7,1,0.5);blitFine(ctx,x,y,d,6,7,1,0.5)
+}
+
+var PAGE_DEATH_DRAW = { "red team": drawPageDeathShot, splat: drawPageDeathSplat }
+function drawPageDeath(ctx,w,pal,ag,age) {
+  if (!pageMotionAgent(w,ag)) return false
+  var draw=Object.prototype.hasOwnProperty.call(PAGE_DEATH_DRAW,ag.diedBy)?PAGE_DEATH_DRAW[ag.diedBy]:null
+  if (!draw) return false
+  draw(ctx,w,pal,age);return true
+}
+function drawPageDeathShot(ctx,w,pal,age) {
+  ctx.save()
+  if (age<12) {
+    var lean=Math.min(3,Math.floor(age/1.5)/2),back=Math.min(5,Math.floor(age)/2)
+    ctx.translate(-back,0)
+    ctx.fillStyle=pal.robe
+    ctx.fillRect(-2,-5,5,3);ctx.fillRect(-3-lean,-9+lean,4,4);ctx.fillRect(1,-2,3,2)
+    ctx.fillStyle=pal.shirt;ctx.fillRect(-2-lean,-10+lean,2,2)
+    ctx.fillStyle=pal.skin;ctx.fillRect(-5-lean,-13+lean*2,4,3)
+    ctx.fillStyle=pal.hair;ctx.fillRect(-6-lean,-14+lean*2,4,1)
+    ctx.fillStyle=pal.eye;ctx.fillRect(-4-lean,-12+lean*2,2,0.5)
+  } else {
+    ctx.translate(-5,0);ctx.scale(-1,1)
+    drawDeathFlat(ctx,pal,7,age<16?3:2.5)
+    if (age>=14) drawDeathGhost(ctx,w,pal,age-14)
+  }
+  ctx.restore()
+}
+function drawPageDeathSplat(ctx,w,pal,age) {
+  var settle=Math.max(0,1.5-Math.floor(age/2)/2)
+  drawDeathFlat(ctx,pal,7,2+settle)
+  if (age<10) {
+    ctx.fillStyle=pal.hair
+    ctx.fillRect(-4-Math.floor(age/4)/2,-7+Math.floor(age/2)/2,4,1)
+  }
+  if (age<20) drawDeathDust(ctx,pal,age,8)
+}
+function drawPageCharge(ctx,w,pal,mine,x,y) {
+  ctx.save()
+  ctx.fillStyle=pal.rigDark;ctx.fillRect(x-2.5,y-2,5,0.5)
+  ctx.fillStyle=pal.steelEdge;ctx.fillRect(x-2,y-3,0.5,0.5);ctx.fillRect(x+2,y-3,0.5,0.5)
+  ctx.fillStyle=mine.fuse<30?pal.fireHot:pal.warn
+  ctx.fillRect(x+0.5,y-4.5,0.5,0.5)
+  ctx.restore()
+}
+
+var PAGE_AGENT_POSITION = { walk:true,fall:true,climb:true,dig:true,bash:true,build:true,block:true,saved:true }
+function pageAgentX(w,ag) {
+  var scale=pageMotionAgent(w,ag)&&PAGE_AGENT_POSITION[ag.state]===true?2:1
+  return Math.round(ag.x*w.k.CELL*scale)/scale-SPRITE_W/2
+}
+function pageAgentY(w,ag) {
+  var scale=pageMotionAgent(w,ag)&&PAGE_AGENT_POSITION[ag.state]===true?2:1
+  return Math.round((ag.y+1)*w.k.CELL*scale)/scale-SPRITE_PX
+}
+function drawAgentShoulders(ctx,w,ag,x,y,d,drop) {
+  var pixel=pageMotionAgent(w,ag)?blitFine:blit
+  pixel(ctx,x,y,d,1,7+drop,1,1);pixel(ctx,x,y,d,6,7+drop,1,1)
 }

@@ -1,16 +1,18 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { loadCore } from "../tools/load-core.js"
-import { themeOf } from "../tools/render.js"
+import { themeOf, canvas } from "../tools/render.js"
 
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
 
 function recorder() {
-  const calls = []
-  return {
-    calls, globalAlpha: 1, fillStyle: "#000",
-    fillRect(x, y, w, h) { calls.push({ x, y, w, h, a: this.globalAlpha, c: this.fillStyle }) }
+  const ctx = canvas(1, 1).ctx, fill = ctx.fillRect.bind(ctx)
+  ctx.calls = []
+  ctx.fillRect = function(x, y, w, h) {
+    this.calls.push({ x, y, w, h, a: this.globalAlpha, c: this.fillStyle })
+    fill(x, y, w, h)
   }
+  return ctx
 }
 function shooter(res, shotFor) {
   const w = S.generate(6, 0, 1); w.res = res
@@ -73,10 +75,11 @@ test("the MVP is the agent who did most in the fight, and only if somebody did",
 test("a landed floater's umbrella folds over BROLLY_FOLD ticks at res 2, then is gone", () => {
   const { w, ag, pal } = shooter(2, 0)
   ag.brollyClosedAt = 100
-  for (const [t, want] of [[99, false], [100, true], [100 + D.BROLLY_FOLD - 1, true], [100 + D.BROLLY_FOLD, false]]) {
-    w.ticks = t
+  for (const [t, want] of [[99, false], ...Array.from({length:D.BROLLY_FOLD}, (_,i)=>[100+i,true]), [100 + D.BROLLY_FOLD, false]]) {
+    w.ticks = t; ag.anim = Math.max(0, t - 100) * 2
     const ctx = recorder()
     assert.equal(D.drawUmbrellaFolding(ctx, w, pal, ag, 80, 140), want, `tick ${t}`)
+    assert.equal(ctx.globalAlpha, 1)
     for (const c of ctx.calls) for (const n of [c.x, c.y, c.w, c.h]) assert.equal(n * 2, Math.round(n * 2))
   }
   w.res = 1; w.ticks = 101

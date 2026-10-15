@@ -7,6 +7,8 @@
 //   npm run fps -- 8 9 10           ten seconds a level at the default speed
 //   npm run fps -- 8 --seconds 5 --speed 2
 //   npm run fps -- 8 9 --json
+//   npm run fps -- 324 --seed 3 --from-tick 450 --seconds 10 --speed 2
+//   npm run fps -- 324 --root /tmp/before/public --seed 3 --from-tick 450
 //
 // Reports per level: median fps, the 5th-percentile fps (the stutter), the
 // longest frame, how much of each second went to tasks over 50ms (long), and
@@ -23,8 +25,12 @@ const sleep = ms => new Promise(r => setTimeout(r, ms))
 export function parseArgs(argv) {
   const opt = (name, d) => { const i = argv.indexOf(name); return i >= 0 ? Number(argv[i + 1]) : d }
   const levels = argv.filter((a, i) => /^\d+$/.test(a) && !/^--/.test(argv[i - 1] || ""))
-  return { levels: levels.length ? levels.map(Number) : [8, 9, 10, 12, 18], seconds: opt("--seconds", 10),
+  const out = { levels: levels.length ? levels.map(Number) : [8, 9, 10, 12, 18], seconds: opt("--seconds", 10),
     speed: opt("--speed", 1), json: argv.includes("--json") }
+  for (const [flag, key] of [["--seed", "seed"], ["--from-tick", "fromTick"]])
+    if (argv.includes(flag)) out[key] = opt(flag)
+  if (argv.includes("--root")) out.root = path.resolve(argv[argv.indexOf("--root") + 1])
+  return out
 }
 
 // Frame intervals in ms -> the numbers worth printing.
@@ -42,10 +48,17 @@ export function summarise(intervals, busyMs, seconds) {
 
 // Started in the page: collect rAF intervals and long tasks for `ms`.
 const PROBE = ms => `new Promise(done => {
-  const gaps = []; let last = 0, busy = 0
-  try { new PerformanceObserver(l => { for (const e of l.getEntries()) busy += e.duration }).observe({ entryTypes: ["longtask"] }) } catch (e) {}
+  const gaps = []; let last = 0, busy = 0, maxCast = 0
+  const start = AgentWorld(); const startLevel = start.level, startTick = start.ticks
+  let observer
+  try { observer = new PerformanceObserver(l => { for (const e of l.getEntries()) busy += e.duration }); observer.observe({ entryTypes: ["longtask"] }) } catch (e) {}
   const end = performance.now() + ${ms}
-  const frame = t => { if (last) gaps.push(t - last); last = t; if (t < end) requestAnimationFrame(frame); else done({ gaps, busy }) }
+  const frame = t => {
+    const w = AgentWorld(); let cast = 0
+    for (const a of w.agents) if (!a.gone && a.state !== "saved") cast++
+    for (const e of w.enemies) if (!e.gone) cast++
+    maxCast = Math.max(maxCast, cast)
+    if (last) gaps.push(t - last); last = t; if (t < end) requestAnimationFrame(frame); else { if (observer) observer.disconnect(); done({ gaps, busy, startLevel, startTick, endLevel: w.level, endTick: w.ticks, maxCast }) } }
   requestAnimationFrame(frame)
 })`
 
@@ -54,32 +67,65 @@ async function taskSeconds(b) {
   return (m.metrics || []).find(x => x.name === "TaskDuration")?.value || 0
 }
 
-export async function measure(b, base, level, seconds, speed) {
+export async function measure(b, base, level, seconds, speed, options = {}) {
   await b.cmd("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
   await b.cmd("Page.navigate", { url: base })
   await sleep(800)
   await b.cmd("Runtime.evaluate", { expression: `localStorage.setItem("oh-no-more-agents", JSON.stringify({ version: 1, level: ${level}, speedIndex: ${speed} }))` })
-  await b.cmd("Page.navigate", { url: base })
+  const url = new URL(base)
+  url.search = new URLSearchParams({ level, seed: options.seed ?? 3, season: "none" }).toString()
+  await b.cmd("Page.navigate", { url: url.href })
   await sleep(2500)                 // past the intro, into the level
+  if (options.fromTick) await waitForTick(b, level, options.fromTick)
   await b.cmd("Performance.enable")
   const before = await taskSeconds(b)
-  const r = (await b.cmd("Runtime.evaluate", { expression: PROBE(seconds * 1000), awaitPromise: true, returnByValue: true })).result.value
+  const r = await collectFrames(b, seconds)
   // Share of the wall clock the renderer's main thread spent working: the
   // headroom left before frames start to drop.
   const cpu = Math.round(100 * (await taskSeconds(b) - before) / seconds)
-  return { level, ...summarise(r.gaps, r.busy, seconds), cpu }
+  return { level, ...summarise(r.gaps, r.busy, seconds), cpu, seed: options.seed ?? 3,
+    startLevel: r.startLevel, startTick: r.startTick, endLevel: r.endLevel, endTick: r.endTick, maxCast: r.maxCast }
 }
+
+// CDP commands have a ten-second deadline. Collect bounded four-second
+// windows on the same live run so the default ten-second probe cannot hang.
+export async function collectFrames(b, seconds) {
+  if (!(seconds > 0 && Number.isFinite(seconds))) throw Error("FPS seconds must be positive and finite")
+  const rows=[]
+  for (let left=seconds*1000;left>0;left-=4000) {
+    const r=await b.cmd("Runtime.evaluate", { expression:PROBE(Math.min(left,4000)),awaitPromise:true,returnByValue:true })
+    if (r.exceptionDetails || !r.result?.value) throw Error("FPS page probe failed")
+    rows.push(r.result.value)
+  }
+  return {gaps:rows.flatMap(r=>r.gaps),busy:rows.reduce((n,r)=>n+r.busy,0),
+    startLevel:rows[0].startLevel,startTick:rows[0].startTick,
+    endLevel:rows.at(-1).endLevel,endTick:rows.at(-1).endTick,maxCast:Math.max(...rows.map(r=>r.maxCast))}
+}
+
+// Observe the normal page clock; never fast-forward or mutate AgentWorld.
+async function waitForTick(b, level, tick) {
+  const deadline = Date.now() + 60000
+  while (Date.now() < deadline) {
+    const w = (await b.cmd("Runtime.evaluate", { expression: "({level:AgentWorld().level,tick:AgentWorld().ticks,done:AgentWorld().done})", returnByValue: true })).result.value
+    if (w.level !== level || w.done) throw Error("FPS warm-up left level " + level + " before tick " + tick)
+    if (w.tick >= tick) return
+    await sleep(100)
+  }
+  throw Error("FPS warm-up timed out at level " + level)
+}
+
+function serveRoot(opts) { return serve(opts.root ? { root: opts.root } : {}) }
 
 async function main(argv) {
   const opts = parseArgs(argv)
-  const server = await serve(), b = await browser(), rows = []
+  const server = await serveRoot(opts), b = await browser(), rows = []
   const base = `http://127.0.0.1:${server.address().port}/`
-  try { for (const level of opts.levels) rows.push(await measure(b, base, level, opts.seconds, opts.speed)) }
+  try { for (const level of opts.levels) rows.push(await measure(b, base, level, opts.seconds, opts.speed, opts)) }
   finally { await b.close(); server.close() }
+  if (b.errors.length) throw Error("page errors: " + b.errors.join("\n"))
   if (opts.json) { console.log(JSON.stringify(rows, null, 1)); return }
   console.log("level  fps  p5  worst  long  cpu")
   for (const r of rows) console.log(`${String(r.level).padStart(5)} ${String(r.fps).padStart(4)} ${String(r.p5).padStart(3)} ${String(r.worstMs + "ms").padStart(6)} ${String(r.busy + "%").padStart(5)} ${String(r.cpu + "%").padStart(4)}`)
-  if (b.errors.length) console.log("page errors:\n  " + b.errors.join("\n  "))
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main(process.argv.slice(2))
