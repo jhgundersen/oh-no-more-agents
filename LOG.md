@@ -7153,3 +7153,51 @@ re-stamped.
   and reduced-motion viewers draw the hatch exactly as before.
 - **Read-only drawing:** it uses the existing `lastReleaseAt` and `ticks`,
   with no RNG or state written.
+
+## 318 — 2026-10-15 · Tunnel home through a thick wall when nothing else answers
+
+**Chosen:** 312's "Next", level 137 (Rooftops). 2 of 16 colonies ended on
+the stall cutoff with agents stranded.
+
+**Traced** (salt 5, agent 11):
+- **The wall:** a dirt bank 4–5 high from x46, running toward the exit at
+  x89 at the exit's own height. `wallThickness` reads it as 14, which is its
+  cap (`BASH_REACH + 4`).
+- **Why nothing answered it:**
+  - no climbers in stock;
+  - too thick to commit a basher to (`BASH_REACH` 10);
+  - a ramp cannot start at a wall face (`canStartBuild`);
+  - too deep for a mine or bomb (`obstructionAhead`).
+- **What the colony did:** paced x37–45 with 9 bashers, 22 builders and 6
+  miners in the toolbar until the stall cutoff.
+
+**Changed** (`tunnelHome`, the last thing `wallTools` tries): spend a basher
+on a wall too thick for `BASH_REACH` when all of these hold:
+- the door lies ahead in the walking direction, with its floor within 3 rows
+  of the agent's;
+- the wall can't be climbed with a climber actually in stock;
+- this agent has already turned from it once.
+
+A bash continues until it breaks into open air (`stepBash`), so one basher
+digs the tunnel; it still stops at a bottomless lip and at steel.
+- **A bug in the first version:** it stepped aside whenever the wall was
+  `climbable`, which describes the wall, not the toolbar. Level 137 has no
+  climbers, so it never fired. It now needs a climber in stock.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 137, 16 colonies: home | 93% | 96% |
+| Level 137: stall cutoffs | 2 | 0 |
+| Level 137: stranded | 3 | 0 |
+| Level 137: written off | 4 | 0 |
+| Level 137: worst colony | 67% | 83% |
+| Level 129 (Skyscraper), 24 colonies: home | 85% | 86% |
+| Level 129: written off | 25 | 20 |
+| Level 129: stall cutoffs | 1 | 2 |
+| `npm run sim play` | 2,956/3,113 home | 2,958/3,113, 200/200 cleared, no hangs |
+
+- **Playtest 1–200:** the 137 and 180 flags are gone; 129 shows 2/8 stall
+  cutoffs where it showed 1/8.
+- **`sim hazards`:** unchanged.

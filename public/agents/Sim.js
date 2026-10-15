@@ -5777,7 +5777,21 @@ function wallTools(w, ag, h, t) {
   }
 
   if (h <= MAX_CLIMB && canStartBuild(w, ag) && spend(w, ag, "builder")) { startBuild(w, ag); return true }
+  if (tunnelHome(w, ag, t, climbable) && spend(w, ag, "basher")) { ag.state = "bash"; ag.timer = 0; return true }
   return false
+}
+
+// A wall too thick to commit a basher to is usually strata, and the colony
+// walks round it. Not when the door is beyond it at this height and nothing
+// else answered: on level 137 a dirt bank five high ran from x46 toward the
+// exit, there were no climbers, a ramp cannot start at a wall face, and the
+// colony paced in front of it with nine bashers until the stall cutoff
+// (LOG 318). A bash keeps going until it breaks into open air, so it is the
+// tunnel home. Only after this agent has turned from it once.
+function tunnelHome(w, ag, t, climbable) {
+  if (t <= BASH_REACH || (climbable && (w.skills.climber || 0) > 0) || ag.turns < 1) return false
+  var door = w.exit.x + w.exit.w / 2
+  return (door - ag.x) * ag.dir > 0 && Math.abs(exitFloor(w) - 1 - Math.floor(ag.y)) <= 3
 }
 
 // Nothing bought a way past: stand down for the colony behind, blast the wall,
