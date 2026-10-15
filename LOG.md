@@ -5859,7 +5859,7 @@ clock-advancing retention test.
   "Incorrect type for map entry 'LIMIT_CLEANUP'": a Worker module may export
   only handlers. Only the local runtime showed it.
 
-**Tests** (`test/ratelimit.test.js`): the Worker's real SQL on node:sqlite
+**Tests** (`test/limit-retention.test.js`): the Worker's real SQL on node:sqlite
 with both migrations applied, behind a small D1 stand-in, with a mocked clock.
 - One event replayed for 1,001 minutes gives 1 rescue, 1 report and 1 event
   row, with at most 6 rate-limit rows.
@@ -5871,3 +5871,21 @@ with both migrations applied, behind a small D1 stand-in, with a mocked clock.
 buckets into local D1, posted one report and got 200, and the three were gone.
 
 **Next:** merge codex/build-fixes, then deploy (this one ships the Worker).
+
+## 290 — 2026-10-15 · Restored the queue tests that 289 overwrote
+
+**What happened:** 289 wrote its retention tests to `test/ratelimit.test.js`
+with a shell redirect. That name was already taken by the tests for the
+in-game rate-limit queue (the 429 sign, AFTER YOU, 200 OK). The check stayed
+green because it simply ran 11 fewer tests: 1,286 against 1,294 before, while
+I had added 3.
+
+**Caught by** comparing the passing test names against the previous commit's.
+
+**Fixed:**
+- The queue tests are restored from ec85876.
+- The retention tests now live in `test/limit-retention.test.js`.
+- 289's entry above now names the new file.
+
+**Lesson:** check that a test file is new before creating it, and compare the
+test count against the last run, not only the fail count.
