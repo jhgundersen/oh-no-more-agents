@@ -6880,3 +6880,57 @@ the fall is winding up or firing. It drops during the rest.
 | `npm run playtest -- 1-200 --seeds 8` | — | identical flags |
 
 `sim play` is neutral, and 200/200 cleared, no hangs.
+
+## 312 — 2026-10-15 · Nobody digs into nothing
+
+**Chosen (autonomy):** the last low-home flag in the 1–200 playtest, "level
+110: 69% home" (Trench).
+
+**Traced** (12 colonies): 29 deaths to the red team, which is the
+fighting-back part of the design, and 21 fatal falls. Every fall was at
+x52–54, out of the bottom of the map, between t540 and t760.
+
+**Cause:** in nearly every colony a digger at x52 tunnelled down from floor
+34 through the rock and broke out over the Trench's void, with no floor
+below it to the bottom row. The colony then followed the shaft out of the
+world. `digOpensDeath` stops a digger before the last layer over a lethal
+drop, but it returned early whenever there were umbrellas in stock, and with
+no floor at all an umbrella is just a slow fall out of the world.
+`edgeAhead` already says so for edges ("an umbrella is no help over a shaft
+with no floor").
+
+**Changed** (`digOpensDeath`): a bottomless drop (`dropDepth` = Infinity)
+always stops the dig, before umbrellas, floaters or specials are considered.
+Finite drops keep the old rule.
+
+**Measured:**
+- **Level 110** (12 colonies): 68% → 76% home. Fatal falls 21 → 10. The rest
+  are a digger that stopped in time, then walked off another edge in its
+  pit.
+- **`npm run sim play`:** 2,944/3,098 home in 206 attempts, against
+  2,951/3,111 in 207. That is 95.0% against 94.9%, with fewer retries;
+  200/200 cleared, no hangs.
+- **Playtest 1–200:** the level-110 flag is gone.
+- **The cost, level 163** (Frost, 24 colonies): 94% → 93%, and 3 colonies now
+  end on the stall cutoff with one agent stranded. The digger that used to go
+  out of the world (dead) now stands in its own pit over the void until the
+  cutoff. Same score per colony (17/18); the level just ends on the cutoff,
+  not when everyone is home. Climbing out of a dead-end pit is the next
+  thing to look at there.
+
+**Next — level 137 (Rooftops), 2 of 16 colonies end on the stall cutoff.**
+Salt 5, agent 11: a dirt wall 4–5 high and 14 thick at x46, which is past
+`BASH_REACH`. No climbers are left. `canStartBuild` refuses at a wall face by
+design ("Walls belong to climbers and bashers"). An earlier builder's ramp
+from x37 stopped against the wall at row 50, its builder turned and fell off,
+and the agents then pace x37–45 with 22 builders and 6 miners unused. The
+level's stall cutoff (t1033) arrives before their own patience reaches the
+half-way charge in `wallLastResort` (idle 426 of 450). Options: build from a
+run-up when the wall can be neither climbed nor bashed, or let a builder at
+the top of a ramp that ran into a wall carry on up.
+
+The first gate failed "a digger stops on the last layer over a fatal drop
+unless an umbrella is going". Its "umbrella on the toolbar: go on" case was
+built over a bottomless drop, which is the case this entry forbids. The test
+now checks a bottomless drop first (stop, even with an umbrella), then puts
+a floor 40 rows down for the old three cases.

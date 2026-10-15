@@ -8373,10 +8373,16 @@ function digOpensDeath(w, ag, cx, footY) {
   // over when the floor goes), so only a drop with no floor at all stops it:
   // on level 92 the hero was in a pocket over a one-cell floor, the rescue
   // dug, and this stopped it on the last layer every time until the clock.
-  var umbrellas = ag.special ? 0 : (w.skills.floater || 0)
-  if (solid(w, cx, footY + 2) || ag.floater || umbrellas > 0) return false
+  //
+  // And nobody digs into nothing. An umbrella lands you on a floor; with no
+  // floor under the hole it is a slow way out of the world. On level 110 a
+  // digger with umbrellas in stock opened a shaft into the Trench's void and
+  // the colony followed it down, a fatal fall in nearly every colony (LOG 312).
+  if (solid(w, cx, footY + 2)) return false
   var depth = dropDepth(w, cx, footY + 1)
-  if (ag.special) return depth === Infinity
+  if (depth === Infinity) return true
+  var umbrellas = ag.special ? 0 : (w.skills.floater || 0)
+  if (ag.special || ag.floater || umbrellas > 0) return false
   return depth > killingFall(w)
 }
 

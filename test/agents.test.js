@@ -42,6 +42,11 @@ test("a digger stops on the last layer over a fatal drop unless an umbrella is g
   for (let y = foot + 2; y < S.ROWS; y++) w.terrain[y * S.COLS + x] = S.EMPTY
   w.terrain[(foot + 1) * S.COLS + x] = S.DIRT
   const ag = S.spawn(w)
+  // Nothing under the hole at all: no umbrella lands you on a floor that is
+  // not there (level 110's colony followed a dug shaft out of the world).
+  w.skills.floater = 1
+  assert.ok(S.digOpensDeath(w, ag, x, foot), "bottomless: stop, umbrellas or not")
+  w.terrain[(foot + 40) * S.COLS + x] = S.DIRT                // a floor, far below
   w.skills.floater = 0
   assert.ok(S.digOpensDeath(w, ag, x, foot), "no umbrellas: stop")
   w.skills.floater = 1
