@@ -9583,7 +9583,101 @@ updraft curls, the duck and the 429 sign. The reference is now main's tip
 just before this merge (a09ddc0), which is what the test means: WHO-off
 pixels unchanged by this merge.
 
-## 372 — 2026-10-15 · Everybody takes a break (on a branch)
+## 373 — 2026-10-15 · No descent where the dig would open into nothing
+
+**Chosen (autonomy):** the last pit straggler. Level 163 (Frost) ended on
+the stall cutoff with one agent standing in a pit it had dug. This is the
+cost 312 recorded.
+
+**Traced** (salt 1, agent 14):
+- **The trigger:** walking out of a hazard zone at x43, row 35,
+  `walkHazardZone` sent it down (`startDescent`). `canDescendHere` saw a
+  corridor below.
+- **The ground:** under that corridor's floor the column is open to the
+  bottom of the world.
+- **The result:** the dig went through the dirt and rock to the last layer,
+  `digOpensDeath` (312) stopped it there, and it stood in its own pit until
+  the cutoff.
+
+**Changed:** `voidUnder`. `canDescendHere` refuses a column where the first
+run of solid ground under the agent sits over a drop with no floor
+(`dropDepth` = Infinity), which is the only place a dig there can end.
+- **A first version was too strict:** it refused any column with a void
+  anywhere underneath. It also stopped digs that break into a corridor
+  first, and level 97 went from 1 stall cutoff to 3 in 24 colonies.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 163, 24 colonies: home | 92% | 97% |
+| Level 163: stall cutoffs | 2 | 0 |
+| Level 163: stranded | 3 | 0 |
+| Level 163: written off | 12 | 0 |
+| Level 163: nukes | 2 | 3 |
+| Level 97, 24 colonies | — | identical |
+| `npm run sim play`: home | 2,965/3,113 | 2,964/3,113 |
+| Playtest 1–440 | — | the 163 flag goes; nothing new |
+
+`sim play`: 200/200 cleared, no hangs.
+
+Built in a worktree (dev/163) while the main tree stayed clean for the
+17:25 deploy, and merged after it.
+
+## 374 — 2026-10-15 · The forecast, as copy for the title card
+
+**Asked:** compute the forecast line's text from the toolbar and biome in
+the core files, so Codex can draw it later. 369 proposed it; the umbrella
+stand went to Codex.
+
+**Built** (`Outcome.js`):
+- **`forecastLines(w)`** returns two lines from the fresh world:
+  `"FORECAST: <up to two conditions>"` and
+  `"<n>0% CHANCE OF <biome noun> · UMBRELLAS: <floaters>"`.
+- **Conditions,** rarest first: hostile contractors (an enemy roster), a
+  meeting at 3 (a mission), lifts running, mostly (a tower), scope changes
+  possible (scheduled events), then isolated, scattered or widespread
+  hazards, then sinkholes likely. Nearly every level has a pit, so that one
+  only fills a gap.
+- **A quiet level** gets "CLEAR SKIES, ALLEGEDLY". No floaters gets "NO
+  UMBRELLAS. GOOD LUCK".
+- **One noun per biome:** echoes, snow, black ice, overheating, shushing,
+  delays, fog, "RAIN, OBVIOUSLY" for the Cloud, and so on.
+- **The percentage** comes from the level number, so the same level always
+  gets the same forecast. Nothing is random, nothing is drawn, the world is
+  read only, and the lines are at most 56 characters.
+
+**Tests** (`test/forecast.test.js`):
+- every biome gets two well-formed, short, deterministic lines and leaves
+  the world untouched;
+- the conditions' order, the two-line cap, clear skies, and no umbrellas.
+
+**For Codex:** draw the two lines on the title card. It shows for 1.2 s
+today, which is short for two extra lines.
+
+## 376 — 2026-10-15 · Deploy (17:27), and three branches merged after it
+
+**Deployed** build b96d79b5 (version 2f4594c8), replacing 4de7f9b0. It
+covers 369–371:
+- Employee of the Level;
+- the follow-up notes;
+- the readable WHO labels.
+
+**Before:** `npm run smoke` on the clean tree passed (3 min, levels 1–7).
+
+**After:** `npm run verify -- --previous 4de7f9b0` passed on the first run
+(5 counter writes refused). The waits for the edge from 359 and 368 did
+their job.
+
+**Branches:** while the main tree stayed clean for the deploy, three
+changes were built and measured in worktrees and merged afterwards:
+- dev/163 (373, no descent into a void);
+- dev/forecast (374, the forecast copy);
+- dev/204 (375, `LONG_RUN` 6).
+
+Each went through the full gate on main.
+
+## 377 — 2026-10-15 · Everybody takes a break (on a branch)
 
 **Chosen:** audit item 3, first of two presentation commits on
 `codex/page-panels`, from then-current main `164457d`.
@@ -9625,7 +9719,7 @@ Logs/evidence and source hashes are under `/tmp/codex-page-panels/`.
 **Next:** the separately committed controls/footer typography pass, then the
 queued lost-umbrella office at biome exits. No push or deployment.
 
-## 373 — 2026-10-15 · Small print, bigger character (on a branch)
+## 378 — 2026-10-15 · Small print, bigger character (on a branch)
 
 **Changed:** the second presentation commit on `codex/page-panels` brings short
 HUD, skill, control and patch-note labels into the game's pixel style with a
@@ -9658,7 +9752,7 @@ source proofs are under `/tmp/codex-page-panels/`.
 
 **Next:** the queued lost-umbrella office, on a separate branch. No push/deploy.
 
-## 374 — 2026-10-15 · Please collect your umbrella (on a branch)
+## 379 — 2026-10-15 · Please collect your umbrella (on a branch)
 
 **Queued brief:** the lost-umbrella office, after the two requested
 presentation commits. `codex/umbrella-office` continues `codex/page-panels`
@@ -9731,3 +9825,73 @@ time. Logs and exact source hashes are under `/tmp/codex-umbrella-office/`.
 
 **Next:** review/merge; branch commits only, no push/deploy. The separate forecast
 idea awaits its own brief.
+
+## 380 — 2026-10-15 · A chance of scattered contractors (on a branch)
+
+**Brief:** `codex/forecast-art` continues approved umbrella/presentation work
+`5ce3368` and merges main `554d4e5`, which supplies the developer's
+`Outcome.forecastLines` (`3d4994e`) and the descent fix. Both log histories are
+retained and stamps regenerated. Sim.js and Outcome.js stay identical to that
+merged main base.
+
+**Changed:** the compact biome title, icon and dry subtitle retain their exact
+pixels. A second translucent plate shows the helper's two forecast lines, with
+the same six-pixel character advance but taller ten-pixel letters for phones.
+Normal forecasts use two rows / 36px height; longer no-umbrella copy wraps at
+word boundaries without dropping text. A local percentage glyph leaves the old
+ROM and other hosts' flavour text unchanged. No assets or dependencies.
+
+Up to 32 bounded candidates place the forecast outside the title, hatch opening,
+first drop and exit, scoring route overlap and proximity to the title. Portal-
+edge candidates fix a case caught at level 329 when the taller type touched the
+hatch reservation. The top 48 pixels stay clear for tips/notices. Tests check
+400 levels with normal and zero umbrella stocks, five themes, unbroken words,
+half-pixel bounds and inherited alpha, plus unchanged live-world digests at both
+resolutions.
+
+The existing single canvas caches both plates at level creation; theme repaints
+reuse the opening forecast even after stock changes. No extra timer, listener,
+per-frame paint or layout. Normal hold is **3.2s**, reduced motion **2.4s**, both
+stationary with the final 20% fading. The original tap-skip still passes the tap
+through; fast navigation clears old timers. Replay, report and standup exclusions
+remain. Screen readers receive the same forecast in the opening announcement.
+
+**Evidence:** `/tmp/codex-forecast-art/review/index.html`, actual desktop and
+390px phone before/after boards plus 3× forecast details. The six paired world
+digests match, including DPR2, Library 13, Cloud 20 and Skyscraper 29. Browser
+errors/exceptions: none. All **30 scene/detail PNG hashes** and canonical/stamped
+sheet copies verify. Current sheet `contact-sheet-3483bdcd.png`, SHA-256
+`d18c3043b82ecb07f412c5e836ef72815d56a0bba902153c7f458ad13a9d2605`.
+Draw `ed6619bf`, web `09358f4b`, build `cf6c5e62`. Viewed at actual phone size,
+desktop and enlarged detail; the whole board is in the phone shots.
+
+**Tools/process:** `tools/titlecard-art.js` now pins scene seeds, records world/
+source/image hashes, exports a source-stamped phone sheet and accepts a baseline
+root. Its shots-only mode avoids rerunning the 13-second wall-clock/input checks
+for every before/after batch; one disposable browser handles each six-view batch
+in about **3.1s**. The existing DPR-normalised contact exporter checks scene
+identity. Cached-paint/layout counters, stock-change snapshot checks and exact
+announcement assertions guard the host boundary. Shipped growth: **2,059 Draw
+bytes / 745 gzip**, **330 web bytes / 76 gzip**. The build scanner classifies both
+files safely. No ongoing frame cost was added.
+
+**Validation:** an unwrapped two-file focused run was allowed to close its own
+browser, archived under `pre-lock/`, then rerun through FIFO testlock. The first
+full gate caught the old accessibility test expecting only the old opening
+sentence. That run was stopped before editing; no orphan browser remained, and
+its incomplete output/LCOV is under `pre-announcement/`. The corrected assertion
+checks the complete level/subtitle plus the exact supplied fresh-world forecast;
+it is also in the focused gate now.
+
+Final locked focused checks **15/15**, **17.62s**. The corrected, frozen-source
+full `npm run check` with coverage passes: **1,536 passed, 0 failed**, **396.77s**,
+including Factory. CRAP **threshold 30 passed** using that same LCOV; maximum
+30.0, including the expanded capture orchestrator (CC12 / 50% coverage). New
+runtime forecast helpers score **1.0–9.0**, with 100% coverage except the glyph
+helper's 87.5%. Completion was reported immediately. Source proof, stamp and
+diff checks pass. Persistent FIFO service: two workers, 120-second test timeouts,
+2,048MB Node heap, `ulimit -v 6000000`, 3GB memory cap; **805.4MiB peak**,
+**7m57s wall time including queueing**. Logs and exact source/image proofs live
+under `/tmp/codex-forecast-art/`.
+
+**Next:** review/merge the branch. No push or deployment.

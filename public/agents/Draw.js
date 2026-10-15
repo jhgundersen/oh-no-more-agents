@@ -3490,23 +3490,79 @@ function levelTitleLayout(w) {
   return best
 }
 
+// The host supplies Outcome's fresh-world copy. Geometry and pixels stay in
+// Draw, without a cross-core call or display fields added to the simulation.
+function levelForecastCopy(lines) {
+  var rows=[]
+  for(var i=0;i<lines.length;i++) {
+    var text=lines[i].toUpperCase()
+    while(text.length>56) {
+      var cut=text.lastIndexOf(" ",56)
+      if(cut<1)cut=56
+      rows.push(text.slice(0,cut));text=text.slice(cut).replace(/^ +/,"")
+    }
+    rows.push(text)
+  }
+  var longest=0
+  for(var j=0;j<rows.length;j++)longest=Math.max(longest,rows[j].length)
+  return {rows:rows,width:Math.ceil((longest*4-1)*1.5)+16,height:rows.length*13+10}
+}
+function levelForecastLayout(w,copy,title) {
+  var spots=levelTitleCandidates(w,copy),keep=levelTitleKeepClear(w)
+  keep.push({x:title.x-4,y:title.y-4,width:title.width+8,height:title.height+8})
+  // Prefer a neighbouring plate when the route permits it; retain the twelve
+  // board pockets for layouts with a hatch, floor or exit directly below.
+  spots.push({x:Math.max(14,Math.min(386-copy.width,title.x)),y:title.y+title.height+5,width:copy.width,height:copy.height})
+  spots.push({x:Math.max(14,Math.min(386-copy.width,title.x)),y:title.y-copy.height-5,width:copy.width,height:copy.height})
+  // Portal edges provide pockets between the coarse rows, notably a tower
+  // with the hatch halfway up. Fixed bound: 18 extra candidates, no live scan.
+  var xs=[14,Math.round((400-copy.width)/2),386-copy.width]
+  for(var anchor=0;anchor<keep.length;anchor++)for(var side=0;side<2;side++)for(var col=0;col<xs.length;col++)
+    spots.push({x:xs[col],y:side?keep[anchor].y+keep[anchor].height+3:keep[anchor].y-copy.height-3,width:copy.width,height:copy.height})
+  var best=null,low=Infinity
+  for(var i=0;i<spots.length;i++) {
+    var r=spots[(i+w.level)%spots.length]
+    if(r.y<48 || r.y+r.height>236)continue
+    var near=Math.abs(r.x-title.x)+Math.abs(r.y-title.y)
+    var score=levelTitleScore(w,r,keep)+near*0.08
+    if(score<low){best=r;low=score}
+  }
+  return best
+}
+function drawLevelForecastCard(ctx,w,pal,copy,r) {
+  if(!r || w.done || w.replaying)return
+  ctx.save()
+  drawLevelTitlePlate(ctx,pal,r)
+  ctx.fillStyle=pal.label
+  for(var i=0;i<copy.rows.length;i++) drawLevelForecastLine(ctx,copy.rows[i],r.x+8,r.y+5+i*13)
+  ctx.restore()
+}
+function drawLevelForecastLine(ctx,text,x,y) {
+  for(var i=0;i<text.length;i++) {
+    // The title ROM predates percentages. Keep this glyph local so adding a
+    // forecast cannot change another host's old result/flavour text pixels.
+    var glyph=text[i]==="%"?[5,1,2,4,5]:TRANSITION_GLYPHS[text[i]]||TRANSITION_GLYPHS["?"]
+    for(var row=0;row<5;row++)for(var col=0;col<3;col++)
+      if(glyph[row]&(4>>col))ctx.fillRect(x+i*6+col*1.5,y+row*2,1.5,2)
+  }
+}
+function drawLevelTitlePlate(ctx,pal,r) {
+  ctx.save()
+  var alpha=ctx.globalAlpha
+  ctx.globalAlpha=alpha*0.82;ctx.fillStyle=pal.cardBack
+  ctx.fillRect(r.x+0.5,r.y+0.5,r.width-1,r.height-1)
+  ctx.globalAlpha=alpha*0.85;ctx.fillStyle=pal.dirtEdge
+  ctx.fillRect(r.x,r.y,r.width,0.5);ctx.fillRect(r.x,r.y+r.height-0.5,r.width,0.5)
+  ctx.fillRect(r.x,r.y,0.5,r.height);ctx.fillRect(r.x+r.width-0.5,r.y,0.5,r.height)
+  ctx.restore()
+}
+
 function drawLevelTitleCard(ctx, w, pal, icon, layout) {
   if (w.done || w.replaying) return
   var r = layout || levelTitleLayout(w), size = levelTitleSize(w)
   var cx = r.x + 38 + (r.width - 46) / 2
   ctx.save()
-  var alpha = ctx.globalAlpha
-  // One translucent fill, not stacked plates that become opaque together.
-  ctx.globalAlpha = alpha * 0.82
-  ctx.fillStyle = pal.cardBack
-  ctx.fillRect(r.x + 0.5, r.y + 0.5, r.width - 1, r.height - 1)
-  ctx.globalAlpha = alpha * 0.85
-  ctx.fillStyle = pal.dirtEdge
-  ctx.fillRect(r.x, r.y, r.width, 0.5)
-  ctx.fillRect(r.x, r.y + r.height - 0.5, r.width, 0.5)
-  ctx.fillRect(r.x, r.y, 0.5, r.height)
-  ctx.fillRect(r.x + r.width - 0.5, r.y, 0.5, r.height)
-  ctx.globalAlpha = alpha
+  drawLevelTitlePlate(ctx, pal, r)
   ctx.save()
   ctx.translate(r.x + 6, r.y + (r.height - 16) / 2)
   drawTourIcon(ctx, pal, icon)

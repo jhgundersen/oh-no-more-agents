@@ -3,6 +3,8 @@ import assert from "node:assert/strict"
 import { execSync } from "node:child_process"
 import { serve, browser } from "../tools/phone.js"
 import { CONTRAST } from "../tools/contrast.js"
+import { loadCore } from "../tools/load-core.js"
+const S = loadCore("Sim.js"), O = loadCore("Outcome.js")
 
 // Accessibility on the page: what a screen reader hears, what a keyboard can
 // do, reduced motion reaching the drawing, and text contrast in every theme.
@@ -19,7 +21,9 @@ test("screen reader and keyboard: announced levels and results, named canvas, pr
     await b.cmd("Page.navigate", { url: `http://127.0.0.1:${server.address().port}/?level=3&seed=42` })
     for (let i = 0; i < 40 && !(await ev(`!!(window.AgentWorld && AgentWorld())`)); i++) await sleep(100)
     assert.equal(await ev(`document.getElementById("announce").getAttribute("aria-live")`), "polite")
-    assert.match(await ev(`document.getElementById("announce").textContent`), /^Level 3, Frost\. \d+ agents\. Cold start\.$/)
+    const fresh = S.generate(3, 0, 42)
+    assert.equal(await ev(`document.getElementById("announce").textContent`),
+      "Level 3, Frost. " + fresh.toRelease + " agents. Cold start. " + O.forecastLines(fresh).join(" "))
     assert.equal(await ev(`document.getElementById("terrain").getAttribute("role")`), "img")
     assert.ok((await ev(`document.getElementById("terrain").getAttribute("aria-label")`)).length > 10)
     assert.equal(await ev(`document.getElementById("actors").getAttribute("aria-hidden")`), "true")

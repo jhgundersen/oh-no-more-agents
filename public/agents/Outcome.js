@@ -292,3 +292,40 @@ function sightingsIn(w) {
   return seen
 }
 
+// ---------------------------------------------------------------------------
+// The forecast
+// ---------------------------------------------------------------------------
+// Two short lines for the level's title card, read off the fresh world before
+// anyone is out: what is in the way, and the umbrella situation. Nothing here
+// is random (the same level always gets the same forecast) and nothing is
+// drawn here; the page's title card draws the lines.
+var FORECAST_NOUNS = {
+  "Cavern": "ECHOES", "Ruins": "ANCIENT BUGS", "Frost": "SNOW", "Foundry": "HEATWAVES",
+  "Jungle": "HUMIDITY", "Ice Cave": "BLACK ICE", "Spaceship": "SOLAR WIND", "Factory": "OVERTIME",
+  "Skyscraper": "ELEVATED RISK", "Trench": "PRESSURE", "Desert": "MIRAGES", "Data Center": "OVERHEATING",
+  "Library": "SHUSHING", "Mail Room": "DELAYED DELIVERY", "Building Site": "FALLING SCAFFOLD",
+  "Clock Tower": "TIME DRIFT", "Rooftops": "GUSTS", "Subway": "DELAYS", "Harbour": "FOG",
+  "The Cloud": "RAIN, OBVIOUSLY"
+}
+function forecastConditions(w) {
+  var out = []
+  var hazards = (w.hazards || []).length
+  // Rarest first: nearly every level has a pit, so it only fills a gap.
+  if (w.enemyRoster && w.enemyRoster.length) out.push("HOSTILE CONTRACTORS")
+  if (w.mission) out.push("A MEETING AT 3")
+  if (w.lifts && w.lifts.length) out.push("LIFTS RUNNING, MOSTLY")
+  if (w.events && w.events.length) out.push("SCOPE CHANGES POSSIBLE")
+  if (hazards) out.push(hazards === 1 ? "ISOLATED HAZARDS" : hazards <= 3 ? "SCATTERED HAZARDS" : "WIDESPREAD HAZARDS")
+  if (w.pits && w.pits.length) out.push("SINKHOLES LIKELY")
+  if (!out.length) out.push("CLEAR SKIES, ALLEGEDLY")
+  return out.slice(0, 2)
+}
+function forecastLines(w) {
+  var chance = 10 + ((w.level * 37) % 9) * 10
+  var noun = FORECAST_NOUNS[w.biome] || "RECURSION"
+  var brollies = (w.skills && w.skills.floater) || 0
+  return [
+    "FORECAST: " + forecastConditions(w).join(", "),
+    chance + "% CHANCE OF " + noun + " · " + (brollies ? "UMBRELLAS: " + brollies : "NO UMBRELLAS. GOOD LUCK")
+  ]
+}
