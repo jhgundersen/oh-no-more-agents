@@ -3261,6 +3261,11 @@ function homeTitle(w) {
   return (s.homePrefix || "") + w.saved + " / " + w.toRelease + (s.homeSuffix === undefined ? " HOME" : s.homeSuffix)
 }
 
+// The card's small heading: the level, or for the colony of the day the date.
+function reportHeading(w) {
+  return w.daily ? "COLONY OF THE DAY · " + w.daily : "LEVEL " + w.level + " · REPORT"
+}
+
 function drawLevelResults(ctx, w, pal) {
   var cx = Math.round(w.k.COLS * w.k.CELL / 2)
   var rows = reportRows(w, pal), extra = 0, padded = false
@@ -3272,7 +3277,7 @@ function drawLevelResults(ctx, w, pal) {
   var y = reportTop(w, rows).y + Math.max(0, 10 - w.doneTicks) * 2
   drawTransitionPlate(ctx, w, pal, cx - 136, y, 62 + extra)
   ctx.fillStyle = pal.decorLit
-  drawTransitionText(ctx, "LEVEL " + w.level + " · REPORT", cx, y + 8, 1)
+  drawTransitionText(ctx, reportHeading(w), cx, y + 8, 1)
   ctx.fillStyle = pal.label
   drawTransitionText(ctx, homeTitle(w), cx, y + 22, 2)
   ctx.fillStyle = w.saved === 0 ? pal.urgent : pal.exitLight
@@ -19910,3 +19915,73 @@ function drawCloudDecorItem(ctx,w,pal,d,x,y) {
   ctx.restore()
   return true
 }
+
+// Small page UI art: twenty 20×12 silhouettes in a 24×16 plate.
+// Static row runs share an ink outline; no assets, animation or world state.
+var TOUR_ICON_PIXELS = [
+  // Cavern
+  ["....................","..bbbbbbbbbbbbbbb...","..bbbbbbbbbbbbbbb...",".ccccbb......bbccc..",".ccccbb......bbccc..",".ccccbb........ccc..",".cccc..tt......ccc..",".cccc..tt......ccc..",".cccc.mtt.mm...ccc..",".cccc.mtt.mm...ccc..",".cccc.mtt.mm...ccc..",".bbbbbbbbbbbbbbbbb.."],
+  // Ruins
+  ["....................","....yyyyy...........","....yyyyy..yyyy.....","...ooyy....yyyy.....","...ooyy....yyooo....","...yyyy....yyooo....","...oooo.....oooo....","...oooo.....yyyy....","...oooo.....oooo....","...oooo.....oooo....","..yyyyyy.o.yyyyyy...","..yyyyyy.o.yyyyyy..."],
+  // Frost
+  [".........ww.........",".........ww.........",".......wwwwwt.......",".......tttttt.......","......wwwwwwwg......","......gggggggg......","....wwwwwwwwwwgg....","....gggggggggggg....","..wwwwwwwwwwwwwwgg..","..gggggggggggggggg..",".........oo.........","..wwwwwwwwwwwwwwww.."],
+  // Foundry
+  ["............bbbb....","............wbbb....","............wbbb....","....ccccccccccccc...","...bbbbbbbbbbbbbbb..","....ccccccccccccc...","....ccooooooooccc...","....ccooyyyyooccc...","....ccooyyyyooccc...","....ccooywwyooccc...","....bbooywwyoobbb...","....bbooywwyoobbb..."],
+  // Jungle
+  ["....gggggggggggg....","..ggggggggggyygg....","..gyyygggggggggg....","..ggggggooogggggggg.","ggggggg.ooogggggggg.","ggggggg.ooogggggggg.","ggggggg.ooo....g....","...g....ooo....g....","...g....ooo....g....","...g....ooo....g....","...g...oooooo..g....",".......oooooo......."],
+  // Ice Cave
+  ["....................","...tttttttttttttt...","...ttttttwwtttttt...",".ttttww..ww..wwtttt.",".twttww..ww..wwttbt.",".twttww......wwttbt.",".twttww......wwttbt.",".twtt........wwttbt.",".twtt..........ttbt.",".tttt..........ttbt.",".tttt..........tttt.","..wwwwwwwwwwwwwwww.."],
+  // Spaceship
+  ["....................","........wwww........","......tttttttt......","......tttttttt......","......tttttttt......","...bbbbbbbbbbbbbb...","...bbbbbbbbbbbbbb...",".wwwwrwwwywwwgwwwww.",".wwwwwwwwwwwwwwwwww.","....cccccccccccc....",".....bb......bb.....",".....bb......bb....."],
+  // Factory
+  ["..............wcc...","..wcc.........wcc...","..wcc.........wcc...","..wcc.........wcc...",".bwcc...bb....wcc...",".bbbb...bbbb..ccc...",".bbbbbb.bbbbbbccc...",".bbbbbbbbbbbbbbbbbb.",".bbbbbbbbbbbbbbbbbb.",".bbyybbyybbyybbyybb.",".bbyybbyybbyybbyybb.",".bbbbbbbbbbbbbbbbbb."],
+  // Skyscraper
+  [".........w..........","......bbbbbbb.......",".....bbbbbbbbbb.....",".....byybbyybbb.....","....cbbbbbbbbbb.....","....cbbbbbbbbbbccc..","....cbyybbyybbbccc..","....cbbbbbbbbbbccc..","....cbbbbbbbbbbccc..","....cbyybbyybbbccc..","....cbbbbbbbbbbccc..","..bbbbbbbbbbbbbbbbb."],
+  // Trench
+  ["....................","...g................",".ggg................",".ggg.......tttwt.bb.","...ggg....ttttttt...","...ggg.....ttttt.bb.","...g...g............",".ggg...ggg..........",".ggg...ggg..........","...g...g............","...g...g............",".bbbbbbbbb.........."],
+  // Desert
+  ["................yyy.","........ggg.....yyy.","........gyg.....yyy.","........gyg...gg....","...gg...gyg...gg....","...gg...gygggggg....","...ggggggygggggg....","...ggggggyg.........","........gyg.........","........gyg.........","........ggg.........","..oooooooooooooooo.."],
+  // Data Center
+  ["..btttttb..btttttb..","..bbbbbbb..bbbbbbb..","..bcccgcb..bcccgcb..","..bcccccb..bcccccb..","..bbbbbbb..bbbbbbb..","..bcccocb..bcccocb..","..bcccccb..bcccccb..","..bbbbbbb..bbbbbbb..","..bcccgcb..bcccgcb..","..bcccccb..bcccccb..","..bbbbbbb..bbbbbbb..","..bbbbbbb..bbbbbbb.."],
+  // Library
+  [".ooooooooooooooooo..",".occccccccccccccco..",".ocrcgcyctcmcwcycoy.",".ocrcgcyctcmcwcycoy.",".ocrcgcyctcmcwcyyyy.",".ooooooooooooooyooy.",".occcccccccccccycoy.",".ocrcgcyctcmcwcyyyy.",".ocrcgcyctcmcwcycoy.",".ocrcgcyctcmcwcycoy.",".ooooooooooooooyyyy.",".ooooooooooooooyooy."],
+  // Mail Room
+  [".ooooooooooooooooo..",".occccoccccoccccco..",".occccoccccocwwwco..",".ocwwcoccccoccccco..",".ooooooooooooooooo..","....................","...wwwwwwwwwwwrrw...","...wbwwwwwwwwwrrw...","...wwbbwwwwwwbbww...","...wwwwbbbbbbwwww...","...wwwwwwwwwwwwww...","...wwwwwwwwwwwwww..."],
+  // Building Site
+  ["......yyw...........",".....wyy.w..........",".yyywyyyyywyyyyyyyy.",".yyyyyyyyyyyyyyyyyy.","oooo..yy........w...","oooo..oo........w...","......yy........w...","......yy........w...","......oo........w...","......yy........yy..","......yy.......yy...","....yyyyyy.........."],
+  // Clock Tower
+  ["......oooooooo......","....oooooooooooo....","....oooooooooooo....",".....bbwwwwwwbb.....",".....bwwwkwwwwb.....",".....bwwwkwwwwb.....",".....bwwwkkkkwb.....",".....bwwwwwwwwb.....",".....bwwwwwwwwb.....",".....bbwwwwwwbb.....",".....bbbbbbbbbb.....","...oooooooooooooo..."],
+  // Rooftops
+  [".............w......","...bbbbbb.wwwwwww...","....oooo.....w......","....oooo...wwwww....","....oooo.....w......","....oooo.....w......","..bbbbbbbbbbbbbbbb..","...cccccccccccccc...","...cccccccccrwwrc...","...cccccccccrrrrc...","...cccccccccccccc...",".tttttttttttttttttt."],
+  // Subway
+  ["....................",".....wwwwwwwwww.....","....bbbbbbbbbbbb....","....bbttttctttbb....","....bbttttctttbb....","....bbttttctttbb....","....bbttttctttbb....","....bbbbbbbbbbbb....","....rrrrrrrrrrrr....","....bbbbbbbbbbbb....","....bbwwbbbbwwbb....","...yyyyyyyyyyyyyy..."],
+  // Harbour
+  ["................yy..","...............rrrr.","......yyyyyy....ww..","......yyyyyy....ww..",".....rrrr.tttt..ww..",".....rrrr.tttt..ww..",".....rrrr.tttt..ww..",".oooooooooooooooo...",".oooooooooooooooo...","...oooooooooooo.....","...bbbb......bbbb...","tttttttttttttttttttt"],
+  // The Cloud
+  ["....................","..........wwwww.....",".....wwww.wwwww.....",".....wwww.wwwww.....","...mmwwwwmwwwwwmm...","..wwwwwwwoooooowww..",".wwwwwwwwoyyyyowwww.",".wwwwwwwwoyyyyowwww.","..wwwwwwwoccccowww..","...mbbbbbocccwomm...","....bbbbbocccco.....","........oooooooo...."],
+]
+var UI_ICON_INK = {"k":"#16161c","w":"#f3ead9","b":"#9aa9c4","c":"#505571","t":"#75c5df","g":"#9ac377","y":"#ecc66d","o":"#bd8059","r":"#e87488","m":"#b6a6ce"}
+function drawUiPixels(ctx, rows, x, y) {
+  ctx.save()
+  ctx.fillStyle = UI_ICON_INK.k
+  for(var r=0;r<rows.length;r++) for(var col=0;col<rows[r].length;col++) {
+    if(rows[r][col] === ".") continue
+    ctx.fillRect(x+col-1,y+r,3,1);ctx.fillRect(x+col,y+r-1,1,3)
+  }
+  for(var row=0;row<rows.length;row++) for(var c=0;c<rows[row].length;c++) {
+    var code=rows[row][c],end=c+1
+    if(code === ".") continue
+    while(end<rows[row].length && rows[row][end]===code) end++
+    ctx.fillStyle=UI_ICON_INK[code];ctx.fillRect(x+c,y+row,end-c,1);c=end-1
+  }
+  ctx.restore()
+}
+function drawTourIcon(ctx, pal, i) {
+  ctx.save()
+  ctx.fillStyle=pal.skyLow;ctx.fillRect(0,0,24,16)
+  ctx.fillStyle=pal.backDim;ctx.fillRect(0,14,24,2)
+  if(TOUR_ICON_PIXELS[i]) drawUiPixels(ctx,TOUR_ICON_PIXELS[i],2,2)
+  ctx.restore()
+}
+var DAILY_BADGE_PIXELS = ["..b......b....","..b......b....",".yyyyyyyyyyy..",".yoyyyyyyyoy..",".wwwwwwwwwww..",".wwwwgggwwww..",".wwwgggggwww..",".wwgggggggww..",".wwwgwgwgwww..",".wwwwwbwwwww..",".wwwwwbwbwww..",".wwwwwwbbwww..",".yyyyyyyyyyy..","..oo.....oo..."]
+function drawDailyBadge(ctx,x,y) { drawUiPixels(ctx,DAILY_BADGE_PIXELS,x+1,y+1) }

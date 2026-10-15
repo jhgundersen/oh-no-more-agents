@@ -54,7 +54,7 @@ export function play(S, level, attempt, salt) {
 // line lives here: a fixed share of the colony, the same on every level. That
 // is a better yardstick than the number the world used to roll, which varied
 // 65-80% per level and put its own noise into every comparison. It sits at the
-// old average, so the baselines in AGENTS.md remain comparable.
+// old average, so the baselines in docs/checking.md remain comparable.
 const CLEAR_SHARE = 0.7
 export function clearBar(w) { return Math.max(1, Math.ceil(w.toRelease * CLEAR_SHARE)) }
 

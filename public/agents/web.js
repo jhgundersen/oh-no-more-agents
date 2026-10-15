@@ -489,6 +489,49 @@
 
   function advance(delta) { newLevel(level + delta); saveState() }
 
+  // The tour: one tiny thumbnail per biome, painted from that biome's own
+  // palette in the current theme, so a visitor who never gets past level five
+  // can still see the Harbour or The Cloud. A jump is a move like prev/next:
+  // nothing is cleared and nothing is counted. It goes to that biome's next
+  // level after this one, so a tour moves forward through the game.
+  function tourLevel(from, biome, count) {
+    var l = from + 1
+    while ((l - 1) % count !== biome) l++
+    return l
+  }
+  window.AgentTour = { level: tourLevel }
+
+  function buildTour() {
+    if (!el.tour) return
+    el.tour.innerHTML = ""
+    BIOMES.forEach(function (name, i) {
+      var b = document.createElement("button")
+      b.className = "tour-stop"
+      b.title = name
+      b.setAttribute("aria-label", "Go to " + name)
+      var c = document.createElement("canvas")
+      c.width = 24; c.height = 16
+      c.setAttribute("aria-hidden", "true")
+      b.appendChild(c)
+      b.addEventListener("click", function () { newLevel(tourLevel(level, i, BIOMES.length)); saveState(); render() })
+      el.tour.appendChild(b)
+    })
+    paintTour()
+  }
+
+  function paintTour() {
+    var badge = document.getElementById("dailyBadge")
+    if (badge) drawDailyBadge(badge.getContext("2d"), 0, 0)
+    if (!el.tour) return
+    var t = THEMES[themeName]
+    Array.prototype.forEach.call(el.tour.children, function (b, i) {
+      var pal = build({ background: hex(t.background), foreground: hex(t.foreground), accent: hex(t.accent),
+        urgent: hex(t.urgent), muted: hex(t.muted) }, i + 1)
+      drawTourIcon(b.firstChild.getContext("2d"), pal, i)
+    })
+  }
+
+
   function tick() {
     if (!world) return
     if (standup) { stepStandup(); return }
@@ -764,6 +807,11 @@
       node.cell.classList.toggle("spent", count === 0 && !recent)
     })
 
+    if (el.tour) Array.prototype.forEach.call(el.tour.children, function (b, i) {
+      var here = (world.level - 1) % BIOMES.length === i
+      b.classList.toggle("on", here)
+      if (here) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current")
+    })
     el.speedWord.textContent = SPEED_NAMES[speedIndex]
     el.whoWord.textContent = showLabels ? "on" : "off"
     el.who.setAttribute("aria-pressed", showLabels ? "true" : "false")
@@ -855,13 +903,27 @@
   // select-and-copy, and failing that the toast admits it.
   function copyShareLink() {
     if (!world || !window.AgentShare) return
-    var link = AgentShare.url(window.location.href, world.level, world.colonySeed)
+    var link = world.daily ? AgentShare.dailyUrl(window.location.href, world.daily)
+      : AgentShare.url(window.location.href, world.level, world.colonySeed)
     if (!link) return
     var done = function () { toast("LINK COPIED") }
     var fallback = function () { toast(copyByHand(link) ? "LINK COPIED" : "COPY FAILED") }
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, fallback)
     else fallback()
   }
+  // Colony of the day (share.js): today's UTC date picks the level and the
+  // colony, the same for everyone. Like a shared link it is a move, not a clear.
+  function playDaily() {
+    if (!window.AgentShare) return
+    var d = AgentShare.daily(AgentShare.today())
+    if (!d) return
+    newLevel(d.level, d.seed)
+    world.daily = d.daily
+    saveState()
+    render()
+    toast("TODAY'S STANDUP IS MANDATORY.")
+  }
+
   function copyByHand(text) {
     var ta = document.createElement("textarea")
     ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0"
@@ -893,6 +955,7 @@
     paintTerrain()
     paintActors()
     saveState()
+    paintTour()
     Array.prototype.forEach.call(el.themes.children, function (b) {
       b.classList.toggle("on", b.dataset.theme === name)
       b.setAttribute("aria-pressed", b.dataset.theme === name ? "true" : "false")
@@ -961,6 +1024,12 @@
 
   function boot() {
     el.level = document.getElementById("level")
+    el.daily = document.getElementById("daily")
+    if (el.daily && window.AgentShare) {
+      document.getElementById("dailyDate").textContent = AgentShare.today()
+      el.daily.addEventListener("click", playDaily)
+    }
+    el.tour = document.getElementById("tour")
     el.announce = document.getElementById("announce")
     el.biome = document.getElementById("biome")
     el.home = document.getElementById("home")
@@ -996,6 +1065,7 @@
     loadPendingReports()
     loadPendingBatch()
     buildToolbar()
+    buildTour()
 
     THEME_ORDER.forEach(function (name) {
       var b = document.createElement("button")
@@ -1036,6 +1106,7 @@
     var shared = window.AgentShare ? AgentShare.parse(window.location.search) : null
     if (shared) {
       newLevel(shared.level, shared.seed)
+      if (shared.daily) { world.daily = shared.daily; render() }
       saveState()
       try { history.replaceState(null, "", window.location.pathname) } catch (e) {}
     } else newLevel(level)
