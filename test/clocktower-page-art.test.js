@@ -228,9 +228,9 @@ test("dial light preserves opaque faces, shirts, eyes and umbrellas", () => {
     assert.ok(checked >= 30, "real opaque actor pixels compared")
   }
 })
-test("original Clock Tower ground, fixtures, gates, pits, hazards and exit retain bytes", () => {
+test("Clock Tower native components retain bytes and page components match the reviewed gates", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "7a7775c57d5ee2c3b18bc526e2a2f35170c1672e4b4ff0743c0d50840849b350"], [[2], "0326a21c4461c9353b99a7da7fc6b9ea8eb0a2c59e2029e1919574107abcdf3b"]
+    [[undefined, 1], "7a7775c57d5ee2c3b18bc526e2a2f35170c1672e4b4ff0743c0d50840849b350"], [[2], "d23720d370d7f517dfcc30ec54839838828fffc7d570d65b62f90d1b25ac5fb3"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)

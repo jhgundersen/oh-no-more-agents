@@ -7955,3 +7955,121 @@ Across 16 colonies, 6 ended that way.
   flagged.
 - **Why `sim hazards` moved:** a camper that packs up wrecks fewer fixtures,
   and the colony gets by.
+
+## 335 — 2026-10-15 · Clockwork portals (on a branch)
+
+**Why:** the last of the moving-parts pass: Clock Tower gates. Watched the
+original level-36 gate at Steady desktop speed and the three-gate level 76
+at phone size with Halloween. Seed-3 level 56 has no gates, so rejected that
+fixture and used level 96 for a wider shutter. Branch `codex/gate-art` from
+then-current main `d991fc0`, with the steamers merged and the separate crane
+pass approved but awaiting merge. Kept this base fixed during validation.
+
+**Change:** page res 2 gets a round ivory clock face, stepped brass case,
+side drive wheels, guided counterweights, shaded portcullis bars and a small
+riveted leaf plate. Counterweights move opposite the shutter; drive-wheel
+poses come from the actual drop. The clock hand has eight shared pixel poses.
+Two steady amber guide lamps and an underline on the dial announce the final
+18 open ticks. If a colleague holds the gate open past its scheduled close,
+those lamps stay amber and the slot stays clear: actual `g.open` and
+`changedAt`, never a visual guess from the schedule.
+
+The original 10-tick opening/closing geometry is unchanged at ordinary page
+motion. Reduced motion snaps straight to the real open/closed state and
+steadies clock/cogs; the functional amber tell remains. Default res 1 and
+share-card res 3 retain the original art, including both motion preferences.
+No simulation edit or new world field. All paint stays inside the original
+cassette/guide reservation; the moving leaf is clipped to its exact slot.
+Agents paint afterwards, preserving faces, suits and umbrellas. No extra
+canvas, image asset, filter, RNG, timer, listener or animation history.
+
+**Evidence:** `/tmp/codex-gate-art/strips/index.html` animates before/after
+of genuine seed-3 cycles on levels 36, 76 and 96: warning, actual close,
+half-closed, shut, actual open, half-open and clear. Eight selected milestones
+are explicitly labelled as milestones, not equal-time animation. The tool
+observes actual state changes, so occupancy delays cannot be mistaken for
+closing. `strips/contact-sheet.png` compares the two half-travel directions;
+per-level frame sheets include native and page resolutions. These fixtures
+cover two-/three-cell gates and a three-gate layout; unit checks also cover
+the supported one-cell slot.
+
+`/tmp/codex-gate-art/page-sheet.png` shows actual desktop/phone boards and 3x
+crops: level 36 closing desktop, level 76's second gate reopening phone,
+level 96's wider gate warning desktop, level 36 fully shut phone, Christmas
+level 96's second gate reopening phone, Halloween level 76's third gate
+reopening phone, and reduced-motion level 36 at a closing edge on phone.
+The phone sheet includes the whole board. Checked the closed grille and amber
+tell at actual 1x CSS size, not just the enlargements. Before/after world
+digests, board/stage geometry and scroll widths match. Every changed pixel
+falls within the union of the levels' existing gate envelopes. Metrics:
+`pages.json`, `presentation-check.json`; baseline assets pinned to `d991fc0`.
+Preferred Chromium connection had no enabled surface, so used the repository's
+capped local Chromium helper.
+
+**Pipeline:** `tools/gate-art.js` bounds cycle discovery at 12,000 ticks and
+each state edge at 600. It caches terrain by version/resolution/palette and
+paints actors into translated 80x64 art-pixel crops. Real `setGate` changes
+invalidate those caches, verified against full-frame crops. All **96 frames
+take 0.63 s / 149 MB peak RSS** in the standalone comparison; the combined
+original-byte proof/comparison run is **0.60 s / 171 MB peak RSS** for frame
+generation (`prepare.log`). One browser captures all fourteen page views;
+composition reuses their PNGs and checks each changed pixel against all gates,
+including neighbours outside the selected close crop. Browser helpers are
+syntax-checked before queue entry and close their browser/server in `finally`.
+
+The old `clock-art` recorder now caps paint at 25,000 calls and supplies compact
+pixel hashes for equality checks, avoiding raw-buffer failure diffs. Raw bytes
+remain only for the existing rubble non-emptiness check. Nested event-frame
+pairs still use deep equality on their small arrays of hashes, preserving the
+value comparison. Searched every test file for gate/component guards before
+the full gate.
+
+`component-proof.json` reconstructs the original component pins from the saved
+renderer: native **7a7775c5…** remains unchanged, while only the reviewed page
+expectation updates to **d23720d3…**. The independent native/share gate
+aggregate is **601fa17b…** before and after across every transition, all five
+palettes, and both reduced-motion settings.
+
+**Cost:** the existing maximum of three gates, at most 160 primitive rectangles
+per sampled gate; shared eight-pose hand and four-pose cog tables. Counterweight
+and shutter poses are pure reads of existing geometry and ticks. Draw.js adds
+**1,133 gzip bytes** before shipping's comment strip. Sim.js is byte-identical
+to the branch base.
+
+Real-page FPS, baseline/final, Brisk speed, five seconds each: level 36 from
+tick 265 and level 76 from tick 360. Both layouts and versions held **60 median /
+60 p5 FPS, 17 ms worst, zero long-task time and 12% CPU**, with up to **13 cast
+members**. Windows cover approximately ticks 267–495 and 363–591, including
+warning, closing, opening and the three-gate layout. No speedup claimed. Logs:
+`fps-before-36.log`, `fps-after-36.log`, `fps-before-76.log`,
+`fps-after-76.log`.
+
+**Focused:** **31/31 pass, 2.72 s**, across the new gate suite, original clock
+art, Clock Tower page art and gate mechanics. Tests cover unchanged native/
+share bytes; real read-only, RNG-free cycles; every half-pixel leaf position
+at all three slot widths; inverse counterweight travel; the exact 18-tick tell;
+a real `stepGates` occupancy deferral and release; reduced-motion steadiness;
+complete unchanged scenery reservations; crop/cache equivalence through actual
+terrain toggles; bounded fixture failure; and complete before/after generation.
+Existing rendered/unrendered live gate-play digests and opaque-agent checks
+also pass.
+
+**Full gate:** **1,416 passed, zero failures/cancellations/skips,
+342.15 s**, with coverage and Factory art included. CRAP threshold **30**
+passed using the same LCOV, maximum **30.0**. All new runtime art helpers
+have **100% coverage**, maximum **4.0**. Comparison orchestration is
+**13.0 / 100%**, real-cycle discovery **7.0 / 90.9%**, advancement
+**6.0 / 100%**, and `gateFrame` **3.1 / 75%**. Completion was reported
+immediately and our shared-lock turn released.
+
+The persistent FIFO gate followed focused tests, page evidence and FPS, with
+preflight guards requiring their outputs before the full run. It used a
+3 GB real-memory service cap, 2,048 MB Node heap, `ulimit -v 6000000`, two
+workers and 120-second per-test timeouts. Source/tests stayed frozen through
+the full gate. CRAP reused coverage instead of starting another full run.
+Logs: `/tmp/codex-gate-art/check.log`, `crap.log`, `queue.log`.
+`npm run stamp`, its check and `git diff --check` pass. The screenshots and
+FPS measurements show the exact final game source.
+
+**Next:** review and merge this branch; then return to a free choice of
+atmosphere, motion or presentation. No push or deployment from this pass.
