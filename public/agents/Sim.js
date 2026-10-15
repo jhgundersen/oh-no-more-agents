@@ -8878,8 +8878,39 @@ function borrowWallTools(w, ag) {
   var acting = w.acting
   w.acting = null
   var ok = wallTools(w, ag, wallHeight(w, ax, footY), wallThickness(w, ax, footY, ag.dir))
+      || bomberAsMine(w, ag)
   w.acting = acting
   return ok
+}
+
+// The last resort of a hero who is last out: the colony's bombers are no use
+// to anyone now, so one is laid as a mine at the wall instead of worn. Level
+// 109 (a Skyscraper since the Cloud) gives no miners or diggers, its bashers
+// are spent before the hero reaches the exit floor's six-thick wall, and the
+// hero paced in front of it until the stall cutoff in 21 of 24 colonies.
+// A tower's floor is steel, so the charge goes in at the foot of the wall
+// itself when it cannot go in the floor.
+function bomberAsMine(w, ag) {
+  var spot = mineReach(w, ag) && mineSpot(w, ag)
+  if (!spot || !take(w, "bomber")) return false
+  plantMine(w, ag)
+  var m = w.mines[w.mines.length - 1]
+  m.x = spot.x; m.y = spot.y
+  return true
+}
+
+function mineReach(w, ag) {
+  var depth = obstructionAhead(w, ag)
+  return depth >= 1 && depth <= MINE_RADIUS && !chargeNear(w, ag) && !(ag.mineCool > 0)
+}
+
+// The floor under the agent if a mine can go there, else the foot of the
+// wall ahead if that is not steel, else nowhere.
+function mineSpot(w, ag) {
+  var x = Math.floor(ag.x), footY = Math.floor(ag.y)
+  if (canPlantMine(w, ag)) return { x: x, y: footY + 1 }
+  var ax = x + ag.dir
+  return solid(w, ax, footY) && at(w, ax, footY) !== STEEL ? { x: ax, y: footY } : null
 }
 
 var HERO_WAIT = 130   // ticks of cooldown a hero will stand out at a wall toward home

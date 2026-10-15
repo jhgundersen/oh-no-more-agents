@@ -410,3 +410,37 @@ test("a mission nobody can reach is descoped once the colony has waited at the d
   assert.equal(ag.state, "walk")
   assert.equal(v.skills.bomber, bombs)
 })
+
+test("a last-out hero at a wall with no tools lays a spare bomber as a mine, in the wall when the floor is steel", () => {
+  const w = box(90), k = w.k
+  for (let x = 0; x < k.COLS; x++) w.terrain[30 * k.COLS + x] = k.STEEL          // a tower's steel floor
+  for (let y = 24; y < 30; y++) for (let x = 45; x < 50; x++) w.terrain[y * k.COLS + x] = k.DIRT
+  w.exit = { x: 70, y: 25, w: 6, h: 5 }
+  w.toRelease = 5; w.saved = 4; w.lost = 0
+  w.special = "fallback"; w.specialSpec = S.specialSpec("fallback")
+  for (const s of Object.keys(w.skills)) w.skills[s] = 0
+  w.skills.bomber = 3
+  const hero = Object.assign(S.spawn(w), { x: 44.5, y: 29, dir: 1, state: "walk", special: "fallback" })
+  w.agents = [hero]
+  assert.equal(S.borrowWallTools(w, hero), true)
+  assert.equal(w.skills.bomber, 2, "one bomber spent")
+  const m = w.mines[w.mines.length - 1]
+  assert.deepEqual([m.x, m.y], [45, 29], "at the foot of the wall, not in the steel")
+  assert.notEqual(hero.state, "bomb", "laid, not worn")
+})
+
+test("the spare-bomber mine goes in the floor where it can, and is refused with nothing ahead or no bombers", () => {
+  const w = box(90), k = w.k
+  for (let y = 24; y < 30; y++) for (let x = 45; x < 50; x++) w.terrain[y * k.COLS + x] = k.DIRT
+  for (const s of Object.keys(w.skills)) w.skills[s] = 0
+  const ag = Object.assign(S.spawn(w), { x: 44.5, y: 29, dir: 1, state: "walk" })
+  w.agents = [ag]
+  assert.equal(S.bomberAsMine(w, ag), false, "no bombers")
+  w.skills.bomber = 1
+  assert.deepEqual({ ...S.mineSpot(w, ag) }, { x: 44, y: 30 }, "the floor, when it is not steel")
+  Object.assign(ag, { x: 20.5 })
+  assert.equal(S.bomberAsMine(w, ag), false, "nothing ahead")
+  Object.assign(ag, { x: 44.5 })
+  assert.equal(S.bomberAsMine(w, ag), true)
+  assert.equal(w.skills.bomber, 0)
+})

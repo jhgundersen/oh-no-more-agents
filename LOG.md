@@ -8637,3 +8637,37 @@ sky colour in it (dusky blue/lilac) so it doesn't look unfinished.
 
 Draw and Palette only; the cells are the same cells. Page resolution draws the
 same pass until Codex's art replaces it.
+
+## 266 — 2026-10-15 · Levels 1–200 after the re-skin; level 109's hero
+
+**Asked:** since levels from 20 up re-skinned, play-test levels 1–200 and fix
+the new regressions. The Cloud especially: lightning near the door, updrafts
+carrying non-floaters, banks that thin under a blocker.
+
+**Measured** (1–200 × 24, 4800 runs): 94.35% home, no hangs, no nobody-home
+runs, 56 bad endings.
+- **The Cloud's levels:** 92.6% home, 2 bad endings.
+- **Lightning:** never near the door. Over the ten Cloud levels up to 200 its
+  nearest is 10 cells from the exit on another floor.
+- **Updrafts:** carry only floaters, covered by `test/cloud.test.js`.
+- **Banks:** don't thin; that part of the brief wasn't built, so it can't
+  strand anyone.
+- **Worst by far:** level 109 (a Skyscraper since the Cloud), with 21 bad
+  endings out of 24.
+
+**Found:** level 109 gives no miners or diggers, and its bashers are spent
+before the hero reaches the exit floor. That floor has a six-thick wall
+between the left-hand lift and the door. The colony gets round by the
+right-hand lift; the hero takes the left one, gets to the wall last out and
+can't pass. Heroes are barred from the toolbar except through
+`borrowWallTools`, and nothing borrowable was left.
+
+**Changed:** `borrowWallTools` (a last-out hero facing home) now falls back to
+`bomberAsMine`. The colony's bombers are no use to anyone by then, so one is
+laid as a mine, not worn. A tower's floor is steel, so the charge goes into
+the foot of the wall when it can't go into the floor. The usual rules still
+apply: within mine reach, no other charge nearby, the mine cooldown.
+
+**Measured:** level 109 251 → 274 home of 288. 1–200 × 24: 68109 → 68131 home
+and bad endings 56 → 41; no other level moved by 3 or more.
+`test/stragglers.test.js` covers it; the test fails without the change.
