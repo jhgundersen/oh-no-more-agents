@@ -356,6 +356,7 @@
   }
 
   function applyScale(scale) {
+    el.stage.dataset.boardScale = scale
     el.boardWrap.style.width = (WIDTH * scale) + "px"
     el.boardWrap.style.height = (HEIGHT * scale) + "px"
     document.documentElement.style.setProperty("--board-w", (WIDTH * scale) + "px")
@@ -662,7 +663,7 @@
     if (sim.ticks === replay.best.t && !sim.moments.some(function (m) { return m.t === replay.best.t && m.kind === replay.best.kind })) { endReplay(); return }
     if (window.AgentSeason) window.AgentSeason.dress(sim)
     if (sim.terrainVersion !== replay.terrain) { replay.terrain = sim.terrainVersion; drawTerrain(terrainCtx, sim, palette) }
-    drawActors(actorCtx, sim, palette, { labels: showLabels, intro: false })
+    drawActors(actorCtx, sim, palette, { labels: showLabels, intro: false, feed: false })
     if (window.AgentSeason) window.AgentSeason.paint(actorCtx, sim)
     if (sim.ticks >= replay.to || sim.done) endReplay()
   }
@@ -724,7 +725,7 @@
     if (!world) return
     if (world.done || world.replaying) hideLevelTitle()
     if (window.AgentSeason) window.AgentSeason.dress(world)
-    drawActors(actorCtx, world, palette, { labels: showLabels, intro: false })
+    drawActors(actorCtx, world, palette, { labels: showLabels, intro: false, feed: false })
     if (window.AgentSeason) window.AgentSeason.paint(actorCtx, world)
   }
 
@@ -827,8 +828,27 @@
     return String(Math.floor(n))
   }
 
+  // Keep the board clear and give its commentary five real seconds, including
+  // at Brisk/fast-forward. No timer, animation, live-region chatter or per-frame
+  // DOM rewrite; pausing leaves the latest line available to read.
+  var captionWorld = null, captionNote = null, captionUntil = 0
+  function renderCaption() {
+    if (!el.caption) return
+    if (captionWorld !== world) { captionWorld = world; captionNote = null; captionUntil = 0 }
+    var note = feedNotice(world), now = performance.now()
+    if (note && note !== captionNote) { captionNote = note; captionUntil = now + 5000 }
+    var active = captionNote && !world.done && !world.replaying && !replay && !standup && (!running || now < captionUntil)
+    var text = active ? captionNote.text : ""
+    if (el.captionText.textContent !== text) {
+      el.captionText.textContent = text
+      el.caption.classList.toggle("empty", !active)
+      el.caption.setAttribute("aria-hidden", active ? "false" : "true")
+    }
+  }
+
   function render() {
     if (!world) return
+    renderCaption()
     // The bar is the whole colony. There is no second, smaller number to
     // reach: the run goes on to the next level either way, so a goal of two
     // thirds only ever told you which of the fifteen you were allowed to stop
@@ -1160,6 +1180,8 @@
     el.bar = document.getElementById("bar")
     el.clock = document.getElementById("clock")
     el.toolbar = document.getElementById("toolbar")
+    el.caption = document.getElementById("eventCaption")
+    el.captionText = document.getElementById("eventText")
     el.speed = document.getElementById("speed")
     el.who = document.getElementById("who")
     el.speedWord = document.getElementById("speedWord")

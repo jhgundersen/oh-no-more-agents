@@ -5787,3 +5787,70 @@ AGENTS.md's deploy rule now ends with it.
 
 The production-only parts are split into functions small enough for the CRAP
 gate without a deploy to cover them.
+
+## 288 — 2026-10-15 · Let the colony be heard (on a branch)
+
+**Chosen (autonomy):** make the event ticker readable outside the board. On
+phones its five-pixel lettering hid the game's explanations and jokes, even
+while the agents and scenery read clearly. Branch `codex/captions`, from main
+`9642606`.
+
+**Watched first:** eight local runs, watched for eight seconds each with frames at
+three and eight seconds:
+Cavern, Trench, Library, The Cloud, Rooftops at Halloween, Factory at Christmas,
+Data Center and Harbour. Desktop 1280×900 and phone 390×844, Steady and Brisk,
+seed 3. The live ticks advanced 90→244 at Steady and 136→366 at Brisk. The
+seasonal props and umbrellas read; “AGENT 006 · RICOCHET” and “HALLUCINATION
+DETECTED” were almost impossible to read along a phone's bedrock. Original
+watch frames/metrics: `/tmp/codex-watch-art/` (`watch.json`, sixteen PNGs).
+
+**Changed:**
+- The page displays the same newest event in a 12px, theme-coloured caption
+  beneath the board. It reserves one line at larger board sizes and two at
+  1×; fixed space prevents controls jumping between notes. Phone spacing
+  accommodates it, and the landscape board/caption centre as a group.
+- A note remains for five wall-clock seconds unless superseded; Brisk and
+  fast-forward cannot spend its reading time in skipped ticks. Pausing keeps
+  it available. New levels, replays, reports and standups clear it. Seasonal
+  lines share the original newer-note/tie rule, including “HOME FOR THE
+  HOLIDAYS”. No new timers, listeners or animation; unchanged captions cause
+  zero DOM rewrites. The note is ordinary accessible text, with `aria-live`
+  off, preserving the existing twice-per-level announcements.
+- A host option suppresses the old board-edge ticker only on the page. Its
+  default drawing and the res-1 panel stay intact. No simulation, colony RNG,
+  terrain, actor or seasonal-rule changes. No assets/dependencies added;
+  source gzip delta across index/Draw/web is **769 bytes**.
+
+**Evidence:** `/tmp/codex-captions/after/contact-sheet.png` (before/after
+pairs for desktop, portrait, landscape and both seasons); each full-size view
+is alongside it. Same level/seed/tick 400, real CSS sizes. Inspected the sheet
+and phone/desktop/landscape originals. `metrics.json` records positions,
+font sizes, event text and lifecycle checks. Before files are in
+`/tmp/codex-captions/before/`; the untouched baseline is in `baseline/public/`.
+
+**Pipeline:** `tools/captions.js` captures all five views with one bounded local
+browser, waits for font/readiness, steps at most 400 ticks while paused, and
+refreshes the host readouts. It hides only the paused capture's obsolete
+wall-clock title card, rather than waiting through the run for every frame.
+The same tool makes the comparison sheet and exercises expiry, pause,
+fast-forward, seasonal priority, navigation and intermission exclusions.
+Run with `node tools/captions.js <out> [public-root] [before-out] --checks`
+through the shared test lock.
+
+**Tests:** shared feed selection/future/age boundaries; retained native pixels
+and page opt-out; read-only, RNG-free painting in all twenty biomes; actual
+browser sizes, full phone/landscape fit, multi-line text, 4.9s→5.001s expiry,
+paused reading, skipped ticks, replay/report/navigation clears, seasonal ties
+and zero repeated DOM writes. Focused caption/brawl/phone tests: **23 passed,
+zero failures/skips, 3.09 s**. `npm run stamp` updated Draw/web and build stamps.
+
+**Full checks:** `npm run check` with coverage passed: **1,293 tests,
+zero failures/skips, 317.30 s**, Factory art included. The subsequent
+`npm run crap -- --threshold 30 --use-existing-coverage` passed with a maximum
+of **30.0**. Both ran sequentially under the shared test lock, Node heap
+2,048 MB, `ulimit -v 6000000`, two test workers and 120-second timeouts.
+The final five-view evidence/lifecycle refresh also passed, with no browser
+errors. Logs: `/tmp/codex-captions/check.log`, `crap.log`, `focused.log` and
+`evidence-final.log`. `git diff --check` passed.
+
+**Next:** review and merge this branch; no push or deployment from this pass.
