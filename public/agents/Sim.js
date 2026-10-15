@@ -9627,10 +9627,28 @@ function specialAtEdge(w, ag, nx, depth, far) {
   if (spec.act === "slab" && ag.cool <= 0 && depth > killingFall(w)) {
     if (specialCut(w, ag, "slab")) { ag.cool = spec.cool; return }
   }
-  if (depth === Infinity) { turnAround(w, ag); return }
+  if (depth === Infinity) {
+    if (lastOut(w) && facingHome(w, ag) && borrowBridge(w, ag, far)) return
+    turnAround(w, ag)
+    return
+  }
 
   if (depth <= killingFall(w)) { ag.x = nx; startFall(w, ag); return }
   turnAround(w, ag)
+}
+
+// What borrowWallTools is for walls, for a gap with no floor: the last one
+// out, facing home, is lent a builder. On level 157 Stack Overflow paced the
+// corridor in front of a sixteen-cell bottomless pit with twenty-three
+// builders in the toolbar until the stall cutoff (LOG 355).
+function borrowBridge(w, ag, far) {
+  if (far < 2 || !crossingHelps(w, ag) || !canStartBuild(w, ag, true)) return false
+  var acting = w.acting
+  w.acting = null
+  var ok = take(w, "builder")
+  w.acting = acting
+  if (ok) startBuild(w, ag, true)
+  return ok
 }
 
 function specialEscape(w, ag) {

@@ -8783,3 +8783,30 @@ and turns as it would for traffic.
 | Level 129: stall cutoffs | 2 | 0 |
 | `npm run sim play` | 2,965/3,113 | identical |
 | Playtest 1–440 | — | only the 129 flag goes; nothing new |
+
+## 355 — 2026-10-15 · A last-out hero is lent a bridge over a bottomless gap
+
+**Chosen (autonomy):** level 157 (Rooftops), stall cutoff in 1 of 6.
+
+**Traced** (salt 6): the last one out was the hero, Stack Overflow.
+- **The gap:** a bottomless pit at x50–65 cuts the corridor to the exit at
+  x83, on the hero's own floor.
+- **Why it couldn't cross:** the colony had bridged its way over earlier. A
+  hero is barred from the toolbar (`take`), and `specialAtEdge` simply turns
+  round when the drop has no floor.
+- **What happened:** it paced x4–48 with 23 builders in the toolbar until
+  the cutoff.
+
+**Changed:** `borrowBridge`, the gap counterpart of `borrowWallTools`. Over
+a bottomless drop, a hero that is last out and facing home is lent one
+builder and starts a bridge (`startBuild(…, true)`). It goes through the
+same `crossingHelps` and `canStartBuild` gates as anyone's bridge. Mid-level
+nothing changes: it turns as before.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 157, 16 colonies | 95%, 1 stall | 95%, no stalls |
+| `npm run sim play` | 2,965/3,113 | identical |
+| Playtest 1–440 | — | only the 157 flag goes; nothing new |
