@@ -259,7 +259,7 @@ function crc32(b) {
 
 // Nearest-neighbour upscaling on the way out: the art is pixel art, so a
 // smooth resize in an image viewer is the wrong thing to look at.
-export function writePNG(file, img, scale) {
+export function writePNG(file, img, scale, { optimise = false } = {}) {
   scale = Math.max(1, scale || 1)
   const { W, H, buf } = img
   const SW = W * scale, SH = H * scale
@@ -286,10 +286,31 @@ export function writePNG(file, img, scale) {
   fs.writeFileSync(file, Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     chunk("IHDR", ihdr),
-    chunk("IDAT", zlib.deflateSync(raw)),
+    chunk("IDAT", zlib.deflateSync(optimise ? filteredRows(raw, SW * 3, SH) : raw, optimise ? { level: 9 } : {})),
     chunk("IEND", Buffer.alloc(0))
   ]))
   return { file, width: SW, height: SH }
+}
+
+// Lossless Sub/Up row prediction for committed pixel art. Kept opt-in so
+// ordinary comparison shots retain their fast writer and identical PNG bytes.
+function filteredRows(raw, stride, height) {
+  const out = Buffer.alloc(raw.length), rowSize = stride + 1
+  for (let y = 0; y < height; y++) {
+    const start = y * rowSize + 1
+    let sub = 0, up = 0
+    for (let i = 0; i < stride; i++) {
+      const a = (raw[start + i] - (i >= 3 ? raw[start + i - 3] : 0)) & 255
+      const b = (raw[start + i] - (y ? raw[start + i - rowSize] : 0)) & 255
+      sub += Math.min(a, 256 - a); up += Math.min(b, 256 - b)
+    }
+    const filter = sub < up ? 1 : 2; out[start - 1] = filter
+    for (let i = 0; i < stride; i++) {
+      const prev = filter === 1 ? (i >= 3 ? raw[start + i - 3] : 0) : (y ? raw[start + i - rowSize] : 0)
+      out[start + i] = (raw[start + i] - prev) & 255
+    }
+  }
+  return out
 }
 
 // Generate a level, run it for a while, and draw one frame of it.
