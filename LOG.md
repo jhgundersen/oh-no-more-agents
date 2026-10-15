@@ -7216,3 +7216,43 @@ length is unchanged (1179 ticks) and nothing hangs.
 
 **Next:** 10's stalls (3/24), and 68's one clock-out. That one is a pillared
 corridor with no bashers or climbers left, so it may just be a hard level.
+
+## 240 — 2026-10-15 · Halloween
+
+**Asked:** a Halloween mode from Oct 24 to Nov 1 by the viewer's local date,
+previewable with `?season=halloween` (strictly validated) and forced off with
+`?season=none`. Cosmetic only: pumpkin-orange accents, jack-o'-lanterns,
+bat-wing umbrellas, a ghost rising from each death, spooky ticker puns, and
+"TRICK OR TREAT: N/M HOME" on the card. No sim changes, cheap per frame,
+readable in every biome, and a small removable module so Christmas can follow.
+
+**Changed:** new web-only `public/agents/season.js` (`window.AgentSeason`).
+It holds a `SEASONS` table (date window, accent, greeting, bat colour,
+lanterns, puns) and `pick`, `tint`, `dress` and `paint`.
+- **Choosing the season.** `pick` takes only an exact, known name from
+  `?season=`. Anything else (other case, `constructor`, `__proto__`, empty) is
+  ignored, and it falls back to the calendar.
+- **What the module does.**
+  - `tint` makes the palette's `decorLit` pumpkin orange.
+  - `dress` hangs a `w.season` data object on each world.
+  - `paint` runs after `drawActors`. It draws five jack-o'-lanterns, fixed per
+    level, on air cells standing on floor; one is skipped if its floor is dug
+    away. It also turns each new death into a ghost that rises and fades over
+    30 ticks (still, under reduced motion) and a ticker pun such as
+    "AGENT 004 WAS GHOSTED".
+- **Draw.js** only reads that plain data: `homeTitle` (the greeting in front of
+  N / M HOME), `batBrolly`/`drawBatEars` (one floater umbrella in three goes
+  dark with ears and hooked tips), and `drawFeed` (shows the season's line
+  when it is the newest). The puns live in `w.season.note`, not `w.feed`,
+  because the office radio times itself off `w.feed`.
+- **Wiring.** web.js calls the module around both `drawActors` calls (live and
+  replay) and after building the palette.
+
+To add Christmas, add a `SEASONS` entry. To remove a season, delete its entry.
+
+**Measured:** playtest 1-150 × 24 is identical to 239, run for run. Without a
+season every drawing test is byte-identical. `test/season.test.js` covers the
+date window and edges, strict parsing, a dressed colony playing out exactly
+like a plain one, the ghost and pun, the tint and the card title. Local
+headless check at `?season=halloween` on levels 2, 9 and 14: lanterns on the
+floors, no page errors. `?season=none` and `?season=xmas` both give no season.

@@ -3179,6 +3179,11 @@ function reportTop(w, rows) {
   return { y: Math.max(4, Math.round((w.k.ROWS * w.k.CELL - 62 - extra) / 2)), extra: extra }
 }
 
+// The card's big line; a season (season.js) may put its greeting in front.
+function homeTitle(w) {
+  return (w.season && w.season.homePrefix || "") + w.saved + " / " + w.toRelease + " HOME"
+}
+
 function drawLevelResults(ctx, w, pal) {
   var cx = Math.round(w.k.COLS * w.k.CELL / 2)
   var rows = reportRows(w, pal), extra = 0, padded = false
@@ -3192,7 +3197,7 @@ function drawLevelResults(ctx, w, pal) {
   ctx.fillStyle = pal.decorLit
   drawTransitionText(ctx, "LEVEL " + w.level + " · REPORT", cx, y + 8, 1)
   ctx.fillStyle = pal.label
-  drawTransitionText(ctx, w.saved + " / " + w.toRelease + " HOME", cx, y + 22, 2)
+  drawTransitionText(ctx, homeTitle(w), cx, y + 22, 2)
   ctx.fillStyle = w.saved === 0 ? pal.urgent : pal.exitLight
   drawTransitionText(ctx, levelVerdict(w), cx, y + 43, 1)
   var at = y + 59
@@ -3216,7 +3221,8 @@ function drawLevelClosing(ctx, w, pal) {
 // Page resolution only; the panel has no room for prose.
 var FEED_SHOW = 150, FEED_FADE = 30
 function drawFeed(ctx, w, pal) {
-  var f = w.feed && w.feed[w.feed.length - 1]
+  var f = w.feed && w.feed[w.feed.length - 1], sn = w.season && w.season.note
+  if (sn && (!f || sn.t >= f.t)) f = sn             // a season's line, newer than the feed's
   if ((w.res || 1) < 2 || !f) return
   var age = w.ticks - f.t
   if (age < 0 || age >= FEED_SHOW) return
@@ -6940,7 +6946,8 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   // to hand mid-descent, and offset by the colony seed so the same id is not
   // handed the same umbrella every playthrough — the same trick the colony
   // itself uses, and it costs no draw from the trait stream to do it here.
-  var brolly = brollyColour(w, pal, ag)
+  var brolly = brollyColour(w, pal, ag), bat = batBrolly(w, ag)
+  if (bat) brolly = bat
 
   if ((w.res || 1) >= 2) drawFloatingUmbrella(ctx, w, pal, ag, ox, oy, flex, brolly)
   else {
@@ -6961,6 +6968,23 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   blit(ctx, ox, oy, 1, -2, -8, 2, 1)
   blit(ctx, ox, oy, 1, 9, -8, 2, 1)
   }
+  if (bat) drawBatEars(ctx, ox, oy, flex, bat)
+}
+
+// A season (web-only season.js) may hand some floaters a bat-wing umbrella:
+// the canopy in the season's colour, two ears on top and a hooked tip at each
+// side. Plain data on the world; with no season this is never drawn.
+function batBrolly(w, ag) {
+  var s = w.season
+  return s && s.bat && (ag.id + (w.colonySeed || 0)) % s.batEvery === 0 ? s.bat : null
+}
+
+function drawBatEars(ctx, ox, oy, flex, colour) {
+  ctx.fillStyle = colour
+  blit(ctx, ox, oy, 1, 1, -11 - flex, 1, 1)
+  blit(ctx, ox, oy, 1, 7, -11 - flex, 1, 1)
+  blit(ctx, ox, oy, 1, -3, -8, 1, 2)
+  blit(ctx, ox, oy, 1, 11, -8, 1, 2)
 }
 
 // Down: the umbrella folds over the first few ticks on the ground instead of

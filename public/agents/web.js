@@ -337,6 +337,7 @@
       background: hex(t.background), foreground: hex(t.foreground),
       accent: hex(t.accent), urgent: hex(t.urgent), muted: hex(t.muted)
     }, level)
+    if (window.AgentSeason) window.AgentSeason.tint(palette)
 
     var root = document.documentElement
     root.style.setProperty("--bg", t.background)
@@ -573,7 +574,9 @@
     // noted it too, on the same tick. Otherwise this is not a replay.
     if (sim.ticks === replay.best.t && !sim.moments.some(function (m) { return m.t === replay.best.t && m.kind === replay.best.kind })) { endReplay(); return }
     if (sim.terrainVersion !== replay.terrain) { replay.terrain = sim.terrainVersion; drawTerrain(terrainCtx, sim, palette) }
+    if (window.AgentSeason) window.AgentSeason.dress(sim)
     drawActors(actorCtx, sim, palette, { labels: showLabels })
+    if (window.AgentSeason) window.AgentSeason.paint(actorCtx, sim)
     if (sim.ticks >= replay.to || sim.done) endReplay()
   }
 
@@ -625,7 +628,12 @@
   // -------------------------------------------------------------------------
 
   function paintTerrain() { if (world) drawTerrain(terrainCtx, world, palette) }
-  function paintActors() { if (world) drawActors(actorCtx, world, palette, { labels: showLabels }) }
+  function paintActors() {
+    if (!world) return
+    if (window.AgentSeason) window.AgentSeason.dress(world)
+    drawActors(actorCtx, world, palette, { labels: showLabels })
+    if (window.AgentSeason) window.AgentSeason.paint(actorCtx, world)
+  }
 
   // -------------------------------------------------------------------------
   // Chrome
