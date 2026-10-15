@@ -25,7 +25,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="16aed039">
+<meta name="build" content="7c2fbad0">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
@@ -256,6 +256,9 @@
 			box-shadow: inset 0 2px var(--muted), inset 0 -2px var(--ink);
 			font-variant-numeric: tabular-nums;
 		}
+		.skill-stock { display: flex; align-items: center; gap: 3px; height: 18px; }
+		.skill-icon { width: 16px; height: 16px; flex-shrink: 0; image-rendering: pixelated; }
+		.skill.spent .skill-icon { opacity: 0.3; }
 		.skill-name { font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
 		.skill-count { font-size: 17px; line-height: 1; font-weight: 700; }
 		.skill.spent { border-color: var(--muted); box-shadow: inset 0 2px var(--ink); }
@@ -464,14 +467,14 @@
 	</p>
 
 	<script src="agents/Sim.js?v=4f0e92c1"></script>
-	<script src="agents/Draw.js?v=0870442a"></script>
+	<script src="agents/Draw.js?v=9dce5f1b"></script>
 	<script src="agents/Palette.js?v=ff1f4919"></script>
 	<script src="agents/Outcome.js?v=1105e622"></script>
 	<script src="agents/share.js?v=c3e48a0d"></script>
 	<script src="agents/sfx.js?v=13e9c6e5"></script>
 	<script src="agents/season.js?v=dbb629c3"></script>
 	<script src="agents/news.js?v=11e53121"></script>
-	<script src="agents/web.js?v=f8413083"></script>
+	<script src="agents/web.js?v=1b768301"></script>
 
 </body>
 

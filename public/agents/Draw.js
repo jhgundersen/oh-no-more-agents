@@ -20131,6 +20131,21 @@ function drawTourIcon(ctx, pal, i) {
 var DAILY_BADGE_PIXELS = ["..b......b....","..b......b....",".yyyyyyyyyyy..",".yoyyyyyyyoy..",".wwwwwwwwwww..",".wwwwgggwwww..",".wwwgggggwww..",".wwgggggggww..",".wwwgwgwgwww..",".wwwwwbwwwww..",".wwwwwbwbwww..",".wwwwwwbbwww..",".yyyyyyyyyyy..","..oo.....oo..."]
 function drawDailyBadge(ctx,x,y) { drawUiPixels(ctx,DAILY_BADGE_PIXELS,x+1,y+1) }
 
+// Passive inventory glyphs: a shared 14×14 drawing inside a 16px outline.
+var SKILL_ICON_PIXELS = {
+  climber: ["...........ccc","....ccc....cbb","...bbbbb...ccc","....wwk....ccc","....www..wwccc","....bbwbbb.cbb","....bbw....ccc","....bbr....ccc","....bbr....ccc","...ccbbbb..cbb","...cc..bbccccc","...cc......ccc","..bbbb.....ccc","...........cbb"],
+  floater: ["..............",".....wwwt.....","...wwtbtttt...","..wtttbttttt..",".tttttbtttttt.",".ctttctttcttc.","......w.......","......w.......","......o.......","......o.......","......o.......","......o..o....","......o..o....",".......oo....."],
+  bomber: ["..........y...",".......oooy...",".......o....yy",".......o......","......bbb.....","....rrrrrr....","...rwwrrrrr...","..rwrrrrrrrr..","..rwrrrrrrrr..","..rrrrrrrrrr..","..rrrrrrrrrr..","...rooooorr...","....rrrrrr....",".............."],
+  blocker: [".....cccc.....","....bbbbbb....","......wwk.....","......www.....",".....bbwbb....","wbbbbbbwbbbbbw","wbbbbbbrbbbbbw",".....bbrbb....",".....bbrbb....",".....bbbbb....","....ccc.ccc...","....ccc.ccc...","....ccc.ccc...","...bbbb.bbbb.."],
+  builder: ["..............","..........ywwy","......www.yyyy",".....bbb..oooo","..............","........yyyyo.","........oocoo.","........oocoo.","....yyyyo.....","....oocoo.....","....oocoo.....","yyyyo.........","oocoo.........","oocoo........."],
+  basher: ["...........y..","...........yyy","............cc",".......wwwb.cb",".......bbbc.cc",".......bbbc.cc",".......bbbc.cc","oyyyyoobbbc.cc","ooooooobbbc.cc",".......bbbb.cc","............cb","...........ycc","...........ycc","............cc"],
+  miner: ["..............","....wwwww.....","..bbbbbbbbb...",".bbb....o.bb..","cc.....y...cc.","......yo...cc.","......y.......",".....y........","....yo........","...yo.........","..yo.....bwb..","..yo....ccccc.",".yo.....cccbc.","........ccccc."],
+  digger: [".....oooo.....",".....o..o.....",".....o..o.....","......yo......","......yo......","......yo......","......yo......","......yo......","....wwwwwb....","....bbwbbb....","....bbwbbb....",".....bbbb.....","oyo...bb..ooyo","ooo.......oooo"],
+}
+function drawSkillIcon(ctx, name) {
+  if (SKILL_ICON_PIXELS[name]) drawUiPixels(ctx, SKILL_ICON_PIXELS[name], 1, 1)
+}
+
 // The page masthead reuses the share card's chunky ROM lettering. The web
 // host caches this static drawing; only the small umbrella changes at idle.
 var PAGE_LOGO_WIDTH = 340, PAGE_LOGO_HEIGHT = 64

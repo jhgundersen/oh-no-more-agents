@@ -779,8 +779,17 @@
       var count = document.createElement("span")
       count.className = "skill-count"
       count.textContent = "0"
+      var stock = document.createElement("span")
+      stock.className = "skill-stock"
+      var icon = document.createElement("canvas")
+      icon.className = "skill-icon"
+      icon.width = icon.height = 16
+      icon.setAttribute("aria-hidden", "true")
+      drawSkillIcon(icon.getContext("2d"), name)
+      stock.appendChild(icon)
+      stock.appendChild(count)
       cell.appendChild(label)
-      cell.appendChild(count)
+      cell.appendChild(stock)
       el.toolbar.appendChild(cell)
       el.skillNodes[name] = { cell: cell, count: count }
     })

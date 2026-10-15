@@ -6124,3 +6124,80 @@ The supervisor asked for three checks during the merge.
 
 **Follow-up (not from this merge):** in faux fullscreen at 844×390 landscape,
 the board's top 17 px sit above the viewport.
+
+## 296 — 2026-10-15 · Put a face on the tools (on a branch)
+
+**Chosen (autonomy):** give the passive skill stock tiny pixel action icons.
+The scenery and agent actions now read well; the text-only CLIMB / BASH /
+MINE / DIG tiles were harder to connect with what the colony was doing.
+Branch `codex/skill-icons`, current main `930af97` plus the approved captions
+branch (merged here while its developer merge was pending).
+
+**Watched first:** six more eight-second local runs, with frames at three and
+eight seconds: desktop Clock Tower, Subway and Building Site; phone Ruins,
+Desert and Ice Cave. Both Steady and Brisk, seed 3; real live ticks advanced
+91→245 and 136→366 respectively. Frames and metrics are in
+`/tmp/codex-watch-again/` (`watch.json`, twelve PNGs). The seasonal follow-up
+below also checks the Christmas inventory beside the decorated board.
+
+**Changed:** eight distinct 16×16 glyphs: climber against a wall, open umbrella,
+fused bomb, arms-out blocker, brick steps, horizontal hammer, diagonal pick,
+and shovel with soil. They use the existing tour-icon palette and dark pixel
+outline, with intact text names and counts. These are still passive inventory
+readouts, not buttons; the canvases are hidden from assistive technology.
+Exhausted tools dim to 30%; a just-used last tool stays bright for the existing
+recent-use cue. No additional listeners, timers or per-frame painting: all eight
+canvases paint once on toolbar creation, survive navigation, and retain their
+pixels through all nine themes. No simulation, RNG, seasonal rules or sound
+changes. No new assets/dependencies; index/Draw/web source gzip delta from the
+approved-caption baseline is **620 bytes**.
+
+**Evidence:** `/tmp/codex-skill-icons/after/contact-sheet.png`: paired native-CSS
+stock strips for desktop, phone, DPR 2 phone, landscape, narrow 400px board and
+Christmas; the eight glyphs at 16px and 3×; full phone and desktop context.
+Inspected the sheet and original phone, desktop-stock and narrow-stock shots.
+Before files are in `before/`, untouched baseline in `baseline/public/`, metrics
+and originals alongside the after sheet. Counts never overlap the icons, and
+phone and landscape controls remain entirely in the viewport.
+
+**Pipeline:** `tools/toolbar-icons.js` reuses one bounded local browser for all
+six views and cache/lifecycle assertions, rather than launching a browser per
+view. Captures wait for font/readiness, step at most 400 ticks paused, then
+refresh the real host readouts. Sheet height follows measured toolbar sizes,
+so adding phone/DPR rows cannot clip the context shots. Run via the shared lock:
+`node tools/toolbar-icons.js <out> [public-root] [before-out] --checks`.
+
+**Tests:** all eight complete, distinct palette-valid glyphs; bounded pixel
+painting, RNG refusal, context preservation, exact 2× scaling; browser label /
+count / passive semantics, icon/count bounds, DPR 1/2 and phone/landscape fit;
+zero icon repaints across repeated refreshes, theme changes and navigation;
+unchanged world during refresh, recent-last-use and exhausted opacity. Focused
+inventory/tour/phone tests: **14 passed, zero failures/skips, 4.84 s**. `npm run
+stamp` refreshed Draw/web and the page/build stamps; `git diff --check` passed.
+
+**Full checks:** `npm run check` with coverage passed: **1,337 tests, zero
+failures/skips, 319.39 s**, Factory art included. The subsequent CRAP threshold
+30 passed using that coverage, maximum **30.0** (new icon painter **2.0**,
+capture helper **5.0**). Both ran sequentially in one shared FIFO lock
+reservation, Node heap 2,048 MB, `ulimit -v 6000000`, two workers and
+120-second test timeouts. Check/coverage completion was reported immediately
+to release the developer's testing window. No browser errors in the evidence.
+`git diff --check` passed.
+Logs: `/tmp/codex-skill-icons/focused.log`, `check.log`, `crap.log`, and
+`evidence.log`.
+
+**Next:** review and merge this branch; no push or deployment from this pass.
+
+## 297 — 2026-10-15 · Merged the skill icons
+
+Reviewed and merged by the loop: codex/skill-icons (46f52eb, entry 296),
+`--no-ff`, as approved.
+- **Base:** the branch sat on Codex's captions commit, so its LOG entry for
+  captions duplicated 294 and was dropped. Its own entry is renumbered 296.
+- **Stamp conflicts** (build meta, web.js `?v=`, `src/version.js`) were
+  resolved by re-stamping.
+- **No code was lost on either side.** Against the branch, the merged
+  code differs only in main's own later changes: the fullscreen caption rule
+  from 295, the standup poll and the verify wait.
+- **Fullscreen layout still matches main:** 2× at 1280×720, 1× at 390×844,
+  and landscape at main's −17 px.
