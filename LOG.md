@@ -5477,3 +5477,26 @@ the Sim):
 
 Headless screenshot: the tag shows at top left during a real fast-forward on
 level 109. No page errors.
+
+## 281 — 2026-10-15 · Navigation ends the intermission (review finding 1)
+
+**Asked:** Codex's review of main (docs/review-2026-10-15.md, finding 1, P2).
+Navigation doesn't cancel the previous level's intermission. Next during the
+fifth level's standup made level 6, but the standup kept drawing over it, and
+its finish then advanced again, so level 6 was never played. Restart, the tour
+and Colony of the Day had the same problem, and a replay survived navigation
+the same way.
+
+**Changed:** `newLevel` clears `standup` and `replay` before making the new
+world. Every navigation goes through it: prev/next, restart, the tour, the
+daily, shared links, and the normal advance. Cancelling is now separate from
+a standup's finish (`endStandup`, which still advances when a meeting runs its
+course), so cancelling can't advance the world just chosen.
+
+**Tests** (`test/navigation.test.js`, which fails without the fix):
+- Next during a standup plays exactly one level on, and that level is being
+  played;
+- a board click afterwards doesn't advance again;
+- the daily chosen during a standup is still the daily after the meeting would
+  have ended;
+- Next during a replay ends the replay and plays level 2.

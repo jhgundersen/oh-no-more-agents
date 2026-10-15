@@ -470,6 +470,12 @@
   }
 
   function newLevel(n, seed) {
+    // Any navigation ends the last level's intermission without its own
+    // ending: a standup or replay left running drew over the new colony, and
+    // the standup's finish then advanced again — Next during a standup
+    // skipped a level (review 2026-10-15, finding 1).
+    standup = null
+    replay = null
     level = Math.max(1, n)
     world = generate(level, 0, seed)
     world.res = RES
