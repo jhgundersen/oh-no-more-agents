@@ -8494,3 +8494,12 @@ passed with it): the run now takes 1,565 page
 ticks of 1,591, so too little is skipped. The new fixture is level 163 /
 47748399, found by replaying the page's own fast-forward rule over 120
 colonies of the levels still flagged. It runs in 71% of the page ticks.
+
+## 347 — 2026-10-15 · Note: level 9's tower straggler (next)
+
+Level 9 (Skyscraper) ends on the stall cutoff in 1 of 24 colonies (salt 3,
+16/17). It is early, so every player sees it. The last one out works down
+the tower floor by floor: the fire escape is at x4–8 and the lift at
+x91–95. On the floor at row 37 it walks back to the escape, builds at x10
+facing it, turns, and walks away; the cutoff ends the level at t2558. The
+next thing to check is whether the escape has a door or stop on that floor.
