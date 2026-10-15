@@ -8120,3 +8120,15 @@ Reviewed and merged by the loop: codex/crane-art (a2bcca5, entry 336),
 `--no-ff`, as approved. Codex's entry is renumbered 336 and the page is
 re-stamped. Draw.js only. Codex's notes and tests keep the native (res 1)
 crane pixels unchanged.
+
+## 338 — 2026-10-15 · 335's straggler gets home on its own
+
+335's "Next" was the level-324 straggler walking the exit floor away from
+the door. Replayed after 335, it turns at the far wall, comes back, climbs
+the block it had come off, and drops off the near side onto the door's
+floor:
+- salt 1 is home at t1523 with 18 of 18;
+- salt 6 is home at t1876 with 17 of 18.
+
+The route was always there; the one-tick "stuck" reading used to end the
+level before the straggler could use it. Nothing more to do.
