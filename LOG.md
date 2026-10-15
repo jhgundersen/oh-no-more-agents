@@ -8452,3 +8452,100 @@ Reviewed and merged by the loop: codex/pool-art (5387545, entry 344),
 `--no-ff`, as approved. Codex's entry is renumbered 344 and the page is
 re-stamped. It changes drawing only, with no Sim.js change, and keeps the
 native (res 1) pool pixels, per Codex's tests.
+
+## 346 — 2026-10-15 · The keeper of the quiet (on a branch)
+
+**Choice:** watched Library 13, Ice Cave 26, Rooftops 17 and Library 33 locally,
+desktop/phone, Steady/Brisk, including Halloween and Christmas. The Library's
+static librarian did not act out the shush that stops a noisy agent. Chose a
+small character performance alongside the already polished shelves and cast.
+
+**Change:** `codex/librarian-art`, based on main **15179a2**, including the
+approved pool merge. Page resolution only: a proper open book with a few
+page-turn poses, rimmed spectacles, a highlighted bun and cardigan, a green
+reading lamp and a little drawer desk. A quiet keeper looks into the book;
+a real shush turns her towards the actual noisy agent and raises a connected
+forearm and index finger, holds, then returns to reading. The desk stays in
+one deterministic orientation instead of flipping with her head.
+
+The gesture reads the existing `shushAt` for exactly the simulation's 40-tick
+pause; no predicted shushes or simulation fields. Book turns happen for 24 of
+every 240 ticks, offset by level and desk position. Reduced motion fixes the
+book and holds a steady functional shush pose. The existing SHHH bubble,
+agent apology, target selection, cooldown and pause are unchanged. New paint
+fits the original two-facing 16x16-art-pixel desk envelope. Whole art pixels
+keep glasses and finger visible at phone size; half pixels supply detail.
+Native/default res 1 and share res 3 keep the original body and bubble bytes.
+Sim.js is byte-identical to the main base.
+
+**Sheet labels:** `tools/art-label.js` uppercases labels for the existing ROM
+font, normalises typographic dashes and multiplication signs, and rejects any
+unsupported glyph before painting. Its default two-pixel lettering doubles
+the old sheet label size. Both the new librarian sheet and `tools/pool-art.js`
+use it. The pool sheet is regenerated at `pool-labels/contact-sheet.png`;
+**all 48 approved pool image strips remain byte-identical**. Tests verify
+actual font pixels against known uppercase rendering and reject an unknown
+glyph without painting a partial label.
+
+**Evidence:** `/tmp/codex-librarian-art/strips/index.html` animates before/after
+reading and shushing on Library 13, 33 and 53; `strips/contact-sheet.png` and
+per-scene frame sheets include native and page resolution. Eight selected
+milestones are labelled as unequal-time frames. Every interaction comes from
+ordinary seed-3 simulation; no staged shushes. Natural starts: 13 reads at
+614/shushes at 240, 33 at 408/306, 53 at 484/227. Captures show both facing
+directions and the return to the fixed reading desk.
+
+`page-sheet.png` contains actual CSS-size boards plus 3x crops: phone reading,
+desktop shush, phone return, the other Library layout, Christmas, Halloween
+and reduced motion. The phone views include the board. Before/after world
+digests, board/stage geometry and scroll widths match. Every changed board
+pixel stays inside the existing librarian footprint, with a half-pixel
+screenshot sampling margin. Agents, umbrellas, shelves and exits remain clear.
+The repository's capped local Chromium helper captured all views.
+
+**Pipeline/cost:** `tools/librarian-art.js` bounds scene discovery at 12,000
+live ticks, caches terrain by version/resolution/theme, and paints actors
+straight into translated 80x64 crops. Reading discovery permits a complete
+page turn in a quiet gap or after the noisy traffic has passed. All **192**
+before/after frames take **0.86 s** at **185.2 MB peak RSS**. The fixed pool sheet's 384 frames take
+**1.46 s** at **223.8 MB peak RSS**. One browser handles all fourteen page views, then
+composition reuses their PNGs. Pixel checks use compact SHA-256 hashes and
+paint recorders are capped.
+
+At most **43 new primitive rectangles** for the single librarian (`cost-final.json`, 2,880 poses across both directions and motion preferences); no extra
+canvas, particles, timers, retained state or assets. Draw.js adds **3,770** source
+bytes / **970** gzip bytes before shipping's comment strip. `native-proof.json`
+verifies aggregate **25bc51a6…** before and after across three layouts, five
+themes, both directions, native/default/share resolutions, motion preferences
+and five shush ages.
+
+A queued pass was stopped before a final forearm correction; its evidence was
+archived and regenerated. Automatic approval review correctly prevented an
+edit while validation was queued. A subsequent preflight caught a duplicate
+colour declaration: the keeper now reuses the Library's existing brass colour.
+No full suite was spent on that failure. Core-name and stamp checks now run
+**before queue entry**, alongside syntax checks, so these errors do not wait
+through a FIFO turn. All final evidence and FPS use the final frozen source.
+
+**FPS:** five-second real-page Brisk runs, Library 13 and 33 from tick 230,
+covering shushes, return to reading and page turns. All four held **60 median / 60 p5 FPS, 17 ms worst and zero long-task time**. CPU was **12% / 12%** on 13 (up to 17 cast members), **11% / 12%** on 33 (up to 13). Actual windows: 13 baseline 234–462, final 230–458; 33 approximately 230–459. No speedup claimed. Logs:
+`fps-before-13.log`, `fps-after-13.log`, `fps-before-33.log`,
+`fps-after-33.log`.
+
+**Focused:** **39/39 pass, 3.82 s**, across librarian art/mechanics, both Library art suites,
+pool art and the new label helper. Covers exact native/share bytes; fixed desk
+orientation; real gesture timing; half-pixel footprint and opacity; all four
+book poses and reduced motion; read-only/RNG-free rendering; live rendered/
+unrendered simulation digests; cached/full-frame crop equivalence; bounded
+natural fixtures; and legible, supported labels. Existing warm-pool, opaque
+agent, umbrella and shush behaviour checks pass.
+
+**Full gate:** **1,444 passed, zero failures/cancellations/skips, 348.57 s**, including Factory art and coverage. CRAP threshold **30**
+passed using that same LCOV, maximum **30.0**. New helper scores: runtime painting **1.0–2.0 / 100% coverage**, derived geometry **9.0 / 92.3%**, label validation **3.0 / 100%**, scene discovery **11.0 / 94.4%**, strip orchestration **11.0 / 100%**, and cached frame rendering **3.1 / 75%**.
+Completion was reported immediately. Persistent FIFO validation used a 3 GB
+service cap, 2,048 MB Node heap, `ulimit -v 6000000`, two workers and 120-second
+per-test timeouts. Source/tests stayed frozen through the final gate. Logs:
+`check.log`, `crap.log`, `green-queue.log`. Stamps and `git diff --check` pass.
+
+**Next:** review and merge this branch, then another free choice of atmosphere,
+motion or presentation. Commit on the branch only; no push or deployment.

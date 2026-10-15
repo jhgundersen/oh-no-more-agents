@@ -2056,7 +2056,8 @@ function drawLibrarians(ctx, w, pal) {
   for (var i = 0; i < w.librarians.length; i++) {
     var lib = w.librarians[i]
     var ox = Math.round(lib.x * C) - SPRITE_W / 2, oy = Math.round((lib.y + 1) * C) - SPRITE_PX
-    drawLibrarian(ctx, pal, ox, oy, lib.dir)
+    if (w.res === 2) drawPageLibrarian(ctx, w, pal, lib, ox, oy)
+    else drawLibrarian(ctx, pal, ox, oy, lib.dir)
     var at = lib.shushAt
     if ((w.res || 1) >= 2 && w.ticks - at >= 0 && w.ticks - at < QUIP_TICKS)
       drawBubble(ctx, w, pal, { at: at, text: "SHHH" }, ox, oy)
@@ -2090,6 +2091,113 @@ function drawLibrarian(ctx, pal, ox, oy, dir) {
   blit(ctx, ox, oy, dir, 6, 9, 3, 1)                  // returns
   ctx.fillStyle = pal.label
   blit(ctx, ox, oy, dir, 6, 10, 3, 1)
+}
+
+// A reading desk belongs to the room; only its keeper turns towards noise.
+// Everything fits the old two-facing desk envelope, with no persistent state.
+var READING_PAPER = "#e8d6ad", READING_INK = "#736655"
+function librarianDrawing(w, lib) {
+  var age = w.ticks - lib.shushAt
+  var shush = age >= 0 && age < 40
+  var lift = shush ? Math.min(1, age / 5, (40 - age) / 6) : 0
+  if (w.reducedMotion) lift = shush ? 1 : 0
+  var phase = w.reducedMotion || shush ? 0 : (w.ticks + lib.x * 7 + w.level * 11) % 240
+  var page = phase < 24 ? Math.min(3, Math.floor(phase / 4), Math.floor((24 - phase) / 4)) : 0
+  return { shush: shush, deskDir: (w.level + lib.x) % 2 ? 1 : -1, lift: Math.round(lift * 4) / 4, page: page }
+}
+function drawPageLibrarian(ctx, w, pal, lib, x, y) {
+  var g = librarianDrawing(w, lib)
+  ctx.save()
+  var facing = g.shush ? lib.dir : g.deskDir
+  drawReadingKeeper(ctx, pal, x, y, facing)
+  drawReadingDesk(ctx, pal, x, y, g.deskDir)
+  drawReadingBook(ctx, x, y, g.deskDir, g.page)
+  drawReadingGesture(ctx, pal, x, y, facing, g.lift)
+  ctx.restore()
+}
+function drawReadingDesk(ctx, pal, x, y, d) {
+  var L = LIBRARIAN
+  ctx.fillStyle = L.desk
+  blitFine(ctx,x,y,d,4,11,8,5)
+  ctx.fillStyle = L.deskTop
+  blitFine(ctx,x,y,d,3.5,10.5,8.5,1)
+  blitFine(ctx,x,y,d,4.5,12,0.5,3.5)
+  ctx.fillStyle = pal.rigDark
+  blitFine(ctx,x,y,d,5.5,12,5.5,0.5)
+  blitFine(ctx,x,y,d,5.5,14,5.5,0.5)
+  ctx.fillStyle = READING_BRASS
+  blitFine(ctx,x,y,d,8,12.5,1,0.5)
+  ctx.fillStyle = "#886975"
+  blitFine(ctx,x,y,d,4.5,9.5,2.5,1)
+  ctx.fillStyle = READING_PAPER
+  blitFine(ctx,x,y,d,5,10,2,0.5)
+  ctx.fillStyle = L.lamp
+  blitFine(ctx,x,y,d,9.5,7.5,2,0.5)
+  blitFine(ctx,x,y,d,9,8,3,1)
+  ctx.fillStyle = "#42644c"
+  blitFine(ctx,x,y,d,9,8.5,3,0.5)
+  ctx.fillStyle = READING_BRASS
+  blitFine(ctx,x,y,d,10.5,9,0.5,1.5)
+  blitFine(ctx,x,y,d,10,10,2,0.5)
+  ctx.fillStyle = L.glow
+  blitFine(ctx,x,y,d,9.5,9,2,0.5)
+  var alpha=ctx.globalAlpha
+  ctx.globalAlpha=alpha*0.15
+  blitFine(ctx,x,y,d,9,9.5,3,0.5)
+  blitFine(ctx,x,y,d,8,10,4,0.5)
+  ctx.globalAlpha=alpha
+}
+function drawReadingKeeper(ctx, pal, x, y, d) {
+  var L=LIBRARIAN
+  ctx.fillStyle=L.cardigan
+  blitFine(ctx,x,y,d,1,8,6,5)
+  ctx.fillStyle="#514361"
+  blitFine(ctx,x,y,d,1,9,1,3.5)
+  ctx.fillStyle=READING_PAPER
+  blitFine(ctx,x,y,d,3,8,2,1)
+  ctx.fillStyle=READING_BRASS
+  blitFine(ctx,x,y,d,4.5,10,0.5,0.5)
+  ctx.fillStyle=L.bun
+  blitFine(ctx,x,y,d,3,0,2,2)
+  blitFine(ctx,x,y,d,2,2,4,2)
+  ctx.fillStyle="#796777"
+  blitFine(ctx,x,y,d,3,0.5,1.5,0.5)
+  ctx.fillStyle=pal.skin
+  blitFine(ctx,x,y,d,2,4,4,4)
+  blitFine(ctx,x,y,d,6,5.5,0.5,1)
+  ctx.fillStyle="#16161c"
+  blitFine(ctx,x,y,d,3,5,4,1)
+  blitFine(ctx,x,y,d,3,5,0.5,1.5)
+  blitFine(ctx,x,y,d,4.5,5,0.5,1.5)
+  blitFine(ctx,x,y,d,6.5,5,0.5,1.5)
+  ctx.fillStyle="#aabdb9"
+  blitFine(ctx,x,y,d,3.5,5.5,1,0.5)
+  blitFine(ctx,x,y,d,5.5,5.5,1,0.5)
+  ctx.fillStyle=READING_INK
+  blitFine(ctx,x,y,d,5,7,1,0.5)
+}
+function drawReadingBook(ctx,x,y,d,page) {
+  ctx.fillStyle="#645573"
+  blitFine(ctx,x,y,d,6.5,10,3.5,0.5)
+  ctx.fillStyle=READING_PAPER
+  blitFine(ctx,x,y,d,6.5,9,1.5,1)
+  blitFine(ctx,x,y,d,8.5,9,1.5,1)
+  ctx.fillStyle=READING_INK
+  blitFine(ctx,x,y,d,8,9,0.5,1.5)
+  blitFine(ctx,x,y,d,7,9.5,0.5,0.5)
+  blitFine(ctx,x,y,d,9,9.5,0.5,0.5)
+  if (!page) return
+  ctx.fillStyle=READING_PAPER
+  blitFine(ctx,x,y,d,9-page*0.5,9-page*0.5,0.5,1.5)
+  ctx.fillStyle="#fff0cd"
+  blitFine(ctx,x,y,d,8.5-page*0.5,8.5-page*0.5,1,0.5)
+}
+function drawReadingGesture(ctx,pal,x,y,d,lift) {
+  ctx.fillStyle=LIBRARIAN.cardigan
+  blitFine(ctx,x,y,d,5.5,9,1.5,1.5)
+  ctx.fillStyle=pal.skin
+  blitFine(ctx,x,y,d,6.5,9-lift*2,1,1+lift*2)
+  blitFine(ctx,x,y,d,7,9-lift*4,1,1+Math.round(lift*2)*0.5)
 }
 
 // The Data Center's aisles (Sim's placeAisles): a floor grate, warm where the
