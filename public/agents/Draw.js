@@ -4774,6 +4774,13 @@ function drawPool(ctx, w, pal, p, px, pw, bot) {
       }
   }
 
+  // Page materials share the simulation's current flood footprint, including
+  // newly opened side chambers. Native/panel and share-card paint stays exact.
+  if (w.res === 2) {
+    drawPagePool(ctx, w, pal, p)
+    return
+  }
+
   // What the surface does when nobody is in it. Lava spits, coolant strobes
   // along its length, water catches the light — three pools that behave
   // differently enough that the biome is legible from the hole alone.
@@ -4830,6 +4837,7 @@ function drawPool(ctx, w, pal, p, px, pw, bot) {
 
 function drawPoolWaterline(ctx, w, pal, p, px, pw) {
   var sy = p.surfaceY * w.k.CELL, t = w.ticks
+  if (w.res === 2 && w.reducedMotion) t = 0
   ctx.fillStyle = pal.poolLip
   for (var c = 0; c < pw; c += 2) {
     var wob = Math.sin(c * 0.11 + t * 0.045 + p.seed)
@@ -4837,6 +4845,132 @@ function drawPoolWaterline(ctx, w, pal, p, px, pw) {
     var swell = w.biome === "Harbour" ? harbourSwell(w, p, px + c) : Math.round(wob)
     ctx.fillRect(px + c, sy + swell, 2, 2)
   }
+}
+
+// The sump must read as a liquid even at one CSS pixel per art pixel.
+// Small stepped ribbons rather than a second screen-wide wash; no particles,
+// canvases, RNG or mutable scenery. The existing wet mask owns every accent.
+var POOL_SLICK = ["#79708f", "#799b91", "#c0a471"]
+function drawPagePool(ctx, w, pal, p) {
+  ctx.save()
+  var t = w.reducedMotion ? 0 : w.ticks
+  if (p.liquid === "oil") drawPoolSlick(ctx, w, pal, p, t)
+  else if (p.liquid === "lava") drawPoolCrust(ctx, w, pal, p, t)
+  else if (p.liquid === "coolant") drawPoolCoolant(ctx, w, pal, p, t)
+  else drawPoolReflections(ctx, w, pal, p, t)
+  drawPagePoolImpact(ctx, w, pal, p)
+  ctx.restore()
+}
+
+// Split at cell boundaries, admitting only actual air in this pool. Above
+// the water only the eight-pixel splash crown in the original shaft is legal.
+// A carved side chamber can receive a reflection; a surviving brick cannot.
+function poolAccentRect(ctx, w, p, x, y, width, height) {
+  var C = w.k.CELL, cols = w.k.COLS, rows = w.k.ROWS
+  var right = Math.min(cols * C, x + width), bottom = Math.min(rows * C, y + height)
+  for (var cy = Math.max(0, Math.floor(y / C)); cy * C < bottom; cy++)
+    for (var cx = Math.max(0, Math.floor(x / C)); cx * C < right; cx++) {
+      var index = cy * cols + cx
+      if (w.terrain[index]) continue
+      var shaft = cx >= p.x0 && cx <= p.x1
+      var wet = p.wet ? p.wet[index] : shaft
+      if (cy < p.surfaceY ? !shaft || cy * C < p.surfaceY * C - 8 : !wet) continue
+      var left = Math.max(x, cx * C), top = Math.max(y, cy * C)
+      ctx.fillRect(left, top, Math.min(right, (cx + 1) * C) - left, Math.min(bottom, (cy + 1) * C) - top)
+    }
+}
+
+function poolRibbon(ctx, w, p, x, y, width, color, alpha) {
+  ctx.fillStyle = color
+  var inherited = ctx.globalAlpha
+  ctx.globalAlpha = inherited * alpha
+  poolAccentRect(ctx, w, p, x, y, width, 0.5)
+  poolAccentRect(ctx, w, p, x + 1, y + 0.5, Math.max(1, width - 2), 1)
+  ctx.globalAlpha = inherited
+}
+
+function drawPoolReflections(ctx, w, pal, p, t) {
+  var C = w.k.CELL, left = p.x0 * C, width = (p.x1 - p.x0 + 1) * C, sy = p.surfaceY * C
+  for (var i = 0; i < 6; i++) {
+    var phase = Math.floor(t / 12 + i * 7 + p.seed) % 24
+    var x = left + ((i * 23 + p.seed) % Math.max(1, width - 8))
+    var len = 4 + (phase < 12 ? phase : 24 - phase) * 0.5
+    poolRibbon(ctx, w, p, x, sy + 3 + i * 1.5, len, i % 2 ? pal.poolGlint : pal.poolLip, 0.42 - i * 0.04)
+  }
+}
+
+function drawPoolSlick(ctx, w, pal, p, t) {
+  var C = w.k.CELL, left = p.x0 * C, width = (p.x1 - p.x0 + 1) * C, sy = p.surfaceY * C
+  for (var i = 0; i < 4; i++) {
+    var drift = Math.floor(t / 24 + p.seed + i * 5) % 6
+    var x = left - 3 + ((i * 17 + p.seed) % Math.max(1, width - 5)) + drift * 0.5
+    poolRibbon(ctx, w, p, x, sy + 2.5 + i * 2, 14 + i * 2, POOL_SLICK[i % 3], 0.62 - i * 0.08)
+    poolRibbon(ctx, w, p, x + 2, sy + 3 + i * 2, 7 + i, pal.poolGlint, 0.30)
+  }
+}
+
+function drawPoolCrust(ctx, w, pal, p, t) {
+  var C = w.k.CELL, left = p.x0 * C, width = (p.x1 - p.x0 + 1) * C, sy = p.surfaceY * C
+  for (var i = 0; i < 5; i++) {
+    var x = left + ((i * 19 + p.seed + Math.floor(t / 18)) % Math.max(1, width - 4))
+    var y = sy + 2 + (i % 3) * 2, len = 5 + i % 3 * 2
+    poolRibbon(ctx, w, p, x, y, len, pal.poolDeep, 0.90)
+    poolRibbon(ctx, w, p, x + 2, y + 1.5, len - 2, pal.poolGlint, 0.64)
+  }
+  if (w.reducedMotion) return
+  ctx.fillStyle = pal.poolGlint
+  for (var e = 0; e < 2; e++) {
+    var age = (t + p.seed + e * 23) % 65
+    if (age >= 12) continue
+    var ex = left + ((p.seed + e * 13) % Math.max(1, width - 1))
+    poolAccentRect(ctx, w, p, ex, sy - Math.round(age * 0.4), 0.5, 1)
+  }
+}
+
+function drawPoolCoolant(ctx, w, pal, p, t) {
+  var C = w.k.CELL, left = p.x0 * C, width = (p.x1 - p.x0 + 1) * C, sy = p.surfaceY * C
+  for (var i = 0; i < 4; i++) {
+    var rise = Math.floor((t + i * 19 + p.seed) / 5) % 8
+    var x = left + ((i * 29 + p.seed) % Math.max(1, width - 4)), y = sy + 10 - rise
+    poolRibbon(ctx, w, p, x, sy + 2 + i * 2, 8, pal.poolLip, 0.22)
+    ctx.fillStyle = pal.poolGlint
+    poolAccentRect(ctx, w, p, x + 0.5, y, 1.5, 0.5)
+    poolAccentRect(ctx, w, p, x, y + 0.5, 0.5, 1)
+    poolAccentRect(ctx, w, p, x + 2, y + 0.5, 0.5, 1)
+    poolAccentRect(ctx, w, p, x + 0.5, y + 1.5, 1.5, 0.5)
+  }
+}
+
+// sink/sinkEnemy already leave the entry coordinates and noteDeaths dates
+// them. Use those immutable records; flooding without a victim uses centre.
+function poolImpactX(w, p) {
+  for (var group = 0; group < 2; group++) {
+    var bodies = group ? w.enemies : w.agents
+    for (var i = 0; i < bodies.length; i++) {
+      var ag = bodies[i], cx = Math.floor(ag.x)
+      if (ag.gone && ag.diedAt === p.ripple && ag.y === p.surfaceY &&
+          cx >= p.x0 && cx <= p.x1) return Math.round(ag.x * w.k.CELL * 2) / 2
+    }
+  }
+  return (p.x0 + p.x1 + 1) * w.k.CELL / 2
+}
+
+function drawPagePoolImpact(ctx, w, pal, p) {
+  var age = w.ticks - p.ripple
+  if (age < 0 || age >= (w.reducedMotion ? 6 : 36)) return
+  var x = poolImpactX(w, p), y = p.surfaceY * w.k.CELL
+  var a = w.reducedMotion ? 0 : age
+  var radius = 2 + Math.floor(a / 3), inherited = ctx.globalAlpha
+  ctx.globalAlpha = inherited * (1 - age / 36)
+  poolRibbon(ctx, w, p, x - radius - 2, y + 2, 3, pal.poolGlint, 0.85)
+  poolRibbon(ctx, w, p, x + radius, y + 2, 3, pal.poolGlint, 0.85)
+  if (!w.reducedMotion && age < 10) {
+    var up = Math.round(age * 0.9 - age * age * 0.08)
+    ctx.fillStyle = pal.poolLip
+    poolAccentRect(ctx, w, p, x - 2 - age * 0.5, y - 2 - up, 1, 1)
+    poolAccentRect(ctx, w, p, x + 2 + age * 0.5, y - 2 - up, 1, 1)
+  }
+  ctx.globalAlpha = inherited
 }
 
 // Something lives in the swamp.
