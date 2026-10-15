@@ -8098,3 +8098,91 @@ floor, climbed off to the right and was left behind (a 20 s tail).
 when home is a long walk away; it fails without the fix.
 
 **Next:** that level-2 straggler, then the rest of the first-impressions list.
+
+## 254 — 2026-10-15 · Snow on the ledges (on a branch)
+
+**Brief:** finish the developer's Christmas dressing (`adb2323`) at native 1×
+and page res 2, keeping all nineteen biomes readable. `codex/christmas-art`
+started from approved share-art and was rebased onto local main as requested.
+The approved gag and share changes are retained above Christmas main, with
+only their overlapping art/stamp/browser sections reconciled. The art baseline
+is `31697e3`; no simulation or palette changes.
+
+**Changed:** thin, broken snow caps sit on exposed surviving ledges, leaving
+material texture and hazard/fixture reservations intact. They are drawn by
+`drawTerrain`, so they cost nothing between terrain repaints; underwater caps
+are dimmer and pass through the existing sea filter. A small, low-contrast fir
+with a warm star and a few lights stands near the hatch where its fixed site
+has clear air and support. Carving removes it rather than moving it somewhere
+else. Live and replay worlds are dressed before their first terrain paint so
+cached seasonal art appears immediately.
+
+Santa hats now attach to the actual head, not to a point above the sprite:
+trait tilts, walking/idle bob, mirrored/rotated poses and the diving helmet's
+kick all carry them. Red folds, a shaded white brim and a pompom read at 1×;
+half-pixel fur highlights appear at res 2. Existing faces, shades, collars,
+ports and hand poses remain intact. Milestone hats retain their precedence.
+Candy canopies have a proper dome, broad diagonal red/white bands, hanging
+tips, a bright rim and a shaft to the grip at both resolutions. Stripe runs
+are batched instead of painted one small square at a time.
+
+The exit is wrapped around its jambs and lintel in green paper, small pale
+marks, red ribbon, folded bow loops and a warm knot. The portal and threshold
+stay open and visible; individual wrapping pieces sit out passing sprites.
+Forty staggered flakes replace seventy noisy ones: triangle-wave drift avoids
+per-flake trigonometry, full-footprint terrain tests stop flakes leaking into
+rock, and expanded live sprite envelopes protect caps, faces and canopies.
+Snow avoids the HUD and ticker; Christmas weather/wrapping sit out report
+plates and blackout overlays. Reduced motion freezes the weather. HO HO HOME,
+calendar selection, seasonal puns and all simulation rules are unchanged.
+
+**Looked:** `/tmp/codex-christmas-art/final/` contains before/after sheets for
+all nineteen biomes: `contact-sheet.png`, `exits-sheet.png`, `hatches-sheet.png`
+and `umbrellas-sheet.png`, plus 76 native full frames and native exit/canopy
+crops. The canopy sheet forces a real floater into clear air in each biome so
+both resolutions can be judged even when the natural tick-400 colony has
+already landed. Reviewed native 400×248 frames together and all biome crops;
+the Trench's copper helmets, Library floors, original hazards and exit openings
+stay legible. Local `?season=christmas&level=1&seed=3` and level 10 previews
+show seasonal data from **tick 0**, correctly cached snow, caps and wrapping;
+no page exceptions. Browser images/JSON are in the same task directory.
+
+**Isolation:** **570** ordinary/Halloween frames (19 biomes × five palettes ×
+unspecified/res-1/res-2 × two modes) are byte-identical to the rebased baseline;
+**6.52 s**, peak RSS **212 MB** under the 256 MB renderer heap. Complete
+simulation digests also match across 600 ticks in all nineteen biomes, with
+matched random draws and only existing `season*` display fields omitted.
+Protected-pixel checks cover every trait, both facings, five poses and diving
+helmets, plus complete living sprite envelopes after seasonal painting.
+
+**Pipeline:** cached unchanged worlds and terrain reduced the all-biome,
+five-palette repeatability test from **4.40 s to 2.31 s**. The contact tool
+simulates each biome once rather than once per before/after/resolution,
+reuses comparison helpers and reports bounded Git errors. Four complete sheets
+and all native images take about three seconds, peak RSS **346 MB**, under a
+256 MB heap. Recordings and comparisons are bounded; frame assertions use
+hashes/zero-copy equality rather than raw-buffer diffs. Node test heaps remain
+2048 MB under `ulimit -v 6000000`, with Factory art excluded, one worker for
+check and two for coverage, and host-aware serialization of full runs.
+
+**Measured:** five interleaved warmed batches of twenty res-2 actor frames,
+including seasonal paint, rebased first Christmas pass → revision. Cavern
+**0.607 → 0.632 ms**, Factory **2.061 → 2.126**, Skyscraper **0.953 → 1.028**,
+Trench **0.888 → 0.925**, Library **1.438 → 1.478**, Rooftops **0.938 → 0.970**,
+Harbour **1.217 → 1.273**. Mean increase across all nineteen biomes is
+**0.044 ms**; maximum **0.075 ms**. Cached snow/tree add no per-tick terrain
+work. These are Node software-raster timings, not browser FPS.
+
+**Validation:** final focused checks pass **20/20** in **9.05 s**. `npm run
+stamp` is current. The final capped `npm run check` passes **1,178 tests**,
+zero failures/skips, in **156.63 s**. Capped coverage also passes **1,178 tests**, zero failures/skips, in
+**194.45 s**. `npm run crap -- --threshold 30 --coverage-command
+/tmp/codex-christmas-art/coverage-safe.sh` passes: highest score **30.0**,
+new Christmas drawing helpers at most **13.0**, actual-head wrapper **18.0**,
+comparison command **15.0**. Start/end source hashes match; Sim, Palette,
+Outcome and share assets remain unchanged. No temporary browsers remain.
+
+**Next:** ready for Christmas art review. Commit on `codex/christmas-art` only;
+no push, deployment or sibling sync.
+
+Reviewed and merged by the loop. Crisp Santa hats, ribbon-wrapped exits, snow settling on ledges, and candy canopies in all 19 biomes. The branch had rebased the gag and share art onto 250; `main` already had both (with the loop's own conflict resolutions), so the merge takes the branch's `Draw.js` and `season.js`, re-applies `STANDUP_EDGE` from the gag-art merge, and keeps `main`'s `tools/phone.js` (`CMD_TIMEOUT`).

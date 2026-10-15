@@ -22,7 +22,7 @@
       homePrefix: "HO HO HOME: ", homeSuffix: "",
       candy: "#d42a3c", candyEvery: 3,          // one floater umbrella in three
       hats: "santa",
-      snow: 70,
+      snow: 40,
       gift: true,
       homePuns: ["IS HOME FOR THE HOLIDAYS", "MADE THE NICE LIST", "DELIVERED. NO CHIMNEY REQUIRED"],
       deathPuns: ["IS ON THE NAUGHTY LIST", "GOT COAL", "WAS RETURNED, NO RECEIPT"]
@@ -110,6 +110,8 @@
   function paint(ctx, w) {
     if (!name || !w || !w.season) return
     observe(w)
+    // Christmas weather/wrapping sits out report plates and blackout overlays.
+    if (name === "christmas" && (w.done || (w.outage && w.ticks >= w.outage.at && w.ticks < w.outage.at + w.outage.len))) return
     var s = SEASONS[name], c = w.k.CELL, unit = (w.res || 1) >= 2 ? 0.5 : 1
     ctx.save()
     if (s.snow) drawSnow(ctx, w, s.snow)
@@ -132,37 +134,72 @@
   // Flakes drifting down through the air, a pure function of the tick: each
   // has its own column, speed and sway, and wraps from the floor to the top.
   // Only drawn over open air, so it reads as weather, not as noise on the rock.
+  function snowActors(w) {
+    var out = []
+    for (var i = 0; i < w.agents.length; i++) {
+      var ag = w.agents[i]
+      if (!ag.gone && ag.state !== "dead" && ag.state !== "saved") {
+        var b = seasonActorBox(w, ag)
+        b.x -= 3; b.y -= 8; b.width += 6; b.height += 8
+        out.push(b)
+      }
+    }
+    return out
+  }
+  function snowAir(w, x, y, size, actors) {
+    var c = w.k.CELL
+    if (y < w.k.SKY * c + 18 || y + size > w.k.ROWS * c - 12) return false
+    for (var yy = Math.floor(y / c); yy <= Math.floor((y + size - 0.5) / c); yy++)
+      for (var xx = Math.floor(x / c); xx <= Math.floor((x + size - 0.5) / c); xx++)
+        if (cell(w, xx, yy) !== w.k.EMPTY) return false
+    if (seasonDanger(w, x, y, size, size)) return false
+    var e = w.exit
+    if (e && overlap(x, y, size, size, { x: e.x * c - 7, y: e.y * c - 7, width: e.w * c + 14, height: e.h * c + 14 })) return false
+    for (var i = 0; i < actors.length; i++) if (overlap(x, y, size, size, actors[i])) return false
+    return true
+  }
+  // Forty pure, staggered flakes. Triangle-wave drift needs no per-flake
+  // trigonometry; full footprint tests preserve faces, canopies and danger tells.
   function drawSnow(ctx, w, n) {
     var k = w.k, W = k.COLS * k.CELL, H = k.ROWS * k.CELL, t = w.reducedMotion ? 0 : w.ticks
-    ctx.save()
-    ctx.fillStyle = "#f4f8ff"
+    var actors = snowActors(w), unit = (w.res || 1) >= 2 ? 0.5 : 1
+    ctx.save(); ctx.fillStyle = "#e4edf9"
     for (var i = 0; i < n; i++) {
-      var h = (i * 2654435761) >>> 0
-      var speed = 0.15 + (h & 15) / 60, x0 = (h >>> 4) % W
-      var y = ((h >>> 12) % H + t * speed) % H
-      var x = (x0 + Math.sin((t + i * 13) / 23) * 2 + W) % W
-      if (cell(w, Math.floor(x / k.CELL), Math.floor(y / k.CELL)) !== k.EMPTY) continue
-      ctx.globalAlpha = 0.5 + (h & 3) * 0.12
-      ctx.fillRect(Math.round(x), Math.round(y), (h & 7) === 0 ? 2 : 1, (h & 7) === 0 ? 2 : 1)
+      var h = (i * 2654435761) >>> 0, phase = (t + i * 13) % 96
+      var sway = (phase < 48 ? phase : 96 - phase) / 24 - 1
+      var x = Math.round((((h >>> 4) % W + sway + W) % W) / unit) * unit
+      var y = Math.round((((h >>> 12) % H + t * (0.12 + (h & 15) / 80)) % H) / unit) * unit
+      var big = i % 9 === 0, size = big ? 3 : 1
+      if (!snowAir(w, x, y, size, actors)) continue
+      ctx.globalAlpha = 0.3 + (h & 3) * 0.1
+      if (big) { ctx.fillRect(x + 1, y, 1, 3); ctx.fillRect(x, y + 1, 3, 1) }
+      else ctx.fillRect(x, y, 1, 1)
     }
     ctx.restore()
   }
-
-  // The exit, wrapped: a ribbon down and across the door and a bow on top.
+  // Wrapping lives on the jambs and lintel. The portal, threshold and any
+  // arriving face remain visible; a bow and folded ribbon sell the gift.
   function drawGift(ctx, w) {
-    var c = w.k.CELL, e = w.exit
-    var x0 = e.x * c, y0 = e.y * c, wd = e.w * c, ht = e.h * c
-    var mx = Math.round(x0 + wd / 2), my = Math.round(y0 + ht / 2)
+    var c = w.k.CELL, e = w.exit, x = e.x * c, y = e.y * c, width = e.w * c, height = e.h * c
+    var mid = Math.round(x + width / 2), actors = snowActors(w)
+    var fill = function(colour, xx, yy, wd, ht) {
+      for (var i = 0; i < actors.length; i++) if (overlap(xx, yy, wd, ht, actors[i])) return
+      ctx.fillStyle = colour; ctx.fillRect(xx, yy, wd, ht)
+    }
     ctx.save()
-    ctx.globalAlpha = 0.85
-    ctx.fillStyle = "#d42a3c"
-    ctx.fillRect(mx - 1, y0, 2, ht)
-    ctx.fillRect(x0, my - 1, wd, 2)
-    ctx.globalAlpha = 1
-    ctx.fillRect(mx - 4, y0 - 3, 3, 3)               // the bow
-    ctx.fillRect(mx + 1, y0 - 3, 3, 3)
-    ctx.fillStyle = "#ffd23f"
-    ctx.fillRect(mx - 1, y0 - 2, 2, 2)
+    fill("#1d3e37", x - 2, y - 2, width + 4, 4)
+    fill("#2c6252", x - 2, y, 4, height - 2); fill("#2c6252", x + width - 2, y, 4, height - 2)
+    for (var row = 2; row < height - 3; row += 4) {
+      fill("#d6d7b1", x - 1, y + row, 1, 1); fill("#d6d7b1", x + width, y + row + 1, 1, 1)
+    }
+    fill("#7c2135", x - 2, y - 1, width + 4, 2)
+    fill("#d42a3c", x - 2, y - 1, width + 4, 1)
+    fill("#d42a3c", x, y, 1, height - 2); fill("#d42a3c", x + width - 1, y, 1, height - 2)
+    fill("#f0767d", x, y + Math.floor(height / 2), 2, 1); fill("#f0767d", x + width - 2, y + Math.floor(height / 2), 2, 1)
+    fill("#8c2639", mid - 6, y - 6, 5, 4); fill("#8c2639", mid + 1, y - 6, 5, 4)
+    fill("#e84a60", mid - 5, y - 6, 3, 1); fill("#e84a60", mid + 2, y - 6, 3, 1)
+    fill("#d42a3c", mid - 3, y - 3, 2, 3); fill("#d42a3c", mid + 1, y - 3, 2, 3)
+    fill("#ffe49a", mid - 1, y - 5, 2, 3)
     ctx.restore()
   }
 

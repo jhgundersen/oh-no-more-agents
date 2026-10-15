@@ -580,8 +580,8 @@
     // The same run arrives at the same moment: the re-simulation must have
     // noted it too, on the same tick. Otherwise this is not a replay.
     if (sim.ticks === replay.best.t && !sim.moments.some(function (m) { return m.t === replay.best.t && m.kind === replay.best.kind })) { endReplay(); return }
-    if (sim.terrainVersion !== replay.terrain) { replay.terrain = sim.terrainVersion; drawTerrain(terrainCtx, sim, palette) }
     if (window.AgentSeason) window.AgentSeason.dress(sim)
+    if (sim.terrainVersion !== replay.terrain) { replay.terrain = sim.terrainVersion; drawTerrain(terrainCtx, sim, palette) }
     drawActors(actorCtx, sim, palette, { labels: showLabels })
     if (window.AgentSeason) window.AgentSeason.paint(actorCtx, sim)
     if (sim.ticks >= replay.to || sim.done) endReplay()
@@ -634,7 +634,11 @@
   // Painting
   // -------------------------------------------------------------------------
 
-  function paintTerrain() { if (world) drawTerrain(terrainCtx, world, palette) }
+  function paintTerrain() {
+    if (!world) return
+    if (window.AgentSeason) window.AgentSeason.dress(world)
+    drawTerrain(terrainCtx, world, palette)
+  }
   function paintActors() {
     if (!world) return
     if (window.AgentSeason) window.AgentSeason.dress(world)
