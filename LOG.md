@@ -9978,3 +9978,67 @@ re-stamped.
   The branch carried the already-merged umbrella-office commits too; git
   folded those in cleanly.
 - **Code:** Draw.js and web.js only, no Sim.js or Outcome.js change.
+
+## 384 — 2026-10-15 · The wall before the door gets a mine on the second visit
+
+**Chosen:** 381's next. On level 163, salt 15, why did nothing escalate?
+
+**Traced:** agent 18 reached the 6-thick block before the door at t2955
+with `idle` 7.
+- **Why idle was so low:** reaching that wall is always an agent's closest
+  point yet, so `watchProgress` resets `idle` on arrival.
+- **What that does to the gate:** `wallLastResort`'s mine needs half its
+  patience (idle > 450), which only comes on about the third visit. A colony
+  that arrives late meets the clock first: 3 miners in the toolbar, no
+  bashers or climbers.
+
+**Changed:** `homeWall`. At a wall with the door ahead at its height
+(`doorAhead`, now shared with `tunnelHome`), an agent that has already
+turned once (`turns >= 1`) counts toward the charge. As with `jammed`, it
+may lay a mine only; a bomb still waits for real patience.
+
+**Measured** (24 colonies each):
+
+| Level | Home | Total ticks | Nukes |
+|---|---|---|---|
+| 163 | 417 → 416 | −7% | 3 → 1 |
+| 304 | 294 → 300 | −7% | 2 → 2 |
+| 72, 129 | identical | identical | identical |
+
+- **`npm run sim play`** and the 1–440 playtest (6 colonies): identical to
+  main.
+
+## 385 — 2026-10-15 · Deploy (18:17), and the 163 mine merged after it
+
+**Deployed** build c88604a4 (version 8326af80), replacing b96d79b5. It
+covers 373–383:
+- the 163 void dig;
+- the forecast copy and its plate;
+- `LONG_RUN` 6;
+- the pause panel, page type and umbrella stand.
+
+**Before:** `npm run smoke` on the clean tree passed (3 min, levels 1–7).
+
+**After:**
+- **`npm run verify -- --previous b96d79b5`** passed on the first run
+  (5 counter writes refused).
+- **Font, on production:** `/fonts/vt323-ui-1.woff2` is `font/woff2`,
+  `public, max-age=31536000, immutable`.
+- **Umbrella stand, on production:** a read-only headless check (verify's
+  `readOnly` browser, every counter write refused, no page errors) played
+  level 3 / seed 7 to six home. `umbrellaOfficeLayout` placed the stand
+  beside the exit and the screenshot showed the furled umbrellas there.
+  The title card's forecast plate read "FORECAST: A MEETING AT 3, SCOPE
+  CHANGES POSSIBLE / 40% CHANCE OF SNOW · UMBRELLAS: 18", and the controls
+  were in VT323.
+
+**Branch:** dev/163b (384) was built in a worktree during the deploy window
+and merged after it, through the gate.
+
+Merge note: the first gate failed three of the 429 sign's tests (365). They
+look for natural queues in fixed colonies, and with this mine rule level 6 /
+seed 5 no longer forms one within 5,000 ticks. `QUEUE_CASES` in
+`tools/queue-art.js` now uses level 5 / seed 5 (Jungle, facing right), found
+by searching levels 1–60, so the cases still cover three biomes and both
+directions. The other two cases, and the contact sheet built from the first,
+are unchanged.
