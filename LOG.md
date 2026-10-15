@@ -5500,3 +5500,20 @@ course), so cancelling can't advance the world just chosen.
 - the daily chosen during a standup is still the daily after the meeting would
   have ended;
 - Next during a replay ends the replay and plays level 2.
+
+## 282 — 2026-10-15 · Shared and daily links keep ?full (review finding 3)
+
+**Asked:** review finding 3 (P2). `/?level=3&seed=42&full=1` and
+`/?daily=2026-10-15&full=1` loaded the right colony but not in fullscreen:
+the shared-link boot cleaned the whole query before `fullParam()` read it.
+`?fullscreen` was affected too.
+
+**Changed:** the boot reads `fullParam()` once, before the address is cleaned,
+and uses that. The cleaned address keeps `?full` when it was asked for, so a
+reload stays the kiosk it was. `?full=0` stays an explicit no.
+
+**Tests:** `test/fullparam.test.js` (fails without the fix) checks a shared
+link with `full=1`, a daily link with `full=1`, a shared link with
+`fullscreen`, a shared link with `full=0` (stays off), and plain `?full`. In
+each case it checks the faux-fullscreen stage, the colony that loaded, and the
+cleaned address.

@@ -1185,11 +1185,15 @@
     // A shared run (share.js): that level, that colony, once. The address bar
     // is cleaned so a reload or the next level is an ordinary one.
     var shared = window.AgentShare ? AgentShare.parse(window.location.search) : null
+    // Read before the address is cleaned below: a shared or daily link with
+    // ?full lost its fullscreen (review 2026-10-15, finding 3). The cleaned
+    // address keeps ?full, so a reload stays the kiosk it was.
+    var wantFull = fullParam()
     if (shared) {
       newLevel(shared.level, shared.seed)
       if (shared.daily) { world.daily = shared.daily; render() }
       saveState()
-      try { history.replaceState(null, "", window.location.pathname) } catch (e) {}
+      try { history.replaceState(null, "", window.location.pathname + (wantFull ? "?full" : "")) } catch (e) {}
     } else newLevel(level)
 
     // ?full — the visual half of fullscreen, without asking the browser for
@@ -1204,7 +1208,7 @@
     // For a kiosk, a second monitor or a screenshot — anywhere the page is the
     // only thing on screen and nobody is going to press `f`.
     setupLogo()
-    if (fullParam()) setFaux(true)
+    if (wantFull) setFaux(true)
 
     fitBoard()
     restartClock()
