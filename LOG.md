@@ -9494,3 +9494,91 @@ rows under the verdict.
   art shown for 1.2 s, so it needs a longer hold or a second line drawn into
   it. Copy along the lines of "FORECAST: SCATTERED AGENTS, 40% CHANCE OF
   RECURSION · UMBRELLAS: 6", built from the toolbar and the biome.
+
+## 370 — 2026-10-15 · Who is who (on a branch)
+
+**Chosen (whole-game consistency audit):** `codex/consistency-art`, from then-current
+main `1feb00f`. Reviewed all **20 biomes × three seasonal modes × desktop/phone**,
+plus eight UI states: **128 settled views**, each with full-page and board PNGs.
+The top three were reported with screenshots before changing code:
+
+1. The optional **Who** labels disappeared into scenery and overlapped neighbours.
+2. Thin page controls/footer typography looked detached from the pixel artwork.
+3. The pause overlay was bare, with desktop-only “Space or click” copy on phones.
+
+**Changed the first:** page-resolution colony labels now use the existing 3×5 ROM
+font on small stepped dark plates, with gold hero names. Exact anchors come from
+the existing agent poses, including hooks, lifts and tubes. A pass-local layout
+tries nine nearby positions per tag, prioritises heroes/actions then stable IDs,
+and omits a tag when every position is occupied. It reserves bodies, actual open,
+folding, drip and parrying umbrellas, seasonal canopies, bomb countdowns, speech,
+enemies and their existing names, hazard names/zones, hatch, exit and the 429 sign.
+Six-pixel horizontal margins keep text inside the phone's clipped board edges.
+No world state, timers, RNG or motion history; WHO off allocates none of this.
+
+**Compatibility:** `Sim.js` is unchanged. Tests compare complete live-world digests
+through 650 ticks and both motion preferences; default/res 1/res 3 rendering and
+WHO-off page pixels **and native text calls** remain exact. Layout/drawing checks
+cover all twenty biomes and five palettes. A canopy regression checks the actual
+rectangles emitted by falling/folding/parrying umbrellas, both directions, both
+motion preferences and normal/Halloween/Christmas styles. A preliminary run was
+stopped after finding that floaters use `fall`, not `float`; its incomplete output
+is archived under `pre-canopy/` and was not used for the final result.
+
+**Evidence:** `/tmp/codex-consistency-art/`. The original audit has six overview
+sheets (`*-all.png`) and `audit.json`. Final `before/` has **12 views**; `after/`
+has **60 views**, including natural Christmas Cloud tick 330 and Halloween
+Rooftops tick 252 open-canopy scenes. All twelve paired world digests match, all
+page widths fit, all browser error lists are empty, and every recorded PNG hash
+has been verified. Review `review/index.html`; current sheet
+`review/contact-sheet-b7cb73f1.png` (SHA-256
+`fda06c3d1cb1144cb5dedcc9a13b9550f5b2e097071165bd0f0d2a7d88c0b3a6`)
+and canonical `contact-sheet.png` are identical. Draw source: `605beb0c`;
+build stamp: `3786e7f3`.
+
+**Tools/process:** `tools/who-art.js` captures real browser text: the software
+renderer intentionally skips the old `fillText` labels, so a software-only
+comparison would give a false baseline. It reuses one disposable browser per
+batch, waits boundedly for the world/fonts, pins seed/tick/WHO state, and exports
+actual-size desktop/phone boards plus 3× phone details. Twelve baseline views
+render in **4.33 s**, sixty revised views in **17.08 s**. The sheet uses validated
+ROM glyphs (no question-mark row labels), compares scene digests, stamps its source,
+and records image hashes. Its regression test deliberately corrupts the canonical
+sheet and proves a rerun refreshes it. The overview audit asserts twenty cases per
+sheet. Final source/tests/tools stayed fixed through evidence and validation;
+`source-proof.sha256` still matches. Two disposable browsers from the interrupted
+owned run were identified by their start times within its exclusive lock and stopped.
+
+**Measured:** WHO enabled, fast speed, seed 3, six-second live FPS probes on levels
+12 and 60 (17/18 live cast; roughly ticks 303–577). Before/after both hold **60 fps
+median / 60 p5**, **17 ms worst**, **zero long tasks**. Main-thread CPU is **12→13%**
+and **13→14%**. Logs: `fps-final.log` / `fps.json`. Shipped Draw growth is **5,898
+source bytes / 2,026 gzip bytes**, with no assets or dependencies.
+
+**Validation:** focused **9/9** (~3.53 s); full `npm run check` with coverage
+**1,488 passed, 0 failed**, **361.97 s**, including `factory-art.test.js`.
+CRAP **threshold 30 passed** using that same LCOV, with maximum **30.0**.
+The new bubble-clearance helper is **30.0 / 50%**; other new runtime helpers are
+**1.0–11.1**, mostly at 100% coverage (`whoKeepClear`: 90%). Modified label/colony
+functions are **18.0 / 100%** and **12.0 / 100%**. The persistent FIFO testlock run
+used **3 GB service memory**, **2,048 MB Node heap**, `ulimit -v 6000000`, two test
+workers and 120-second timeouts; systemd reports **813.7 MiB peak memory**.
+Completion was reported immediately. `npm run stamp`, stamp check and
+`git diff --check` pass. Final logs: `focused-final.log`, `check.log`, `crap.log`,
+`queue.log`. No second completed coverage run was needed.
+
+**Next:** review/merge this branch; page typography and the pause overlay remain
+the next two audit findings. Branch commit only; no push or deployment.
+
+## 371 — 2026-10-15 · Merged the readable WHO labels
+
+Reviewed and merged by the loop: codex/consistency-art (47db78c, entry 370), `--no-ff`, as approved.
+Codex's entry is renumbered and the page is re-stamped. Drawing only, with
+no Sim.js change, and the native (res 1) pixels kept, per Codex's tests.
+
+Merge note: the first gate failed "native, default, share and WHO-off
+rendering retain pixels". That test compares against a pinned Draw.js from
+the branch's base (1feb00f), and main has merged more drawing since: the
+updraft curls, the duck and the 429 sign. The reference is now main's tip
+just before this merge (a09ddc0), which is what the test means: WHO-off
+pixels unchanged by this merge.
