@@ -8698,3 +8698,47 @@ loss read "YOUR FILES ARE IN THE CLOUD. SO IS AGENT 012." whatever the cause.
 first line and the cause, and there's no glow early in the wind-up but there
 is in its last second. The test fails without the change. The sim is
 unchanged apart from the cause field and the ticker line.
+
+## 268 — 2026-10-15 · A shared lock for heavy test runs
+
+**Asked (supervisor):** my coverage runs kept interrupting Codex's final
+checks. Build a shared test lock: a small `tools/testlock.js`, a lock file in
+the repo's common git dir so both worktrees see it, recording owner, PID and
+start time, with stale-PID cleanup and a FIFO queue, wrapped around
+`npm run check`, coverage and crap so the two worktrees take turns.
+
+**Changed:** `tools/testlock.js`.
+- **Where.** `<git common dir>/testlock/`, which the main worktree and Codex's
+  share.
+- **The lock.** `lock` records owner (worktree), pid, host, command and start
+  time. It is created with O_EXCL, so of everyone who sees it free, exactly one
+  wins.
+- **The queue.** `queue/` holds one ticket per waiter, named by arrival time;
+  only the first ticket may take the lock.
+- **Heartbeats.** Holder and waiters touch their file every 5 s. A file nobody
+  has touched for 90 s, or whose pid is gone on this host, is a crashed run
+  and is cleared.
+- **Waiting.** A waiter says every 30 s whom it is waiting for.
+- **Interrupts.** Ctrl-C or SIGTERM releases.
+- **Nesting.** A run started inside a locked run (crap runs coverage, check
+  runs `npm test`) passes straight through, because `TESTLOCK_HELD` is set
+  for the child.
+- **Status.** `node tools/testlock.js status` shows the holder and the queue.
+
+**Wired in:** `npm run check`, `npm test`, `npm run coverage` and
+`npm run crap` all go through the lock; the old commands are kept as
+`check:raw`, `test:raw` and `coverage:raw`. AGENTS.md says how to wrap any
+other heavy run.
+
+**Tests:** `test/testlock.test.js` covers:
+- the lock living in the git common dir;
+- FIFO order;
+- O_EXCL letting one taker win;
+- only the holder releasing;
+- dead or silent holders being cleared and live ones kept;
+- two concurrent runs from separate processes executing strictly one after
+  the other.
+
+Run as a single file, because full runs were paused for Codex's check.
+Committed on single-file tests with the supervisor's go-ahead; the full gate
+runs when full runs are allowed again.
