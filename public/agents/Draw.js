@@ -13598,12 +13598,13 @@ function craneRailY(w, crane) {
 function craneDrawing(w, crane) {
   var C = w.k.CELL, grid = (w.res || 1) >= 2 ? 2 : 1
   var moving = crane.phase === "across" || crane.phase === "back"
-  var sway = moving ? Math.round(Math.sin(w.ticks / 9) * grid) / grid : 0
+  var sway = moving && !(w.res === 2 && w.reducedMotion) ? Math.round(Math.sin(w.ticks / 9) * grid) / grid : 0
   var x = Math.round((crane.hookX + 0.5) * C * grid) / grid
   var feet = Math.round((crane.y - SITE_HOIST + crane.drop + 1) * C * grid) / grid
   return { x: x, tipX: x + sway, tipY: feet - 10, feet: feet, railY: craneRailY(w, crane) }
 }
 function drawCrane(ctx, w, pal, crane) {
+  if (w.res === 2) return drawPageHoist(ctx, w, pal, crane)
   var g = craneDrawing(w, crane), C = w.k.CELL
   var left = Math.min(crane.ax, crane.hx) * C
   var width = (Math.abs(crane.ax - crane.hx) + 1) * C
@@ -13621,6 +13622,122 @@ function drawCrane(ctx, w, pal, crane) {
   ctx.fillRect(g.x + 3, g.railY + 3, 1, 2) // warning lamp, including while waiting
   drawCraneLanding(ctx, w, pal, crane)
   ctx.restore()
+}
+// Page hoist: all movement comes from the existing hook and drop. Keep the
+// girder inside its original four-pixel clearance and the hook at the collar.
+var HOIST_TURN = [[0, -0.5], [0.5, 0], [0, 0.5], [-0.5, 0]]
+function drawPageHoist(ctx, w, pal, crane) {
+  var g = craneDrawing(w, crane), C = w.k.CELL
+  var left = Math.min(crane.ax, crane.hx) * C
+  var width = (Math.abs(crane.ax - crane.hx) + 1) * C
+  ctx.save()
+  var ink = { fillStyle: pal.rigDark, fillRect: function(x, y, ww, hh) {
+    ctx.fillStyle = this.fillStyle; subwayTrainRect(ctx, w, x, y, ww, hh)
+  } }
+  drawHoistGirder(ink, pal, left, g.railY, width)
+  drawHoistRopes(ink, w, pal, crane, g)
+  drawHoistTrolley(ink, w, pal, crane, g)
+  drawHoistBlock(ink, pal, g)
+  drawHoistBeacon(ink, w, pal, crane, g)
+  if (!w.reducedMotion) drawHoistSetdown(ctx, w, pal, crane)
+  ctx.restore()
+}
+function drawHoistGirder(ctx, pal, x, y, width) {
+  ctx.fillStyle = pal.rigDark; ctx.fillRect(x, y, width, 4)
+  ctx.fillStyle = pal.oreShade; ctx.fillRect(x + 1, y + 0.5, width - 2, 2.5)
+  ctx.fillStyle = pal.ore
+  ctx.fillRect(x, y, width, 0.5); ctx.fillRect(x, y + 2.5, width, 1)
+  // Short diagonal braces in the web of the beam, below its bright flange.
+  for (var bay = 3; bay < width - 3; bay += 4) {
+    ctx.fillStyle = pal.rigDark
+    ctx.fillRect(x + bay, y + 0.5, 1, 0.5)
+    ctx.fillRect(x + bay + 0.5, y + 1, 1, 0.5)
+    ctx.fillRect(x + bay + 1, y + 1.5, 1, 1)
+  }
+  ctx.fillStyle = pal.oreEdge; ctx.fillRect(x + 2, y, width - 4, 0.5)
+  for (var end = 0; end < 2; end++) {
+    var xx = x + end * (width - 2)
+    ctx.fillStyle = pal.rigDark; ctx.fillRect(xx, y, 2, 4)
+    ctx.fillStyle = pal.steelEdge; ctx.fillRect(xx + 0.5, y + 0.5, 0.5, 0.5)
+    ctx.fillRect(xx + 0.5, y + 2.5, 0.5, 0.5)
+  }
+}
+function drawHoistRotor(ctx, pal, x, y, pose) {
+  ctx.fillStyle = pal.rigDark; ctx.fillRect(x - 1.5, y - 1, 3, 2.5)
+  ctx.fillStyle = pal.steelEdge; ctx.fillRect(x - 1, y - 0.5, 2, 1.5)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + HOIST_TURN[pose][0], y + HOIST_TURN[pose][1], 0.5, 0.5)
+}
+function hoistTurn(w, distance) {
+  return w.reducedMotion ? 0 : ((Math.floor(distance * 4) % 4) + 4) % 4
+}
+function drawHoistTrolley(ctx, w, pal, crane, g) {
+  ctx.fillStyle = pal.rigDark; ctx.fillRect(g.x - 7, g.railY + 1, 14, 4)
+  ctx.fillStyle = pal.ore; ctx.fillRect(g.x - 6.5, g.railY + 2, 13, 2.5)
+  ctx.fillStyle = pal.oreEdge; ctx.fillRect(g.x - 6, g.railY + 2, 12, 0.5)
+  var roll = hoistTurn(w, crane.hookX), reel = hoistTurn(w, crane.drop)
+  drawHoistRotor(ctx, pal, g.x - 4.5, g.railY + 1.5, roll)
+  drawHoistRotor(ctx, pal, g.x + 4.5, g.railY + 1.5, roll)
+  // The motor sits beside the hard hat, visible even at full hoist.
+  drawHoistRotor(ctx, pal, g.x - crane.dir * 5.5, g.railY + 3, reel)
+  ctx.fillStyle = pal.steelShade; ctx.fillRect(g.x - 1, g.railY + 4.5, 2, 0.5)
+}
+function drawHoistRopes(ctx, w, pal, crane, g) {
+  var start = g.railY + 5, end = g.tipY - 9.5, length = end - start
+  if (length <= 0) return
+  var winding = w.reducedMotion ? 0 : Math.floor(crane.drop * 4) % 4
+  for (var y = start; y < end; y += 2) {
+    var x = Math.round((g.x + (g.tipX - g.x) * (y - start) / length) * 2) / 2
+    var height = Math.min(2, end - y)
+    ctx.fillStyle = pal.steelShade; ctx.fillRect(x - 1, y, 0.5, height)
+    ctx.fillStyle = (Math.floor(y - start) + winding) % 8 < 2 ? pal.oreEdge : pal.steelEdge
+    ctx.fillRect(x + 1, y, 0.5, height)
+  }
+}
+function drawHoistBlock(ctx, pal, g) {
+  var top = g.tipY - 10
+  ctx.fillStyle = pal.rigDark; ctx.fillRect(g.tipX - 3.5, top, 7, 4)
+  ctx.fillStyle = pal.ore; ctx.fillRect(g.tipX - 3, top + 0.5, 6, 3)
+  ctx.fillStyle = pal.oreEdge; ctx.fillRect(g.tipX - 2.5, top + 0.5, 5, 0.5)
+  ctx.fillStyle = pal.rigDark
+  for (var i = -2; i <= 1; i += 3) {
+    ctx.fillRect(g.tipX + i, top + 1, 1, 1)
+    ctx.fillRect(g.tipX + i + 0.5, top + 2, 1, 1.5)
+  }
+  // The shank passes behind the head; the original C-hook meets the collar.
+  ctx.fillStyle = pal.steelShade; ctx.fillRect(g.tipX, top + 4, 0.5, 5)
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(g.tipX, g.tipY - 1, 1, 2)
+  ctx.fillRect(g.tipX - 1, g.tipY + 1, 2, 1)
+  ctx.fillRect(g.tipX - 1, g.tipY, 0.5, 1)
+  ctx.fillStyle = pal.shirt; ctx.fillRect(g.tipX, g.tipY - 0.5, 0.5, 1)
+}
+function drawHoistBeacon(ctx, w, pal, crane, g) {
+  var x = g.x - crane.dir * 8
+  ctx.fillStyle = pal.rigDark; ctx.fillRect(x - 0.5, g.railY + 2.5, 2, 3)
+  ctx.fillStyle = crane.phase === "wait" ? pal.oreShade : pal.warn
+  ctx.fillRect(x, g.railY + 3, 1, 2)
+  if (crane.phase === "wait") return
+  var sweep = w.reducedMotion ? 0 : Math.floor(w.ticks / 8) % 3
+  ctx.fillStyle = pal.shirt; ctx.fillRect(x + sweep * 0.5, g.railY + 3, 0.5, 0.5)
+}
+function hoistSetdownAge(crane) {
+  if (crane.phase !== "back" || crane.hookX !== crane.hx || crane.usedAt < 0) return -1
+  var age = (crane.land - (crane.y - SITE_HOIST) - crane.drop) / 0.8
+  return age >= 0 && age < 10 ? age : -1
+}
+function drawHoistSetdown(ctx, w, pal, crane) {
+  var age = hoistSetdownAge(crane)
+  if (age < 0) return
+  var x = (crane.hx + 0.5) * w.k.CELL, floor = (crane.land + 1) * w.k.CELL
+  var spread = Math.floor(age / 3) * 0.5, opacity = ctx.globalAlpha
+  ctx.fillStyle = pal.dust; ctx.globalAlpha = opacity * (1 - age / 10) * 0.35
+  for (var i = -1; i <= 1; i += 2) {
+    var xx = x + i * (3 + spread * 2) - 1
+    moteFineRect(ctx, w, xx, floor - 1.5 - spread, 2, 1)
+    moteFineRect(ctx, w, xx + 0.5, floor - 2 - spread, 1, 0.5)
+  }
+  ctx.globalAlpha = opacity
 }
 function drawCraneRail(ctx, w, pal, x, y, width) {
   ctx.fillStyle = pal.steelShade
@@ -13688,7 +13805,7 @@ function drawHookedAgent(ctx, w, pal, ag, opts) {
   blit(ctx, ox, oy, dir, 2, 7, 4, 5)
   blit(ctx, ox, oy, dir, 0, 4, 1, 5); blit(ctx, ox, oy, dir, 7, 4, 1, 5) // arms up
   blit(ctx, ox, oy, dir, 1, 3, 2, 1); blit(ctx, ox, oy, dir, 5, 3, 2, 1)
-  var kick = Math.round(Math.sin(w.ticks / 7))
+  var kick = w.res === 2 && w.reducedMotion ? 0 : Math.round(Math.sin(w.ticks / 7))
   blit(ctx, ox, oy, dir, 2 + kick, 12, 1, 4); blit(ctx, ox, oy, dir, 5 - kick, 12, 1, 4)
   ctx.fillStyle = colors.skin
   blit(ctx, ox, oy, dir, 2, 4, 1, 1); blit(ctx, ox, oy, dir, 5, 4, 1, 1)

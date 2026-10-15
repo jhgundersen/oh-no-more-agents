@@ -7778,3 +7778,122 @@ re-stamped.
   panel's half is unchanged and only the page's moved.
 - **Memory safety:** the art tests now compare pixel hashes rather than raw
   buffers, as AGENTS.md asks.
+
+## 331 — 2026-10-15 · A proper little hoist (on a branch)
+
+**Why:** watched genuine Building Site rides on levels 15/35 and the Clock
+Tower gate on level 36, at desktop/phone sizes and Steady/Brisk speed. The
+gate already has its working dial and pawls; the crane's tiny trolley and bare
+cable were the next plain machinery beside a finished biome. Branch
+`codex/crane-art` from current main `e68327c`, with the vintage trains merged.
+The approved ferry pass was still awaiting its separate merge. Kept this base
+fixed during validation.
+
+**Change:** page res 2 gets a braced yellow girder, bolted end stops, a wheeled
+trolley, side-mounted winch drum, paired ropes with winding glints, a striped
+pulley block, a small working beacon, and two soft set-down puffs. Wheel and
+drum poses derive from actual `hookX`/`drop`, so a stopped lift has stopped
+machinery. The block sits above the hard hat; the original C-hook still meets
+the collar at exactly ten art pixels above the rider's feet. The agent keeps
+its original hanging pose and direction. Reduced motion steadies the sway,
+leg kick, rotors and beacon glint, and omits the new landing puffs; actual
+travel and lowering continue.
+
+The close crop exposed the tight full-hoist headroom: a central motor was
+hidden behind the rider. Moved it beside the hard hat and raised the pulley
+block; roof cells clip it naturally where it tucks into the trolley. The
+beam stays in its original four-pixel clearance. All new machinery is sliced
+against current air; puffs check their complete footprints. Actors paint
+afterwards, retaining opaque faces, suits and umbrellas. No simulation edit,
+new world field, RNG, timer, listener, filter, canvas or image asset. Default
+res 1 and share-card res 3 preserve the original cranes and riders byte for
+byte, with reduced motion both on and off.
+
+**Evidence:** `/tmp/codex-crane-art/strips/index.html` animates before/after
+of real seed-3 rides on levels 15, 35 and 75: pick-up, lift, travel, descent,
+mid-descent, set-down, reel-in and return. Eight selected milestones are
+labelled as milestones, not equal-time animation. `strips/contact-sheet.png`
+compares lifted and halfway-lowered riders; per-level sheets include native
+and page frames. Both directions and level 75's 38-cell full drop are covered.
+No staged rider or shortened shaft.
+
+`/tmp/codex-crane-art/page-sheet.png` shows real desktop/phone boards and 3x
+crops: level 15 travelling desktop, level 35 descending phone, level 75's long
+descent desktop, level 15 set-down phone, Christmas level 35 travelling phone,
+Halloween level 15 travelling phone, and reduced-motion level 75 descending
+phone. The phone sheet includes the complete board. Before/after page worlds,
+board/stage geometry and scroll width match. Every changed board pixel lies
+inside the levels' existing crane rail/rider/drop envelopes. Sources:
+`pages.json`, `presentation-check.json`; before assets pinned to `e68327c`.
+The preferred Chromium connection reported no available browser surface, so
+used the repository's capped local Chromium helper.
+
+**Pipeline:** `tools/crane-art.js` bounds natural-ride discovery at 12,000
+ticks and milestones at 600. It caches terrain by version/resolution/palette
+and paints actors straight into translated 112-pixel-wide crops. Crop height
+comes from the entire descent and landing: 92/88/184 art pixels in these
+fixtures. Regressions compare direct crops with full-frame crops. Mid-descent
+is selected by half the actual drop, replacing a prototype's four-tick sample
+that barely showed the lowering. The final **96-frame** generation takes
+**0.68 s**; the combined original-byte proof/comparison process peaks at
+**206 MB RSS** (`prepare.log`).
+
+One browser captured all fourteen page views. The initial sheet checker
+considered only the occupied crane, incorrectly rejecting changes to the
+level's other crane. The corrected checker tests every changed pixel against
+the union of both machinery envelopes. Composition reuses every captured PNG;
+no repeated gameplay capture. The legacy `site-art` recorder is now capped at
+25,000 calls and hashes picture buffers before equality assertions, preventing
+large failure diffs. Temporary browser helpers are syntax-checked before queue
+entry, and every browser/server closes in `finally`.
+
+Searched all tests for crane/component guards. `component-proof.json`
+reproduces the old component pins with the saved renderer: native
+**eec79298…** is unchanged, and only the reviewed page expectation updates to
+**a5308eab…**. The separate complete crane/rider aggregate is **eb6ed354…**
+before and after, across default/1/3 resolutions, five phases, both reduced-
+motion settings, directions and all five palettes.
+
+**Cost:** at most the existing two cranes; small shared four-pose rotor table;
+paired ropes at two-pixel vertical intervals; two set-down puffs. No animation
+history. Tests bound assembled cell-sliced paint at 800 calls per sampled
+crane, including the long shaft. Draw.js adds **1,207 gzip bytes** before
+shipping's comment strip. Sim.js is byte-identical to the branch base.
+
+Real-page FPS at Brisk speed, five seconds each, baseline/final: level 35
+from tick 210 and level 75 from tick 120. Both layouts and versions held
+**60 median / 60 p5 FPS, 17 ms worst, zero long-task time and 11% CPU**.
+Up to **15 / 13 cast members**. The windows cover about ticks 212–440 and
+120–348, including genuine loaded travel, the long descent, set-down and
+return. No speedup claimed. Logs: `fps-before-35.log`, `fps-after-35.log`,
+`fps-before-75.log`, `fps-after-75.log`.
+
+**Focused:** **32/32 pass, 2.96 s**, across the new crane suite, existing site
+art, Building Site page art and crane mechanics. Tests cover native/share byte
+identity, exact hook/rider contacts, real read-only and RNG-free journeys in
+five palettes, roof/girder clearance and terrain occlusion, inherited opacity,
+complete reduced-motion steadiness, position-driven drum/wheel motion, valid
+set-down/expiry/abort handling, crop/cache equivalence, bounded fixture failure,
+and complete long-shaft comparison output. Existing rendered/unrendered real
+crane-play digests and opaque-agent checks also pass.
+
+**Full gate:** **1,407 passed, zero failures/cancellations/skips,
+341.29 s**, with coverage and Factory art included. CRAP threshold **30**
+passed using the same LCOV, maximum **30.0**. `craneDrawing` is **7.0 / 100%**;
+new runtime art helpers are **1.0–6.0**, with all at 100% except
+`drawHoistRopes` (**5.0 / 87.5%**). Comparison orchestration is
+**13.0 / 100%**, journey advancement **11.0 / 100%**, and `craneFrame`
+**3.1 / 75%**. Completion was reported immediately and our shared-lock turn
+released.
+
+The persistent FIFO gate waited behind the focused tests, FPS and sheet,
+with preflight guards requiring their successful outputs before starting the
+full run. It used a 3 GB real-memory service cap, 2,048 MB Node heap,
+`ulimit -v 6000000`, two workers and 120-second per-test timeouts. Source/tests
+stayed frozen through the full gate. CRAP reused coverage instead of starting
+another coverage run. Logs: `/tmp/codex-crane-art/check.log`, `crap.log`,
+`queue.log`. `npm run stamp`, its check and `git diff --check` pass. The
+screenshots and FPS measurements show the exact final game source.
+
+**Next:** review and merge this branch; Clock Tower gates are the remaining
+candidate from this machinery pass. No push or deployment from this branch.
