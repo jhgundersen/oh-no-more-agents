@@ -25,7 +25,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="2749339a">
+<meta name="build" content="ba69eb43">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
@@ -128,6 +128,7 @@
 			box-shadow: 0 2px var(--muted); opacity: 0; transition: opacity 200ms; pointer-events: none;
 		}
 		#toast.on { opacity: 1; }
+		.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 		#tip {
 			position: absolute; left: 50%; top: 12%; z-index: 3; transform: translateX(-50%);
 			padding: 6px 10px; font-size: 10px; letter-spacing: 0.08em; cursor: pointer; white-space: nowrap;
@@ -341,9 +342,10 @@
 		</div>
 
 		<div id="board">
-			<canvas id="terrain"></canvas>
-			<canvas id="actors"></canvas>
+			<canvas id="terrain" role="img" aria-label="The game board: agents finding their own way home. Each level and its result are announced."></canvas>
+			<canvas id="actors" aria-hidden="true"></canvas>
 			<div id="toast" role="status" aria-live="polite"></div>
+			<div id="announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 			<div id="tip" hidden>Tip: tap an agent. <span aria-hidden="true">&times;</span></div>
 			<div id="overlay" style="display: none">
 				<div id="overlay-title">PAUSED</div>
@@ -365,9 +367,9 @@
 			<button class="ctl" id="c-next"><b>n</b>ext level</button>
 			<button class="ctl" id="c-restart"><b>r</b>estart</button>
 			<button class="ctl" id="speed"><b>s</b>peed: <span id="speedWord">Steady</span></button>
-			<button class="ctl" id="who"><b>w</b>ho: <span id="whoWord">off</span></button>
-			<button class="ctl" id="c-full"><b>f</b>ullscreen: <span id="fullWord">off</span></button>
-			<button class="ctl" id="sfx" title="Sound effects"><b>m</b> sfx: <span id="sfxWord">off</span></button>
+			<button class="ctl" id="who" aria-label="Agent names" aria-pressed="false"><b>w</b>ho: <span id="whoWord">off</span></button>
+			<button class="ctl" id="c-full" aria-label="Fullscreen" aria-pressed="false"><b>f</b>ullscreen: <span id="fullWord">off</span></button>
+			<button class="ctl" id="sfx" title="Sound effects" aria-label="Sound effects" aria-pressed="false"><b>m</b> sfx: <span id="sfxWord">off</span></button>
 			<button class="ctl" id="share" title="Copy a link to this level with this colony"><b>c</b>opy link</button>
 			<span class="counts">
 				<span id="lifetime"></span>
@@ -409,7 +411,7 @@
 	<script src="agents/sfx.js?v=13e9c6e5"></script>
 	<script src="agents/season.js?v=dbb629c3"></script>
 	<script src="agents/news.js?v=19ff2b67"></script>
-	<script src="agents/web.js?v=593db74e"></script>
+	<script src="agents/web.js?v=394af161"></script>
 
 </body>
 

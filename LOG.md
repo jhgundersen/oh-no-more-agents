@@ -8294,3 +8294,67 @@ blast, and arrives after the bang.
 |---|---|---|
 | Worst first home | 58.5 s | 24 s |
 | Median level length | 61 s | 30 s |
+
+## 261 — 2026-10-15 · Accessibility pass
+
+**Asked:**
+- **(a) Keyboard:** every control reachable by Tab in a sensible order, a
+  visible focus ring in the page's style, Esc closes panels, no traps.
+- **(b) Screen readers:** a polite live region announcing level starts and the
+  report summary, buttons with proper names and pressed states, a short label
+  on the canvas, nothing chatty per frame.
+- **(c) Reduced motion:** confirm the outage, confetti, replay, standup, any
+  screen shake and snow have gentle variants.
+- **(d) Contrast:** page UI text at least 4.5:1 against its background in
+  every theme.
+
+Add tests where practical.
+
+**(a) Keyboard.** Audited headless by pressing Tab 45 times. The order follows
+the page: pause, prev, next, restart, speed, who, fullscreen, sfx, copy link,
+what's new, the nine themes, the soundtrack and its seven tracks, the source
+link, then back round with no trap. Every stop shows the page's 2 px solid
+focus ring. Esc already closed the patch notes and faux fullscreen. **Fixed:**
+Space on a focused button paused the game instead of pressing the button, so
+"next level" by keyboard paused. Space and Enter on a focused control now
+belong to the control; elsewhere Space still pauses.
+
+**(b) Screen readers.**
+- **Announcements.** A visually hidden `#announce` (`aria-live="polite"`,
+  atomic) says "Level 3, Frost. 16 agents." when a level starts and "Level 4
+  report: 18 of 18 home." (plus ", N lost.") when it ends. That's twice a
+  level and never per frame.
+- **The board.** The terrain canvas is `role="img"` with a short name that
+  says levels and results are announced; the actors canvas is `aria-hidden`.
+  The board's container stays an ordinary element, so the toast and tip
+  inside it are still read.
+- **Toggles.** Agent names, fullscreen, sound effects, the soundtrack
+  play/pause, the themes and the tracks carry `aria-pressed`, kept in step
+  wherever their state changes. The toggles have stable names ("Agent names",
+  "Fullscreen", "Sound effects"); the track buttons are named "Soundtrack N".
+
+**(c) Reduced motion,** checked in the code. `w.reducedMotion` comes from the
+media query and reaches the replay's re-simulation as well.
+- **Gentle versions already exist:** the outage (no flicker, lower dim, no
+  wave), the confetti (static positions, no sparkle), the replay tag's blink,
+  the 429 sign, the rubber duck's bob, ghosts (no rise), snow (still), and
+  lanterns and umbrellas (no flicker or sway).
+- **Standup:** speakers only idle in place, with no camera move.
+- **No screen shake:** the only "shake" is a 1 px umbrella twitch when it
+  parries.
+- **CSS:** all animations and transitions are off under the media query.
+
+**(d) Contrast.** New `tools/contrast.js` runs in the page and measures each
+visible element with its own text against its effective background (layered
+backgrounds, colour-mix values, own opacity). Every one of the nine themes
+passes. The lowest are nord at 4.64:1 and everforest at 4.84:1; hackerman is
+10.47:1.
+
+**Tests:** `test/a11y.test.js`, in Chromium with prefers-reduced-motion
+emulated:
+- the level and report announcements;
+- the canvas name and the hidden actors layer;
+- reduced motion reaching the world;
+- `aria-pressed` on a toggle and on exactly one theme;
+- Space on a focused "next level" moving on without pausing;
+- every theme at least 4.5:1.
