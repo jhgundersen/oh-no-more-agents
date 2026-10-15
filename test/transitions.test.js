@@ -1,6 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import fs from "node:fs"
+import { createHash } from "node:crypto"
 import { loadCore } from "../tools/load-core.js"
 import { canvas, themeOf, THEMES } from "../tools/render.js"
 
@@ -126,10 +127,12 @@ test("report numbers respond to saves and added colleagues, independently of the
     const report = () => {
       const r = recording(w)
       D.drawLevelTransition(r.ctx, w, r.pal)
-      // Only the large numeric line (22px below the plate's top, 10 tall); no
-      // whole-frame snapshot. The plate is centred on its height, so ask where.
-      const top = D.reportTop(w, D.reportRows(w, r.pal)).y + 22
-      return r.img.buf.slice(top * res * 400 * res * 3, (top + 10) * res * 400 * res * 3)
+      // Only the numeric line, using the appropriate host layout. A digest
+      // keeps a failed comparison from constructing a raw pixel-buffer diff.
+      const page = res >= 2 ? D.pageReportLayout(w, r.pal) : null
+      const top = page ? page.titleY : D.reportTop(w, D.reportRows(w, r.pal)).y + 22
+      const height = page ? page.titleHeight : 10
+      return createHash("sha256").update(r.img.buf.slice(top * res * 400 * res * 3, (top + height) * res * 400 * res * 3)).digest("hex")
     }
     const before = report()
     w.lost = 99

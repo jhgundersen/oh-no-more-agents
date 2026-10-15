@@ -6014,7 +6014,7 @@ than its 4 s poll while the full parallel run competed with Codex's caption
 validation for the machine. This change cannot reach that test, so it was a
 flake. The poll now waits up to 10 s, as the replay wait did earlier.
 
-## 294 — 2026-10-15 · Let the colony be heard (on a branch)
+## 294 — 2026-10-15 · Readable colony event captions (on a branch)
 
 **Chosen (autonomy):** make the event ticker readable outside the board. On
 phones its five-pixel lettering hid the game's explanations and jokes, even
@@ -6257,3 +6257,175 @@ fails with "board top −17.5".
   although they sit side by side there. That is pessimistic, but harmless
   until a coarse landscape screen is tall enough for 2×, which the
   ≤500 px-high query rules out.
+
+## 299 — 2026-10-15 · A little sense of place (on a branch)
+
+**Chosen (autonomy):** quiet synthesized biome ambience. The fresh watch found
+no visual problem as valuable as giving the polished settings their own sound
+between action cues. Branch `codex/biome-audio`, from current main `39a871e`
+plus the approved skill-icons/captions branch, whose developer merge was pending.
+
+**Watched first:** four more eight-second local runs, frames at three and eight
+seconds: desktop Cloud at Steady, phone Trench at Brisk, desktop Halloween
+Rooftops at Brisk, phone Christmas Library at Steady. Seed 3, real live clocks;
+inspected all four final frames. Existing artwork, captions, inventory and both
+seasons read clearly. Frames and metrics: `/tmp/codex-watch-sound/`.
+
+**Changed:**
+- Twenty procedural beds: cave air/drips, icy wind/creaks, jungle rustle,
+  industrial hum/pulses, submerged rumble/pings, desert wind, server fans,
+  hushed Library room tone, sorting machinery, clock ticks, roof rain,
+  subway ventilation, harbour wash and Cloud rain/low rumble. Shared synthesis,
+  small per-biome recipes, no samples/assets/dependencies.
+- Eight-second mono 12 kHz loops, locally seeded without touching Math.random
+  or world state. Four-ms seam tapers, slow breathing, balanced RMS. The
+  Library uses its indoor voice. Original home/umbrella/duck cues remain
+  conspicuously above the bed: real engine renders are about **−54 dBFS RMS**
+  (**−62 dBFS** in Library), bed peaks below 0.012, cue mix peaks below 0.08.
+- Remains **off by default**, under the existing SFX toggle and gesture policy.
+  Wall-clock playback keeps pitch and rhythm independent of Calm/Steady/Brisk
+  and fast-forward. The existing render and visibility hooks fade beds out
+  for pause, hidden tabs, replay, standup and report; navigation crossfades.
+  No new timers or document listeners. Source `onended` disconnects both nodes.
+- A two-entry LRU buffer cache (**768 KB**, allocated only with SFX enabled),
+  one source/gain in steady play, at most two while fading; rapid navigation
+  stops the previous retiring source immediately. Repeated scene refreshes
+  allocate/paint/synthesize nothing. First build **16.5 ms**, subsequent
+  biome builds **9.4–11.1 ms** in the real browser; no synthesis per frame.
+  Source gzip delta for index/sfx/web: **1,795 bytes**.
+
+**Evidence:** `/tmp/codex-biome-audio/final/review.html` is a local listening
+sheet: six matched before/after pairs with identical home, umbrella and duck
+cues at 2, 4 and 6 seconds, plus isolated beds for all twenty biomes. Nine-second
+WAVs include the eight-second loop seam, at original playback amplitude.
+`comparison.png` / `.svg` show the six pairs and isolated beds (explicit 5×
+vertical scale on the latter); inspected the sheet. Audio balance was checked
+through the real engine and measured waveforms; paired files are supplied for
+listening. `audio.json` records RMS, peak, seam and build timings.
+`live/live.json` records actual browser node counts/lifecycle, with a phone
+Halloween screenshot. Five created bed sources and all five gains were closed
+at the report; no browser errors. `audition-18db.mp3` is an additional six-bed
+montage amplified 18 dB for audition, not the game's playback level.
+
+**Pipeline:** `tools/biome-audio.js <out> [baseline-public] --live` uses one
+bounded local browser for all OfflineAudioContext previews, then one for the
+live page. Its HTML has native audio controls and no autoplay. The first
+render exposed very uneven floor levels, so buffers now normalize once at
+creation rather than doing work in the frame loop. A rapid-navigation test
+uses alternating cached biomes, cutting it from **4.5 s to 0.29 s** while
+preserving the source-bound/cleanup check; distinct generation is covered
+separately for every biome. Waveform export used the dependency-free local
+SVG script `/tmp/codex-biome-audio/draw-sheet-svg.py` and `rsvg-convert`.
+
+**Tests:** **17 focused passes, zero failures/skips, 6.44 s**: all twenty beds
+finite, distinct, quiet, deterministic, RNG-free and seam-safe; exact cached
+loop repetition in real WebAudio; cue headroom; two-buffer reuse and 2,000
+refreshes with zero new nodes; at most two active sources under rapid changes;
+fade/stop/disconnect on mute and scene changes; identical complete gameplay
+digests over 400 ticks in every biome (cosmetic RNG pinned equally); existing
+event/voice tests unchanged. Real-page checks exercise all speeds, pause,
+visibility, mute, navigation and report. An additional real-engine mid-fade
+suspension probe held gain **0.1119271144 → 0.1119271144**, confirming no volume
+jump on early pause (`fade-probe.test.mjs`, `fade-probe.json` in the evidence
+parent directory). `npm run stamp` updated sfx/web and page/build stamps.
+
+**Full checks:** `npm run check` with coverage passed: **1,344 tests, zero
+failures/skips, 326.79 s**, Factory art included. CRAP threshold 30 passed
+using the same coverage, maximum **30.0** (new preview/live helpers **5.4 /
+5.0**). The focused run, final evidence, full check/coverage and CRAP ran
+sequentially under one shared FIFO lock reservation; Node heap 2,048 MB,
+`ulimit -v 6000000`, two workers, 120-second test timeouts. Completion was
+reported immediately to release the developer's testing window.
+`git diff --check` passed. Logs:
+`/tmp/codex-biome-audio/focused-green.log`, `evidence-final.log`, `check.log`,
+`crap.log`. Simulation, art, seasonal rules and counter code are unchanged.
+
+**Next:** review and merge this branch; no push or deployment from this pass.
+
+## 300 — 2026-10-15 · Readable report cards at phone size (on a branch)
+
+**Chosen (autonomy):** enlarge the page report's pixel typography and wrap long
+rows. At native phone size its verdict and commit joke were only five pixels
+tall, even though the scenery, captions and stock read clearly. Branch
+`codex/report-art`, from current main `93bb853` plus approved `codex/biome-audio`
+while that merge was pending. Kept main's new short-screen fullscreen/safe-area
+fix. Renamed entry 294's heading to **Readable colony event captions**, matching
+its actual content as requested.
+
+**Watched first:** another four eight-second local runs, frames at three/eight
+seconds: phone Factory at Steady, desktop Data Center at Brisk, phone Halloween
+Harbour at Brisk, desktop Christmas Mail Room at Steady. Seed 3, live clocks;
+inspected all four final frames (`/tmp/codex-watch-brief/`). The initial native
+Factory report render (`tools/shoot.js level 8 --seed 3 --ticks 6000 --res 1
+--scale 1`) made the tiny verdict/commit lettering clear. It is in
+`/tmp/codex-watch-report/native/`; later exploratory report frames are beside it.
+
+**Changed:**
+- Res-2 reports use a 352-art-pixel plate: 2px font pixels for ordinary copy,
+  a 3px-pixel count, larger heading and verdict, and 2× escort/sighting badges.
+  Long rows wrap at words; the full house uses 1.5px font pixels to retain
+  every fact. Halloween's longer greeting fits at 2.5px. No missing rows or
+  ellipses, and no new text/meaning in the report.
+- Copy uses brighter existing palette inks: foreground for dim scenery tones,
+  the hot warning colour for warnings, exit light for umbrellas, and the AGI's
+  existing cream highlight for gold copy. All report text clears **4.5:1** on
+  its backing in all nine page themes. Original semantic colours remain in
+  the native report.
+- The plate centres on its measured height, and the entrance slide stops at
+  the board edge on a crowded card. The existing closing wipe stays last.
+  Native/unspecified-res reports retain exact pixels; the shared plate helper
+  now accepts an optional width, with its original default of 272.
+- Halloween's late lantern/ghost pass no longer paints over page report words,
+  matching Christmas's existing report policy. Greetings and tinted frames
+  remain. Native Halloween retains its original path. No simulation, input,
+  hold timing, storage, counter or sound changes in this pass.
+
+**Cheap:** wrapping is only used for finished page reports, over their small
+fixed set of rows. Larger font pixels scale the same rectangles: the zero /
+all-home / full-house fixtures issue **637 / 685 / 2,808** fills against
+**636 / 684 / 2,807** before — one added divider, no extra glyph detail. Bounded
+measurement: `/tmp/codex-report-art/fill-cost.json`. No assets/dependencies;
+Draw/season/index source gzip delta from the approved baseline: **1,014 bytes**.
+
+**Evidence:** `/tmp/codex-report-art/after/contact-sheet.png`, paired at actual
+CSS sizes: desktop and 390px phone natural Factory reports; a crowded daily
+report; the same full house at 360px with Halloween; Christmas Library; and a
+zero-home Cloud report in phone landscape. Full phone-page context is included.
+Inspected the sheet and original phone/small-phone/landscape shots. Every field,
+count and badge fits the plate; page/board geometry matches before exactly.
+At 360×800 the stage bottom measures 840.7px in both copies; the whole report is
+visible. At 390×844 and landscape the controls also fit. Before files are in
+`before/`, original public files in `baseline/public/`, final metrics/originals
+in `after/`. Paused art captures suppress the existing pause veil to inspect
+report typography; control behaviour is unchanged.
+
+**Pipeline:** `tools/report-art.js <out> [public-root] [before-out]` reuses one
+bounded browser for all six views. It waits for a fresh world and fonts,
+advances a pinned colony at most 10,000 steps while paused, then adds explicit
+stress fixtures for the crowded/seasonal cases. Crops use the visible viewport
+intersection (so overhanging 400px boards are captured at their true 390/360px
+size). The sheet sizes itself from measured board heights. Existing number-row
+verification now reads the correct host layout and compares digests instead of
+raw pixel arrays, avoiding expensive failure diffs.
+
+**Tests:** **36 focused passes, zero failures/skips, 6.67 s**. Original native
+hashes for zero/all/busy cards; complete wrapping and bounded long tokens;
+all row content retained across seasons and entrance ages; physical ink bounds,
+half-pixel grid, state/RNG/context preservation in all twenty biomes and nine
+page themes; 4.5:1 copy contrast; seasonal foreground exclusion with native
+Halloween retained; actual desktop/phone/360px/landscape report visibility.
+Existing transition, escort, commit, sightings and season tests pass too.
+`npm run stamp` refreshed Draw/season and page/build stamps. Browser evidence
+has no errors. `git diff --check` passed.
+
+**Full checks:** `npm run check` with coverage passed: **1,351 tests, zero
+failures/skips, 330.06 s**, Factory art included. CRAP threshold 30 passed
+using that coverage, maximum **30.0**; new report helpers top out at **8.0**.
+Focused tests, refreshed evidence, full check/coverage and CRAP ran sequentially
+under one shared FIFO lock reservation; Node heap 2,048 MB, `ulimit -v 6000000`,
+two workers, 120-second test timeouts. Completion was reported immediately to
+release the developer's testing window. `git diff --check` passed. Logs:
+`/tmp/codex-report-art/focused-final.log`, `evidence-final.log`, `check.log`,
+`crap.log`.
+
+**Next:** review and merge this branch; no push or deployment from this pass.

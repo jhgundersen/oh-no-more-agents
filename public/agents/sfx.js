@@ -270,9 +270,109 @@
     if (now.done && !was.done) play("fanfare", w.saved * 2 >= w.toRelease)
   }
 
+  // A little place between the action cues. Eight seconds, mono, 12 kHz;
+  // generated only on entry and cached for the last two biomes (768 KB).
+  // [low-pass blend, air, hum Hz, hum level, pulse Hz, pulse level, pulse Hz pitch]
+  var BEDS = {
+    "Cavern":       [.018, .20,  48, .018, .375, .055,  960], // air and distant drips
+    "Ruins":        [.025, .25,  35, .009, .125, .018,  420],
+    "Frost":        [.050, .38,  88, .008, .250, .012, 1400],
+    "Foundry":      [.100, .26,  50, .045, 1,    .025,  120],
+    "Jungle":       [.070, .38, 124, .006, .625, .015, 1800],
+    "Ice Cave":     [.016, .22,  72, .012, .250, .035,  680],
+    "Spaceship":    [.025, .18,  80, .045, .500, .008,  640],
+    "Factory":      [.100, .28,  60, .040, 2,    .016,  180],
+    "Skyscraper":   [.045, .32,  55, .015, .125, .008,  240],
+    "Trench":       [.008, .30,  42, .028, .375, .025,  340],
+    "Desert":       [.030, .48,  38, .006, .125, .008,  160],
+    "Data Center":  [.120, .19, 100, .032, .250, .005, 1200],
+    "Library":      [.025, .07,  50, .006, .125, .006,  520],
+    "Mail Room":    [.080, .19,  90, .014, .750, .013,  240],
+    "Building Site":[.065, .34,  45, .022, .500, .018,  160],
+    "Clock Tower":  [.025, .12,  64, .012, 2,    .040,  720],
+    "Rooftops":     [.220, .45,  40, .006, .750, .009, 1600],
+    "Subway":       [.060, .30,  55, .034, .250, .010,  150],
+    "Harbour":      [.025, .40,  44, .012, .250, .015,  380],
+    "The Cloud":    [.160, .38,  36, .020, .125, .025,   90]
+  }
+  var bedCache = [], bed = null, fadingBed = null, sceneBiome = "", sceneActive = false
+
+  function bedBuffer(name) {
+    for (var c = 0; c < bedCache.length; c++) if (bedCache[c].name === name) {
+      var cached = bedCache.splice(c, 1)[0]
+      bedCache.push(cached); return cached.buffer
+    }
+    var p = BEDS[name], rate = 12000, n = rate * 8, buf = ctx.createBuffer(1, n, rate)
+    var data = buf.getChannelData(0), seed = 17, low = 0, tau = Math.PI * 2, energy = 0
+    for (var j = 0; j < name.length; j++) seed = (Math.imul(seed, 31) + name.charCodeAt(j)) >>> 0
+    for (var i = 0; i < n; i++) {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0
+      var t = i / rate, white = seed / 2147483648 - 1
+      low += p[0] * (white - low)
+      var breath = .72 + .28 * Math.sin(tau * t / 8)
+      var air = low * p[1] * breath
+      // Rain/fans retain a little high-frequency texture; underwater stays muffled.
+      var hiss = white * p[0] * p[1] * .24
+      var hum = Math.sin(tau * p[2] * t) * p[3] * (.85 + .15 * Math.sin(tau * t / 4))
+      var pulse = Math.exp(-((t * p[4]) % 1) * 70) * Math.sin(tau * p[6] * t) * p[5]
+      // Four ms at either edge suppresses the loop seam without a rhythmic gap.
+      var edge = Math.min(1, i / 48, (n - 1 - i) / 48)
+      data[i] = (air + hiss + hum + pulse) * edge
+      energy += data[i] * data[i]
+    }
+    // Match perceived floor levels; the library keeps its indoor voice.
+    var level = name === "Library" ? .020 : .050
+    var scale = level / Math.sqrt(energy / n)
+    for (var k = 0; k < n; k++) data[k] *= scale
+    bedCache.push({ name: name, buffer: buf })
+    if (bedCache.length > 2) bedCache.shift()
+    return buf
+  }
+
+  function disconnectBed(b) {
+    if (!b || b.closed) return
+    b.closed = true
+    b.source.disconnect(); b.gain.disconnect()
+    if (fadingBed === b) fadingBed = null
+  }
+
+  function retireBed() {
+    if (!bed) return
+    // A rapid run through the tour never leaves a trail of fading sources.
+    if (fadingBed) { fadingBed.source.stop(); disconnectBed(fadingBed) }
+    var old = bed, t = ctx.currentTime
+    bed = null; fadingBed = old
+    old.gain.gain.cancelScheduledValues(t)
+    old.gain.gain.setValueAtTime(old.gain.gain.value, t)
+    old.gain.gain.linearRampToValueAtTime(0, t + .18)
+    old.source.stop(t + .20)
+  }
+
+  function syncBed() {
+    var name = on && sceneActive && Array.isArray(BEDS[sceneBiome]) ? sceneBiome : ""
+    if (!ctx || bed && bed.name === name) return
+    retireBed()
+    if (!name) return
+    var source = ctx.createBufferSource(), gain = ctx.createGain(), t = ctx.currentTime
+    source.buffer = bedBuffer(name); source.loop = true
+    gain.gain.setValueAtTime(0, t)
+    gain.gain.linearRampToValueAtTime(.35, t + .4)
+    source.connect(gain); gain.connect(master)
+    var next = { name: name, source: source, gain: gain, closed: false }
+    source.onended = function () { disconnectBed(next) }
+    bed = next; source.start(t)
+  }
+
+  function scene(w, active) {
+    sceneBiome = w && w.biome || ""
+    sceneActive = !!active
+    syncBed()
+  }
+
   function setOn(v) {
     on = !!v
     if (on && ensure() && ctx.state !== "running") ctx.resume()
+    syncBed()
   }
 
   // A saved "on" from a previous visit still needs a gesture to start.
@@ -281,5 +381,5 @@
   // For the page's own moments that are not in a world, like the standup.
   function cue(name) { if (SOUNDS[name]) play(name) }
 
-  window.AgentSfx = { observe: observe, setOn: setOn, isOn: function () { return on }, wake: wake, cue: cue, WORDS: WORDS }
+  window.AgentSfx = { scene: scene, observe: observe, setOn: setOn, isOn: function () { return on }, wake: wake, cue: cue, WORDS: WORDS }
 })()

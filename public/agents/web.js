@@ -857,8 +857,13 @@
     }
   }
 
+  function syncSfxScene() {
+    if (window.AgentSfx && AgentSfx.scene) AgentSfx.scene(world, running && !document.hidden && !standup && !replay && !world.done)
+  }
+
   function render() {
     if (!world) return
+    syncSfxScene()
     renderCaption()
     // The bar is the whole colony. There is no second, smaller number to
     // reach: the run goes on to the next level either way, so a goal of two
@@ -1365,6 +1370,7 @@
     document.addEventListener("visibilitychange", function () {
       if (document.hidden) { if (timer !== null) { clearInterval(timer); timer = null } }
       else restartClock()
+      syncSfxScene()
     })
     window.addEventListener("online", function () { loadGlobalStats(); flushGlobalSaves() })
 
