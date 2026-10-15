@@ -2478,6 +2478,8 @@ function drawLifts(ctx, w, pal) {
     ctx.fillStyle = pal.rig
     ctx.fillRect(Math.round(L.mid * C) - 1, top, 2, Math.max(0, carTop - top))
 
+    if (w.res === 2) drawPageLiftCable(ctx, w, pal, L, top, carTop)
+
     // The doors, one set per floor. A frame on the wall face, and leaves that
     // are shut everywhere the car is not — which is what makes the one open
     // set worth walking to.
@@ -2514,47 +2516,147 @@ function drawLifts(ctx, w, pal) {
       ctx.fillRect(lx2, dy0 - 8, 4, 5)
       ctx.fillStyle = open ? pal.exitLight : pal.decorDim
       ctx.fillRect(lx2 + 1, dy0 - 7 + (open ? 0 : (L.dir > 0 ? 2 : 0)), 2, open ? 3 : 1)
+      if (w.res === 2) drawPageLiftPortal(ctx, w, pal, L, s, dx, dy0, fy, lx2, open)
     }
 
-    // The car: a back wall, a roof, a floor plate and a light. No front panel
-    // at all — the passengers are the front of it, and they are drawn after.
-    // Six cells tall: a clear course over an agent's head, and — the point —
-    // the floor plate lands just under the riders' foot line instead of
-    // behind their shoes, so they read as standing on it rather than sunk
-    // through the bottom of the box.
-    //
-    // The back wall is `rig`, two steps brighter than the shaft it hangs in.
-    // At `rigDark` it vanished into the void the moment riders filled the
-    // cabin, and a moving car read as a box chasing agents who floated above
-    // it. Seams break the panel up so it stays scenery behind the sprites.
-    var ch2 = 6 * C
-    ctx.fillStyle = pal.rig
-    ctx.fillRect(x0 + 3, carTop, wid - 6, ch2)
-    ctx.fillStyle = pal.rigDark
-    for (var seam = x0 + 9; seam < x0 + wid - 6; seam += 7)
-      ctx.fillRect(seam, carTop + 4, 1, ch2 - 8)
-    ctx.fillStyle = pal.steel
-    ctx.fillRect(x0 + 2, carTop, wid - 4, 3)                    // roof
-    // The plate's top row is the riders' foot line exactly — the same join a
-    // walker makes with a floor, one pixel lower and their boots hang over an
-    // empty row of shaft.
-    ctx.fillRect(x0 + 2, carTop + ch2 - 4, wid - 4, 3)          // floor plate
-    // A bright jamb down each side. A full load of riders covers the wall
-    // between them, and without this outline the only cues left are strips
-    // above their heads and under their feet — the cabin stops reading as a
-    // thing they are inside of.
-    ctx.fillStyle = pal.steelEdge
-    ctx.fillRect(x0 + 2, carTop, 2, ch2)
-    ctx.fillRect(x0 + wid - 4, carTop, 2, ch2)
-    ctx.fillStyle = pal.steelShade
-    ctx.fillRect(x0 + 3, carTop + 3, 2, ch2 - 6)                // corner posts
-    ctx.fillRect(x0 + wid - 5, carTop + 3, 2, ch2 - 6)
-    ctx.fillStyle = pal.decorLit
-    ctx.fillRect(x0 + 6, carTop + 4, wid - 12, 2)               // the ceiling light
-    ctx.globalAlpha = 0.25                                      // and what it throws
-    ctx.fillRect(x0 + 5, carTop + 6, wid - 10, ch2 - 10)
-    ctx.globalAlpha = 1
+    if (w.res === 2) drawPageLiftCabin(ctx, w, pal, L, x0, carTop, wid)
+    else drawLiftCabin(ctx, pal, x0, carTop, wid, C)
   }
+}
+
+// The panel keeps its original cabin. The page's passengers still stand on
+// the exact same floor plate; the warm room is scenery behind their bodies.
+function drawLiftCabin(ctx, pal, x0, carTop, wid, C) {
+  // The car: a back wall, a roof, a floor plate and a light. No front panel
+  // at all — the passengers are the front of it, and they are drawn after.
+  // Six cells tall: a clear course over an agent's head, and — the point —
+  // the floor plate lands just under the riders' foot line instead of
+  // behind their shoes, so they read as standing on it rather than sunk
+  // through the bottom of the box.
+  //
+  // The back wall is `rig`, two steps brighter than the shaft it hangs in.
+  // At `rigDark` it vanished into the void the moment riders filled the
+  // cabin, and a moving car read as a box chasing agents who floated above
+  // it. Seams break the panel up so it stays scenery behind the sprites.
+  var ch2 = 6 * C
+  ctx.fillStyle = pal.rig
+  ctx.fillRect(x0 + 3, carTop, wid - 6, ch2)
+  ctx.fillStyle = pal.rigDark
+  for (var seam = x0 + 9; seam < x0 + wid - 6; seam += 7)
+    ctx.fillRect(seam, carTop + 4, 1, ch2 - 8)
+  ctx.fillStyle = pal.steel
+  ctx.fillRect(x0 + 2, carTop, wid - 4, 3)                    // roof
+  // The plate's top row is the riders' foot line exactly — the same join a
+  // walker makes with a floor, one pixel lower and their boots hang over an
+  // empty row of shaft.
+  ctx.fillRect(x0 + 2, carTop + ch2 - 4, wid - 4, 3)          // floor plate
+  // A bright jamb down each side. A full load of riders covers the wall
+  // between them, and without this outline the only cues left are strips
+  // above their heads and under their feet — the cabin stops reading as a
+  // thing they are inside of.
+  ctx.fillStyle = pal.steelEdge
+  ctx.fillRect(x0 + 2, carTop, 2, ch2)
+  ctx.fillRect(x0 + wid - 4, carTop, 2, ch2)
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x0 + 3, carTop + 3, 2, ch2 - 6)                // corner posts
+  ctx.fillRect(x0 + wid - 5, carTop + 3, 2, ch2 - 6)
+  ctx.fillStyle = pal.decorLit
+  ctx.fillRect(x0 + 6, carTop + 4, wid - 12, 2)               // the ceiling light
+  ctx.globalAlpha = 0.25                                      // and what it throws
+  ctx.fillRect(x0 + 5, carTop + 6, wid - 10, ch2 - 10)
+  ctx.globalAlpha = 1
+}
+
+var LIFT_BRASS = "#b99a70", LIFT_LAMP = "#ffe1a3", LIFT_PANEL = "#595363"
+var LIFT_BELL = [0.25,0.5,0.75,1,1,0.75,0.5,0.5,0.25,0.25,0.125,0.125]
+function liftArrivalLight(w, L) {
+  if (w.reducedMotion || L.parked || !(L.hold > 0) || !(L.doorFor > 22) || L.doorFor > 34) return 0
+  return LIFT_BELL[34 - L.doorFor]
+}
+
+function drawPageLiftCabin(ctx, w, pal, L, x, y, width) {
+  var floor = y + 5 * w.k.CELL, right = x + width
+  ctx.save()
+  ctx.fillStyle = LIFT_PANEL
+  ctx.fillRect(x + 3, y + 3, width - 6, 17)
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x + 5, y + 10, width - 10, 0.5)
+  ctx.fillRect(x + width / 2, y + 5, 0.5, 14)
+  // Brass posts, stepped capital and shoe-level skirting. No front grille.
+  ctx.fillStyle = pal.steelShade
+  ctx.fillRect(x + 2, y, width - 4, 3)
+  ctx.fillRect(x + 2, floor, width - 4, 3)
+  ctx.fillRect(x + 2, y, 2, 24); ctx.fillRect(right - 4, y, 2, 24)
+  ctx.fillStyle = LIFT_BRASS
+  ctx.fillRect(x + 2, y, width - 4, 0.5)
+  ctx.fillRect(x + 2, y + 1, 0.5, 22); ctx.fillRect(right - 2.5, y + 1, 0.5, 22)
+  ctx.fillRect(x + 3, y + 3, 2, 1); ctx.fillRect(right - 5, y + 3, 2, 1)
+  ctx.fillRect(x + 4, floor - 1, width - 8, 0.5)
+  ctx.fillRect(x + 3, floor + 2, width - 6, 0.5)
+  drawLiftPendant(ctx, w, L, x, y, width)
+  drawLiftOccupancy(ctx, pal, L, x, y)
+  ctx.restore()
+}
+
+function drawLiftPendant(ctx, w, L, x, y, width) {
+  // The lamp settles after a real stop, and only sways while travelling.
+  // Existing car/door clocks suffice: no observer history or wall clock.
+  var moving = !L.parked && L.hold <= 0
+  var sway = w.reducedMotion ? 0 : moving ? Math.round(Math.sin(L.car * 0.65) * 1.5) / 2
+    : Math.round(Math.sin((34 - L.doorFor) * 0.7) * liftArrivalLight(w, L)) / 2
+  var center = x + width / 2 + sway
+  ctx.fillStyle = LIFT_BRASS; ctx.fillRect(center - 0.5, y + 3, 1, 1.5)
+  ctx.fillStyle = LIFT_LAMP
+  ctx.fillRect(center - 3, y + 4.5, 6, 1)
+  ctx.fillRect(center - 2, y + 5.5, 4, 0.5)
+  // Stepped light falls on the back panel; actors are painted later.
+  var alpha = ctx.globalAlpha
+  for (var band = 0; band < 3; band++) {
+    ctx.globalAlpha = alpha * (0.16 - band * 0.04)
+    ctx.fillRect(x + 5 - band * 0.5, y + 6 + band * 4, width - 10 + band, 4)
+  }
+  ctx.globalAlpha = alpha
+}
+
+function drawLiftOccupancy(ctx, pal, L, x, y) {
+  // Five little cab-roof lamps: the fifth passenger really is the last seat.
+  for (var seat = 0; seat < 5; seat++) {
+    ctx.fillStyle = seat < L.riders ? LIFT_LAMP : pal.rigDark
+    ctx.fillRect(x + 5 + seat * 2, y + 1.5, 1, 0.5)
+  }
+}
+
+function drawPageLiftCable(ctx, w, pal, L, top, carTop) {
+  var x = Math.round(L.mid * w.k.CELL), phase = w.reducedMotion ? 0 : Math.round(L.car * w.k.CELL) % 8
+  ctx.save(); ctx.fillStyle = pal.steelEdge
+  // Rope joints move with car position, never with idle ticks.
+  for (var y = top + phase; y + 1 < carTop; y += 8) ctx.fillRect(x - 0.5, y, 0.5, 1)
+  ctx.fillStyle = LIFT_BRASS
+  ctx.fillRect(x - 2, carTop - 1.5, 4, 1.5)
+  ctx.restore()
+}
+
+function drawPageLiftPortal(ctx, w, pal, L, stop, x, y, floor, lamp, open) {
+  ctx.save(); ctx.fillStyle = LIFT_BRASS
+  ctx.fillRect(x - 2, y - 2, 0.5, floor - y - 1)
+  ctx.fillRect(x + 5.5, y - 2, 0.5, floor - y - 1)
+  ctx.fillRect(x - 1.5, y - 2, 7, 0.5)
+  ctx.fillStyle = open ? LIFT_LAMP : pal.steelEdge
+  ctx.fillRect(x - 1, floor - 2, 6, 0.5)
+  // Only the served floor rings. Passing an unrequested stop is not a ding.
+  var light = open && stop === L.at ? liftArrivalLight(w, L) : 0
+  if (light) drawLiftBell(ctx, lamp, y - 6, light)
+  ctx.restore()
+}
+function drawLiftBell(ctx, x, y, light) {
+  ctx.fillStyle = LIFT_LAMP
+  var alpha = ctx.globalAlpha
+  ctx.globalAlpha = alpha * light * 0.6
+  ctx.fillRect(x - 1, y - 3, 6, 6)
+  ctx.globalAlpha = alpha
+  ctx.fillRect(x - 2, y - 1.5, 1, 0.5)
+  ctx.fillRect(x + 5, y - 1.5, 1, 0.5)
+  ctx.fillRect(x + 1.5, y - 4, 0.5, 1)
 }
 
 // The end of a level held by blockers: they put their arms down and go home
