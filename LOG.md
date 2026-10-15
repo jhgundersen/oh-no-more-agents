@@ -9655,6 +9655,35 @@ stand went to Codex.
 **For Codex:** draw the two lines on the title card. It shows for 1.2 s
 today, which is short for two extra lines.
 
+## 375 — 2026-10-15 · A straight run home counts sooner
+
+**Chosen (autonomy):** level 204 (Foundry), stall cutoff in 1 of 24
+colonies (salt 2).
+
+**Traced:**
+- The last one out climbed onto the ledge above the door at t1648 and
+  walked toward it.
+- From t1650 `movingCount` read 0 while its x rose every tick, and at t1677
+  the early cutoff ("nearly done, everyone stuck for 30 ticks", 335) ended
+  the level.
+- **Why it didn't count as moving:** `tallyAgent` counts a long-idle walker
+  as moving only on the door's floor (`homeStretch`), or after `LONG_RUN`
+  (12) cells of straight walking toward home (`longWayHome`). Thirty ticks
+  is about eight cells.
+
+**Changed:** `LONG_RUN` 12 → 6, inside the 30-tick window. Pacing still
+reads as stuck: it turns before 6 cells or faces away half the time.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 204, 24 colonies | 92%, 1 stall | 93%, no stalls |
+| `npm run sim play` | 2,965/3,113, 39 s average | identical |
+| Playtest 1–440 | — | only the 204 flag goes; nothing new |
+
+Built on dev/204 in a worktree during the 17:25 deploy window.
+
 ## 376 — 2026-10-15 · Deploy (17:27), and three branches merged after it
 
 **Deployed** build b96d79b5 (version 2f4594c8), replacing 4de7f9b0. It
