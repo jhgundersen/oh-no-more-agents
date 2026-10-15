@@ -8906,10 +8906,6 @@ service cap**, **2,048 MB Node heap**, `ulimit -v 6000000`, two workers and
 120-second test timeouts; sampled peak was **796 MB**. Source/tests stayed
 frozen through the gate, source hashes still match, and CRAP reused coverage.
 Logs: `check.log`, `crap.log`, `queue.log` in the evidence directory.
-`npm run stamp`, its check and `git diff --check` pass.
-
-**Next:** review and merge this branch, then another free choice of atmosphere,
-motion or presentation. Commit on the branch only; no push or deployment.
 
 ## 357 — 2026-10-15 · Let the storm announce itself (on a branch)
 
@@ -9195,3 +9191,106 @@ left (`explainingAnyone`).
 | Levels 163, 204, 225 | — | identical |
 | `npm run sim play` | 2,965/3,113 | identical |
 | Playtest 1–440 | — | only the 345 flag goes; nothing new |
+
+## 364 — 2026-10-15 · Please hold. (on a branch)
+
+**Chosen (autonomy):** give the 429 queue a small service sign. A fresh local
+phone watch caught its code completely blank during the original blink, just
+as the crowd formed. Branch `codex/queue-art` starts from current main
+`63efc2a` (the last-out hero bridge fix arrived while creating it). Drawing
+only; no Sim.js, web.js, queue timing or counter changes.
+
+**Changed:** page-only dark red enamel face, steel post with small gold
+markings, bevel, rivets, and steady white **429** digits. The existing glyph
+size and complete sign envelope stay the same. Two little amber side lamps
+pulse slowly; five lower indicators drain with the actual living walking
+queue. They are a proportional indicator, not one lamp per person. Dead,
+gone, saved and non-walking holds never count. Once Sim sets `clearAt`, the
+same sign turns green **200** for its existing departure grace. An empty
+queue before that flag does not prematurely announce success. Reduced motion
+stops the amber pulse; actual releases and the clear state still show.
+
+**Evidence:** `/tmp/codex-queue-art/strips/index.html` animates twelve before /
+after poses through appearance, releases, green clearance and disappearance.
+The **current** contact sheet is
+`/tmp/codex-queue-art/strips/contact-sheet-7ab8cc9f.png`; the canonical
+`contact-sheet.png` is byte-identical and was regenerated in the same export.
+Native/page frame sheets are `40-3-frames.png`, `72-2-frames.png`,
+`6-5-frames.png`. These are real queues with no forced crowd or coin toss:
+
+- Cloud 40, seed 3: appears **1080**, five held, clears **1198**.
+- Data Center 72, seed 2: appears **675**, six held, clears **809**.
+- Ice Cave 6, seed 5: appears **1605**, five held, clears **1723**.
+
+Both directions are covered. The review gives each nonuniformly sampled pose
+equal display time and says so; exact ticks are in `manifest.json`.
+
+`/tmp/codex-queue-art/page-sheet.png` (**1640×4904**) shows actual CSS-size
+boards and 3× crops: 390 px phone and desktop, the blank-at-birth comparison,
+real draining and 200 states, six-member queue, Ice Cave, Halloween,
+Christmas and reduced motion. Full pages are in `before/` and `after/`.
+Browser assertions verify identical complete world digests and board/stage
+geometry, no page errors or horizontal overflow, and every changed pixel
+inside the existing sign envelope. Original opaque agents, hats, umbrellas
+and speech bubble clearance retain their guards.
+
+**Tooling:** `tools/queue-art.js` seeks once per fixture, caches terrain per
+renderer/resolution, and draws translated actor crops directly. All **144**
+comparison frames take **0.92 s / 238.4 MB peak RSS**. Sheet labels use the
+validated uppercase pixel-font helper. Each export refreshes both canonical
+and content-stamped contact sheets, links the stamped sheet from its HTML,
+and records source/image hashes in its manifest. The stamp includes drawing,
+tool, baseline and selected cases. A test poisons both sheet files with stale
+images, reruns the export and requires the correct new bytes. This makes the
+current contact sheet explicit after the storm review's stale-path confusion.
+No previous storm evidence was overwritten.
+
+**Compatibility:** `native-proof.json` compares the independent main renderer
+with the branch: aggregate **f6a08d55…** stays exact for default, native res 1
+and share res 3, every palette, both motion settings, appearance and departure.
+The new helpers are page-res 2 only. Rendered and plain live simulations have
+identical complete JSON digests through each real queue; no RNG or world
+writes occur while painting.
+
+**Focused:** **33/33 pass, 7.56 s**. Covers native/share parity; natural fixtures;
+living queue counts and stale/dead holds; the complete original plate/pole/foot
+envelope and speech exclusion; full digits at former blink ages; correct 200
+transition; lettering contrast over 7:1; reduced-motion lamp behaviour;
+palette/state/RNG safety; live digests; crop/cache equality through carving;
+and refreshed, source-stamped review output. Includes all original rate-limit
+and gag guards, including opaque agents and umbrellas.
+
+**Cost:** **2,585 source bytes / 875 gzip bytes** added to Draw.js before ship's
+comment strip; maximum **59** primitive rectangles across **1,062** real queue
+phase/motion samples. One short cast scan per visible sign, no terrain scan,
+new canvas, timers, retained particles or simulation state.
+
+Five-second real-page Brisk runs cover Cloud 40 / seed 3 around ticks
+1072–1302 (up to **17** cast), and Data Center 72 / seed 2 at 667–895 (up to
+**13**). All four before/after samples hold **60 median / 60 p5 FPS, 17 ms
+worst, zero long-task time**. CPU is **11% / 12%** on 40 and **12% / 12%** on
+72. No speedup claimed. Individual logs and `fps-summary.json` are in the
+evidence directory.
+
+
+**Full gate:** **1,466 passed, zero failures/cancellations/skips, 363.79 s**,
+including Factory art and coverage. CRAP threshold **30** passed using the same
+LCOV, maximum **30.0**. Every new runtime helper has **100% coverage**, scores
+**2.0–9.0**. Review orchestration is **13.0 / 100%**, scene discovery
+**4.0 / 100%**, cached frame rendering **3.1 / 75%**. Completion was reported
+immediately. Persistent FIFO validation used a **3 GB service cap**, **2,048 MB
+Node heap**, `ulimit -v 6000000`, two workers and 120-second test timeouts;
+sampled peak was **788 MB**. Source/tests stayed frozen, their recorded hashes
+still match, and CRAP reused coverage. The canonical/stamped contact sheets
+and manifest source/image hashes were checked again before commit. Logs:
+`check.log`, `crap.log`, `queue.log` in the evidence directory.
+`npm run stamp`, its check and `git diff --check` pass.
+
+**Next:** review and merge this branch, then another free choice of atmosphere,
+motion or presentation. Commit on the branch only; no push or deployment.
+
+## 365 — 2026-10-15 · Merged the 429 service sign
+
+Reviewed and merged by the loop: codex/queue-art (fa955f8, entry 364), `--no-ff`, as approved.
+Codex's entry is renumbered and the page is re-stamped. Drawing only, with
+no Sim.js change, and the native (res 1) pixels kept, per Codex's tests.
