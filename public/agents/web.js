@@ -914,13 +914,27 @@
   // select-and-copy, and failing that the toast admits it.
   function copyShareLink() {
     if (!world || !window.AgentShare) return
-    var link = AgentShare.url(window.location.href, world.level, world.colonySeed)
+    var link = world.daily ? AgentShare.dailyUrl(window.location.href, world.daily)
+      : AgentShare.url(window.location.href, world.level, world.colonySeed)
     if (!link) return
     var done = function () { toast("LINK COPIED") }
     var fallback = function () { toast(copyByHand(link) ? "LINK COPIED" : "COPY FAILED") }
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, fallback)
     else fallback()
   }
+  // Colony of the day (share.js): today's UTC date picks the level and the
+  // colony, the same for everyone. Like a shared link it is a move, not a clear.
+  function playDaily() {
+    if (!window.AgentShare) return
+    var d = AgentShare.daily(AgentShare.today())
+    if (!d) return
+    newLevel(d.level, d.seed)
+    world.daily = d.daily
+    saveState()
+    render()
+    toast("TODAY'S STANDUP IS MANDATORY.")
+  }
+
   function copyByHand(text) {
     var ta = document.createElement("textarea")
     ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0"
@@ -1021,6 +1035,11 @@
 
   function boot() {
     el.level = document.getElementById("level")
+    el.daily = document.getElementById("daily")
+    if (el.daily && window.AgentShare) {
+      document.getElementById("dailyDate").textContent = AgentShare.today()
+      el.daily.addEventListener("click", playDaily)
+    }
     el.tour = document.getElementById("tour")
     el.announce = document.getElementById("announce")
     el.biome = document.getElementById("biome")
@@ -1098,6 +1117,7 @@
     var shared = window.AgentShare ? AgentShare.parse(window.location.search) : null
     if (shared) {
       newLevel(shared.level, shared.seed)
+      if (shared.daily) { world.daily = shared.daily; render() }
       saveState()
       try { history.replaceState(null, "", window.location.pathname) } catch (e) {}
     } else newLevel(level)
