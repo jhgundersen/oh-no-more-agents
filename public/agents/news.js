@@ -5,6 +5,7 @@
 // gets one dismissible tip on the board. Both remember in localStorage and
 // carry on without it. Web-only, like share.js.
 (function () {
+  // Eight at most: when a line is added, the oldest drops off the end.
   var NEWS = [
     { id: "2026-10-15-aisles", text: "Added: hot and cold aisles in the Data Center. Agents run hot or get throttled." },
     { id: "2026-10-15-biomes", text: "Added: new paint in all 19 biomes. The agents have not noticed." },
@@ -13,8 +14,7 @@
     { id: "2026-10-15-sweepstake", text: "Added: sweepstake. Tap an agent before anyone's home to back it. It will not try any harder." },
     { id: "2026-10-15-sightings", text: "Added: sightings. The report card keeps track of the rare things you've seen. Nobody else is told." },
     { id: "2026-10-15-share", text: "Added: copy link. Send someone the exact colony that let you down." },
-    { id: "2026-10-15-pep", text: "Added: pep talks. Tap an agent to tell it it's absolutely right. It already knew." },
-    { id: "2026-10-14-duck", text: "Added: rubber duck. It does not talk back." }
+    { id: "2026-10-15-pep", text: "Added: pep talks. Tap an agent to tell it it's absolutely right. It already knew." }
   ]
   var SEEN_KEY = "oh-no-more-agents-news", TIP_KEY = "oh-no-more-agents-tip"
 

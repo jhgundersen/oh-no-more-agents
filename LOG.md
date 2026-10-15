@@ -7628,3 +7628,9 @@ its own.
   stalls or clock-outs. `test/aisles.test.js` covers it.
 
 **Next:** the Library.
+
+**Fix after 245:** 245 was committed with `test/news.test.js` failing. The
+aisles line made nine patch notes and the test caps them at eight. The oldest
+(rubber duck) drops off, and `NEWS` now says so: eight at most, oldest out.
+I ran the news test, saw it fail, and committed anyway; from now on the full
+check runs after the last edit before every commit.
