@@ -7778,3 +7778,21 @@ re-stamped.
   panel's half is unchanged and only the page's moved.
 - **Memory safety:** the art tests now compare pixel hashes rather than raw
   buffers, as AGENTS.md asks.
+
+## 331 — 2026-10-15 · Deploy (12:45)
+
+**Deployed** build 8ed231cd (version c5fee8ec), replacing dde21043. It
+covers 321–330:
+- the exit welcome;
+- the stall cutoff counting progress (323, with its tests and the
+  `narrowStep` split);
+- the Art Deco lift;
+- the 204/129/133 checks and fresh baselines (326–328);
+- the vintage trains.
+
+**Before:** the gate (1,402 tests), then `npm run smoke` on the clean tree,
+which passed (3 min, levels 1–7).
+
+**After:** `npm run verify -- --previous dde21043` passed: shipped files,
+build agreement, the open tab reloading, level 20, `?daily&full=1`, Next
+during a standup, and the patch notes by keyboard (5 counter writes refused).
