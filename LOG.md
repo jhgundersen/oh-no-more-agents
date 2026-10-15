@@ -8210,3 +8210,12 @@ the old rules stand.
   no level moved by 3 or more.
 
 `test/stragglers.test.js` covers it.
+
+## 256 — 2026-10-15 · No empty sightings strip
+
+**Asked:** next from the first-impressions list (249).
+
+**Changed:** the report card shows the sightings strip only once this browser
+has seen at least one. On a first visit's first card, "0/7 SIGHTINGS" and
+seven grey icons said nothing; the strip appears with the first sighting,
+which is gold and named. `test/sightings.test.js` covers it.

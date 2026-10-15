@@ -3219,7 +3219,9 @@ function reportRows(w, pal) {
   if (w.bet !== undefined && w.bet !== null) rows.push({ text: betLine(w), colour: betCalled(w) ? AGI_GOLD : pal.label, step: 12 })
   rows.push({ text: commitLine(w), colour: pal.decor, step: 12 })
   // The watcher's sightings (the page sets w.sightings at the end of a level).
-  if (w.sightings) {
+  // Not until there is one: a row of seven grey icons and "0/7" means nothing
+  // on a first visit's first card (first-look review).
+  if (w.sightings && w.sightings.seen.length) {
     rows.push({ sightings: true, step: 14 })
     if (w.sightings.fresh.length) rows.push({ text: "NEW: " + sightingLine(w.sightings.fresh[0]), colour: AGI_GOLD, step: 12 })
   }
