@@ -6201,3 +6201,59 @@ Reviewed and merged by the loop: codex/skill-icons (46f52eb, entry 296),
   from 295, the standup poll and the verify wait.
 - **Fullscreen layout still matches main:** 2× at 1280×720, 1× at 390×844,
   and landscape at main's −17 px.
+
+## 298 — 2026-10-15 · Fullscreen on a short screen keeps the board's top
+
+**Asked:** fix the pre-existing bug from 295. In faux fullscreen at 844×390,
+the top 17 px of the board sat above the screen. Check safe-area insets and
+the faux-fullscreen sizing math, and test 844×390, 932×430 and a notched
+device.
+
+**Found:**
+- **A real touch phone was never affected.** The coarse-pointer landscape
+  grid puts the board at y 71–319 (844×390) and 91–339 (932×430). The −17
+  came from a fine pointer in a short window, such as a desktop window or the
+  earlier probe.
+- **The cause.** Without the landscape grid, `#stage` stacks the hud, board,
+  caption, toolbar and controls in a flex column 545 px tall. Plain
+  `justify-content: center` spreads the overflow over both ends, and the top
+  part can't be scrolled to.
+- **The sizing math was correct.** At 1× there is no smaller scale, so the
+  stack has to overflow. It just has to overflow downwards, where the stage's
+  `overflow: auto` reaches it.
+- **Safe areas were never used.** The page doesn't opt into
+  `viewport-fit=cover`, so iOS keeps content clear of the notch by itself and
+  `env()` is 0. A browser that does report insets (Chromium's emulation does)
+  had them ignored.
+
+**Changed** (`public/index.html`):
+- Fullscreen (faux and native) uses `justify-content: safe center`.
+- Fullscreen padding is `max(16px, env(safe-area-inset-*))` on each side.
+- In the landscape-phone layout, body padding is `max(6/8px, env(…))`, and
+  the stage's min-height subtracts the same top and bottom values.
+- `stageAroundBoard` reads the computed padding, so the fit math accounts for
+  insets with no change.
+
+**Checked headless:**
+
+| View | Result |
+|---|---|
+| 844×390, mouse | board top 60 (was −17.5), rest reachable by scrolling the stage |
+| 844×390, touch | unchanged |
+| 932×430, touch | unchanged |
+| 932×430, touch, notch (left/right 59, bottom 21) | 59 px padding, board at x 59 |
+| 1280×720 | still 2× |
+| 1920×1080 | 3× |
+| non-fullscreen pages | unchanged |
+
+**Test:** `test/full-short.test.js` covers the three sizes, and the notch
+where CDP's `Emulation.setSafeAreaInsetsOverride` exists. Without the fix it
+fails with "board top −17.5".
+
+**Notes:**
+- At 390×844 portrait the 400 px board overhangs a 390 px screen by 5 px each
+  side. That is the deliberate under-423 px rule, not this bug.
+- The landscape fit still sums the stage's children as if they were stacked,
+  although they sit side by side there. That is pessimistic, but harmless
+  until a coarse landscape screen is tall enough for 2×, which the
+  ≤500 px-high query rules out.

@@ -25,7 +25,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="7c2fbad0">
+<meta name="build" content="dd8fb134">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
@@ -97,8 +97,16 @@
 		}
 		#stage:fullscreen, #stage.faux {
 			background: var(--bg);
-			padding: 16px;
+			/* Clear of a notch or home bar where the browser reports one
+			   (zero without viewport-fit=cover, which this page does not use). */
+			padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+				max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 			box-sizing: border-box;
+			/* When the stack is taller than the screen (a short window with a
+			   fine pointer stacks hud, board, caption and controls), plain
+			   centring pushed the board's top above the screen where no scroll
+			   could reach it. Safe centring starts at the top instead. */
+			justify-content: safe center;
 		}
 		/* The existing iOS/URL fullscreen fallback. */
 		#stage.faux { position: fixed; inset: 0; z-index: 50; width: auto; overflow: auto; }
@@ -345,12 +353,13 @@
 		   skills and controls stacked beside it, all on the first screen. The
 		   rest of the page is still there below for whoever scrolls. */
 		@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
-			body { padding: 6px 8px; gap: 10px; }
+			body { padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+				max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); gap: 10px; }
 			h1, body > .sub:first-of-type { display: none; }
 			#stage {
 				display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto 1fr;
 				column-gap: 10px; row-gap: 6px; align-items: start;
-				min-height: calc(100dvh - 12px); box-sizing: border-box;
+				min-height: calc(100dvh - max(6px, env(safe-area-inset-top)) - max(6px, env(safe-area-inset-bottom))); box-sizing: border-box;
 			}
 			#board { grid-column: 1; grid-row: 1 / span 3; align-self: center; transform: translateY(-18px); }
 			/* Centre the 248px board + 6px gap + 30px caption as one group. */
