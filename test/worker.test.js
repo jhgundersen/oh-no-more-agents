@@ -23,7 +23,10 @@ function fakeDB({ stats = { total_saved: 41, reports: 3, updated_at: "2026-10-14
       }
       return stmt
     },
-    async batch(stmts) { log.push(["batch", stmts.length, stmts[0].args]); return [] }
+    async batch(stmts) {
+      if (/submission_limits/.test(stmts[0].sql)) { log.push(["limit", stmts.length]); return [{ results: [{ submissions }] }, { results: [] }] }
+      log.push(["batch", stmts.length, stmts[0].args]); return []
+    }
   }
   return db
 }

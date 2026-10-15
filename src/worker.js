@@ -1,4 +1,4 @@
-import { MAX_BODY_BYTES, MAX_REPORTS_PER_MINUTE, MAX_SAVED_PER_REPORT, clientHash, json, parseSaveReport, readCappedBody } from "./counter.js"
+import { LIMIT_CLEANUP, LIMIT_KEEP_MINUTES, MAX_BODY_BYTES, MAX_REPORTS_PER_MINUTE, MAX_SAVED_PER_REPORT, clientHash, json, parseSaveReport, readCappedBody } from "./counter.js"
 import { BUILD } from "./version.js"
 
 async function readStats(env) {
@@ -15,16 +15,33 @@ async function readStats(env) {
   }
 }
 
+// Only the current minute's bucket is ever read, so older ones are dead
+// weight. Each charge also retires up to LIMIT_CLEANUP of them (by the bucket
+// index), in the same batch, so the table stays about as big as one window of
+// active callers instead of growing a row per caller per minute for ever
+// (server review 2026-10-15, finding 5). A few minutes are kept so an edge
+// whose clock runs slightly behind still finds its count. Only rate-limit
+// state goes: rescue_events, which makes a retry idempotent, is untouched.
+// (The constants live in counter.js: a Worker module may export only handlers.)
+
 async function enforceRateLimit(request, env) {
   const hash = await clientHash(request, env.RATE_LIMIT_SALT)
   const bucket = Math.floor(Date.now() / 60000)
-  const row = await env.DB.prepare(`
-    INSERT INTO submission_limits (client_hash, minute_bucket, submissions)
-    VALUES (?, ?, 1)
-    ON CONFLICT(client_hash, minute_bucket)
-    DO UPDATE SET submissions = submissions + 1
-    RETURNING submissions
-  `).bind(hash, bucket).first()
+  const [charged] = await env.DB.batch([
+    env.DB.prepare(`
+      INSERT INTO submission_limits (client_hash, minute_bucket, submissions)
+      VALUES (?, ?, 1)
+      ON CONFLICT(client_hash, minute_bucket)
+      DO UPDATE SET submissions = submissions + 1
+      RETURNING submissions
+    `).bind(hash, bucket),
+    env.DB.prepare(`
+      DELETE FROM submission_limits WHERE rowid IN (
+        SELECT rowid FROM submission_limits WHERE minute_bucket < ? LIMIT ?
+      )
+    `).bind(bucket - LIMIT_KEEP_MINUTES, LIMIT_CLEANUP)
+  ])
+  const row = charged?.results?.[0]
   return Number(row?.submissions || 1) <= MAX_REPORTS_PER_MINUTE
 }
 

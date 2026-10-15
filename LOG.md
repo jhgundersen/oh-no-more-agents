@@ -5832,3 +5832,42 @@ quota before parsing if that's cheap, and add the tests the review suggests.
   this Miniflare version wants a different configuration and I stopped there.
   Not yet seen on production; a single oversized chunked POST would show it,
   and would write nothing, because it's refused before the quota.
+
+## 289 — 2026-10-15 · Retired old rate-limit buckets (server review finding 5)
+
+**Asked:** finding 5 (P3) of the same review. Each minute a client reports in
+leaves one permanent row in `submission_limits`, but only the current minute
+is ever read. The review replayed one event over 1,001 minutes and got 1
+rescue and 1 event row, but 1,001 rate-limit rows. Retire old buckets with
+bounded cleanup in the same batch, keep the event-id dedupe history, and add a
+clock-advancing retention test.
+
+**Changed:**
+- **`enforceRateLimit` is now one D1 batch.** The existing upsert charges the
+  current minute, and a `DELETE … WHERE rowid IN (SELECT rowid … WHERE
+  minute_bucket < ? LIMIT ?)` retires up to `LIMIT_CLEANUP` (64) buckets older
+  than `LIMIT_KEEP_MINUTES` (5). It uses the existing `submission_limits_bucket`
+  index.
+- **Why keep five minutes:** an edge whose clock runs a little behind still
+  finds its own count.
+- **Bounded either way:** each charge adds at most one row and can remove 64,
+  so the table stays at about one window of active callers. The backlog
+  already in production drains at 64 per report.
+- **`rescue_events` is untouched;** it is what makes a retry idempotent.
+- **Constants live in `counter.js`.** The first version exported them from
+  `worker.js`. Unit tests passed, but `wrangler dev` refused to start with
+  "Incorrect type for map entry 'LIMIT_CLEANUP'": a Worker module may export
+  only handlers. Only the local runtime showed it.
+
+**Tests** (`test/ratelimit.test.js`): the Worker's real SQL on node:sqlite
+with both migrations applied, behind a small D1 stand-in, with a mocked clock.
+- One event replayed for 1,001 minutes gives 1 rescue, 1 report and 1 event
+  row, with at most 6 rate-limit rows.
+- Twenty callers over 40 minutes stay within 20 × 6 rows, with all 800 events
+  kept.
+- The same-minute quota is unchanged: eight 200s, then 429, 429.
+
+**Checked locally** with `wrangler dev --local`: I seeded three ancient
+buckets into local D1, posted one report and got 200, and the three were gone.
+
+**Next:** merge codex/build-fixes, then deploy (this one ships the Worker).

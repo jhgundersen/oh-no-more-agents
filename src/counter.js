@@ -5,6 +5,10 @@
 // rather than per level.
 export const MAX_SAVED_PER_REPORT = 90
 export const MAX_REPORTS_PER_MINUTE = 8
+// Rate-limit buckets older than this many minutes are retired, at most
+// LIMIT_CLEANUP per charge (see enforceRateLimit in worker.js).
+export const LIMIT_KEEP_MINUTES = 5
+export const LIMIT_CLEANUP = 64
 // A report is about seventy bytes of JSON. Anything near this is not one.
 export const MAX_BODY_BYTES = 4096
 
