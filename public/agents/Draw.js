@@ -3149,6 +3149,7 @@ function drawMirage(ctx, w, pal, m) {
 // there while the queue drains, and drops away once it has. Red for the code,
 // the colony's own label colour for the post. Whole art pixels.
 function drawRateLimitSign(ctx, w, pal, rl) {
+  if (w.res === 2) return drawPageQueueSign(ctx,w,pal,rl)
   var C = w.k.CELL, cx = Math.round(rl.x * C), foot = (rl.y + 1) * C
   var age = w.ticks - rl.at, gone = rl.clearAt >= 0 ? w.ticks - rl.clearAt : 0
   var top = foot - Math.round(30 * Math.min(1, age / 6)) + Math.max(0, gone - 18) * 2
@@ -3165,6 +3166,69 @@ function drawRateLimitSign(ctx, w, pal, rl) {
   if (w.reducedMotion || age > 30 || Math.floor(age / 5) % 2 === 0) drawTransitionText(ctx, "429", cx + 1, top + 3, 1)
   ctx.fillStyle = pal.rigDark; ctx.fillRect(cx - 3, foot - 1, 7, 1)
   ctx.restore()
+}
+
+// The page's portable service sign: the code never blinks out. Five lamps
+// drain with the real waiting cast; a green 200 belongs to Sim's clear phase.
+function queueSignGeometry(w,rl) {
+  var foot=(rl.y+1)*w.k.CELL,age=w.ticks-rl.at
+  var gone=rl.clearAt>=0?w.ticks-rl.clearAt:0
+  var top=foot-Math.round(30*Math.min(1,age/6))+Math.max(0,gone-18)*2
+  if(age<0 || top>=foot-4)return null
+  return{cx:Math.round(rl.x*w.k.CELL),foot:foot,top:top,age:age}
+}
+function queueReadout(w,rl) {
+  var waiting=0
+  for(var i=0;i<w.agents.length;i++) {
+    var a=w.agents[i]
+    if(!a.gone && a.state==="walk" && a.queueFor>0)waiting++
+  }
+  return{waiting:waiting,pips:Math.min(5,Math.ceil(waiting*5/Math.max(1,rl.count||1))),clear:rl.clearAt>=0}
+}
+function drawPageQueueSign(ctx,w,pal,rl) {
+  var g=queueSignGeometry(w,rl)
+  if(!g)return
+  var readout=queueReadout(w,rl)
+  ctx.save()
+  drawQueuePost(ctx,pal,g)
+  drawQueuePlate(ctx,w,g,readout)
+  drawQueueProgress(ctx,g,readout)
+  ctx.restore()
+}
+function drawQueuePost(ctx,pal,g) {
+  var pole=g.foot-g.top-9
+  if(pole>0) {
+    ctx.fillStyle=pal.rigDark;ctx.fillRect(g.cx-1,g.top+9,3,pole)
+    ctx.fillStyle=pal.steelShade;ctx.fillRect(g.cx-0.5,g.top+9,2,pole)
+    ctx.fillStyle=pal.steelEdge;ctx.fillRect(g.cx-0.5,g.top+9,0.5,pole)
+    ctx.fillStyle="#e2b966"
+    for(var y=g.foot-9;y<g.foot-1;y+=3)
+      if(y>=g.top+9)ctx.fillRect(g.cx-0.5,y,1.5,0.5)
+  }
+  ctx.fillStyle=pal.rigDark;ctx.fillRect(g.cx-3,g.foot-1,7,1)
+  ctx.fillStyle=pal.steelEdge;ctx.fillRect(g.cx-2,g.foot-1,5,0.5)
+}
+function drawQueuePlate(ctx,w,g,r) {
+  drawGagPanel(ctx,g.cx-11,g.top-1,23,12,GAG_INK,r.clear?"#1f5147":"#7b2d40")
+  ctx.fillStyle=r.clear?"#6bcda0":"#d76670";ctx.fillRect(g.cx-9,g.top-0.5,19,0.5)
+  ctx.fillStyle=r.clear?"#123b36":"#492739";ctx.fillRect(g.cx-9,g.top+9.5,19,0.5)
+  ctx.fillStyle="#c9c5b8"
+  ctx.fillRect(g.cx-9,g.top+1,0.5,0.5);ctx.fillRect(g.cx+9,g.top+1,0.5,0.5)
+  var alpha=ctx.globalAlpha
+  ctx.globalAlpha=alpha*(r.clear||w.reducedMotion||Math.floor(g.age/12)%2===0?1:0.45)
+  ctx.fillStyle=r.clear?"#91efb0":"#ffc66b"
+  ctx.fillRect(g.cx-10,g.top+3.5,1,2);ctx.fillRect(g.cx+10,g.top+3.5,1,2)
+  ctx.globalAlpha=alpha
+  ctx.fillStyle=GAG_PAPER;drawTransitionText(ctx,r.clear?"200":"429",g.cx+1,g.top+3,1)
+}
+function drawQueueProgress(ctx,g,r) {
+  for(var i=0;i<5;i++) {
+    var x=g.cx-7.5+i*3.5
+    ctx.fillStyle="#24252f";ctx.fillRect(x,g.top+8.5,2.5,1)
+    if(r.clear || i<r.pips) {
+      ctx.fillStyle=r.clear?"#91efb0":"#ffc66b";ctx.fillRect(x,g.top+8.5,2,0.5)
+    }
+  }
 }
 
 // What the colony is going through rather than what is on the level: a
