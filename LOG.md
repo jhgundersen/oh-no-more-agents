@@ -7826,3 +7826,46 @@ the festive lines, and hats and stripes drawn only with the season. Local
 headless check at `?season=christmas`, level 1: Santa hats on every walker,
 snow over the cave air, the exit wrapped with a bow, "AGENT 001 DELIVERED. NO
 CHIMNEY REQUIRED" on the ticker, no page errors.
+
+**Deployed** at 03:46 after 250 (name="build" content="5721422d"), gated on a
+green full check (1165 tests) and the CRAP gate. It covers 242–250: the
+Harbour art, page weight and the `dist/` ship, the aisles, the librarian, the
+test-hang fix, the voices, first impressions and Christmas. It is the first
+deploy built by `tools/ship.js`.
+
+Verified on production, read-only (every non-GET to `/api/*` failed in the
+browser, throwaway profiles):
+- **`dist/` shipped as built.** All 9 scripts serve as brotli and are
+  byte-identical to `dist/` after decoding, with no comment lines.
+  Cache-Control is `public, max-age=31536000, immutable`. The `?v=` stamps in
+  the served page match the source's `index.html`. The build agrees on the
+  page meta, `src/version.js` and `/api/stats` (5721422d). The page itself
+  differs from `dist/index.html` only by Cloudflare's injected challenge
+  script before `</body>`, which is edge-side and not ours.
+- **Version notice for open tabs.** A tab served the page as the previous
+  build (meta rewritten to f279cc1a) learned the new build from
+  `/api/stats`. When its level ended it reloaded itself into 5721422d. No
+  console errors, no page errors.
+- **Sweepstake and replay** (desktop 1280×900 and phone 390×844 with touch,
+  `?level=5&seed=111`):
+  - Sweepstake: the pick was recorded on both, and both cards say "YOUR PICK
+    AGENT 001 CAME HOME 5TH · CALLED 0 OF 1".
+  - Replay: on the desktop it played on level 9 (an AGI moment). On the phone
+    none of the levels in the 150 s window had a moment worth replaying, so
+    there was none, which is the designed behaviour.
+- **Seasons:** `?season=halloween` gives lanterns, a ghost and "WENT TO THE
+  GREAT /DEV/NULL"; `?season=christmas` gives "AGENT 001 DELIVERED. NO CHIMNEY
+  REQUIRED".
+- **Patch notes:** the tip, the dot, 8 lines and Esc all work at both sizes.
+
+**Load time on production** (`npm run loadtime -- --runs 3`), before (f279cc1a) → after:
+
+| | Before | After |
+|---|---|---|
+| Total on the wire | 390 KB | 250 KB |
+| Draw.js on the wire | 198 KB | 146 KB |
+| Sim.js on the wire | 149 KB | 73 KB |
+| Fast 3G first frame | 3.8 s | 3.0 s |
+| Fast 4G first frame | 1.0 s | 0.86 s |
+
+Still no long tasks.
