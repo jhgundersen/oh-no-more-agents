@@ -5492,3 +5492,38 @@ Verified on production, read-only:
 - **`?daily=2026-10-15`:** level 13, colony 188139894, with the badge and the
   date.
 - No counter writes attempted.
+
+## 280 — 2026-10-15 · Umbrellas up sooner
+
+**Chosen (autonomy):** the Building Site had the lowest home rate of the 20
+biomes since the re-skin (88% against 94%), and that's where I started.
+
+**Found:**
+- **Bosses, not the biome.** On the Building Site's ten levels from 15 to
+  195 the loss is concentrated on level 35, at 73% home and 47% at worst.
+  Every death there is the red team: level 35 is a boss level (every 7th),
+  and its gun boss is posted over the colony's route. Gun bosses are beaten on
+  some layouts and not others; levels 35, 63 and 147 are the worst, at 68–81%
+  home. The re-skin moved the Building Site onto two gun-boss levels.
+- **How the boss kills.** It fires every ~89 ticks and almost never misses.
+  On level 35, 56 deaths in 12 colonies were 25 agents walking, 18 falling a
+  short drop with no canopy open (a clean shot, by design), 7 brawling and 6
+  on crane hooks.
+- **Why so few parries.** Umbrellas were plentiful (13 of 17 floaters left at
+  the end), but parries averaged 2 a run. A walker raises its umbrella against
+  a shot only on a 50% roll.
+
+**Changed:** `BROLLY_PARRY` goes from 50 to 65, so a walker with an umbrella
+sees the muzzle in time about two times in three. It's the game's own rule
+("the round goes into the canopy") turned up, not a new rule. Falls, brawls
+and hooks are unchanged, and so is the ricochet chance on a parry.
+
+**Measured:** playtest 1-200 × 24 against main:
+- home 94.38% → 94.92%, which recovers about 40% of what the re-skin cost;
+- bad endings 41 → 38;
+- no level worse by 6 or more;
+- level 35 261 → 284 home (72% → 79%), so the boss stays the danger;
+- 111 323 → 347, 146 237 → 255, 38 254 → 273, 191 329 → 345.
+
+`test/brolly-kept.test.js` checks the rate comes out at two in three across
+ticks and ids.

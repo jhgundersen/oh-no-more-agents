@@ -4917,7 +4917,7 @@ var BROLLY_STOPS = { rockfall: true, snowball: true, icicle: true }
 // the suit and the umbrella were always going to end up here. In time is a
 // roll, from stable state like the sidearm's, so it costs nobody's random
 // stream; once it is up it stays up for the rest of the burst.
-var BROLLY_PARRY = 50
+var BROLLY_PARRY = 65     // in a hundred: the walker sees the muzzle in time (was 50; see LOG 280)
 
 function umbrellaParries(w, ag, fromX) {
   if (ag.special) return false
