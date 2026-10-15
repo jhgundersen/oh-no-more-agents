@@ -5260,3 +5260,78 @@ match. Conflict-marker and unresolved-merge-file checks are clean, as is
 
 **Next:** ready for tour-art review. Branch commit only; no push, deployment
 or sibling sync.
+
+## 276 — 2026-10-15 · A masthead with colleagues (on a branch)
+
+`codex/logo` starts from approved tour art `2c2193b`.
+
+**Art:** the header now draws the share card's chunky ROM lettering, with
+bevel highlights and a small extrusion. OH NO! uses the selected theme's
+accent; MORE AGENTS uses its foreground. A suited colleague grips the first
+O with one hand and an open umbrella with the other. A dreamer steps beyond
+the last S, following a tiny outlined EXIT thought. Faces, collars, hats,
+coat edges and shoes use the game's existing pixel language. No font,
+bitmap, SVG or asset request is added.
+
+The drawing is 340×64 art pixels: 680×128 CSS pixels on desktop, 340×64 on
+phones. At DPR 1/2, desktop backing sizes are 680×128/1360×256, phone sizes
+340×64/680×128. All lettering, sprites and sway offsets use whole pixels.
+The real heading text stays in the DOM, visually clipped only once the
+canvas is ready; the decorative canvas is aria-hidden. The accessibility
+tree still has a level-one "Oh No! More Agents" heading. Without canvas
+initialisation the ordinary CSS title remains available.
+
+**Idle:** the host caches all lettering and both colleagues on an offscreen
+canvas. A one-second timer blits that cache and draws at most 32 umbrella
+rectangles; only its canopy/shaft move by one art pixel. Initial and dynamic
+prefers-reduced-motion both produce a still neutral pose. The timer stops
+when the header is offscreen, the document hidden or the game fullscreen,
+and resumes on return. Missing observer/motion APIs get a static logo.
+Theme/size/DPR changes rebuild the small cache. There is no simulation
+state, RNG, level timer or gameplay animation change.
+
+**Review:** `/tmp/codex-logo/review/desktop-before-dpr1.png` and
+`desktop-after-dpr1.png`, plus `phone-before-dpr1.png` and
+`phone-after-dpr1.png`, show the full page before/after. Their `-header.png`
+companions give the exact masthead crops. After captures also include DPR 2
+on desktop and phone. At 390px the logo is centred at x25, width340, with no
+page overflow. The two colleagues, grip/umbrella and EXIT thought stay
+inside the canvas. All nine themes have distinct, legible logo colours.
+No page errors.
+
+Browser motion checks record four cached paints over roughly three seconds
+and three distinct idle poses. Reduced motion is stable before animation
+and after a live preference change; offscreen pixels freeze and scrolling
+back resumes them. Pixel tests bound every rectangle and confirm that the
+lettering/colleagues outside the small canopy region never change.
+
+**Isolation/weight:** all twenty biome frames at seed 3/tick 400/res 2
+match the approved tour renderer byte-for-byte, and rendering leaves complete
+world digests unchanged. Sim.js, Palette.js and Outcome.js are untouched.
+The added Draw/web/page code costs 656 + 641 + 105 = **1,402 Brotli bytes**
+(~1.4 KB). The renderer probe peaks at 176 MB RSS under its 256 MB heap.
+
+**Pipeline:** `node tools/logo-art.js <out> [before-public-root]` reuses one
+bounded local browser and ephemeral servers for both versions, both CSS
+sizes and DPR 1/2. Header crops come from the same live pages as full shots. The focused
+three-test set takes 10.31 s, including the timed live-motion checks.
+It uses the existing capped browser helper, explicit readiness/font bounds,
+and cleanup in finally. Queue an immutable validation script: finish caps,
+stamps and commands before the FIFO handoff. The full check emits LCOV
+once, and CRAP reuses it; all heavy work takes the shared test lock. The
+initial all-in-one screenshot helper scored 42.2, so evaluation, viewport
+capture and live preference checks now have separate small functions.
+
+**Validation:** `npm run stamp` is current (Draw `f9c23ae9`, web `e0fd746e`,
+build `f62ff481`). The final capped `npm run check` with LCOV passes all
+**1,257 tests**, zero failures/skips, in **240.29 s**. Factory art remains
+explicitly excluded. The immutable wrapper exports a 2,048 MB Node heap,
+uses `ulimit -v 6000000`, two test workers and 120 s timeouts. Shared-lock
+`npm run crap -- --threshold 30 --use-existing-coverage` passes, maximum
+30.0. Drawing helpers are 100% covered and score at most 6.0; the refactored
+screenshot helpers score at most 13.1 (down from 42.2). All checked source
+hashes match, and `git diff --check`/conflict-marker checks are clean. The
+branch commit is gated on the final green check and CRAP results.
+
+**Next:** ready for header-logo review. Branch commit only; no push,
+deployment or sibling sync.

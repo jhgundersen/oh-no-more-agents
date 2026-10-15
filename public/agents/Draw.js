@@ -19985,3 +19985,71 @@ function drawTourIcon(ctx, pal, i) {
 }
 var DAILY_BADGE_PIXELS = ["..b......b....","..b......b....",".yyyyyyyyyyy..",".yoyyyyyyyoy..",".wwwwwwwwwww..",".wwwwgggwwww..",".wwwgggggwww..",".wwgggggggww..",".wwwgwgwgwww..",".wwwwwbwwwww..",".wwwwwbwbwww..",".wwwwwwbbwww..",".yyyyyyyyyyy..","..oo.....oo..."]
 function drawDailyBadge(ctx,x,y) { drawUiPixels(ctx,DAILY_BADGE_PIXELS,x+1,y+1) }
+
+// The page masthead reuses the share card's chunky ROM lettering. The web
+// host caches this static drawing; only the small umbrella changes at idle.
+var PAGE_LOGO_WIDTH = 340, PAGE_LOGO_HEIGHT = 64
+function drawPageLogoBase(ctx, colours) {
+  ctx.save()
+  ctx.fillStyle=colours.muted
+  drawTransitionText(ctx,"OH NO! MORE AGENTS",172,21,4)
+  var text="OH NO! MORE AGENTS",x=28,y=18
+  for(var i=0;i<text.length;i++) drawLogoLetter(ctx,TRANSITION_GLYPHS[text[i]],x+i*16,y,i<6?colours.accent:colours.foreground)
+  drawLogoHanger(ctx)
+  drawLogoDreamer(ctx,colours)
+  ctx.restore()
+}
+function drawLogoLetter(ctx,rows,x,y,colour) {
+  for(var r=0;r<5;r++) for(var c=0;c<3;c++) {
+    var bit=4>>c
+    if(!(rows[r]&bit)) continue
+    ctx.fillStyle=colour;ctx.fillRect(x+c*4,y+r*4,4,4)
+    if(r===0 || !(rows[r-1]&bit)) {ctx.fillStyle="#f4f4ec";ctx.fillRect(x+c*4,y+r*4,4,1)}
+  }
+}
+function drawLogoHanger(ctx) {
+  ctx.fillStyle="#16161c";ctx.fillRect(35,45,8,14);ctx.fillRect(33,39,3,13)
+  ctx.fillStyle="#f0c8a0";ctx.fillRect(33,37,3,2);ctx.fillRect(34,39,1,10);ctx.fillRect(35,49,2,3)
+  ctx.fillStyle="#8792ad";ctx.fillRect(35,43,7,2);ctx.fillRect(34,45,10,1)
+  ctx.fillStyle="#f0c8a0";ctx.fillRect(36,46,6,4)
+  ctx.fillStyle="#16161c";ctx.fillRect(40,47,1,1)
+  ctx.fillStyle="#f4f4ec";ctx.fillRect(36,51,6,1)
+  ctx.fillStyle="#626d89";ctx.fillRect(36,52,6,7);ctx.fillRect(42,53,8,2)
+  ctx.fillStyle="#9ca9c4";ctx.fillRect(36,53,1,5)
+  ctx.fillStyle="#e87488";ctx.fillRect(39,52,1,4)
+  ctx.fillStyle="#f0c8a0";ctx.fillRect(50,52,2,2)
+  ctx.fillStyle="#626d89";ctx.fillRect(36,59,2,3);ctx.fillRect(41,59,2,2)
+  ctx.fillStyle="#aab4cb";ctx.fillRect(35,62,3,1);ctx.fillRect(41,61,3,1)
+}
+function drawLogoDreamer(ctx,colours) {
+  // Mirage EXIT thought, then a colleague trusting the air past the last S.
+  ctx.fillStyle=colours.muted;ctx.fillRect(315,2,23,12)
+  ctx.fillStyle=colours.background;ctx.fillRect(316,3,21,10)
+  ctx.fillStyle=colours.accent;ctx.fillRect(318,2,5,1);ctx.fillRect(328,2,5,1);ctx.fillRect(315,5,1,5);ctx.fillRect(337,5,1,5)
+  drawTransitionText(ctx,"EXIT",326,6,1)
+  ctx.fillRect(320,17,2,2);ctx.fillRect(318,21,1,1)
+  ctx.fillStyle="#16161c";ctx.fillRect(317,26,9,13)
+  ctx.fillStyle="#a49483";ctx.fillRect(318,23,6,2);ctx.fillRect(316,25,10,1)
+  ctx.fillStyle="#f0c8a0";ctx.fillRect(319,26,6,5)
+  ctx.fillStyle="#16161c";ctx.fillRect(324,27,1,1)
+  ctx.fillStyle="#f4f4ec";ctx.fillRect(318,32,7,1)
+  ctx.fillStyle="#626d89";ctx.fillRect(318,33,7,6);ctx.fillRect(324,34,5,2)
+  ctx.fillStyle="#f0c8a0";ctx.fillRect(329,34,2,2)
+  ctx.fillStyle=colours.accent;ctx.fillRect(321,33,1,3)
+  ctx.fillStyle="#626d89";ctx.fillRect(316,38,4,2);ctx.fillRect(313,40,4,1);ctx.fillRect(323,39,3,3)
+  ctx.fillStyle="#aab4cb";ctx.fillRect(310,41,6,1);ctx.fillRect(325,42,5,1)
+}
+function drawLogoUmbrella(ctx,colours,phase) {
+  var sway=[0,1,0,-1][phase%4],x=53+sway
+  ctx.save()
+  ctx.fillStyle="#aab4cb"
+  for(var y=44;y<53;y++) {
+    var stem=Math.round(51+(x-51)*(53-y)/9)
+    ctx.fillRect(stem,y,1,1)
+  }
+  ctx.fillStyle="#16161c";ctx.fillRect(x-3,39,6,1);ctx.fillRect(x-6,40,12,1);ctx.fillRect(x-9,41,18,2);ctx.fillRect(x-10,43,20,3)
+  ctx.fillStyle=colours.accent;ctx.fillRect(x-3,40,6,1);ctx.fillRect(x-6,41,12,1);ctx.fillRect(x-9,42,18,2)
+  ctx.fillRect(x-9,44,4,2);ctx.fillRect(x-2,44,5,2);ctx.fillRect(x+6,44,3,2)
+  ctx.fillStyle="#e9edf7";ctx.fillRect(x-3,40,4,1);ctx.fillRect(x-6,41,2,1);ctx.fillRect(x-1,41,1,3)
+  ctx.restore()
+}
