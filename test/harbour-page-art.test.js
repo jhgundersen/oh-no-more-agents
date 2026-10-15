@@ -235,9 +235,9 @@ test("harbour beam preserves opaque faces, shirts, eyes and umbrellas", () => {
     assert.ok(checked >= 30, "real opaque actor pixels compared")
   }
 })
-test("original Harbour ground, nets, lamps, sea, ferries, hazards and exit retain bytes", () => {
+test("Harbour native components retain bytes and page components match the reviewed steamer", () => {
   for (const [resolutions, expected] of [
-    [[undefined, 1], "c94428a91fb2b4c8fa623cfc3eac8eaf3ae3a57aaf65cd54779942ddb879ee59"], [[2], "3ce0bed508104068a955a653e1a3e56839d7432d8aeae3c0e0a00f507464d327"]
+    [[undefined, 1], "c94428a91fb2b4c8fa623cfc3eac8eaf3ae3a57aaf65cd54779942ddb879ee59"], [[2], "0194ef5d2ff28e2c40239d1a4005718a2b18baa4dfdc5eecb065118e42ddbd84"]
   ]) {
     const hash = createHash("sha256")
     for (const name of Object.keys(THEMES)) for (const level of levels)

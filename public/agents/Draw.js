@@ -15456,6 +15456,7 @@ function harbourFerryDrawing(w, tr) {
     dockY: (tr.y + 1) * w.k.CELL, open: tr.phase === "wait" || tr.phase === "drop" }
 }
 function drawHarbourFerry(ctx, w, pal, tr) {
+  if (w.res === 2) return drawPageFerry(ctx, w, pal, tr)
   var g = harbourFerryDrawing(w, tr)
   ctx.save()
   // Cell slicing keeps quay stone in front of the hull, just like the metro.
@@ -15470,6 +15471,143 @@ function drawHarbourFerry(ctx, w, pal, tr) {
   drawHarbourFerrySmoke(ctx, w, pal, tr, g)
   drawHarbourFerryWake(ctx, w, pal, tr, g)
   ctx.restore()
+}
+// A little night steamer. Same water/quay anchors and passenger seats as the
+// native launch; page details never change the simulation or its terrain.
+var FERRY_BRASS = "#b99e66", FERRY_LIGHT = "#f1dc9e", FERRY_SHADE = "#9d967d"
+var FERRY_GREEN = "#9bc8ac", FERRY_STEAM = "#bac4bd"
+var FERRY_FLAG = [0, 0.5, 0, -0.5]
+function drawPageFerry(ctx, w, pal, tr) {
+  var g = harbourFerryDrawing(w, tr)
+  // Keep the new secondary motion quiet with reduced motion. Travel, docking
+  // and actual passengers still follow the real ferry, including its return.
+  if (w.reducedMotion) g.y = w.pits[tr.pit].surfaceY * w.k.CELL
+  ctx.save()
+  var ink = { fillStyle: HARBOUR_INK, fillRect: function(x, y, width, height) {
+    ctx.fillStyle = this.fillStyle; subwayTrainRect(ctx, w, x, y, width, height)
+  } }
+  drawPageFerryHull(ink, g.x, g.y)
+  drawPageFerryCabin(ink, g.x, g.y, tr.dir)
+  drawPageFerryFlag(ink, w, tr, g)
+  drawHarbourPassengers(ink, tr, g.x, g.y)
+  drawHarbourGangway(ink, g, g.open)
+  drawPageFerryLights(ctx, w, tr, g)
+  if (!w.reducedMotion) {
+    drawPageFerrySteam(ctx, w, tr, g)
+    drawPageFerryWake(ctx, w, pal, tr, g)
+  }
+  ctx.restore()
+}
+function drawPageFerryHull(ctx, x, y) {
+  ctx.fillStyle = HARBOUR_INK
+  ctx.fillRect(x - 20, y - 5, 40, 3); ctx.fillRect(x - 19, y - 2, 38, 1)
+  ctx.fillRect(x - 17.5, y - 1, 35, 2); ctx.fillRect(x - 14, y + 1, 28, 2)
+  ctx.fillStyle = HARBOUR_HULL
+  ctx.fillRect(x - 19, y - 4, 38, 2); ctx.fillRect(x - 17, y - 2, 34, 2)
+  ctx.fillStyle = "#57777a"
+  ctx.fillRect(x - 17, y - 3.5, 34, 0.5)
+  ctx.fillStyle = HARBOUR_RED; ctx.fillRect(x - 14, y + 1, 28, 1)
+  ctx.fillStyle = FERRY_SHADE; ctx.fillRect(x - 19.5, y - 5, 39, 1)
+  ctx.fillStyle = HARBOUR_CREAM; ctx.fillRect(x - 18, y - 5, 36, 0.5)
+  // Hanging tyres rather than black rectangular holes in the hull.
+  for (var i = -1; i <= 1; i += 2) {
+    ctx.fillStyle = FERRY_BRASS; ctx.fillRect(x + i * 13, y - 5, 0.5, 1.5)
+    ctx.fillStyle = HARBOUR_INK
+    ctx.fillRect(x + i * 13 - 1, y - 3.5, 2.5, 3.5)
+    ctx.fillRect(x + i * 13 - 1.5, y - 3, 3.5, 2.5)
+    ctx.fillStyle = "#647a79"; ctx.fillRect(x + i * 13 - 0.5, y - 3, 1, 0.5)
+    ctx.fillStyle = HARBOUR_HULL; ctx.fillRect(x + i * 13 - 0.5, y - 2, 1, 1)
+  }
+}
+function drawPageFerryCabin(ctx, x, y, dir) {
+  ctx.fillStyle = HARBOUR_INK
+  ctx.fillRect(x - 16, y - 15, 32, 10)
+  ctx.fillStyle = FERRY_SHADE; ctx.fillRect(x - 15, y - 14, 30, 9)
+  ctx.fillStyle = HARBOUR_CREAM; ctx.fillRect(x - 14.5, y - 14, 29, 7.5)
+  ctx.fillStyle = FERRY_BRASS; ctx.fillRect(x - 17, y - 15.5, 34, 1)
+  ctx.fillStyle = FERRY_LIGHT; ctx.fillRect(x - 15, y - 15.5, 30, 0.5)
+  for (var i = 0; i < 3; i++) drawPageFerryWindow(ctx, x - 13 + i * 9, y - 12)
+  ctx.fillStyle = FERRY_SHADE; ctx.fillRect(x - 14, y - 6, 28, 0.5)
+  drawPageFerryWheelhouse(ctx, x + dir * 8, y)
+  ctx.fillStyle = HARBOUR_INK; ctx.fillRect(x - dir * 8 - 3, y - 23, 6, 8)
+  ctx.fillStyle = HARBOUR_RED; ctx.fillRect(x - dir * 8 - 2, y - 22, 4, 7)
+  ctx.fillStyle = "#c17c5a"; ctx.fillRect(x - dir * 8 - 1.5, y - 21.5, 0.5, 5.5)
+  ctx.fillStyle = FERRY_BRASS; ctx.fillRect(x - dir * 8 - 2, y - 20, 4, 1)
+  ctx.fillStyle = HARBOUR_INK; ctx.fillRect(x - dir * 8 - 3.5, y - 23, 7, 1.5)
+  ctx.fillStyle = FERRY_SHADE; ctx.fillRect(x - dir * 8 - 3, y - 23, 6, 0.5)
+  drawHarbourRing(ctx, x + dir * 16, y - 10, HARBOUR_RED)
+  ctx.fillStyle = FERRY_LIGHT
+  ctx.fillRect(x + dir * 16 - 1, y - 12, 2, 0.5)
+  ctx.fillRect(x + dir * 16 - 1, y - 8.5, 2, 0.5)
+}
+function drawPageFerryWindow(ctx, x, y) {
+  ctx.fillStyle = FERRY_BRASS; ctx.fillRect(x - 0.5, y - 0.5, 9, 7)
+  ctx.fillStyle = HARBOUR_INK; ctx.fillRect(x, y, 8, 6)
+  ctx.fillStyle = HARBOUR_GLASS
+  ctx.fillRect(x + 2, y, 4, 6); ctx.fillRect(x + 1, y + 1, 6, 4)
+  ctx.fillStyle = FERRY_LIGHT; ctx.fillRect(x + 2, y + 0.5, 4, 0.5)
+}
+function drawPageFerryWheelhouse(ctx, x, y) {
+  ctx.fillStyle = HARBOUR_INK; ctx.fillRect(x - 4.5, y - 21, 9, 6.5)
+  ctx.fillStyle = HARBOUR_CREAM; ctx.fillRect(x - 4, y - 20, 8, 5.5)
+  ctx.fillStyle = FERRY_BRASS; ctx.fillRect(x - 5.5, y - 21.5, 11, 1)
+  ctx.fillStyle = FERRY_LIGHT; ctx.fillRect(x - 4, y - 21.5, 8, 0.5)
+  ctx.fillStyle = HARBOUR_INK; ctx.fillRect(x - 3.5, y - 19.5, 7, 3.5)
+  ctx.fillStyle = HARBOUR_GLASS; ctx.fillRect(x - 3, y - 19, 6, 2.5)
+  ctx.fillStyle = FERRY_LIGHT; ctx.fillRect(x - 2.5, y - 19, 2, 0.5)
+  ctx.fillStyle = FERRY_BRASS; ctx.fillRect(x, y - 19.5, 0.5, 3.5)
+}
+function drawPageFerryFlag(ctx, w, tr, g) {
+  var x = g.x + tr.dir * 16, y = g.y - 24
+  var flap = w.reducedMotion ? 0 : FERRY_FLAG[Math.floor(w.ticks / 6) % 4]
+  ctx.fillStyle = FERRY_SHADE; ctx.fillRect(x, y, 0.5, 10)
+  ctx.fillStyle = HARBOUR_RED; ctx.fillRect(x - 3, y + 1, 3, 1)
+  ctx.fillRect(x - 4, y + 2 + flap, 3, 1)
+  ctx.fillStyle = HARBOUR_CREAM; ctx.fillRect(x - 3, y + 1.5, 2.5, 0.5)
+}
+function drawPageFerryLights(ctx, w, tr, g) {
+  var opacity = ctx.globalAlpha, p = w.pits[tr.pit]
+  ctx.fillStyle = FERRY_GREEN
+  subwayTrainRect(ctx, w, g.x + tr.dir * 11 - 0.5, g.y - 17, 1, 1)
+  ctx.fillStyle = FERRY_LIGHT
+  subwayTrainRect(ctx, w, g.x - tr.dir * 16 - 0.5, g.y - 6.5, 1, 1)
+  // Short broken glimmers, well below the passenger windows and quay walkers.
+  for (var i = 0; i < 3; i++) {
+    var dx = w.reducedMotion ? 0 : ((Math.floor(w.ticks / 5) + i) % 3 - 1) * 0.5
+    ctx.globalAlpha = opacity * (0.32 - i * 0.07)
+    ferryWaterMark(ctx, w, p, g.x + tr.dir * 11 + dx - 1.5, g.y + 4 + i * 2, 3 - i * 0.5)
+  }
+  ctx.globalAlpha = opacity
+}
+function drawPageFerrySteam(ctx, w, tr, g) {
+  var opacity = ctx.globalAlpha
+  ctx.fillStyle = FERRY_STEAM
+  for (var i = 0; i < 3; i++) {
+    var age = (w.ticks + i * 14) % 42, size = 1.5 + Math.floor(age / 14) * 0.5
+    var x = g.x - tr.dir * (8 + Math.floor(age / 4) * 0.5), y = g.y - 25 - Math.floor(age / 3) * 0.5
+    ctx.globalAlpha = opacity * (1 - age / 42) * 0.3
+    moteFineRect(ctx, w, x - Math.floor(size) / 2, y, size, 1)
+    moteFineRect(ctx, w, x - 0.5, y - 0.5, 1.5, 2)
+  }
+  ctx.globalAlpha = opacity
+}
+function ferryWaterMark(ctx, w, p, x, y, width) {
+  var left = p.x0 * w.k.CELL, right = (p.x1 + 1) * w.k.CELL
+  x = Math.max(left, x); width = Math.min(width, right - x)
+  if (width <= 0 || y < p.surfaceY * w.k.CELL || y + 0.5 > w.k.ROWS * w.k.CELL) return
+  moteFineRect(ctx, w, x, y, width, 0.5)
+}
+function drawPageFerryWake(ctx, w, pal, tr, g) {
+  if (!(tr.v > 0) || (tr.phase !== "run" && tr.phase !== "back")) return
+  var p = w.pits[tr.pit], dir = tr.phase === "back" ? -tr.dir : tr.dir
+  var opacity = ctx.globalAlpha
+  ctx.fillStyle = pal.poolGlint; ctx.globalAlpha = opacity * 0.45
+  for (var i = 0; i < 5; i++) {
+    var spread = (w.ticks + i * 4) % 17
+    var x = g.x - dir * (19 + spread) - 1
+    ferryWaterMark(ctx, w, p, x, g.y + 2.5 + i % 3, 2 + spread * 0.5)
+  }
+  ctx.globalAlpha = opacity
 }
 function drawHarbourFerryHull(ctx, x, y) {
   ctx.fillStyle = HARBOUR_INK

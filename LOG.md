@@ -7796,3 +7796,124 @@ which passed (3 min, levels 1–7).
 **After:** `npm run verify -- --previous dde21043` passed: shipped files,
 build agreement, the open tab reloading, level 20, `?daily&full=1`, Next
 during a standup, and the patch notes by keyboard (5 counter writes refused).
+
+## 332 — 2026-10-15 · The night ferry (on a branch)
+
+**Why:** watched real Harbour crossings, Building Site crane rides and Clock
+Tower gates again, on desktop and phone at Steady/Brisk speeds. The crane
+already has a characterful rider pose, and the gate has its little working
+dial; the ferry's flat cream cabin and square smoke were the plainest moving
+part beside their finished biome. Branch `codex/ferry-art`, from then-current
+main `127f38b`. Kept that base fixed during validation; the approved vintage
+train pass was still awaiting its separate merge.
+
+**Change:** res 2 turns the launch into a little night steamer: a stepped,
+shaded teal hull with rubbing strake, red waterline and two hanging tyre
+fenders; brass-edged portholes and roof; an inset, divided wheelhouse window;
+a banded funnel; a small fluttering pennant; steady green/warm lamps, short
+broken water glimmers, rounded steam and a spreading wake. These are pixel
+rectangles in the existing Harbour colours, with half-pixel bevels. No bitmap,
+filter, new game canvas, per-agent lookup, state, timer, listener or RNG.
+
+Boarding, alighting, direction, return travel and the sea/quay anchors stay
+with the existing ferry recipe. Every real rider retains a separate head in
+the original lit seats; no decorative passenger. Quay cells occlude the entire
+boat, and steam, lights and wake also test current air. New water marks are
+clipped to the actual pit. Corridor agents paint afterwards, so dark suits,
+faces and umbrellas remain in front. Reduced motion holds the boat at its
+mean waterline with a steady flag/reflection and no steam/wake animation;
+real travel, docking, lamps and riders remain. Native res 1/default and share
+res 3 use the original renderer byte-for-byte. Sim.js is unchanged.
+
+**Evidence:** `/tmp/codex-ferry-art/strips/index.html` animates before/after
+milestones of genuine occupied crossings in both directions, seed 3, levels
+39 and 59. Pick-up, rolling, braking, docking, alighting and empty return are
+selected milestones, explicitly not equal-time frames. Per-level sheets show
+native and page frames; `strips/contact-sheet.png` compares loaded and docked
+boats. Level 59 also covers the narrow dock: its hull stays in the water and
+behind the quay. Level 19's seed-3 colony bypasses its ferry, so it was rejected
+as an action fixture rather than populated with fake riders.
+
+`/tmp/codex-ferry-art/page-sheet.png` shows actual desktop/phone board sizes
+and 3x crops: occupied level 39 desktop, level 39 docking on phone, level 59's
+empty return desktop, Christmas level 59 on phone, Halloween level 39 docking
+on phone, and reduced-motion level 39 on phone. The complete board is visible
+in phone screenshots. Page worlds and board/stage geometry match in every
+pair, with no horizontal overflow and all pixel differences confined to the
+ferry and its nearby water. Metrics: `pages.json`, `presentation-check.json`.
+Before assets are pinned to the branch base, not a moving main ref.
+
+**Pipeline:** `tools/ferry-art.js` bounds the search for a natural occupied
+crossing at 12,000 ticks and every journey milestone at 600 (100 for return).
+Terrain caches are keyed by version, resolution and palette; actors paint
+straight into translated 112x64 art-pixel crops. A regression compares them
+with full-frame crops. All **64 before/after frames take 0.46 s / 171 MB peak
+RSS**. One browser captures all twelve page views; composition reuses their
+PNGs, including viewport-clipped phone boards. The temporary watch helper's
+initial extra bracket was corrected after stopping only its queued job;
+syntax checking now gates queue entry under `set -e`.
+
+The inherited Harbour picture helper now caps recording at 25,000 calls and
+compares compact pixel hashes instead of raw buffers, avoiding huge failure
+diffs. Its raw bytes remain solely for the original compact component SHA.
+These safety changes match the approved train branch's helper edits.
+Searched every test file for ferry component guards before the full gate.
+`component-proof.json` reconstructs both original component pins from the
+saved renderer: native **c94428a9…** is unchanged; only the reviewed page
+expectation changes. The independent ferry aggregate is **0291f580…** before
+and after across default/1/3 resolutions, phases, directions and five palettes.
+
+**Cost:** one existing ferry per crossing, three steam puffs, five wake
+strokes, three reflection strokes and a four-pose shared pennant table.
+Fixtures bound assembled cell-sliced paint at 512 calls. No persistent new
+state or allocation pool. Draw.js adds **1,373 gzip bytes** before shipping's
+comment strip.
+
+Real-page FPS at Brisk speed, five seconds per layout, baseline/final:
+level 39 from tick 350 and level 59 from tick 680. Both versions and levels
+**60 median / 60 p5 FPS, 17 ms worst, zero long-task time**. CPU level 39
+**11% / 11%**, level 59 **11% / 12%**, with up to **15 / 10 cast members**.
+The sampled windows include the occupied crossing, approach, dock and return,
+not just the opening. One CPU point is ordinary short-sample variation, not
+a claimed speedup. Logs: `fps-before-39.log`, `fps-after-39.log`,
+`fps-before-59.log`, `fps-after-59.log`.
+
+**Focused:** **31/31 pass, 5.01 s**, covering the new ferry pass, both older
+Harbour art suites and ferry mechanics. New checks cover unchanged native and
+share bytes; deterministic, read-only, RNG-free real journeys in five palettes;
+passenger increments in assembled windows; inherited alpha/context balance;
+half-pixel geometry and paint bounds; reduced-motion steadiness; wake/reflection
+water bounds; quay occlusion; crop/cache equivalence; bounded fixture failure;
+and the complete review generator. The first focused run was 29/31: corrected
+two new test assumptions (count cell-sliced paint, and put the wake fixture
+mid-water rather than at a berth where the trailing wake is correctly clipped).
+No game source changed after that run; archived as `focused-first.log`.
+Existing rendered/unrendered live ferry-play digests also pass.
+
+**Full gate:** **1,397 passed, zero failures/cancellations/skips,
+337.94 s**, with coverage and Factory art included. CRAP threshold **30**
+passed using that same LCOV, maximum **30.0**. All new runtime art helpers
+have **100% coverage**, maximum **6.0** (`drawPageFerryWake`); the others
+are **1.0–4.0**. Journey/comparison orchestration is **13.0**, fully covered;
+`ferryFrame` is **3.1 / 75%**. Completion was reported immediately and our
+shared-lock turn released.
+
+The persistent FIFO job used a 3 GB real-memory service cap, 2,048 MB Node
+heap, `ulimit -v 6000000`, two workers and 120-second per-test timeouts.
+Source/tests stayed frozen from queue entry through the gate; CRAP reused
+coverage rather than starting a second full run. Logs:
+`/tmp/codex-ferry-art/check.log`, `crap.log`, `queue.log`.
+`npm run stamp`, its check and `git diff --check` pass. The source in the
+screenshots and FPS runs is the exact final game source.
+
+**Next:** review and merge this branch. No push or deployment from this pass.
+
+## 333 — 2026-10-15 · Merged the night steamers
+
+Reviewed and merged by the loop: codex/ferry-art (6d9acef, entry 332),
+`--no-ff`, as approved. Codex's entry is renumbered 332 and the page is
+re-stamped.
+- **Draw.js only.** The panel's (res 1) and the share card's ferry pixels
+  are pinned unchanged by a new test across directions, phases and palettes.
+  Codex reconstructed the old native Harbour hash (c94428a9…), which is
+  unchanged; only the page's moved.
