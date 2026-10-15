@@ -379,9 +379,10 @@
     var top = Math.max(1, Math.min(Math.floor(avail / WIDTH), full ? 6 : 4))
     for (var scale = top; scale > 1; scale--) {
       applyScale(scale)
-      if (boardFits(full)) return
+      if (boardFits(full)) { renderCaption(); return }
     }
     applyScale(1)
+    renderCaption()
   }
 
   // Accepts ?full, ?full=1 and ?fullscreen; ?full=0 and ?full=false are an
@@ -840,7 +841,7 @@
   // Keep the board clear and give its commentary five real seconds, including
   // at Brisk/fast-forward. No timer, animation, live-region chatter or per-frame
   // DOM rewrite; pausing leaves the latest line available to read.
-  var captionWorld = null, captionNote = null, captionUntil = 0
+  var captionWorld = null, captionNote = null, captionUntil = 0, captionProfile = ""
   function reportHeld() {
     return !running && world && world.done && !world.replaying && !replay && !standup
   }
@@ -849,16 +850,21 @@
   // in-board ticker back: a reserved caption row cost a 720p kiosk its 2x.
   function renderCaption() {
     if (!el.caption) return
-    if (captionWorld !== world) { captionWorld = world; captionNote = null; captionUntil = 0 }
+    if (captionWorld !== world) {
+      captionWorld = world; captionNote = null; captionUntil = 0
+      captionProfile = skyCardCaption(world)
+    }
     var note = feedNotice(world), now = performance.now()
     if (note && note !== captionNote) { captionNote = note; captionUntil = now + 5000 }
     var held = reportHeld()
-    var active = held || captionNote && !world.done && !world.replaying && !replay && !standup && (!running || now < captionUntil)
-    var text = held ? "Report held · Space or tap to resume" : active ? captionNote.text : ""
+    var available = !world.done && !world.replaying && !replay && !standup
+    var event = available && captionNote && (!running || now < captionUntil)
+    var profile = el.stage.dataset.boardScale === "1" ? captionProfile : ""
+    var text = held ? "Report held · Space or tap to resume" : available ? (event ? captionNote.text : profile) : ""
     if (el.captionText.textContent !== text) {
       el.captionText.textContent = text
-      el.caption.classList.toggle("empty", !active)
-      el.caption.setAttribute("aria-hidden", active ? "false" : "true")
+      el.caption.classList.toggle("empty", !text)
+      el.caption.setAttribute("aria-hidden", text ? "false" : "true")
     }
   }
 

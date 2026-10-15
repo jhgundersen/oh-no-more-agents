@@ -6828,24 +6828,6 @@ based on 1081c49), `--no-ff`, as approved. Codex's entry is renumbered from
 **Merge check:** against the branch, the merged code differs only in main's
 own 305 and 308 (Sim.js) and the mission test's seeds.
 
-## 313 — 2026-10-15 · Deploy (10:44)
-
-**Deployed** build 1e1a7406 (version d5579b3b), replacing f45a1cb9. It
-covers 303–310:
-- the readable report card;
-- the wall blocker standing down (305);
-- the clear held report;
-- fired blasts at their own height (308);
-- the readable standup.
-
-**Before:** the last gate (1,362 tests), then `npm run smoke` on the clean
-tree, which passed (3 min, levels 1–7). 311 and 312 were stashed so they
-ride the next deploy, as asked.
-
-**After:** `npm run verify -- --previous f45a1cb9` passed: shipped files,
-build agreement, the open tab reloading, level 20, `?daily&full=1`, Next
-during a standup, and the patch notes by keyboard (5 counter writes refused).
-
 ## 311 — 2026-10-15 · Wait at a lip over a blast, not over a fence
 
 **Chosen:** 308's "Next". Level 72's colony walked off the end of floor 36
@@ -6934,3 +6916,141 @@ unless an umbrella is going". Its "umbrella on the toolbar: go on" case was
 built over a bottomless drop, which is the case this entry forbids. The test
 now checks a bottomless drop first (stop, even with an umbrella), then puts
 a floor 40 rows down for the old three cases.
+
+## 313 — 2026-10-15 · Deploy (10:44)
+
+**Deployed** build 1e1a7406 (version d5579b3b), replacing f45a1cb9. It
+covers 303–310:
+- the readable report card;
+- the wall blocker standing down (305);
+- the clear held report;
+- fired blasts at their own height (308);
+- the readable standup.
+
+**Before:** the last gate (1,362 tests), then `npm run smoke` on the clean
+tree, which passed (3 min, levels 1–7). 311 and 312 were stashed so they
+ride the next deploy, as asked.
+
+**After:** `npm run verify -- --previous f45a1cb9` passed: shipped files,
+build agreement, the open tab reloading, level 20, `?daily&full=1`, Next
+during a standup, and the patch notes by keyboard (5 counter writes refused).
+
+## 314 — 2026-10-15 · Readable hero introductions (on a branch)
+
+**Brief / choice:** another autonomous presentation improvement after standup
+approval. At phone size the hero's sky-card name was 8px and its biography 7px.
+Chosen first: give the hero a readable introduction in the existing caption
+strip between live events. No extra row, popup or board overlap.
+
+**Branch:** `codex/hero-intros`, based on main's approved standup merge `8aeb786`.
+Started from current main `f03adc2`; fast-forwarded when the standup merged.
+Kept main's complete log and fired-blast correction. Autostash conflicts were
+only generated stamps, regenerated against the files. No simulation changes
+from this pass.
+
+**Watched first:** fresh eight-second local runs, frames at three/eight seconds:
+phone Factory at Steady; desktop Trench at Brisk; phone Halloween Skyscraper at
+Brisk; desktop Christmas Data Center at Steady. Seed 3, real clocks; inspected
+all four final frames and metrics in `/tmp/codex-watch-third/`. Auto Complete's
+phone card made the tiny biography especially clear. No browser extension
+surfaces were available, so used the repository's bounded local Chromium helper.
+
+**Changed:** the name and selected biography appear in the existing **12px**
+caption style on boards displayed at **1×**, including short desktop windows.
+The full original wording is retained. Larger boards keep their existing,
+already readable sky card; the added introduction clears immediately on resize
+and returns when the board fits at 1× again. Fullscreen retains its existing
+caption-free layout. The original sky card, portrait, hatch, mission and event
+banners are untouched, at both render resolutions.
+
+Live feed captions keep priority, including their five real seconds and paused
+reading hold. When an event expires, the biography returns. New levels select
+their own introduction. A level without a hero leaves the row empty; Deep
+Learning, which has no biography in the current table, shows its name alone.
+Reports/replays/standups still clear normal commentary, and a held report still
+gets its resume hint. The quiet note remains `aria-live=off`; its broader
+accessible label is now **Colony commentary**. No input/focus changes.
+
+**Cheap:** the introduction is selected **once per world** and cached in the
+host, outside simulation state. A live browser check measures one selection,
+zero repeated caption DOM writes across repeated renders, and no world change.
+The pure helper tests forbid RNG draws. No assets, nodes, timers, listeners or canvas drawing added. Public
+Draw/web/index source gzip increase against main: **199 bytes**. Resizing uses
+the existing fit handler and refreshes the caption after the final scale choice;
+there is no per-frame layout measurement. Original sky-card snapshots remain
+exact at res 1 and 2.
+
+**Evidence:** `/tmp/codex-hero-intros/after/contact-sheet.png`, before/after at
+actual CSS size, including desktop: Cloud Provider on desktop; Auto Complete
+on a 390px phone; the longest Prompt Injection biography on a 360px Library;
+Halloween Stack Overflow on Rooftops; Christmas Speculative Decoder in the
+Data Center; Deep Learning in landscape Trench. Explicit hero/fact fixtures,
+seed 3, tick 200; before/after use the same cast and wording. Inspected the
+original phone, 360px, landscape and desktop screenshots. The longest copy fits
+two lines; board/stage geometry matches before exactly. The desktop's added
+caption stays empty as intended. All six original PNGs and measured boxes are
+in `before/` and `after/`; original public files in `baseline/public/`.
+
+**Pipeline:** reused `tools/captions.js` instead of another browser harness.
+It now accepts view/setup/check callbacks; comparison sheets derive their
+height from loaded images and optionally preserve actual CSS size in both
+columns. The six-view sheet is 2,620×4,956, so its last phone/landscape frames
+are retained. Existing capture defaults remain. The small `tools/hero-intros.js`
+wrapper pins hero/fact fixtures, settles decorative HUD transitions, and tests
+all **231** canonical introductions in one real 336×30px caption box (the
+360px phone width), rather than navigating once per biography. It also checks
+real desktop→phone resizing. All setup loops and polling are bounded; the same
+one browser/server closes after the run. The original caption tool also ran
+against the older baseline page, with no page errors and its original empty
+expired-note result; metadata probes handle its absent new helper.
+
+**Focused checks:** **21 passes, zero failures/skips, 10.92 s**. Complete
+canonical copy and pick wrapping; missing biography/absent hero handling;
+read-only/no-RNG selection in twenty biomes at both resolutions; exact original
+sky-card snapshots. Actual desktop/390/360/landscape/seasonal layouts; all 231
+biographies fit; cache/no-rewrite counts; unchanged stage height with/without a
+hero; same world digest across real resizes; live-event priority and expiry;
+paused reading; report/replay/standup/navigation cleanup. Existing sky, report
+hold, standup, keyboard/accessibility and nine-theme page contrast checks pass.
+`npm run stamp` refreshed Draw/web/page/build stamps. Browser evidence has no
+page errors; `git diff --check` passed.
+
+**Gate/tool correction:** the first full check and coverage passed all **1,362**
+tests in **327.61 s**. CRAP then reported **77.2** for the serialized browser
+fixture: it executed in Chromium while Node attributed only 5.6% coverage to its
+original function. Changed the new setup API to execute its Node callback
+directly and send browser work through the evaluator, matching the existing
+caption lifecycle pattern. This keeps the actual browser assertions and images
+and makes the Node orchestration path directly covered. The unchanged game
+code needed no fix. The revised fixture/caption checks passed **7/7 in 2.82 s**;
+evidence was regenerated, and the full gate was rerun against the revised tool.
+First-gate logs are retained as `check-first.log` / `crap-first.log`.
+
+**Full checks:** the final `npm run check` with coverage passed **1,362 tests,
+zero failures/skips, 327.09 s**, Factory art included. CRAP threshold 30 passed
+with that same coverage, maximum **30.0**. `skyCardCaption` is **7.0** at 100%
+coverage; the directly executed fixture callback is **1.0** at 100%. The shared
+capture function is **8.3**, and hero lifecycle checks **7.0**. No further game
+changes were needed. Both full gates were serialized through the shared FIFO
+lock, with Node heap 2,048 MB, `ulimit -v 6000000`, two workers and 120-second
+test timeouts; CRAP reused each completed coverage run. Final completion was
+reported immediately. `git diff --check` and all script/build stamp checks
+passed. Final logs: `/tmp/codex-hero-intros/check-final.log`, `crap-final.log`,
+`fixture-final.log`, `evidence-validated.log`.
+
+**Next:** review and merge this branch; no push or deployment from this pass.
+
+## 315 — 2026-10-15 · Merged the readable hero intros
+
+Reviewed and merged by the loop: codex/hero-intros (9325eb6, entry 314),
+`--no-ff`, as approved.
+- **LOG:** Codex's entry is renumbered from 311 to 314. Main's 311–313 are
+  put in number order: 311 and 312 were committed after the 10:44 deploy
+  that 313 logs, but were written before it.
+- **Stamps:** re-stamped.
+- **One risk checked:** the branch calls `renderCaption()` from `fitBoard`,
+  and `feedNotice(world)` would throw with no world. Every `fitBoard` caller
+  (boot, `afterFullscreen`, resize) runs after the boot's `newLevel`, so the
+  world always exists by then.
+- **Fullscreen unchanged:** the hero line appears only at board scale 1, and
+  fullscreen hides the caption row (295).
