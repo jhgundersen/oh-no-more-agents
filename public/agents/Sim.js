@@ -11289,7 +11289,11 @@ function tallyAgent(w, counts, ag) {
 // far it wandered first. Its best distance was set before the detour, so idle
 // had long passed 300 and the stall cutoff ended level 138 with the last agent
 // half way back along the ledge, walking at the exit.
-var LONG_RUN = 12
+// Six, was twelve: since 335 the colony counts as stuck after 30 still ticks,
+// about eight cells of walking, and on level 204 the last one out had climbed
+// onto the ledge above the door and walked eight cells toward it when the
+// cutoff ended the level (LOG 375).
+var LONG_RUN = 6
 function longWayHome(w, ag) {
   if (ag.runDir !== ag.dir) { ag.runDir = ag.dir; ag.runFrom = ag.x }
   return facingHome(w, ag) && Math.abs(ag.x - ag.runFrom) >= LONG_RUN
