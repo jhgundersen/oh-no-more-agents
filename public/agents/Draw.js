@@ -5338,8 +5338,13 @@ function drawHatch(ctx, w, pal) {
   var x = Math.round(w.hatch.x * C)
   var y = w.hatch.y * C
   var open = hatchOpen(w)
+  var kick = hatchKick(w)
+  // The housing settles on its brackets; the mouth stays on the spawn line.
+  var bob = kick < 0 ? 0 : HATCH_RECOIL[kick]
   var releasing = w.released < w.toRelease
 
+  ctx.save()
+  ctx.translate(0, bob)
   ctx.fillStyle = pal.hatchBody
   ctx.fillRect(x - 14, y - 10, 28, 10)
   ctx.fillStyle = pal.rigDark
@@ -5354,11 +5359,12 @@ function drawHatch(ctx, w, pal) {
   ctx.fillStyle = lit ? pal.exitLight : pal.rigDark
   ctx.fillRect(x - 1, y - 13, 3, 3)
   if ((w.res || 1) >= 2) drawHatchFine(ctx, pal, x, y, lit)
+  ctx.restore()
 
   // The mouth, and the light of a drop going through it.
   ctx.fillStyle = pal.hatchMouth
   ctx.fillRect(x - 9, y + 2, 18, 3)
-  if (releasing && w.ticks - w.lastReleaseAt < 4 && w.lastReleaseAt >= 0) {
+  if ((releasing || kick >= 0) && w.ticks - w.lastReleaseAt < 4 && w.lastReleaseAt >= 0) {
     ctx.fillStyle = pal.exitLight
     ctx.globalAlpha = 0.6
     ctx.fillRect(x - 8, y + 2, 16, 2)
@@ -5366,13 +5372,46 @@ function drawHatch(ctx, w, pal) {
   }
 
   // Two doors hinged at the sides of the mouth, swinging down and out.
-  var ang = open * Math.PI * 0.5
+  var ang = open * Math.PI * 0.5 - (kick < 0 ? 0 : HATCH_RECOIL[kick] * 0.12)
   ctx.fillStyle = pal.hatchBody
   for (var i = 0; i < 9; i++) {
     var dx = Math.round(i * Math.cos(ang)), dy = Math.round(i * Math.sin(ang))
     ctx.fillRect(x - 9 + dx, y + 2 + dy, 1, 2)
     ctx.fillRect(x + 8 - dx, y + 2 + dy, 1, 2)
   }
+  if (kick >= 0) drawHatchBreath(ctx, w, pal, x, y, kick)
+}
+
+// A single short impulse from existing release state, including the last
+// agent. No emitter, history, RNG or extra clock; paused/replayed frames agree.
+var HATCH_RECOIL = [0.5, 1, 1, 0.5, 0, -0.5, -0.5, 0, 0.5, 0.5, 0, 0]
+function hatchKick(w) {
+  if (w.res !== 2 || w.reducedMotion || w.done || !(w.lastReleaseAt >= 0)) return -1
+  var age = w.ticks - w.lastReleaseAt
+  return age >= 0 && age < HATCH_RECOIL.length ? age : -1
+}
+
+// Paired little exhausts stay outside the falling body and below the sky
+// biography. Underwater the same vents let out two rising, hollow bubbles.
+function drawHatchBreath(ctx, w, pal, x, y, age) {
+  var drift = Math.floor(age / 2) * 0.5
+  var rise = Math.floor(age / 3) * 0.5
+  var size = age < 3 ? 1.5 : age < 8 ? 2.5 : 3.5
+  ctx.save()
+  ctx.fillStyle = pal.shirt
+  ctx.globalAlpha = (12 - age) / 16
+  for (var side = -1; side <= 1; side += 2) {
+    var px = x + side * (15 + drift) - size / 2
+    var py = y - 2 - rise - (side > 0 ? 0.5 : 0)
+    // Half-pixel round caps, deliberately solid steam rather than sparks.
+    px = Math.round(px * 2) / 2
+    ctx.fillRect(px + 0.5, py - 0.5, size - 1, 0.5)
+    ctx.fillRect(px, py, 0.5, size - 1)
+    ctx.fillRect(px + size - 0.5, py, 0.5, size - 1)
+    ctx.fillRect(px + 0.5, py + size - 1, size - 1, 0.5)
+    if (!w.submerged) ctx.fillRect(px + 0.5, py, size - 1, size - 1)
+  }
+  ctx.restore()
 }
 
 // The hatch at half-pixel detail: each panel bevelled — light on its top and
