@@ -3016,6 +3016,7 @@ function drawActors(ctx, w, pal, opts) {
   drawSpecialCard(ctx, w, pal)
   drawHatch(ctx, w, pal)
   drawEnemyHatch(ctx, w, pal, opts)
+  drawUmbrellaOffice(ctx, w, pal)
   drawExitGlow(ctx, w, pal)
   drawExitWelcome(ctx, w, pal)
   drawExitGate(ctx, w, pal)
@@ -6135,6 +6136,124 @@ var EXIT_WELCOMES = {
   "Rooftops": ["porch","door"], "Subway": ["signal","warm"],
   "Harbour": ["harbour","warm"], "The Cloud": ["signal","door"]
 }
+// The lost-umbrella office: one furled canopy per colleague home, five in
+// the stand and five neatly stacked beside it. Display only; no stock moves.
+var UMBRELLA_OFFICE_CACHE = new WeakMap()
+var UMBRELLA_OFFICES = {
+  "Cavern":["stone","rockShade","rockEdge"], "Ruins":["pot","dirtShade","oreEdge"],
+  "Frost":["wood","dirtShade","snow"], "Foundry":["metal","steelShade","oreEdge"],
+  "Jungle":["wood","dirtShade","decorLit"], "Ice Cave":["stone","rockShade","exitLight"],
+  "Spaceship":["metal","steelShade","exitLight"], "Factory":["metal","steelShade","warn"],
+  "Skyscraper":["deco","rigDark","oreEdge"], "Trench":["barrel","oreShade","oreEdge"],
+  "Desert":["pot","dirtShade","oreEdge"], "Data Center":["metal","steelShade","exitLight"],
+  "Library":["wood","dirtShade","oreEdge"], "Mail Room":["crate","dirtShade","oreEdge"],
+  "Building Site":["pail","steelShade","warn"], "Clock Tower":["deco","rigDark","oreEdge"],
+  "Rooftops":["pot","steelShade","rockEdge"], "Subway":["tile","rockShade","exitLight"],
+  "Harbour":["barrel","dirtShade","oreEdge"], "The Cloud":["pail","steelShade","rockEdge"]
+}
+function umbrellaOfficeClear(w,x,foot,width) {
+  if (x < 6 || x+width > w.k.COLS*w.k.CELL-6 || foot-16 < w.k.SKY*w.k.CELL || foot >= w.k.ROWS*w.k.CELL) return false
+  var C=w.k.CELL
+  for (var yy=foot-16; yy<foot; yy+=C)
+    for (var xx=x; xx<x+width; xx+=C) if (!mechanismAir(w,xx,yy)) return false
+  for (var sx=x; sx<x+width; sx+=C) if (mechanismAir(w,sx,foot)) return false
+  var box={x:x,y:foot-16,width:width,height:16}
+  for (var i=0;i<w.hazards.length;i++) {
+    var h=w.hazards[i], zone={x:h.zx0*C-2,y:h.zy0*C-2,width:(h.zx1-h.zx0)*C+4,height:(h.zy1-h.zy0)*C+4}
+    if (levelTitleOverlap(box,zone)>0) return false
+  }
+  return true
+}
+function umbrellaOfficeFind(w) {
+  var e=w.exit,C=w.k.CELL,foot=(e.y+e.h)*C
+  var sides=e.x<w.k.COLS/2?[1,-1]:[-1,1], rises=[0,-4,-8,-12,4]
+  for (var size=24;size>=12;size-=12) for (var gap=12;gap<=36;gap+=12) for (var side=0;side<2;side++) for (var row=0;row<rises.length;row++) {
+    var d=sides[side],x=d<0?e.x*C-gap-size:(e.x+e.w)*C+gap,base=foot+rises[row]
+    if (umbrellaOfficeClear(w,x,base,size)) return {x:x,foot:base,width:size,stand:d<0?x+size-12:x,pile:d<0?x:x+12}
+  }
+  return null
+}
+function umbrellaOfficeLayout(w) {
+  var e=w.exit,old=UMBRELLA_OFFICE_CACHE.get(w)
+  var key=[w.terrainVersion,e.x,e.y,e.w,e.h].join(":")
+  if (old && old.key===key && old.terrain===w.terrain && old.hazards===w.hazards) return old.layout
+  var layout=umbrellaOfficeFind(w)
+  UMBRELLA_OFFICE_CACHE.set(w,{key:key,terrain:w.terrain,hazards:w.hazards,layout:layout})
+  return layout
+}
+function drawUmbrellaOffice(ctx,w,pal) {
+  if (w.res!==2 || !w.exit) return
+  var b=umbrellaOfficeLayout(w)
+  if (!b) return
+  var spec=Object.prototype.hasOwnProperty.call(UMBRELLA_OFFICES,w.biome)?UMBRELLA_OFFICES[w.biome]:UMBRELLA_OFFICES.Cavern
+  var count=Math.max(0,Math.min(10,Math.floor(w.saved||0)))
+  ctx.save()
+  // Back rim, then the canopies, then the bowl's front: they sit IN it.
+  ctx.fillStyle=pal.rigDark;ctx.fillRect(b.stand,b.foot-7,12,6)
+  ctx.fillStyle=pal[spec[2]]||GAG_PAPER;ctx.fillRect(b.stand,b.foot-7,12,0.5)
+  for (var i=0;i<Math.min(5,count);i++) drawOfficeBrolly(ctx,w,pal,i,b.stand+1+i*2,b.foot-15+(i%2),false)
+  drawOfficeBowl(ctx,w,pal,b,spec)
+  if (b.width===24) for (var j=5;j<count;j++) drawOfficeBrolly(ctx,w,pal,j,b.pile+1,b.foot-1-(j-5)*1.5,true)
+  ctx.restore()
+}
+function drawOfficeBrolly(ctx,w,pal,index,x,y,flat) {
+  var id=w.homeOrder&&w.homeOrder[index]!==undefined?w.homeOrder[index]:index
+  var ag={id:id},candy=candyBrolly(w,ag),bat=batBrolly(w,ag)
+  var ink=candy||bat||brollyColour(w,pal,ag)
+  // Rotate by swapping coordinates, keeping the half-pixel grid exact.
+  function mark(a,b,width,height){if(flat)ctx.fillRect(x+b,y-a-width,height,width);else ctx.fillRect(x+a,y+b,width,height)}
+  ctx.fillStyle=pal.umbrellaStem
+  mark(0,0,2,0.5);mark(0,0.5,0.5,1);mark(1.5,0.5,0.5,9)
+  ctx.fillStyle=ink
+  mark(1,3,1.5,4);mark(1.5,2,0.5,1);mark(1.5,7,0.5,1.5)
+  if (candy) {ctx.fillStyle=GAG_PAPER;mark(1,3.5,1.5,0.5);mark(1,5.5,1.5,0.5)}
+  if (bat) {ctx.fillStyle="#a393bc";mark(1,3,0.5,3);mark(0.5,3,0.5,1);mark(2.5,3,0.5,1)}
+}
+function drawOfficeBowl(ctx,w,pal,b,spec) {
+  var x=b.stand,y=b.foot-6,trim=pal[spec[2]]||GAG_PAPER
+  ctx.fillStyle=pal.rigDark;ctx.fillRect(x,y,12,6)
+  ctx.fillStyle=pal[spec[1]];ctx.fillRect(x+1,y+1,10,4)
+  ctx.fillStyle=trim;ctx.fillRect(x,y,12,1);ctx.fillRect(x+1,y+1,0.5,4)
+  UMBRELLA_OFFICE_TRIM[spec[0]](ctx,pal,x,y,trim)
+  // A small umbrella stamped on the front; no new font or tiny unreadable text.
+  ctx.fillStyle=GAG_PAPER;ctx.fillRect(x+5,y+2,3,0.5);ctx.fillRect(x+4.5,y+2.5,4,0.5)
+  ctx.fillRect(x+6,y+3,0.5,1.5);ctx.fillRect(x+5,y+4,1,0.5)
+}
+var UMBRELLA_OFFICE_TRIM = {
+  stone:officeStoneTrim,pot:officePotTrim,wood:officeWoodTrim,metal:officeMetalTrim,
+  deco:officeDecoTrim,barrel:officeBarrelTrim,crate:officeCrateTrim,pail:officePailTrim,tile:officeTileTrim
+}
+function officeStoneTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=pal.rockEdge;ctx.fillRect(x+1,y+3,3,0.5);ctx.fillRect(x+9,y+3,2,0.5)
+}
+function officePotTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=pal.rigDark;ctx.fillRect(x,y+1,1,2);ctx.fillRect(x+11,y+1,1,2)
+  ctx.fillStyle=trim;ctx.fillRect(x+2,y+4.5,8,0.5)
+}
+function officeWoodTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=trim;ctx.fillRect(x+3,y+1,0.5,4);ctx.fillRect(x+9,y+1,0.5,4)
+}
+function officeMetalTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=pal.steelEdge;ctx.fillRect(x+2,y+2,0.5,0.5);ctx.fillRect(x+10,y+2,0.5,0.5)
+  ctx.fillRect(x+2,y+4,0.5,0.5);ctx.fillRect(x+10,y+4,0.5,0.5)
+}
+function officeDecoTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=trim;ctx.fillRect(x+2,y+1,0.5,4);ctx.fillRect(x+9.5,y+1,0.5,4);ctx.fillRect(x+1,y+5,10,0.5)
+}
+function officeBarrelTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=trim;ctx.fillRect(x+1,y+2,3,0.5);ctx.fillRect(x+9,y+2,2,0.5);ctx.fillRect(x+1,y+4.5,10,0.5)
+}
+function officeCrateTrim(ctx,pal,x,y,trim) {
+  officeWoodTrim(ctx,pal,x,y,trim);ctx.fillStyle=trim;ctx.fillRect(x+1,y+4.5,10,0.5)
+}
+function officePailTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=trim;ctx.fillRect(x,y+1,0.5,2);ctx.fillRect(x+11.5,y+1,0.5,2);ctx.fillRect(x+2,y+4.5,8,0.5)
+}
+function officeTileTrim(ctx,pal,x,y,trim) {
+  ctx.fillStyle=pal.rockEdge;ctx.fillRect(x+3,y+1,0.5,4);ctx.fillRect(x+9,y+1,0.5,4)
+  ctx.fillStyle=trim;ctx.fillRect(x+1,y+3.5,3,0.5);ctx.fillRect(x+9,y+3.5,2,0.5)
+}
+
 function exitWelcomeArrival(w) {
   if (!w || w.res !== 2 || !w.saved || !w.exit) return null
   if (w.mission && !w.mission.done) return null

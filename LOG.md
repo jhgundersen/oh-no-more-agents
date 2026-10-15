@@ -9705,3 +9705,171 @@ changes were built and measured in worktrees and merged afterwards:
 - dev/204 (375, `LONG_RUN` 6).
 
 Each went through the full gate on main.
+
+## 377 — 2026-10-15 · Everybody takes a break (on a branch)
+
+**Chosen:** audit item 3, first of two presentation commits on
+`codex/page-panels`, from then-current main `164457d`.
+
+**Changed:** the pause overlay is a compact, theme-coloured panel with a ROM-font
+PAUSED heading, an agent on a break, a recessed resume button and the report/
+standup panels' pixel frame. The board remains visible around it. Coarse-pointer
+clients get **“Tap to resume”**; desktop gets **“Space or click to resume”**.
+The heading remains in the DOM, the canvas is decorative, and resume is a real
+44px button. Enter/Space activate it once and restore focus to the pause control;
+click/tap elsewhere on the board still resumes. Held reports stay clear.
+No pause animation, timer or simulation changes. The small drawing caches by
+theme/DPR, refreshes on paused theme changes and resize, and borrows the existing
+cached blocker canvas, independent of the inventory's spent opacity.
+
+**Evidence:** `/tmp/codex-page-panels/pause-review/index.html`, current sheet
+`contact-sheet-6e2f985c.png`; canonical copy has the same SHA-256
+`1880dec92342647fff53da727cac8dd11b073874841e10f7aecb29e0002cff9e`.
+Seven before/after pairs cover desktop, 390px phone, DPR2 detail, phone landscape,
+reduced motion in two more palettes, and 720p fullscreen. World digests and board
+rectangles/scales match in every pair. Browser errors: none. The new bounded
+`tools/page-panels.js` reuses a browser per batch, waits for fonts/world readiness,
+records source/image hashes and rejects mismatched scenes; tests prove canonical
+sheets refresh and validate ROM labels. All nine palettes retain at least 4.5:1
+DOM text contrast while paused. Actual keyboard, button, board-resume and held-
+report checks pass, including unchanged world bytes while waiting.
+
+**Validation:** targeted pause/inventory checks **6/6**. A first full run exposed
+an extra sprite repaint during theme changes; the fix reuses the cached image,
+rather than changing the old cache assertion. That unsuccessful result is saved
+under `pre-cache-fix/`. The corrected frozen-source full check and coverage pass:
+**1,509 passed, 0 failed**, **383.14 s**, including Factory art. CRAP **30** passes
+from the same LCOV (maximum 30); new evidence helpers score 4.6–6.0. Source proof,
+`npm run stamp`, stamp check and `git diff --check` pass. Completion was reported
+immediately. Persistent FIFO testlock run: 3 GB service cap, 2,048 MB Node heap,
+`ulimit -v 6000000`, two workers, 120-second test timeouts; **792.7 MiB peak**.
+Logs/evidence and source hashes are under `/tmp/codex-page-panels/`.
+
+**Next:** the separately committed controls/footer typography pass, then the
+queued lost-umbrella office at biome exits. No push or deployment.
+
+## 378 — 2026-10-15 · Small print, bigger character (on a branch)
+
+**Changed:** the second presentation commit on `codex/page-panels` brings short
+HUD, skill, control and patch-note labels into the game's pixel style with a
+locally hosted, numbered VT323 subset (12,460 bytes; SIL OFL licence and source
+provenance in `docs/fonts.md`). Longer footer and patch-note prose uses a readable
+13px system monospace. The introductory copy and theme buttons keep their existing
+font; theme colours, pressed states, keyboard outlines and touch targets remain
+intact. The board refits after the font is ready. Compact fullscreen spacing keeps
+the same 800×496 board at 720p; phone controls retain 44px targets. No simulation
+or drawing changes.
+
+**Evidence:** `/tmp/codex-page-panels/type-review/index.html`, current sheet
+`contact-sheet-183bdf46.png`, SHA-256
+`676902cbfd0505d56c2495a4c0d3bfe78e98eaf448b3be745492e6252cb31c11`.
+Nine before/after views cover desktop, 320/390px phones, DPR2, landscape, reduced
+motion, palettes, fullscreen and a zoom-sized viewport. Every world digest and
+board rectangle/scale matches; no clipped text, horizontal overflow or browser
+errors. All nine themes pass 4.5:1 text contrast. Keyboard focus and blocked-font
+fallback are tested. The sheet tool now normalises DPR to actual CSS size for both
+page and board exports, and validates canonical copies against source-stamped
+image hashes. Batched captures took 3.85s before and 3.49s after.
+
+**Validation:** focused checks **9/9**. Frozen-source full check and coverage:
+**1,512 passed, 0 failed**, **385.89s**, including Factory art; CRAP **30** passes
+using that same LCOV. Source hashes, stamp check and diff whitespace check pass.
+The FIFO testlock service used two workers, 120-second test timeouts, a 2,048MB
+Node heap, `ulimit -v 6000000`, and a 3GB service cap: **802.9MiB peak**, 6m37s
+for check/coverage/CRAP together. Completion was reported immediately. Logs and
+source proofs are under `/tmp/codex-page-panels/`.
+
+**Next:** the queued lost-umbrella office, on a separate branch. No push/deploy.
+
+## 379 — 2026-10-15 · Please collect your umbrella (on a branch)
+
+**Queued brief:** the lost-umbrella office, after the two requested
+presentation commits. `codex/umbrella-office` continues `codex/page-panels`
+(`cde476b`, `d38fc2d`) and merges local main `2b12360`, including WHO labels.
+Log conflicts retain both histories; generated stamp conflicts are re-stamped.
+
+**Changed:** page-resolution exits get a small umbrella stand with a stamped
+umbrella on its front. `w.saved` fills five furled canopies, then a neat five-
+umbrella overflow pile; a narrow ledge caps at five. The real `homeOrder` IDs
+supply canopy colours, including the existing Halloween purple and Christmas
+red/white selections. Twenty biome styles use stone, pots, wood, metal, Deco
+brass, barrels, crates, pails and station tiles. No inventory changes: the count
+is a visual record of colleagues home, including those who never needed to float.
+
+Placement tries bounded nearby floor candidates, outside the doorway/frame and
+hazard zones, with phone-edge margins. Tight layouts can use a stand without the
+pile. A WeakMap caches geometry by world, terrain reference/version and exit;
+carving refreshes it, and missing support means no floating furniture. The
+collection paints before exit effects, hazards and every body/umbrella. A
+read-only sweep of 200 initial layouts fits 197; two of the three others gain
+space by the first arrival. Level 71 stays omitted because its nearby floor is
+too cramped for the reserved safe footprint. Static
+under reduced motion, fast speed, outages and report holds; no timers, RNG or
+new simulation fields. Default/res 1/res 3 actor pixels stay exact. Sim.js is
+unchanged; live rendered/plain world digests match through natural arrivals.
+
+**Evidence:** `/tmp/codex-umbrella-office/review/index.html`, current all-biome
+sheet `contact-sheet-4476837b.png`, SHA-256
+`829eece2c761da2cbf059005825cfb49b204f9d379b63278da1d8ecae2630ddc`.
+Sixty strips cover all twenty biomes in normal/Halloween/Christmas colours, with
+explicitly illustrative counts 0/1/3/5/10/20 over frozen real first-arrival scenes;
+desktop and phone scales are available. Browser review:
+`/tmp/codex-umbrella-office/browser-review/index.html`, current sheet
+`contact-sheet-f60eec13.png`, SHA-256
+`38abc85cd7b3e1ea7759d0bff12a63f9b0693eaa25e4fc8b61c4dbf957186923`.
+Eight actual desktop/390px phone pairs show Library (7 home), Harbour (5),
+Christmas Cloud (6) and Halloween Rooftops (5), with 3× exit details. All world
+digests match; all 92 recorded image hashes and both canonical sheets verify.
+Viewed at actual size and in the crops: doorways, agents and open umbrellas stay
+clear. Draw source `d79954de`, build `4ef703ca`.
+
+**Tools/performance:** the new `tools/umbrella-office.js` seeks one natural
+arrival per strip, reuses terrain and renders actors straight into crops; cache
+keys include resolution, palette and season. The complete staged review takes
+**4.20s / 241.9MiB peak RSS**. Real browser batches reuse one disposable browser:
+**3.77s before / 3.75s after**. Source-stamped sheets refresh the canonical copy;
+ROM labels are validated (no missing-glyph question marks). Live, fast-speed,
+seed-3 six-second FPS probes on levels 12 and 60, from tick 500 through arrivals:
+both versions **60 fps median / 60 p5**, **17ms worst**, **zero long tasks**;
+CPU **12→12%** and **13→12%**, max live cast 15/18. Shipped Draw growth is
+**5,924 bytes / 1,713 gzip bytes**; no asset/dependency additions.
+
+**Validation:** focused umbrella/welcome/WHO **25/25**, 5.41s. Tests bound paint
+at 128 rectangles, check air/support and frame margins, count/cap and arrival
+colours, seasonal patterns, every biome in five palettes, native compatibility,
+terrain-cache invalidation, static motion preferences, full-frame/crop equality,
+paint confined to the stand footprint, live digests and regenerated evidence.
+WHO's page-off compatibility assertion now compares colony pixels/text calls,
+so independent scenery can change; full actor comparisons remain for native and
+share, and the new stand test independently checks surrounding actor pixels.
+
+The frozen-source full `npm run check` and coverage pass: **1,529 passed,
+0 failed**, **390.29s**, Factory included. CRAP **threshold 30 passed** using the
+same LCOV (maximum 30.0); new runtime helpers score **1.0–12.0 / 100% coverage**,
+new review helpers **1.0–9.1**. Completion was reported immediately. Source proof,
+`npm run stamp`, stamp check and whitespace check pass. The persistent FIFO lock
+service used two workers, 120-second test timeouts, a 2,048MB Node heap,
+`ulimit -v 6000000` and a 3GB memory cap: **782MiB peak**, 8m17s including queue
+time. Logs and exact source hashes are under `/tmp/codex-umbrella-office/`.
+
+**Next:** review/merge; branch commits only, no push/deploy. The separate forecast
+idea awaits its own brief.
+
+## 380 — 2026-10-15 · Merged the pause panel, page type and umbrella stand
+
+Reviewed and merged by the loop: codex/umbrella-office (cde476b, d38fc2d,
+5ce3368; entries 377–379), `--no-ff`, as approved. Codex's entries are
+renumbered and the page is re-stamped.
+
+**The font, as asked:**
+- **Cache rule:** `public/fonts/vt323-ui-1.woff2` (12,460 bytes, OFL licence
+  alongside) had no cache rule, so it would have revalidated on every visit.
+  `_headers` now gives `/fonts/*.woff2` a year, `immutable`, on the
+  never-overwrite rule the numbered artwork uses: the name carries a version
+  (`-1`), so a new cut gets a new file.
+- **Shipping:** `tools/ship.js` copies it into `dist/fonts/` byte for byte,
+  with the licence. `dist/_headers` carries the rule.
+- **Served locally** (`wrangler dev` on `dist/`): `font/woff2`, `public,
+  max-age=31536000, immutable`.
+
+**Code:** Draw.js and web.js only, page resolution, no Sim.js change.

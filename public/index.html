@@ -25,14 +25,16 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="ff2b49fb">
+<meta name="build" content="a7bfcb9b">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+	<link rel="preload" href="/fonts/vt323-ui-1.woff2" as="font" type="font/woff2" crossorigin>
 	<style>
+		@font-face { font-family: 'VT323'; src: url('/fonts/vt323-ui-1.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
 		:root {
 			/* web.js supplies the selected board theme before the first paint. */
 			--bg: #1a1b26;
@@ -136,9 +138,22 @@
 		#overlay {
 			position: absolute; inset: 0; z-index: 2;
 			display: flex; align-items: center; justify-content: center;
-			flex-direction: column; gap: 10px; padding: 24px;
-			background: rgba(0, 0, 0, 0.55); text-align: center;
-			transition: opacity 160ms;
+			padding: 20px; box-sizing: border-box;
+			background: rgba(0, 0, 0, 0.48); text-align: center;
+		}
+		.pause-card {
+			width: 284px; max-width: 100%; box-sizing: border-box; padding: 10px 12px 12px;
+			background: var(--panel); border: 2px solid var(--accent);
+			box-shadow: 0 0 0 2px var(--ink), 0 5px 0 2px var(--muted), inset 0 2px var(--edge);
+		}
+		#board #pauseArt { position: static; display: block; width: 256px; max-width: 100%; height: auto; margin: 0 auto 8px; }
+		#overlay-line {
+			display: block; width: 100%; min-height: 44px; padding: 8px 6px; box-sizing: border-box;
+			font: 13px/1.4 ui-monospace, monospace; color: var(--fg); background: var(--ink);
+			border: 1px solid var(--edge); box-shadow: inset 0 1px var(--muted), 0 2px var(--bg); cursor: pointer;
+		}
+		#overlay-line:hover { border-color: var(--accent); }
+		#overlay-line:active { transform: translateY(1px); box-shadow: inset 0 2px var(--bg);
 		}
 		#toast {
 			position: absolute; left: 50%; bottom: 10px; z-index: 3; transform: translateX(-50%);
@@ -197,8 +212,6 @@
 			display: block; margin: 10px 0 0 auto; padding: 7px 10px; font: inherit; font-size: 10px; letter-spacing: 0.1em;
 			color: var(--fg); background: var(--ink); border: 1px solid var(--accent); cursor: pointer;
 		}
-		#overlay-title { font-size: 16px; font-weight: 700; letter-spacing: 0.08em; }
-		#overlay-line { max-width: 560px; font-size: 12px; line-height: 1.45; color: #fff; opacity: 0.78; }
 
 		.hud, #toolbar, .controls, #themes { width: var(--board-w); max-width: 100%; box-sizing: border-box; }
 		.hud {
@@ -378,6 +391,36 @@
 		@media (prefers-reduced-motion: reduce) {
 			*, *::before, *::after { animation: none !important; transition: none !important; }
 		}
+		/* Pixel labels for short UI; readable prose; retain the original theme buttons. */
+		.hud, #toolbar, .controls, .news-row, #toast, #tip, .news-card { font-family: 'VT323', ui-monospace, monospace; font-weight: 400; font-synthesis: none; }
+		.hud { font-size: 18px; line-height: 1.15; }
+		#biome { font-size: 16px; letter-spacing: 0.025em; }
+		.skill-name { font-size: 14px; letter-spacing: 0.025em; }
+		.skill-count { font-size: 20px; }
+		.ctl { font-size: 20px; line-height: 1; padding: 7px 8px; }
+		.controls b { font-weight: 400; }
+		.counts { font-size: 16px; line-height: 1.3; }
+		.linkish { font-size: 18px; letter-spacing: 0.025em; }
+		.daily-sub { font-size: 16px; letter-spacing: 0.025em; }
+		#toast, #tip { font-size: 18px; letter-spacing: 0.025em; }
+		#news-title { font-size: 22px; }
+		.news-card ol { font: 13px/1.6 ui-monospace, monospace; }
+		.news-close { font-size: 18px; }
+		body > .sub:last-of-type { font: 13px/1.65 ui-monospace, monospace; letter-spacing: 0; }
+		body > .sub:last-of-type { max-width: min(80ch, 100%); }
+		@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) { .hud { font-size: 18px; } .ctl { font-size: 18px; } .skill-name { font-size: 14px; } .skill-count { font-size: 20px; } .counts { font-size: 16px; } }
+		@media(max-width:599px) { .hud { gap: 8px 12px; padding: 7px 10px; } .skill { padding: 6px 2px; } .ctl { min-height: 44px; } }
+
+		@media (pointer: fine), (pointer: none) {
+			#stage:is(.faux, :fullscreen) { gap: 3px; }
+			#stage:is(.faux, :fullscreen) .hud { padding: 6px 10px; font-size: 18px; line-height: 1; }
+			#stage:is(.faux, :fullscreen) #biome { font-size: 16px; }
+			#stage:is(.faux, :fullscreen) .skill { padding: 4px 2px; gap: 2px; }
+			#stage:is(.faux, :fullscreen) .skill-name { font-size: 14px; }
+			#stage:is(.faux, :fullscreen) .skill-count { font-size: 20px; }
+			#stage:is(.faux, :fullscreen) .ctl { font-size: 18px; min-height: 34px; padding: 4px 6px; }
+			#stage:is(.faux, :fullscreen) .counts { font-size: 14px; line-height: 1.2; margin-top: 1px; padding: 2px 0; }
+		}
 	</style>
 </head>
 
@@ -415,9 +458,12 @@
 			<div id="toast" role="status" aria-live="polite"></div>
 			<div id="announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 			<div id="tip" hidden>Tip: tap an agent. <span aria-hidden="true">&times;</span></div>
-			<div id="overlay" style="display: none">
-				<div id="overlay-title">PAUSED</div>
-				<div id="overlay-line">Space or click to resume</div>
+			<div id="overlay" role="group" aria-labelledby="overlay-title" style="display: none">
+				<div class="pause-card">
+					<div id="overlay-title" class="sr-only">PAUSED</div>
+					<canvas id="pauseArt" width="256" height="64" aria-hidden="true"></canvas>
+					<button id="overlay-line" type="button">Space or click to resume</button>
+				</div>
 			</div>
 		</div>
 
@@ -476,14 +522,14 @@
 	</p>
 
 	<script src="agents/Sim.js?v=e91ea22f"></script>
-	<script src="agents/Draw.js?v=86d7352d"></script>
+	<script src="agents/Draw.js?v=d79954de"></script>
 	<script src="agents/Palette.js?v=ff1f4919"></script>
 	<script src="agents/Outcome.js?v=cb53ebab"></script>
 	<script src="agents/share.js?v=c3e48a0d"></script>
 	<script src="agents/sfx.js?v=443464e2"></script>
 	<script src="agents/season.js?v=30ab2597"></script>
 	<script src="agents/news.js?v=30824986"></script>
-	<script src="agents/web.js?v=1d6dad36"></script>
+	<script src="agents/web.js?v=fca3e82b"></script>
 
 </body>
 
