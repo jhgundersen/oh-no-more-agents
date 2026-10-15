@@ -680,8 +680,8 @@
   // Daily standup (Draw's drawStandup, Outcome's standupLines)
   // -------------------------------------------------------------------------
   // Up to five of the colony that just got home, the last few levels as their
-  // status, about five and a half seconds of wall clock whatever the speed,
-  // and a tap anywhere on the board skips it.
+  // status. The page allows 2.4 seconds per three-line update, independent
+  // of game speed; a tap anywhere on the board still skips the meeting.
   var STANDUP_EVERY = 5, STANDUP_MS = 30   // ms per standup tick
   var recent = [], transitions = 0, standup = null
 
@@ -698,12 +698,12 @@
 
   function stepStandup() {
     standup.t = Math.floor((performance.now() - standup.started) / STANDUP_MS)
-    var talking = Math.floor((standup.t - STANDUP_INTRO) / STANDUP_TURN)
+    if (standup.t >= standupLength(standup.speakers.length, world.res)) { endStandup(); return }
+    var talking = standupSpeaker(standup.t, world.res)
     if (talking >= 0 && talking !== standup.said) {
       standup.said = talking
       if (window.AgentSfx && AgentSfx.cue) AgentSfx.cue("murmur")
     }
-    if (standup.t >= standupLength(standup.speakers.length)) { endStandup(); return }
     drawStandup(actorCtx, world, palette, standup)
   }
 
