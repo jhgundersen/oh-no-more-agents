@@ -6,6 +6,7 @@ import {execFileSync} from 'node:child_process'
 import {fileURLToPath} from 'node:url'
 import {load,canvas,crop,writePNG,themeOf} from './render.js'
 import {renderer,copyPixels,doublePixels} from './gag-art.js'
+import {sheetLabel} from './art-label.js'
 const S=load('Sim.js'),P=load('Palette.js'),ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..')
 export const POOL_LEVELS=[2,24,25,7,8,39]
 export function poolScene(level=8,{res=2,entry=false}={}){
@@ -43,13 +44,13 @@ function poolStripsScene(out,D,old,level,entry,sheet,row){
   }
  }
  const kind=entry?'entry':'ambient',compare=canvas(1660,576,'#121822')
- compare.ctx.fillStyle='#e6e9ee';D.drawTransitionText(compare.ctx,`${w.biome} - ${kind}`,830,8,1)
- sheet.ctx.fillStyle='#e6e9ee';D.drawTransitionText(sheet.ctx,`${w.biome} - ${kind} - BEFORE / AFTER`,408,15+row*296,1)
+ compare.ctx.fillStyle='#e6e9ee';sheetLabel(compare.ctx,D,`${w.biome} - ${kind}`,830,8)
+ sheet.ctx.fillStyle='#e6e9ee';const label=sheetLabel(sheet.ctx,D,`${w.biome} - ${kind} - BEFORE / AFTER`,408,15+row*296)
  for(const[index,strip]of strips.entries()){
   const res=index<2?1:2,tag=index%2?'after':'before';writePNG(path.join(out,`${level}-${kind}-${tag}-res${res}.png`),strip)
-  compare.ctx.fillStyle='#e6e9ee';D.drawTransitionText(compare.ctx,`${tag.toUpperCase()} ${res}X`,42,65+index*136,1);copyPixels(compare,res===1?doublePixels(strip):strip,100,30+index*136)
+  compare.ctx.fillStyle='#e6e9ee';sheetLabel(compare.ctx,D,`${tag} ${res}x`,42,65+index*136);copyPixels(compare,res===1?doublePixels(strip):strip,100,30+index*136)
  }
- return{kind,compare,frames}
+ return{kind,compare,frames,label}
 }
 export function poolStrips(out,{base='main',levels=POOL_LEVELS}={}){
  const started=performance.now(),D=load('Draw.js'),old=renderer(execFileSync('git',['show',base+':public/agents/Draw.js'],{cwd:ROOT,maxBuffer:4<<20}).toString()),records=[]
@@ -57,7 +58,7 @@ export function poolStrips(out,{base='main',levels=POOL_LEVELS}={}){
  for(const[row,level]of levels.entries()){
   for(const[ei,entry]of[false,true].entries()){
    const scene=poolStripsScene(out,D,old,level,entry,sheet,row*2+ei)
-   writePNG(path.join(out,`${level}-${scene.kind}-frames.png`),scene.compare);records.push({level,kind:scene.kind,frames:scene.frames})
+   writePNG(path.join(out,`${level}-${scene.kind}-frames.png`),scene.compare);records.push({level,kind:scene.kind,label:scene.label,frames:scene.frames})
   }
  }
  writePNG(path.join(out,'contact-sheet.png'),sheet);fs.writeFileSync(path.join(out,'index.html'),poolReviewHTML(levels))

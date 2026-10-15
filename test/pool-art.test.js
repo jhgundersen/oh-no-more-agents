@@ -111,7 +111,7 @@ test('cached direct crops equal full-frame crops through spill updates and resol
 test('comparison harness renders bounded ambient and explicitly staged entry strips',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'pool-art-'))
  try{
-  const result=poolStrips(dir,{base:'e114230',levels:[8]});assert.equal(result.records.length,2);assert.equal(result.records[0].frames.length,8)
+  const result=poolStrips(dir,{base:'e114230',levels:[8]});assert.equal(result.records.length,2);assert.equal(result.records[0].frames.length,8);assert.equal(result.records[0].label,'FACTORY - AMBIENT - BEFORE / AFTER')
   assert.ok(fs.statSync(path.join(dir,'8-entry-after-res2.png')).size>0);assert.match(fs.readFileSync(path.join(dir,'index.html'),'utf8'),/explicitly stage/)
  }finally{fs.rmSync(dir,{recursive:true,force:true})}
 })
