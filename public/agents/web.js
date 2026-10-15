@@ -539,6 +539,7 @@
     if (replay) { stepReplay(); return }
     step(world)
     if (window.AgentSfx) AgentSfx.observe(world)
+    fastForward(world)
 
     if (world.terrainVersion !== lastTerrainVersion) {
       lastTerrainVersion = world.terrainVersion
@@ -570,6 +571,26 @@
       advance(1); applyUpdate()
     }
   }
+
+  // Fast-forward through the dead time. Once everybody is out of the hatch and
+  // nothing has changed for FF_QUIET ticks, eight seconds (nobody home, nobody lost, not a
+  // cell dug), the page runs the same simulation FF_STEPS times a tick until
+  // something does — the stall cutoff's last twenty seconds become five. The
+  // rules are untouched, so the run is the run it would have been; Draw shows
+  // a small FAST-FORWARD tag while it lasts.
+  var FF_QUIET = 240, FF_STEPS = 4, ffMark = -1, ffQuiet = 0
+  function progressMark(w) { return w.saved * 100000 + w.lost * 1000 + (w.carved || 0) }
+  function fastForward(w) {
+    var mark = progressMark(w)
+    if (mark !== ffMark || w.released < w.toRelease || w.done) { ffMark = mark; ffQuiet = 0; w.fastForward = false; return }
+    ffQuiet++
+    w.fastForward = ffQuiet > FF_QUIET
+    for (var i = 1; w.fastForward && i < FF_STEPS && !w.done; i++) {
+      step(w)
+      if (progressMark(w) !== ffMark) { w.fastForward = false; ffMark = progressMark(w); ffQuiet = 0 }
+    }
+  }
+  window.AgentFastForward = { quiet: FF_QUIET, steps: FF_STEPS, check: fastForward }
 
   // -------------------------------------------------------------------------
   // Instant replay (Sim's moments, Draw's drawReplayTag)

@@ -2748,6 +2748,7 @@ function drawActors(ctx, w, pal, opts) {
   if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
   drawOutage(ctx, w, pal)
   if (w.replaying) drawReplayTag(ctx, w, pal)
+  else if (w.fastForward && !w.done) drawFastForwardTag(ctx, w, pal)
   // Above the outage, so an event's or a boss's warning is never in the dark.
   drawEventBanner(ctx, w, pal)
   drawLevelTransition(ctx, w, pal)
@@ -2756,6 +2757,17 @@ function drawActors(ctx, w, pal, opts) {
 // The instant replay (the page re-simulates the level's best moment; see
 // web.js): letterbox bars, and a tag with a recording dot in the corner below
 // the sky band, so the hero's card and event warnings stay readable.
+// The page fast-forwarding through dead time (web.js fastForward): the same
+// panel as the replay tag, two arrows and the reason.
+function drawFastForwardTag(ctx, w, pal) {
+  var top = w.k.SKY * w.k.CELL + 2
+  ctx.save()
+  drawGagPanel(ctx, 4, top, 104, 13, pal.label, pal.rigDark)
+  ctx.fillStyle = GAG_PAPER
+  drawTransitionText(ctx, ">> NOTHING TO SEE", 56, top + 4, 1)
+  ctx.restore()
+}
+
 function drawReplayTag(ctx, w, pal) {
   var C = w.k.CELL, W = w.k.COLS * C, H = w.k.ROWS * C, top = w.k.SKY * C + 2
   ctx.save(); ctx.globalAlpha = 0.55; ctx.fillStyle = "#000000"; ctx.fillRect(0, H - 6, W, 6)

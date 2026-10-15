@@ -5440,3 +5440,40 @@ check, then `npm run smoke`. It is not part of the per-commit gate. First run:
 levels 1–7, heap 5.2 MB, 524–540 nodes, 73–74 listeners, 24 canvases (the
 pixel logo added two), frame time 16.7 ms throughout, at most one live audio
 node at any sample. **Passed.**
+
+## 279 — 2026-10-15 · Nothing to see (yet): fast-forward through dead time
+
+**Chosen (autonomy):** the roughest thing a watcher saw tonight was dead
+time. A level whose last few agents are pacing sits unchanged for up to twenty
+seconds before the stall cutoff ends it (level 109's worst colony: 86 s). The
+play-test list's remaining items each cost a few runs; dead time costs every
+watcher on a third of all levels.
+
+**Changed** (page only; the simulation's rules are untouched):
+- **The rule** (`web.js` `fastForward`). Once every agent is out of the hatch,
+  nothing has changed for 240 ticks (eight seconds: nobody home, nobody lost,
+  not a cell dug) and the level isn't over, the page runs `FF_STEPS` (4) steps
+  per tick. It drops back to normal the moment anything changes.
+- **Why the run is unchanged.** It only calls `step` more often, so the run is
+  exactly the run it would have been.
+- **The tag** (`drawFastForwardTag`): ">> NOTHING TO SEE" in the replay tag's
+  panel, top left, while it lasts. The replay tag wins if both are up.
+
+**Threshold, measured** (levels 1–150 × 6 colonies, replicating the rule on
+the Sim):
+
+| Quiet threshold | Watch time removed | Runs that fast-forward at all | Notes |
+|---|---|---|---|
+| 3 s | 11% | | catches ordinary long walks, which are watchable |
+| "nobody moving" (the stall detector) | nothing | 2 of 900 | pacing agents count as moving |
+| 6 s | 4.3% | | |
+| **8 s (shipped)** | **2.1%** | 326 of 900 | cuts only real dead stretches; level 109's worst colony saves 69 s, 127's 17 s, 81's 12 s |
+
+**Tests** (`test/fastforward.test.js`):
+- level 109's stalled colony on the page, driven through `fastForward`, ends
+  with exactly the plain simulation's home, lost and tick counts, in fewer
+  page ticks, having fast-forwarded;
+- the tag draws only while fast-forwarding and never over a replay.
+
+Headless screenshot: the tag shows at top left during a real fast-forward on
+level 109. No page errors.
