@@ -395,7 +395,8 @@ function walkStep(ag, w) {
   var run = w && w.ticks < (ag.sprintUntil || 0) ? BOULDER_SPRINT : 1
   var belt = w && w.beltAt ? 1 + beltUnder(w, ag) * ag.dir * BELT_PUSH : 1
   var pep = w && w.ticks < (ag.pepUntil || 0) ? PEP_PACE : 1
-  return WALK_SPEED * (traitOf(ag).pace || 1) * (ag.chilledFor > 0 ? 0.48 : 1) * swim * wind * run * belt * pep
+  var aisle = w && w.aisleAt ? aislePace(aisleUnder(w, ag)) : 1
+  return WALK_SPEED * (traitOf(ag).pace || 1) * (ag.chilledFor > 0 ? 0.48 : 1) * swim * wind * run * belt * pep * aisle
 }
 
 // ---------------------------------------------------------------------------
@@ -902,6 +903,8 @@ function newWorld(level, attempt, colonySeed) {
     boulder: null,    // the Ruins' rolling stone; see placeBoulder
     belts: [],        // the Factory's conveyors; see placeBelts
     beltAt: null,     // and which way each feet cell is carried, -1/0/1
+    aisles: [],       // the Data Center's hot and cold aisles; see placeAisles
+    aisleAt: null,    // and which each feet cell is: 1 hot, -1 cold, 0 neither
     frozen: [],       // the Ice Cave's colleagues in the ice; see placeFrozen
     pads: [],
     cranes: [],       // the Building Site's gantry cranes; see placeCranes
@@ -1536,6 +1539,7 @@ var BIOME_MECHANISMS = {
   "Jungle": placeVines,
   "Ruins": placeBoulder,
   "Factory": placeBelts,
+  "Data Center": placeAisles,
   "Ice Cave": placeFrozen,
   "Spaceship": placePads,
   "Foundry": placeChains,
@@ -1756,6 +1760,61 @@ function beltUnder(w, ag) {
   if (fy < 0 || fy >= ROWS - 1) return 0
   var d = w.beltAt[fy * COLS + cx]
   return d && solid(w, cx, fy + 1) ? d : 0
+}
+
+// ---------------------------------------------------------------------------
+// Hot and cold aisles
+// ---------------------------------------------------------------------------
+//
+// The Data Center's own mechanism. Racks breathe in from a cold aisle and out
+// into a hot one, and the floor grates say which is which: a run of hot aisle
+// hurries whoever walks it and the cold aisle beside it slows them, whichever
+// way they are going. Pace only — nobody is ever stopped or turned — so it
+// changes who reaches the next ledge first and how a crossing is timed, and
+// cannot strand anyone. A pair on some corridors, from a stream of its own.
+var AISLE_HOT = 1.35, AISLE_COLD = 0.85
+var AISLE_CHANCE = 0.6     // per corridor
+var AISLE_MIN = 6, AISLE_MAX = 10
+
+function placeAisles(w, corridors) {
+  var arng = makeRng(w.level * 7393 + 3251)
+  w.aisleAt = new Int8Array(COLS * ROWS)
+  for (var ci = 0; ci < corridors.length; ci++) {
+    var c = corridors[ci]
+    if (arng() >= AISLE_CHANCE) continue
+    var len = irand(arng, AISLE_MIN, AISLE_MAX), hotFirst = arng() < 0.5
+    var x0 = beltRun(w, c, irand(arng, c.x0 + 4, c.x1 - 4 - 2 * len), 2 * len)
+    if (x0 < 0) continue
+    var feet = c.floorY - 1
+    for (var x = x0; x < x0 + 2 * len; x++)
+      w.aisleAt[feet * COLS + x] = (x < x0 + len) === hotFirst ? 1 : -1
+    w.aisles.push({ x0: x0, mid: x0 + len, x1: x0 + 2 * len, y: feet, hotFirst: hotFirst })
+  }
+}
+
+function aisleUnder(w, ag) {
+  var cx = Math.floor(ag.x), fy = Math.floor(ag.y)
+  if (fy < 0 || fy >= ROWS - 1 || cx < 0 || cx >= COLS) return 0
+  var a = w.aisleAt[fy * COLS + cx]
+  return a && solid(w, cx, fy + 1) ? a : 0
+}
+
+function aislePace(a) { return a > 0 ? AISLE_HOT : a < 0 ? AISLE_COLD : 1 }
+
+// The ticker notices each kind once a level, the first time somebody is on it.
+var AISLE_LINES = { hot: "IS RUNNING HOT", cold: "HAS BEEN THROTTLED" }
+function stepAisles(w) {
+  if (!w.aisles.length || (w.aisleNoted && w.aisleNoted.hot && w.aisleNoted.cold)) return
+  w.aisleNoted = w.aisleNoted || {}
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state !== "walk") continue
+    var a = aisleUnder(w, ag), kind = a > 0 ? "hot" : a < 0 ? "cold" : ""
+    if (!kind || w.aisleNoted[kind]) continue
+    w.aisleNoted[kind] = true
+    feedNote(w, (kind === "hot" ? "HOT AISLE: " : "COLD AISLE: ") + agentTag(w, ag) + " " + AISLE_LINES[kind])
+    return
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -11217,6 +11276,7 @@ function finishWorldStep(w, active, blockers, moving) {
   stepRateLimit(w)
   stepDuck(w)
   stepConflicts(w)
+  stepAisles(w)
   stepAgi(w)
   stepRadio(w)
   stepMission(w)

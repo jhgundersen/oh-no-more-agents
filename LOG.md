@@ -7571,3 +7571,60 @@ already 1.3 s: DNS, TLS and the HTML over a 562 ms round trip. Getting under
 2 s would mean roughly halving the script bytes again, and that is the lazy
 per-biome art split above. Proposed as a separate pass if wanted. On Fast 4G
 the first frame is well under a second.
+
+## 245 — 2026-10-15 · Biome audit; hot and cold aisles
+
+**Asked:** list each biome's signature mechanic or hazard, and give the 2–3
+weakest a small one that fits their art and the puns. Playtest-neutral or
+better, never a soft-lock. Commit each.
+
+**Audit** (`BIOME_MECHANISMS`, the biome-only hazards, events and rules):
+
+| Biome | Signature |
+|---|---|
+| Cavern | sinkholes |
+| Ruins | the boulder |
+| Frost | powder snow (softer falls) and the Cold Cache snowball |
+| Foundry | hoist chains, lava |
+| Jungle | vines, crocodile pools |
+| Ice Cave | frozen colleagues |
+| Spaceship | jump pads, coolant |
+| Factory | conveyor belts, oil |
+| Skyscraper | the tower plan and its office hazards (sprinkler, polisher, shredder) |
+| Trench | swimming, currents, the Loan Shark |
+| Desert | wind gusts, the Tail Call scorpion |
+| Mail Room | pneumatic tubes |
+| Building Site | cranes |
+| Clock Tower | gates |
+| Rooftops | ziplines |
+| Subway | trains |
+| Harbour | ferries |
+| Data Center | only the Hot Aisle hazard (weak) |
+| Library | nothing of its own (weakest) |
+
+**Changed:** the Data Center's own mechanism, `placeAisles`, on a stream of
+its own.
+- **Placement.** On most corridors, a pair of floor grates: a hot aisle and the
+  cold aisle beside it, 6–10 cells each, on open floor.
+- **Effect.** Hot hurries whoever walks it (1.35×) and cold slows them
+  (0.85×), whichever way they face. It is pace only, through `walkStep`, so
+  hazard timing sees it too. Nothing is ever stopped or turned, so it can't
+  strand anyone.
+- **Ticker.** It names the first agent on each kind once a level: "HOT AISLE:
+  AGENT 004 IS RUNNING HOT" and "COLD AISLE: … HAS BEEN THROTTLED".
+- **Draw.** `drawAisles` shows a dashed orange or ice-blue grate on the
+  floor's lip, with heat shimmering up or chilled air sinking at page
+  resolution.
+- **Patch notes** have a line for it.
+
+**Measured:**
+- **Other biomes:** playtest 1-150 × 24 is identical run for run.
+- **Data Center at 1.3/0.7:** −8 home and one new clock-out (level 69, where
+  a shift in tool spending left a 2-high wall and nothing to climb it with).
+- **Tuning** on the 8 Data Center levels × 48 (base 5542): 1.3/0.7 gave 5532,
+  1.25/0.8 gave 5557, 1.35/0.85 gave 5565 and 1.2/0.85 gave 5560. 1.35/0.85
+  is shipped, with no bad endings.
+- **Full run at 1.35/0.85:** 51445 → 51452 home. Data Center 2777 → 2784, no
+  stalls or clock-outs. `test/aisles.test.js` covers it.
+
+**Next:** the Library.

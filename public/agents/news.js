@@ -6,6 +6,7 @@
 // carry on without it. Web-only, like share.js.
 (function () {
   var NEWS = [
+    { id: "2026-10-15-aisles", text: "Added: hot and cold aisles in the Data Center. Agents run hot or get throttled." },
     { id: "2026-10-15-biomes", text: "Added: new paint in all 19 biomes. The agents have not noticed." },
     { id: "2026-10-15-halloween", text: "Added: Halloween, Oct 24 to Nov 1. Same agents, worse lighting." },
     { id: "2026-10-15-replay", text: "Added: instant replay. The level's best moment, again, because nobody saw it the first time." },

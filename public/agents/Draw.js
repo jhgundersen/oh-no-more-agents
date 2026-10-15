@@ -2032,6 +2032,40 @@ function drawBelts(ctx, w, pal) {
   }
 }
 
+// The Data Center's aisles (Sim's placeAisles): a floor grate, warm where the
+// racks exhaust and cool where they breathe in, with the air showing — heat
+// shimmering up off the hot run, chilled air sinking onto the cold one.
+var AISLE_HOT_LIT = "#ff8a3d", AISLE_COLD_LIT = "#7dcfff"
+function drawAisles(ctx, w, pal) {
+  var C = w.k.CELL, cols = w.k.COLS
+  for (var i = 0; i < w.aisles.length; i++) {
+    var a = w.aisles[i], top = (a.y + 1) * C
+    for (var x = a.x0; x < a.x1; x++) {
+      if (w.terrain[(a.y + 1) * cols + x] === w.k.EMPTY) continue
+      var hot = (x < a.mid) === a.hotFirst
+      drawAisleCell(ctx, w, pal, x * C, top, hot)
+    }
+  }
+}
+
+function drawAisleCell(ctx, w, pal, x, top, hot) {
+  var C = w.k.CELL, lit = hot ? AISLE_HOT_LIT : AISLE_COLD_LIT
+  ctx.fillStyle = pal.rigDark
+  ctx.fillRect(x, top, C, 1)
+  ctx.fillStyle = lit
+  for (var j = 0; j < C; j += 2) ctx.fillRect(x + j, top, 1, 1)
+  if ((w.res || 1) < 2) return
+  // Two wisps a cell, a cycle of 24 ticks, offset along the run.
+  ctx.save()
+  for (var k = 0; k < 2; k++) {
+    var phase = ((w.ticks + x * 3 + k * 12) % 24) / 24
+    var dy = hot ? -1 - phase * 7 : -8 + phase * 7
+    ctx.globalAlpha = 0.55 * (1 - phase)
+    ctx.fillRect(x + 1 + k * 2, top + dy, 0.5, 1)
+  }
+  ctx.restore()
+}
+
 function drawBeltTreads(ctx, w, pal, x, top, shift) {
   ctx.fillStyle = pal.rigDark
   ctx.fillRect(x, top, w.k.CELL, 3)
@@ -2085,6 +2119,7 @@ function drawMachines(ctx, w, pal) {
   if (w.biome === "Cavern") drawCavernLife(ctx, w, pal)
   if (w.biome === "Data Center") drawRackLights(ctx, w)
   if (w.belts && w.belts.length) drawBelts(ctx, w, pal)
+  if (w.aisles && w.aisles.length) drawAisles(ctx, w, pal)
   if (w.updraft) drawUpdrafts(ctx, w, pal)
   drawAmbience(ctx, w, pal)
   if (w.biome === "Factory") drawFactoryMachines(ctx, w, pal)
