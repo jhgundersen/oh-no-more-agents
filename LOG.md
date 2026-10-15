@@ -9582,3 +9582,44 @@ the branch's base (1feb00f), and main has merged more drawing since: the
 updraft curls, the duck and the 429 sign. The reference is now main's tip
 just before this merge (a09ddc0), which is what the test means: WHO-off
 pixels unchanged by this merge.
+
+## 373 — 2026-10-15 · No descent where the dig would open into nothing
+
+**Chosen (autonomy):** the last pit straggler. Level 163 (Frost) ended on
+the stall cutoff with one agent standing in a pit it had dug. This is the
+cost 312 recorded.
+
+**Traced** (salt 1, agent 14):
+- **The trigger:** walking out of a hazard zone at x43, row 35,
+  `walkHazardZone` sent it down (`startDescent`). `canDescendHere` saw a
+  corridor below.
+- **The ground:** under that corridor's floor the column is open to the
+  bottom of the world.
+- **The result:** the dig went through the dirt and rock to the last layer,
+  `digOpensDeath` (312) stopped it there, and it stood in its own pit until
+  the cutoff.
+
+**Changed:** `voidUnder`. `canDescendHere` refuses a column where the first
+run of solid ground under the agent sits over a drop with no floor
+(`dropDepth` = Infinity), which is the only place a dig there can end.
+- **A first version was too strict:** it refused any column with a void
+  anywhere underneath. It also stopped digs that break into a corridor
+  first, and level 97 went from 1 stall cutoff to 3 in 24 colonies.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 163, 24 colonies: home | 92% | 97% |
+| Level 163: stall cutoffs | 2 | 0 |
+| Level 163: stranded | 3 | 0 |
+| Level 163: written off | 12 | 0 |
+| Level 163: nukes | 2 | 3 |
+| Level 97, 24 colonies | — | identical |
+| `npm run sim play`: home | 2,965/3,113 | 2,964/3,113 |
+| Playtest 1–440 | — | the 163 flag goes; nothing new |
+
+`sim play`: 200/200 cleared, no hangs.
+
+Built in a worktree (dev/163) while the main tree stayed clean for the
+17:25 deploy, and merged after it.

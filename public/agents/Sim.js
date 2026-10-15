@@ -5619,6 +5619,18 @@ function canDescendHere(w, ag, requireWorkable) {
   return exitBelow(w, ag) && corridorBelow(w, ag)
       && solid(w, x, footY + 1)
       && (!requireWorkable || at(w, x, footY + 1) !== STEEL)
+      && !voidUnder(w, x, footY)
+}
+
+// The dig goes through the ground under the agent and drops into whatever
+// is under that. If nothing is (open air to the bottom of the world), the
+// dig can only end on its last layer (digOpensDeath), in a pit of its own
+// making: on level 163 a walker leaving a hazard zone dug down toward a void
+// and stood in that pit until the cutoff (LOG 373).
+function voidUnder(w, x, footY) {
+  var y = footY + 1
+  while (y < ROWS && solid(w, x, y)) y++
+  return y < ROWS && dropDepth(w, x, y - 1) === Infinity
 }
 
 // Every ordinary downward rescue uses this gate. Keeping the corridor, steel,
