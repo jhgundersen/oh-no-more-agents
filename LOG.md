@@ -7255,7 +7255,7 @@ covers 311–319:
 
 **Before:** the last gate (1,370 tests), then `npm run smoke` on the clean
 tree, which passed (3 min, levels 1–7). The stall-progress change was
-stashed: its CRAP gate failed (see 322).
+stashed: its CRAP gate failed (see 323).
 
 **After:** `npm run verify -- --previous 1e1a7406` passed: shipped files,
 build agreement, the open tab reloading, level 20, `?daily&full=1`, Next
@@ -7396,3 +7396,75 @@ re-stamped.
 
 It rides the next deploy: the 11:44 one had gone out by the time it was
 merged.
+## 323 — 2026-10-15 · The level isn't stalled while someone is still getting closer
+
+**Chosen (autonomy):** the stall flags in a fresh 201–300 playtest. Level 204
+(Foundry) ended on the stall cutoff in 2 of 6 runs; 264, 224 and 294 also
+had some.
+
+**Traced** (204, salt 3): the last agent was not stuck.
+- **Where it was:** it had climbed onto the floor above the exit, at row 30,
+  and was walking along it toward the exit's column at x86, with 15 umbrellas
+  to come down on.
+- **Why the level ended:** the cutoff fired at t1267 with the agent at x90.
+- **Two measures that missed it:**
+  - `goalDist` off the door's floor is height only (`1000 + dy*4`), so
+    walking toward the door's column never counted as progress;
+  - the level's stall counter (`runDirector`) resets only on a save, a loss
+    or carved terrain, though the comment at `watchProgress` describes the
+    cutoff as "once nobody has got closer to home".
+- **Tried first:** the `goalDist` term alone made no difference, because the
+  level counter never reads it.
+
+**Changed:**
+- **`goalDist`:** off the door's floor it adds `|x − door| × 0.25`. `markD`
+  keeps the best ever, so pacing earns it once.
+- **`watchProgress`:** an agent's new best distance resets `w.stallTicks`, so
+  the level isn't stalled while anyone is genuinely closing in.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| `npm run sim play`: home | 2,972/3,129 | 2,976/3,129 |
+| `npm run sim play`: average attempt | 39 s | 40 s |
+| Playtest 1–200 stall flags gone | — | levels 43, 81, 97, 146 |
+| Playtest 1–200: level 129 stall cutoffs | 3/8 | 2/8 |
+| Playtest 1–200: level 133 stall cutoffs | none | 1/8 (new) |
+| Level 224, 12 colonies | 98% | 99%, stalls 2 → 0 |
+| Level 264, 12 colonies | 98% | 99%, stalls 4 → 2 |
+| Level 204, 12 colonies | 93% | 90%, stalls unchanged at 3 |
+
+200/200 cleared, no hangs. Level 204 is the one regression. Its stragglers
+are on high ledges with the exit below, so a later cutoff gives them longer
+to get into trouble. Worth a second look.
+
+**The CRAP gate** failed this the first time, with `directorNudge` at 40.8
+(20% covered) and `stepBuild` at 30.1. With real progress resetting the
+stall count, played levels reach the director's nudge far less often, so
+the suite stopped covering it. `test/director.test.js` now pins each
+branch on hand-built ground:
+- a wall on the door's floor gets a basher;
+- below the door, a way up and never a bash;
+- open ground gets a staircase, a bridge or nothing, never a bomb;
+- boxed in by steel with rescues spent, one bomb and only one per level.
+
+The change was stashed through the 11:44 deploy and lands after it (that
+deploy is 320, and the exit welcome merge is 322).
+
+The second gate failed one test from the exit welcome (322): "native arrival
+actors retain the original pixels in all 20 biomes". It plays each biome's
+level to its first arrival and hashes the frames, so its digest depends on
+the simulation as well as the drawing. This change touches only Sim.js and
+alters which world it reaches, not how anything is drawn (Draw.js is
+unchanged against HEAD). The digest is re-baselined to 5fca7a85….
+
+The third gate passed the check, then failed CRAP: `climbOut` at 43.2 (25%
+covered, the director's way up is reached less often now) and `stepBuild`
+at 30.1 (complexity 30, 95.8% covered). Fixed both:
+- **`test/director.test.js`** now covers `climbOut` both ways: it climbs the
+  wall it faces or turns to the one behind, and it declines with no wall, a
+  wall too tall, no climbers, or the door on this floor.
+- **`stepBuild`** gives its "blocked at a full stride" block to `narrowStep`,
+  as AGENTS.md asks for a giant you are already in. `npm run sim play` is
+  identical before and after the split (2,976/3,129, 208 attempts).

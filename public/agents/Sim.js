@@ -5654,7 +5654,11 @@ function goalDist(w, ag, goal) {
     }
     return 1000 + dy * 4 + near
   }
-  return 1000 + dy * 4
+  // Off the door's floor, closing on its column counts a little too. With
+  // height alone, the last agent on level 204 walked the floor above the exit
+  // toward it and read as getting nowhere (LOG 323). markD keeps the best
+  // ever, so pacing back and forth earns this once.
+  return 1000 + dy * 4 + Math.abs(ag.x - goal) * 0.25
 }
 function exitAbove(w, ag) { return exitFloor(w) < ag.y - 2 }
 
@@ -7860,36 +7864,10 @@ function stepBuild(w, ag) {
   if (ag.buildSpan && trimOverhang(w, Math.floor(nx), Math.floor(ny))) { /* cleared; carry on */ }
   if (solid(w, Math.floor(nx), Math.floor(ny))
       || !headroom(w, Math.floor(nx), Math.floor(ny))) {
-    // Blocked at a full stride. Before giving the build up, try a narrower
-    // one. A step is two cells across and gains a row every third brick, so a
-    // staircase needs eighteen cells of floor to climb a single corridor — and
-    // an agent wedged in a slot between a wall and a shaft has three. Cut the
-    // same brick to one cell across and a row up, and the twelve that used to
-    // buy less than a row of height buy twelve. It costs no decision and no
-    // threshold: the wide step is tried first every time and the narrow one is
-    // only reached where the wide one has nowhere to go, so a builder steepens
-    // exactly as far into a pocket as the pocket is tight, and goes back to
-    // ordinary stairs the moment the room opens out.
-    var sx = ag.x + ag.dir
-    var sy = ag.y - 1
-    if (!ag.buildFlat && ag.idle > NARROW_IDLE
-        && !solid(w, Math.floor(sx), Math.floor(sy))
-        && headroom(w, Math.floor(sx), Math.floor(sy))) {
-      nx = sx
-      ny = sy
-    } else {
-      // Even a narrow one is blocked. Check this BEFORE laying anything: the
-      // old order left a three-cell stub from a step the builder could never
-      // occupy, and a queue of agents repeated it into the little brick heaps
-      // seen on level 19.
-      ag.state = "walk"
-      // But where the way on is open at foot level, even if only at a crouch,
-      // the stairs have simply run into a roof on ground the agent can walk:
-      // stop building and carry on. Level 138's builders topped out under the
-      // ledge by the exit and turned their backs on it, every time.
-      if (!walkOnAhead(w, bx, footY)) ag.dir = -ag.dir
-      return
-    }
+    var narrow = narrowStep(w, ag, bx, footY)
+    if (!narrow) return
+    nx = narrow.x
+    ny = narrow.y
   }
 
   // A brick is three cells laid at foot level; the agent then steps along it.
@@ -7903,6 +7881,40 @@ function stepBuild(w, ag) {
   if (ag.bricks <= 0) {
     ag.state = "walk"
     ag.turns = 0
+  }
+}
+
+// Blocked at a full stride (stepBuild): the narrow step, or null having
+// given the build up.
+function narrowStep(w, ag, bx, footY) {
+  // Blocked at a full stride. Before giving the build up, try a narrower
+  // one. A step is two cells across and gains a row every third brick, so a
+  // staircase needs eighteen cells of floor to climb a single corridor — and
+  // an agent wedged in a slot between a wall and a shaft has three. Cut the
+  // same brick to one cell across and a row up, and the twelve that used to
+  // buy less than a row of height buy twelve. It costs no decision and no
+  // threshold: the wide step is tried first every time and the narrow one is
+  // only reached where the wide one has nowhere to go, so a builder steepens
+  // exactly as far into a pocket as the pocket is tight, and goes back to
+  // ordinary stairs the moment the room opens out.
+  var sx = ag.x + ag.dir
+  var sy = ag.y - 1
+  if (!ag.buildFlat && ag.idle > NARROW_IDLE
+      && !solid(w, Math.floor(sx), Math.floor(sy))
+      && headroom(w, Math.floor(sx), Math.floor(sy))) {
+    return { x: sx, y: sy }
+  } else {
+    // Even a narrow one is blocked. Check this BEFORE laying anything: the
+    // old order left a three-cell stub from a step the builder could never
+    // occupy, and a queue of agents repeated it into the little brick heaps
+    // seen on level 19.
+    ag.state = "walk"
+    // But where the way on is open at foot level, even if only at a crouch,
+    // the stairs have simply run into a roof on ground the agent can walk:
+    // stop building and carry on. Level 138's builders topped out under the
+    // ledge by the exit and turned their backs on it, every time.
+    if (!walkOnAhead(w, bx, footY)) ag.dir = -ag.dir
+    return null
   }
 }
 
@@ -11369,6 +11381,10 @@ function watchProgress(w, ag) {
   var dist = goalDist(w, ag, goalNow)
   if (dist < ag.markD - 2) {
     ag.markD = dist
+    // And the level is not stalled while anyone is still getting closer: the
+    // cutoff counted only saves, losses and carving, so it ended level 204
+    // under the feet of a straggler walking to the door (LOG 323).
+    w.stallTicks = 0
     ag.idle = 0
     ag.turns = 0
     // Progress wipes the pacing record. Everything the loop check knows is
