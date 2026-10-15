@@ -5033,3 +5033,164 @@ gate committed the merge with the conflict markers in it. The check doesn't
 read LOG.md, so it was green. This commit resolves it, with 272 first and then
 the 05:46 deploy note. The gate script now refuses to commit while any file
 holds conflict markers or a merge is unresolved.
+
+## 273 — 2026-10-15 · A place in The Cloud (on a branch)
+
+`codex/cloud` starts from approved agent art (`d67dcb7`) and merges current
+main (`afa5be9`) as requested. Merge `c44398a` includes the twentieth biome,
+its three Cloud commits, the latest gameplay fixes and the shared test lock.
+Both logs are preserved; the approved agent-art entry follows main as 269.
+The art below changes Draw only, with the new tests and generated stamps.
+
+**Art:** layered stationary dusk cloud banks and tall thunderheads replace
+the placeholder back wall. Their pale lilac tops, darker overlapping bodies
+and veiled server-rack silhouettes stay behind the playable terrain. The
+walkable banks have warm silver crowns, a continuous rim at the real foot
+line, softly shaded billows, lilac depth, stippled sides and damp undersides.
+Larger deep volumes fade into the weather. The placeholder cave scatter keeps
+its support locations as small condensation mounds/curls instead of stone
+spires and icicles, at page resolution only. The ON-PREM exit is a compact
+brick refuge: thick masonry, a steel door, warm window, light through the
+opening and a complete seven-letter plaque.
+
+The existing rain, updrafts, lightning bolt/column, scorch, exit glow and gate
+remain in their original passes. Short internal thunderhead flickers and a
+few splashes on supported bank tops run before the colony. Lightning's real
+wind-up controls a local lilac glow and stronger late column edges/ground
+contact, so the art names the actual danger. Reduced motion removes the new
+ambient flickers and splashes, retaining the steady warning. No scrolling or
+parallax, simulation state, RNG draws or new particles.
+
+**Cache:** a WeakMap keyed by world and terrain version holds depth rows,
+real walking/underside edges, pre-shaded billow fragments and pre-clipped air
+masks for distant flashes. Carving invalidates it. Steel and built bricks do
+not become cloud. Static art uses the existing terrain cache; the live pass
+reads three phase counters and ten splash slots without scanning terrain.
+Supported condensation vanishes when its support is removed. All drawing
+uses whole/half art pixels, with bounded recordings and digest comparisons.
+
+**Review:** `npm run compare -- codex/cloud 20 --seed 3 --ticks 400 --out
+/tmp/codex-cloud/compare-main.png`; the requested comparison takes 0.2 s.
+`compare-cloud-only.png` uses merged baseline `c44398a`, isolating this pass
+from the approved agent animations. `final/level-20.png` and `final/crop-20.png`
+come from `tools/shoot.js` at res 2, seed 3, tick 400. The eleven-pair
+`review/contact-sheet.png` includes Cloud levels 20/40/60/80/100 at tick 500,
+level 20/tick 400, and natural early/late charge, strike and recovery at ticks
+175/210/217/232, plus an internal flash at 249. Native frame pairs and
+individual enlarged comparisons are alongside it. Reviewed full frames and
+pixel crops: the route, faces, suits, umbrella rims, red team, hazards,
+original fittings and ON-PREM door remain clear.
+
+**Isolation:** 360 unspecified/res-1/res-3 live frames match the merged
+baseline byte for byte (24 levels × five palettes × three scales). All 95
+non-Cloud page frames match too. All eleven Cloud comparisons preserve the
+original sky above the existing crown envelope; the first changed pixel in
+the requested comparison is at canvas (24,50), not (0,0). The final probe takes
+8.67 s, peak RSS 322 MB under a 256 MB renderer heap. Rendered/unrendered
+Cloud play has identical complete digests through 600 ticks on levels
+20/40/60/80/100. Sim, Palette, web integration and numbered assets are unchanged
+from the merged baseline. Native/other-scale art retains the original bank,
+scatter and door drawing.
+
+**Cost:** scan Cloud levels 20–400, seed 3, every thirty ticks up to tick 1500:
+the largest sampled cast is nineteen at level 340/tick 480. Five warmed,
+interleaved batches of one hundred software-raster actor frames give
+1.570 → 1.563 ms, effectively unchanged within noise. The sampled internal
+flash costs 0.040 ms/76 rectangles; an idle splash phase costs 0.0015–0.0035 ms.
+`npm run fps -- 340 --seed 3 --from-tick 360 --seconds 5 --speed 2 --json`
+measures normal page play from tick 363 to 592, reaches nineteen characters,
+and holds median/p5 60/60 fps, worst 17 ms, 0% long tasks, 12% CPU.
+
+**Pipeline:** static billow shading and atmospheric clipping are computed
+once per terrain version, with no allocation or scan in the live weather
+loop. The native/progression sheet reuses each played world for both
+renderers. A complexity preflight moved the coarse Cloud gate into its helper, keeping
+the terrain dispatcher at 29. The backdrop preserves the coarse recipe's
+canvas-state contract. Shared backdrop assertions now compare SHA digests
+instead of risking full-frame buffer diffs.
+The newly wrapped npm check/test scripts need four `--` separators before
+Node options; a dry-run argument probe verified the exact file list and flags
+reach Node, keeping Factory art excluded. Check writes LCOV in the same run;
+CRAP consumes it with `--use-existing-coverage`, avoiding a second full suite.
+All heavy steps use the shared FIFO test lock.
+
+**Validation:** `npm run stamp` is current (Draw `d50a47c7`, build
+`b2fb8642`). The capped full `npm run check` plus LCOV passes all 1,243 tests,
+zero failures/skips, in 232.27 s; Factory art is explicitly excluded. Node
+uses a 2,048 MB heap, `ulimit -v 6000000`, two test workers and a 120 s test
+timeout. `npm run crap -- --threshold 30 --use-existing-coverage` passes;
+maximum CRAP is 30.0, terrain/decor dispatchers are 29.0, and the largest
+new Cloud helper is 21.0 with 100% coverage. All final source hashes match
+the checked files. The focused backdrop/Cloud set also passes 74 tests in
+5.90 s. Check and coverage share one execution and one FIFO lock, released
+as soon as CRAP finished. `git diff --check` is clean.
+
+**Next:** ready for Cloud art review. Commit on `codex/cloud` only; no push,
+deployment or sibling sync.
+
+## 274 — 2026-10-15 · Cumulus, not glass (on a branch)
+
+Revision on `codex/cloud`, following review of level 20/seed 3/tick 500.
+The previous smooth depth ramp reached straight cell edges and read as ice.
+Cloud banks now have overlapping rounded cream crowns in the air above the
+real walking line, irregular hanging lobes underneath and bulging side edges.
+Every short bank gets a crown, with staggered widths and heights along longer
+runs. The cream/silver foot line stays continuous and exactly on the terrain.
+The original three-pixel crown envelope at the first bank preserves the sky.
+
+Rounded highlights interrupt the body ramp. Exposed narrow columns have
+height-local overlapping volumes so their stepped terrain reads as rising
+cumulus; broad banks do not acquire false columns where depth groups meet.
+The underside no longer has a continuous straight dark border. Side lobes
+blend with the body depth rather than forming a bright rectangular frame.
+The thunderheads, server silhouettes, brick refuge, weather and wind-up light
+are unchanged. Native/res-3 and non-Cloud rendering remain unchanged.
+
+Contour fragments and rising volumes are computed once in the existing
+world/terrain-version cache. Air fragments must touch the actual bank; steel,
+built bricks and carved openings retain their masks. All animation still
+uses the existing cached masks without terrain scans or new per-frame work.
+No simulation, RNG, host integration or palette changes.
+
+**Review:** `/tmp/codex-cloud-revision/compare-main.png` is the requested
+`npm run compare -- codex/cloud 20 --seed 3 --ticks 500`; `compare-revision.png`
+uses first-pass `22ec45e` as the before image. `final/level-20.png`
+and `final/crop-20.png` are res-2 shoot.js renders at that exact seed/tick.
+The eleven-pair `review/contact-sheet.png` covers five Cloud layouts at tick
+500 (including the review frame), tick 400, and natural
+charge/strike/recovery/flash phases. Reviewed native-sized images and enlarged crops for ground, faces,
+suits, umbrella rims, hazards and ON-PREM readability.
+
+**Isolation and cost:** 360 unspecified/res-1/res-3 live frames and all
+95 non-Cloud res-2 frames match the previous Cloud commit byte for byte.
+Eleven Cloud frames preserve the original sky band. The sheet/isolation
+probe takes 8.84 s, peak RSS 330 MB with a 256 MB heap. Both comparisons
+finish in 0.2–0.3 s; their first changed pixel is canvas (24,50).
+The busiest sampled Cloud scene remains nineteen characters at level 340,
+tick 480. Five interleaved batches of one hundred actor frames measure
+1.5304 → 1.5307 ms (0.0003 ms difference, within noise). Internal flicker
+remains 76 rectangles/~0.040 ms, idle phase zero calls, splashes three/six
+calls/~0.0016–0.0033 ms. The revision changes cached terrain paint only.
+
+**Validation:** `npm run stamp` is current (Draw `9d2d3dd1`, build
+`96acba68`). The capped full `npm run check` with LCOV passes all 1,245 tests,
+zero failures/skips, in 230.96 s. Factory art remains explicitly excluded.
+The shared-lock run uses a 2,048 MB Node heap, `ulimit -v 6000000`, two test
+workers and 120 s test timeouts. `npm run crap -- --threshold 30
+--use-existing-coverage` passes, maximum 30.0; new helpers score at most
+13.0, with boundary layout/fragments 100% covered. All final source hashes
+match the checked files. The focused 13-test Cloud set passes in 4.44 s,
+including adjacent-air contour masks and a tower joined to a broad base.
+Rendered/unrendered Cloud digests still match through 600 ticks on five
+layouts. `git diff --check` is clean.
+
+**Pipeline:** the comparison sheet reuses each played world for both Draw
+versions. New shape fragments are clipped and shaded during cache creation,
+so the detailed outline adds no live weather work. The full check emits
+LCOV once and CRAP reuses it, avoiding a duplicate suite. All heavy runs use
+the shared FIFO lock; this revision queued behind main's soak run.
+
+**Next:** ready for Cloud revision review. Branch commit only; no push,
+deployment or sibling sync.
+
+Reviewed and merged by the loop. Cumulus lobes, a towering cumulus column, a brick ON-PREM refuge and thunderheads at page resolution; the banks read as ground.
