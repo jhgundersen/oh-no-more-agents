@@ -1996,6 +1996,7 @@ function drawRackLights(ctx, w) {
 // column of rising air, in open air only. A safe way down that the audience
 // cannot see is a safe way down that looks like luck.
 function drawUpdrafts(ctx, w, pal) {
+  if (cloudPage(w) && w.updraftLift) { drawCloudDrafts(ctx, w); return }
   var k = w.k, C = k.CELL, top = k.SKY * C, tall = k.ROWS * C - top
   ctx.save()
   for (var x = 0; x < k.COLS; x++) {
@@ -21558,5 +21559,75 @@ function drawLogoUmbrella(ctx,colours,phase) {
   ctx.fillStyle=colours.accent;ctx.fillRect(x-3,40,6,1);ctx.fillRect(x-6,41,12,1);ctx.fillRect(x-9,42,18,2)
   ctx.fillRect(x-9,44,4,2);ctx.fillRect(x-2,44,5,2);ctx.fillRect(x+6,44,3,2)
   ctx.fillStyle="#e9edf7";ctx.fillRect(x-3,40,4,1);ctx.fillRect(x-6,41,2,1);ctx.fillRect(x-1,41,1,3)
+  ctx.restore()
+}
+
+// Rising curls, rather than falling streaks: the Cloud's umbrella lanes.
+// The half-pixel air mask also excludes the bank's cached cumulus contours.
+var CLOUD_DRAFT_CACHE = new WeakMap()
+var CLOUD_DRAFT_CURL = [[2,0,3,1,0.62],[1,1,1,1,0.60],[2,2,3,1,0.52],
+  [5,3,1,1,0.42],[3,4,2,0.5,0.32],[2,4.5,1,1,0.24],[2,5.5,0.5,2,0.16]]
+function cloudDraftLayout(w) {
+  var old = CLOUD_DRAFT_CACHE.get(w)
+  if (old && old.version === w.terrainVersion && old.source === w.updraft && old.terrain === w.terrain) return old
+  var k = w.k, scene = {version:w.terrainVersion,source:w.updraft,terrain:w.terrain,
+    width:k.COLS*k.CELL*2,height:k.ROWS*k.CELL*2,bands:[]}
+  scene.mask = new Uint8Array(scene.width*scene.height)
+  for (var x=0;x<k.COLS;x++) {
+    if (!w.updraft[x]) continue
+    var end=x+1
+    while (end<k.COLS && w.updraft[end]) end++
+    scene.bands.push({x:x*k.CELL,width:(end-x)*k.CELL});x=end-1
+  }
+  cloudDraftAir(w,scene)
+  var outline=cloudLayout(w).outline
+  for (var i=0;i<outline.length;i++) cloudDraftMaskRect(scene,outline[i],0)
+  CLOUD_DRAFT_CACHE.set(w,scene)
+  return scene
+}
+function cloudDraftAir(w,scene) {
+  var k=w.k,C=k.CELL
+  for (var x=0;x<k.COLS;x++) {
+    if (!w.updraft[x]) continue
+    for (var y=k.SKY;y<k.ROWS;y++) if (w.terrain[y*k.COLS+x]===k.EMPTY)
+      cloudDraftMaskRect(scene,{x:x*C,y:y*C,width:C,height:C},1)
+  }
+}
+function cloudDraftMaskRect(scene,b,value) {
+  var left=Math.max(0,Math.round(b.x*2)),right=Math.min(scene.width,Math.round((b.x+b.width)*2))
+  if (right<=left) return
+  for (var y=Math.max(0,Math.round(b.y*2));y<Math.min(scene.height,Math.round((b.y+b.height)*2));y++)
+    scene.mask.fill(value,y*scene.width+left,y*scene.width+right)
+}
+function drawCloudDraftRect(ctx,scene,x,y,width,height) {
+  var left=Math.max(0,Math.round(x*2)),right=Math.min(scene.width,Math.round((x+width)*2))
+  for (var yy=Math.max(0,Math.round(y*2));yy<Math.min(scene.height,Math.round((y+height)*2));yy++) {
+    var run=-1
+    for (var xx=left;xx<=right;xx++) {
+      var air=xx<right && scene.mask[yy*scene.width+xx]
+      if (air && run<0) run=xx
+      if (!air && run>=0) {ctx.fillRect(run/2,yy/2,(xx-run)/2,0.5);run=-1}
+    }
+  }
+}
+function drawCloudDraftCurl(ctx,scene,b,y,alpha) {
+  var scale=b.width/8
+  for (var i=0;i<CLOUD_DRAFT_CURL.length;i++) {
+    var p=CLOUD_DRAFT_CURL[i]
+    ctx.globalAlpha=alpha*p[4]
+    drawCloudDraftRect(ctx,scene,b.x+Math.round(p[0]*scale*2)/2,y+p[1],Math.max(0.5,Math.round(p[2]*scale*2)/2),p[3])
+  }
+}
+function drawCloudDrafts(ctx,w) {
+  var scene=cloudDraftLayout(w),top=w.k.SKY*w.k.CELL,tall=w.k.ROWS*w.k.CELL-top
+  var phase=w.reducedMotion?0:Math.floor(w.ticks)/2,alpha=ctx.globalAlpha,count=Math.ceil(tall/32)
+  ctx.save();ctx.fillStyle="#acdce2"
+  for (var i=0;i<scene.bands.length;i++) {
+    var b=scene.bands[i]
+    for (var s=0;s<count;s++) {
+      var y=Math.round((top+tall-((phase+s*tall/count+b.x*3)%tall))*2)/2
+      drawCloudDraftCurl(ctx,scene,b,y,alpha)
+    }
+  }
   ctx.restore()
 }
