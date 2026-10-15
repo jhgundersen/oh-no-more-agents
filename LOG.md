@@ -9978,3 +9978,32 @@ re-stamped.
   The branch carried the already-merged umbrella-office commits too; git
   folded those in cleanly.
 - **Code:** Draw.js and web.js only, no Sim.js or Outcome.js change.
+
+## 384 — 2026-10-15 · The wall before the door gets a mine on the second visit
+
+**Chosen:** 381's next. On level 163, salt 15, why did nothing escalate?
+
+**Traced:** agent 18 reached the 6-thick block before the door at t2955
+with `idle` 7.
+- **Why idle was so low:** reaching that wall is always an agent's closest
+  point yet, so `watchProgress` resets `idle` on arrival.
+- **What that does to the gate:** `wallLastResort`'s mine needs half its
+  patience (idle > 450), which only comes on about the third visit. A colony
+  that arrives late meets the clock first: 3 miners in the toolbar, no
+  bashers or climbers.
+
+**Changed:** `homeWall`. At a wall with the door ahead at its height
+(`doorAhead`, now shared with `tunnelHome`), an agent that has already
+turned once (`turns >= 1`) counts toward the charge. As with `jammed`, it
+may lay a mine only; a bomb still waits for real patience.
+
+**Measured** (24 colonies each):
+
+| Level | Home | Total ticks | Nukes |
+|---|---|---|---|
+| 163 | 417 → 416 | −7% | 3 → 1 |
+| 304 | 294 → 300 | −7% | 2 → 2 |
+| 72, 129 | identical | identical | identical |
+
+- **`npm run sim play`** and the 1–440 playtest (6 colonies): identical to
+  main.
