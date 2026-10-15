@@ -5782,6 +5782,7 @@ function wallLastResort(w, ag, t) {
   if (trait.standDown > 0 && ag.turns >= trait.standDown &&
       countComing(w, ag) >= 1 && spend(w, ag, "blocker")) {
     ag.state = "block"
+    ag.blockWall = true
     return
   }
 
@@ -8382,7 +8383,14 @@ function stepBlock(w, ag) {
   // every one of them bouncing off it, so the pocket keeps the blocker
   // standing and the blocker keeps the pocket full — the counter that was
   // meant to release it is fed by the very thing it is causing.
-  if (ag.blockIdle > BLOCK_PATIENCE || ag.blockHeld > BLOCK_MAX) {
+  // Standing down for a wall holds the colony back from a dead end, and only
+  // while it is one. On level 79 a charge cleared the low post in front of
+  // the blocker ninety ticks after it planted its hands; the colony bouncing
+  // off it kept its patience full, and it stood on the open way home until
+  // the loop rule had bombed ten of twelve (`npm run playtest`, LOG 305).
+  if (ag.blockIdle > BLOCK_PATIENCE || ag.blockHeld > BLOCK_MAX
+      || (ag.blockWall && obstructionAhead(w, ag) === 0)) {
+    ag.blockWall = false
     ag.blockIdle = 0
     ag.blockHeld = 0
     ag.state = "walk"

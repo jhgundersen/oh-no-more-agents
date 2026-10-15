@@ -390,8 +390,10 @@ test("a planter clears the blast and then comes back to the gap, not on to the f
 test("a mission nobody can reach is descoped once the colony has waited at the door, and nobody is condemned for waiting", () => {
   // Level 101 (a Cavern mission level): the miners sit beyond two walls that
   // hang to within two rows of the floor, with the bashers spent upstairs.
+  // Seed 8 used to be the example; since a wall's blocker stands down when the
+  // wall goes (LOG 305) that colony reaches the cages, and seed 10 is the one.
   let w = null
-  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
     const c = S.generate(101, 0, seed * 104729)
     while (!c.done && c.ticks < 6000) S.step(c)
     if (c.mission && c.mission.descoped) { w = c; break }

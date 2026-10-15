@@ -6521,3 +6521,49 @@ based on 93bb853 plus the ambience), `--no-ff`, as approved.
 - **Stamps:** re-stamped.
 - **No code was lost on either side.** Against the branch, the merged code
   differs only in main's later change, the DevTools port fix (301).
+
+## 305 — 2026-10-15 · A blocker at a wall stands down when the wall goes
+
+**Chosen (autonomy):** the worst entry in a fresh `npm run playtest -- 1-100`
+was "level 79: 14 agents written off as looping". A colony pacing on the
+spot until it's bombed one by one is the most visible gameplay flaw a
+watcher can meet. Levels 1–100 overall were at 96% home.
+
+**Traced** (level 79, Harbour, salt 3: 2 of 12 home, 10 condemned):
+- **The obstacle:** a rock post hangs from the ceiling at x61 down to row 55,
+  leaving two cells over the bottom floor. That is too low for a four-cell
+  agent, on the only way left to the exit.
+- **t1259:** agent 2 gives up there and stands as a blocker
+  (`wallLastResort`), so the colony turns back short of the dead end.
+- **t1351:** another agent's mine clears the post, and the way home is open.
+- **Why the blocker stays:** it is released only when it has stopped nobody
+  for 300 ticks (`BLOCK_PATIENCE`) or after 900 (`BLOCK_MAX`). The colony
+  bouncing off it kept resetting the first.
+- **The cost:** behind it the colony's idle counters were already in the
+  hundreds from the walk down. From t1678 the loop rule began bombing them,
+  ten in all, beside a blocker guarding a wall that no longer existed.
+
+**Changed** (`Sim.js`):
+- `wallLastResort` marks its blocker `blockWall`.
+- `stepBlock` stands such a blocker down as soon as `obstructionAhead` finds
+  nothing in front of it. That is the same measure the charges use, so
+  "open" means what it means for a mine or a bomb.
+- Other blockers are unchanged: edges, hazards, and the stand-down at the end.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Salt 3 | 2/12 | 12/12, t2639 |
+| Level 79, 24 colonies | 93% home, 19 condemned | 98%, 5 |
+| `npm run sim play` (200 levels) | 2,968/3,139 home | 2,969, all 200 cleared, no hangs |
+| `npm run playtest -- 1-200 --seeds 8` | level 79 flagged | identical except that one flag |
+
+The case is rare, but when it occurs it costs most of a colony.
+
+The first gate failed one test: "a mission nobody can reach is descoped".
+It looks for a level-101 colony, among seeds 1–8, that descopes its mission,
+and seed 8 had been the only one. With this change seed 8 reaches the cages:
+11 of 15 home, where it used to descope with 8. Across seeds 1–12, seed 11
+goes from 11 to 14 home and seed 12 from 7 to 14, and seed 10 still
+descopes. The test now searches seeds 1–12, with a note why.
