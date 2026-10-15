@@ -5975,3 +5975,133 @@ on f28b2c5), `--no-ff`, as approved.
     reload after a deploy.
   - Level 20, a `?daily&full=1` link, Next during a standup, and the patch
     notes by keyboard all work.
+
+## 293 — 2026-10-15 · Let the colony be heard (on a branch)
+
+**Chosen (autonomy):** make the event ticker readable outside the board. On
+phones its five-pixel lettering hid the game's explanations and jokes, even
+while the agents and scenery read clearly. Branch `codex/captions`, from main
+`9642606`.
+
+**Watched first:** eight local runs, watched for eight seconds each with frames at
+three and eight seconds:
+Cavern, Trench, Library, The Cloud, Rooftops at Halloween, Factory at Christmas,
+Data Center and Harbour. Desktop 1280×900 and phone 390×844, Steady and Brisk,
+seed 3. The live ticks advanced 90→244 at Steady and 136→366 at Brisk. The
+seasonal props and umbrellas read; “AGENT 006 · RICOCHET” and “HALLUCINATION
+DETECTED” were almost impossible to read along a phone's bedrock. Original
+watch frames/metrics: `/tmp/codex-watch-art/` (`watch.json`, sixteen PNGs).
+
+**Changed:**
+- The page displays the same newest event in a 12px, theme-coloured caption
+  beneath the board. It reserves one line at larger board sizes and two at
+  1×; fixed space prevents controls jumping between notes. Phone spacing
+  accommodates it, and the landscape board/caption centre as a group.
+- A note remains for five wall-clock seconds unless superseded; Brisk and
+  fast-forward cannot spend its reading time in skipped ticks. Pausing keeps
+  it available. New levels, replays, reports and standups clear it. Seasonal
+  lines share the original newer-note/tie rule, including “HOME FOR THE
+  HOLIDAYS”. No new timers, listeners or animation; unchanged captions cause
+  zero DOM rewrites. The note is ordinary accessible text, with `aria-live`
+  off, preserving the existing twice-per-level announcements.
+- A host option suppresses the old board-edge ticker only on the page. Its
+  default drawing and the res-1 panel stay intact. No simulation, colony RNG,
+  terrain, actor or seasonal-rule changes. No assets/dependencies added;
+  source gzip delta across index/Draw/web is **769 bytes**.
+
+**Evidence:** `/tmp/codex-captions/after/contact-sheet.png` (before/after
+pairs for desktop, portrait, landscape and both seasons); each full-size view
+is alongside it. Same level/seed/tick 400, real CSS sizes. Inspected the sheet
+and phone/desktop/landscape originals. `metrics.json` records positions,
+font sizes, event text and lifecycle checks. Before files are in
+`/tmp/codex-captions/before/`; the untouched baseline is in `baseline/public/`.
+
+**Pipeline:** `tools/captions.js` captures all five views with one bounded local
+browser, waits for font/readiness, steps at most 400 ticks while paused, and
+refreshes the host readouts. It hides only the paused capture's obsolete
+wall-clock title card, rather than waiting through the run for every frame.
+The same tool makes the comparison sheet and exercises expiry, pause,
+fast-forward, seasonal priority, navigation and intermission exclusions.
+Run with `node tools/captions.js <out> [public-root] [before-out] --checks`
+through the shared test lock.
+
+**Tests:** shared feed selection/future/age boundaries; retained native pixels
+and page opt-out; read-only, RNG-free painting in all twenty biomes; actual
+browser sizes, full phone/landscape fit, multi-line text, 4.9s→5.001s expiry,
+paused reading, skipped ticks, replay/report/navigation clears, seasonal ties
+and zero repeated DOM writes. Focused caption/brawl/phone tests: **23 passed,
+zero failures/skips, 3.09 s**. `npm run stamp` updated Draw/web and build stamps.
+
+**Full checks:** `npm run check` with coverage passed: **1,293 tests,
+zero failures/skips, 317.30 s**, Factory art included. The subsequent
+`npm run crap -- --threshold 30 --use-existing-coverage` passed with a maximum
+of **30.0**. Both ran sequentially under the shared test lock, Node heap
+2,048 MB, `ulimit -v 6000000`, two test workers and 120-second timeouts.
+The final five-view evidence/lifecycle refresh also passed, with no browser
+errors. Logs: `/tmp/codex-captions/check.log`, `crap.log`, `focused.log` and
+`evidence-final.log`. `git diff --check` passed.
+
+**Next:** review and merge this branch; no push or deployment from this pass.
+
+## 294 — 2026-10-15 · Put a face on the tools (on a branch)
+
+**Chosen (autonomy):** give the passive skill stock tiny pixel action icons.
+The scenery and agent actions now read well; the text-only CLIMB / BASH /
+MINE / DIG tiles were harder to connect with what the colony was doing.
+Branch `codex/skill-icons`, current main `930af97` plus the approved captions
+branch (merged here while its developer merge was pending).
+
+**Watched first:** six more eight-second local runs, with frames at three and
+eight seconds: desktop Clock Tower, Subway and Building Site; phone Ruins,
+Desert and Ice Cave. Both Steady and Brisk, seed 3; real live ticks advanced
+91→245 and 136→366 respectively. Frames and metrics are in
+`/tmp/codex-watch-again/` (`watch.json`, twelve PNGs). The seasonal follow-up
+below also checks the Christmas inventory beside the decorated board.
+
+**Changed:** eight distinct 16×16 glyphs: climber against a wall, open umbrella,
+fused bomb, arms-out blocker, brick steps, horizontal hammer, diagonal pick,
+and shovel with soil. They use the existing tour-icon palette and dark pixel
+outline, with intact text names and counts. These are still passive inventory
+readouts, not buttons; the canvases are hidden from assistive technology.
+Exhausted tools dim to 30%; a just-used last tool stays bright for the existing
+recent-use cue. No additional listeners, timers or per-frame painting: all eight
+canvases paint once on toolbar creation, survive navigation, and retain their
+pixels through all nine themes. No simulation, RNG, seasonal rules or sound
+changes. No new assets/dependencies; index/Draw/web source gzip delta from the
+approved-caption baseline is **620 bytes**.
+
+**Evidence:** `/tmp/codex-skill-icons/after/contact-sheet.png`: paired native-CSS
+stock strips for desktop, phone, DPR 2 phone, landscape, narrow 400px board and
+Christmas; the eight glyphs at 16px and 3×; full phone and desktop context.
+Inspected the sheet and original phone, desktop-stock and narrow-stock shots.
+Before files are in `before/`, untouched baseline in `baseline/public/`, metrics
+and originals alongside the after sheet. Counts never overlap the icons, and
+phone and landscape controls remain entirely in the viewport.
+
+**Pipeline:** `tools/toolbar-icons.js` reuses one bounded local browser for all
+six views and cache/lifecycle assertions, rather than launching a browser per
+view. Captures wait for font/readiness, step at most 400 ticks paused, then
+refresh the real host readouts. Sheet height follows measured toolbar sizes,
+so adding phone/DPR rows cannot clip the context shots. Run via the shared lock:
+`node tools/toolbar-icons.js <out> [public-root] [before-out] --checks`.
+
+**Tests:** all eight complete, distinct palette-valid glyphs; bounded pixel
+painting, RNG refusal, context preservation, exact 2× scaling; browser label /
+count / passive semantics, icon/count bounds, DPR 1/2 and phone/landscape fit;
+zero icon repaints across repeated refreshes, theme changes and navigation;
+unchanged world during refresh, recent-last-use and exhausted opacity. Focused
+inventory/tour/phone tests: **14 passed, zero failures/skips, 4.84 s**. `npm run
+stamp` refreshed Draw/web and the page/build stamps; `git diff --check` passed.
+
+**Full checks:** `npm run check` with coverage passed: **1,337 tests, zero
+failures/skips, 319.39 s**, Factory art included. The subsequent CRAP threshold
+30 passed using that coverage, maximum **30.0** (new icon painter **2.0**,
+capture helper **5.0**). Both ran sequentially in one shared FIFO lock
+reservation, Node heap 2,048 MB, `ulimit -v 6000000`, two workers and
+120-second test timeouts. Check/coverage completion was reported immediately
+to release the developer's testing window. No browser errors in the evidence.
+`git diff --check` passed.
+Logs: `/tmp/codex-skill-icons/focused.log`, `check.log`, `crap.log`, and
+`evidence.log`.
+
+**Next:** review and merge this branch; no push or deployment from this pass.
