@@ -6845,3 +6845,38 @@ ride the next deploy, as asked.
 **After:** `npm run verify -- --previous f45a1cb9` passed: shipped files,
 build agreement, the open tab reloading, level 20, `?daily&full=1`, Next
 during a standup, and the patch notes by keyboard (5 counter writes refused).
+
+## 311 — 2026-10-15 · Wait at a lip over a blast, not over a fence
+
+**Chosen:** 308's "Next". Level 72's colony walked off the end of floor 36
+at x70 and died falling through the Hot Aisle's blast.
+
+**Traced:**
+- **Why the edge check missed it:** `edgeAhead` only checks where a drop
+  lands (`hazardZoneAt` at `footY + depth`). That hole drops 20 rows, through
+  the Hot Aisle's corridor to the floor below. The landing was clear and the
+  way down was not, and the fixture was already known.
+
+**Changed:** `fallThroughFire`. At a lip, an agent waits
+(`waitFor`, the same hold a walker uses at a current) while a known
+floor blast (`catchFired`: hot aisle, sentry, frostjet) that covers any row of
+the fall is winding up or firing. It drops during the rest.
+- **Two exclusions,** both found by measuring:
+  - **Only the blasts.** First applied to every fixture, it took fences from
+    13 to 47 kills. On level 58 the whole colony queued at a fence's lip, then
+    stepped off together and fell into the next pulse: 16 died at tick 782.
+    A field or box needs its own timing, which this rule does not attempt.
+  - **Not a fixture whose reach takes in the lip.** Waiting there would be
+    standing in it.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 72, 12 colonies | 75% home | 78% |
+| Other Data Center levels | — | unchanged |
+| `sim hazards` | — | the same totals: hot aisle +1, brazier −1, fences back at 13 |
+| `npm run sim play` | 2,951/3,111 home, 207 attempts | 2,963/3,126, 208 attempts |
+| `npm run playtest -- 1-200 --seeds 8` | — | identical flags |
+
+`sim play` is neutral, and 200/200 cleared, no hangs.

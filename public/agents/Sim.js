@@ -5926,6 +5926,11 @@ function edgeAhead(w, ag, nx) {
   }
 
   if (ag.special) { specialAtEdge(w, ag, nx, depth, far); return }
+  // The landing can be clear while the way down is not: on level 72 a hole
+  // drops twenty rows past a Hot Aisle's corridor, and the colony walked off
+  // it into the blast one after another. Wait at the lip while it winds up
+  // or fires, and go during the rest, the way a walker waits out a current.
+  if (fallThroughFire(w, ag, ax, footY, depth)) { ag.waitFor = 2; ag.still = 0; return }
   if (depth !== Infinity && hazardZoneAt(w, ax, footY + depth, hazardPerceptive(ag))) {
     edgeOverDanger(w, ag, far)
     return
@@ -5935,6 +5940,25 @@ function edgeAhead(w, ag, nx) {
   // first is exactly how a floater ends up drifting serenely out of the world.
   if (depth === Infinity) { edgeBottomless(w, ag, far); return }
   edgeDrop(w, ag, nx, depth, far)
+}
+
+function fallThroughFire(w, ag, ax, footY, depth) {
+  var perceptive = hazardPerceptive(ag), bottom = Math.min(ROWS - 1, footY + (depth === Infinity ? ROWS : depth))
+  for (var i = 0; i < w.hazards.length; i++) {
+    var h = w.hazards[i]
+    if (h.wrecked || h.throttled > 0 || (!h.known && !perceptive)) continue
+    // Only the blasts along a floor (catchFired), whose rest outlasts a fall
+    // through them. A field or a box has its own rhythm; held at a fence's lip
+    // and then released together, level 58's colony fell into it as one.
+    if (HAZARD_REACHES[h.kind] !== catchFired) continue
+    if (h.phase !== "charge" && h.phase !== "fire") continue
+    // Not one whose reach takes in the lip itself: waiting there is standing
+    // in it (a fence's box reaches two rows past its floor, and holding the
+    // queue at its edge tripled what fences killed).
+    if (hazardCovers(w, h, Math.floor(ag.x), footY)) continue
+    for (var y = footY + 1; y <= bottom; y++) if (hazardCovers(w, h, ax, y)) return true
+  }
+  return false
 }
 
 // The top of a ladder is approached from the wall it rests on, facing out
