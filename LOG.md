@@ -9169,3 +9169,29 @@ Reviewed and merged by the loop: codex/duck-art (7705edb, entry 361),
 `--no-ff`, as approved. Codex's entry is renumbered 361 and the page is
 re-stamped. Drawing only, with no Sim.js change, and the native (res 1)
 pixels kept, per Codex's tests.
+
+## 363 — 2026-10-15 · The cutoff waits while someone explains it to the duck
+
+**Chosen (autonomy):** level 345 (Jungle), stall cutoff in 1 of 6.
+
+**Traced** (salt 3):
+- The last one out walked the floor by the door and stopped dead at x48.7,
+  in `walk`, with no wait, queue or hazard.
+- It had just picked up the Rubber Duck (`duckAt` 1032), and `explaining`
+  holds it still for `RUBBER_TALK` (48) ticks before its eureka and rescue.
+- 335 made "everyone stuck" mean 30 still ticks, so the cutoff ended the
+  level 30 ticks into the 48-tick talk.
+
+**Changed:** `w.stillTicks` does not count while anyone has `explainFor`
+left (`explainingAnyone`).
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 345, salt 3 | stall cutoff | 17/17 at t1237 |
+| Level 345, 16 colonies: stalls | 1 | 0 |
+| Level 345: worst colony | 94% | 100% |
+| Levels 163, 204, 225 | — | identical |
+| `npm run sim play` | 2,965/3,113 | identical |
+| Playtest 1–440 | — | only the 345 flag goes; nothing new |

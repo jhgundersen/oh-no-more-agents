@@ -11773,7 +11773,10 @@ function finishWorldStep(w, active, blockers, moving) {
     // agent turning at a wall stands still for a tick, and on level 324 the
     // last one out turned at the far wall at t1536 and the level ended under
     // it, in 2 of 16 colonies (LOG 335).
-    w.stillTicks = w.movingCount === 0 ? (w.stillTicks || 0) + 1 : 0
+    // Explaining to the rubber duck is standing still on purpose, and it
+    // ends in a rescue: on level 345 the last one out picked up the duck,
+    // and the cutoff ended the level 30 ticks into its 48-tick talk (LOG 363).
+    w.stillTicks = w.movingCount === 0 && !explainingAnyone(w) ? (w.stillTicks || 0) + 1 : 0
     var allStuck = w.stillTicks > STILL_FOR
     if (w.stallTicks > 900
         || (nearlyDone && allStuck && w.stallTicks > 210)
@@ -11785,6 +11788,10 @@ function finishWorldStep(w, active, blockers, moving) {
   if (w.done) stepAgi(w)
 }
 var STILL_FOR = 30   // ticks of nobody moving before the colony counts as stuck
+function explainingAnyone(w) {
+  for (var i = 0; i < w.agents.length; i++) if (!w.agents[i].gone && w.agents[i].explainFor > 0) return true
+  return false
+}
 function step(w) {
   w.ticks++
   w.lastEvent = ""
