@@ -9485,3 +9485,12 @@ rows under the verdict.
 - floats count a quarter.
 
 `test/a11y.test.js` accepts the optional sentence.
+
+**Next (art, for Codex if wanted):**
+- **The lost-umbrella office:** the page exit gets a stand that fills with
+  one furled umbrella per agent home. It reads `w.saved`, page resolution
+  only.
+- **The forecast:** a line on the level's title card. The card is canvas
+  art shown for 1.2 s, so it needs a longer hold or a second line drawn into
+  it. Copy along the lines of "FORECAST: SCATTERED AGENTS, 40% CHANCE OF
+  RECURSION · UMBRELLAS: 6", built from the toolbar and the biome.
