@@ -8719,3 +8719,37 @@ Reviewed and merged by the loop: codex/aisle-art (0ef0b10, entry 351),
 `--no-ff`, as approved. Codex's entry is renumbered 351 and the page is
 re-stamped. Drawing only, with no Sim.js change, and the native (res 1)
 pixels kept, per Codex's tests.
+
+## 353 — 2026-10-15 · The director leaves alone an agent heading for a door
+
+**Asked:** fix 347's note, level 9's fire-escape straggler. Level 9 is
+early, so everyone sees it.
+
+**Traced** (salt 3, the last one out):
+- It worked down the tower floor by floor, between the lift (x91–95) and
+  the fire escape (x4–8).
+- On the floor at row 37 it walked from the lift toward the escape, whose
+  door at x9 was open with a stop on that floor.
+- At t2265, at x10.4, two cells short of the door, the stall director
+  (`runDirector` → `directorNudge`) handed it a builder.
+- The bridge stopped at the hoistway (stepBuild's lift-column rule), it
+  turned, walked away, and the cutoff ended the level.
+- **Why the director fired:** on a tower, `goalDist` measures distance to
+  the nearest shaft. Walking from the shaft it just left to the other one
+  reads as getting nowhere until nearly there, about 300 ticks across an
+  80-cell floor.
+
+**Changed:** `headingForDoor`. `directorNudge` passes over a walking agent
+on a lift level that is facing a lift or escape with a stop on its floor:
+it is on its way. The director still resets its stall clock and comes back
+if the agent really stops.
+
+**Measured:**
+
+| Measure | Before | After |
+|---|---|---|
+| Level 9, salt 3 | stall cutoff | 17/17 at t2542 |
+| Level 9, 16 colonies | 99%, 1 stall | 99%, no stalls |
+| Levels 109, 129, 204 (16 colonies) | — | identical |
+| `npm run sim play` | 2,965/3,113, 207 attempts | identical |
+| Playtest 1–440 | — | only the level-9 flag goes; nothing new |

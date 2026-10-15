@@ -11066,8 +11066,25 @@ function directorPick(w) {
   return best
 }
 
+// On its way to a door on its own floor is not stalled: a tower floor is
+// eighty cells between shafts, and walking from the one it left to the other
+// reads as getting nowhere until it is nearly there. On level 9 the director
+// handed the last one out a builder two cells short of the fire escape; the
+// bridge stopped at the hoistway, it turned, and the cutoff ended the level
+// (LOG 353).
+function headingForDoor(w, ag) {
+  if (!w.lifts.length || ag.state !== "walk") return false
+  var floorY = Math.floor(ag.y) + 1
+  for (var i = 0; i < w.lifts.length; i++) {
+    var L = w.lifts[i]
+    if (L.stops.indexOf(floorY) >= 0 && (L.mid - ag.x) * ag.dir > 0) return true
+  }
+  return false
+}
+
 // The first of these that applies and can be paid for.
 function directorNudge(w, best) {
+  if (headingForDoor(w, best)) return
   // Below the exit and pacing: nothing horizontal helps, and digging only
   // makes it worse. Hand them a climb.
   if (exitAbove(w, best) && !liftRouted(w)) { directorRaise(w, best); return }
