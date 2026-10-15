@@ -3252,6 +3252,11 @@ function homeTitle(w) {
   return (s.homePrefix || "") + w.saved + " / " + w.toRelease + (s.homeSuffix === undefined ? " HOME" : s.homeSuffix)
 }
 
+// The card's small heading: the level, or for the colony of the day the date.
+function reportHeading(w) {
+  return w.daily ? "COLONY OF THE DAY · " + w.daily : "LEVEL " + w.level + " · REPORT"
+}
+
 function drawLevelResults(ctx, w, pal) {
   var cx = Math.round(w.k.COLS * w.k.CELL / 2)
   var rows = reportRows(w, pal), extra = 0, padded = false
@@ -3263,7 +3268,7 @@ function drawLevelResults(ctx, w, pal) {
   var y = reportTop(w, rows).y + Math.max(0, 10 - w.doneTicks) * 2
   drawTransitionPlate(ctx, w, pal, cx - 136, y, 62 + extra)
   ctx.fillStyle = pal.decorLit
-  drawTransitionText(ctx, "LEVEL " + w.level + " · REPORT", cx, y + 8, 1)
+  drawTransitionText(ctx, reportHeading(w), cx, y + 8, 1)
   ctx.fillStyle = pal.label
   drawTransitionText(ctx, homeTitle(w), cx, y + 22, 2)
   ctx.fillStyle = w.saved === 0 ? pal.urgent : pal.exitLight

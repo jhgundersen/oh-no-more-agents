@@ -4959,3 +4959,49 @@ except one cross-reference rewritten from "see below" to `docs/checking.md`.
 Every line of the old LOG.md is in LOG.md or the archive. The one code comment
 that pointed at AGENTS.md's baselines (`tools/simcheck.js`) now points at
 `docs/checking.md`.
+
+## 272 — 2026-10-15 · Colony of the day
+
+**Asked:** a "Colony of the day": a button that loads today's level and
+colony seed, derived from the UTC date (the same for everyone worldwide,
+deterministic via `generate(level, attempt, seed)`). It should be labelled
+with the date and a dry subtitle ("Today's standup is mandatory."). The report
+card says "COLONY OF THE DAY · 2026-10-15" and the share link carries it. No
+server state, strict parameter checks, a patch-notes line, and a test that two
+calls on the same date give identical runs and different dates differ.
+
+**Changed:**
+- **`share.js`.**
+  - `daily(date)` hashes the date string twice (FNV-1a, two salts) into a
+    level from 1 to 200 and a colony seed.
+  - `today()` is the UTC date.
+  - `?daily=YYYY-MM-DD` is accepted only when it's exactly that shape and a
+    real calendar date from the 2000s; anything else is ignored, as with
+    `?level&seed`.
+  - `dailyUrl` builds the link.
+- **The page.**
+  - "colony of the day · 2026-10-15", with "Today's standup is mandatory."
+    under it, sits at the left of the what's-new row. A click plays today's
+    colony as a move, like a shared link (nothing cleared, nothing counted),
+    and the toast says the subtitle.
+  - A `?daily=` link opens that day's colony and the address bar is cleaned,
+    as before.
+  - Copy link on a daily colony copies `?daily=<date>`.
+- **`Draw.reportHeading`:** the card reads "COLONY OF THE DAY · <date>" in place
+  of "LEVEL N · REPORT".
+- **Patch notes:** "Added: colony of the day, the same level and colony for
+  everyone. Copy link shares it." It replaces the old copy-link line, which it
+  covers.
+
+**Tests** (`test/daily.test.js`):
+- the same date gives the same level and seed, and identical full play-outs;
+  the next day differs;
+- a month visits more than 20 levels;
+- strict parsing (bad shapes, impossible dates, the 1900s rejected);
+- `today()` at either side of UTC midnight;
+- `dailyUrl`;
+- the card heading;
+- on the page: the button's date, playing it, nothing cleared, and a `?daily=`
+  link opening that colony.
+
+Local headless check at both sizes: no page errors.
