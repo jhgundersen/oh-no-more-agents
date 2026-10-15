@@ -10222,3 +10222,18 @@ Production is c88604a4 (18:17).
    wants it.
 4. For Codex, if wanted: the title card's 1.2 s hold now carries the
    forecast plate (382); check it reads on phones at Brisk.
+
+## 391 — 2026-10-15 · The GitHub check workflow
+The last pushed run (38771728541) failed with 54 tests failing and 28
+cancelled, after 22 minutes. The previous green run predates the browser
+tests. On the ubuntu-24.04 runner, every headless Chromium launch exited at
+startup with SIGABRT, and the rest timed out at 120 s. Ubuntu 24.04 blocks
+unprivileged user namespaces through AppArmor, so Chromium's sandbox aborts.
+- check.yml lifts that block (`sysctl
+  kernel.apparmor_restrict_unprivileged_userns=0`), so the sandbox stays on.
+  It also prints `chromium --version` and caps the job at 30 minutes.
+- tools/phone.js keeps the last lines of Chromium's stderr and adds them to
+  "exited at startup", so a runner that still refuses says why.
+
+Local gate: 1549/1549, CRAP green. Not proven on the runner until the next
+push; the workflow is unpushed, like everything else.

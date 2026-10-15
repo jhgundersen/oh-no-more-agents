@@ -7,6 +7,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -14,4 +15,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Ubuntu 24.04 blocks unprivileged user namespaces through AppArmor, so
+      # Chromium's sandbox aborts at startup (SIGABRT) in every browser test.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: chromium --version
       - run: npm run check
