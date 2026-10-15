@@ -8607,3 +8607,24 @@ Reviewed and merged by the loop: codex/librarian-art (cd05177, entry 348),
 `--no-ff`, as approved. Codex's entry is renumbered 348 and the page is
 re-stamped. Drawing only, with no Sim.js change, and the native (res 1)
 pixels kept, per Codex's tests.
+
+## 350 — 2026-10-15 · Deploy (14:33)
+
+**Deployed** build 9826ad5f (version 38b8ac83), replacing 2c43039e. It
+covers 343–349:
+- the round-trip charge (343);
+- the pool surfaces;
+- the ledge step (346), with the new fast-forward fixture;
+- the level-9 note;
+- the librarian.
+
+**Before:** the gate (1,447 tests), then `npm run smoke` on the clean tree,
+which passed (3 min, levels 1–6).
+
+**After:**
+- **A false alarm:** a curl a few seconds after the upload still got the
+  old page (2c43039e) while the edge caught up.
+- **`npm run verify -- --previous 2c43039e`** passed on 9826ad5f a moment
+  later: shipped files, build agreement, the open tab reloading, level 20,
+  `?daily&full=1`, Next during a standup, and the patch notes by keyboard
+  (5 counter writes refused).
