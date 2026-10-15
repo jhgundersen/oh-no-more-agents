@@ -254,6 +254,7 @@ function drawTerrain(ctx, w, pal) {
   drawStationPanels(ctx, w)
   drawStationEdge(ctx, w)
   drawPortQuay(ctx, w)
+  drawChristmasGround(ctx, w)
   drawDecor(ctx, w, pal)
   drawExitBack(ctx, w, pal)
   drawSea(ctx, w, pal)
@@ -7006,7 +7007,7 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   // itself uses, and it costs no draw from the trait stream to do it here.
   var brolly = brollyColour(w, pal, ag), bat = batBrolly(w, ag), candy = candyBrolly(w, ag)
   if (bat) { drawBatUmbrella(ctx, w, pal, ox, oy, w.reducedMotion ? 0 : flex, bat); return }
-  if (candy) brolly = "#f4f4ec"
+  if (candy) { drawCandyUmbrella(ctx, w, pal, ag, ox, oy, w.reducedMotion ? 0 : flex, candy); return }
 
   if ((w.res || 1) >= 2) drawFloatingUmbrella(ctx, w, pal, ag, ox, oy, flex, brolly)
   else {
@@ -7027,7 +7028,6 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   blit(ctx, ox, oy, 1, -2, -8, 2, 1)
   blit(ctx, ox, oy, 1, 9, -8, 2, 1)
   }
-  if (candy) drawCandyStripes(ctx, ox, oy, flex, candy)
 }
 
 // A season (web-only season.js) may hand some floaters a bat-wing umbrella:
@@ -11747,7 +11747,7 @@ var PEP_GLOW = 18
 function drawAgentGlitter(ctx, w, ag, ox, oy) {
   if (ag.agi || (ag.pepAt !== undefined && w.ticks - ag.pepAt >= 0 && w.ticks - ag.pepAt < PEP_GLOW)) drawAgiSparkle(ctx, w, ag, ox, oy)
   if (w.milestone && ag.state !== "saved") drawPartyHat(ctx, w.milestone.kind, ag, ox, oy)
-  else if (w.season && w.season.hats && ag.state !== "saved") drawPartyHat(ctx, w.season.hats, ag, ox, oy)
+  else if (w.season && w.season.hats && w.season.hats !== "santa" && ag.state !== "saved") drawPartyHat(ctx, w.season.hats, ag, ox, oy)
   if (w.bet === ag.id && ag.state !== "saved") drawBetCoin(ctx, w, ox, oy)
 }
 
@@ -11759,14 +11759,7 @@ function drawPartyHat(ctx, kind, ag, ox, oy) {
   var cx = ox + 4, top = oy - 7, colour = kind === "hundred" || kind === "million" ? "#ffd23f" : PARTY[(ag.id || 0) % PARTY.length]
   ctx.save()
   ctx.fillStyle = GAG_INK
-  if (kind === "santa") {
-    ctx.fillStyle = "#d42a3c"
-    ctx.fillRect(cx - 1, top + 1, 3, 2)
-    ctx.fillRect(cx + 1, top, 1, 1)                 // the tip, flopping over
-    ctx.fillStyle = "#ffffff"
-    ctx.fillRect(cx - 2, top + 3, 5, 1)             // the fur brim
-    ctx.fillRect(cx + 2, top, 1, 1)                 // the pompom
-  } else if (kind === "million") {
+  if (kind === "million") {
     ctx.fillRect(cx - 4, top + 1, 9, 6)
     ctx.fillStyle = colour; ctx.fillRect(cx - 3, top + 4, 7, 2)
     ctx.fillRect(cx - 3, top + 1, 1, 3); ctx.fillRect(cx, top, 1, 4); ctx.fillRect(cx + 3, top + 1, 1, 3)
@@ -11981,6 +11974,11 @@ function drawAgentHead(ctx, w, pal, ag, ox, oy, dir, hair, skin, st, bodyDrop) {
     var collarLift = (!agentIdleKind(ag) && w.submerged && (st === "walk" || st === "swim"))
       ? Math.round(Math.sin(ag.anim * 0.22) * 1.2) : 0
     blit(ctx, ox, oy, dir, 3, 6 + bodyDrop + collarLift, 2, 4)
+  }
+
+  if (w.season && w.season.hats === "santa" && !w.milestone && st !== "saved") {
+    var hatLook = traitHeadOffset(w, ag)
+    drawSantaHat(ctx, w, ag, ox + dir * hatLook.x, oy, dir, bodyDrop + (w.submerged ? collarLift : hatLook.y))
   }
 
 }
@@ -18576,4 +18574,80 @@ function gagRateLimitRect(w) {
   var C = w.k.CELL, age = w.ticks - rl.at, gone = rl.clearAt >= 0 ? w.ticks - rl.clearAt : 0
   var foot = (rl.y + 1) * C, top = foot - Math.round(30 * Math.min(1, age / 6)) + Math.max(0, gone - 18) * 2
   return age >= 0 && top < foot - 4 ? [rl.x * C - 12, top - 2, rl.x * C + 13, top + 12] : null
+}
+
+// Christmas is display data supplied by the web host; no season, no new pixels.
+function drawSantaHat(ctx, w, ag, ox, oy, dir, drop) {
+  var pixel = (w.res || 1) >= 2 ? blitFine : blit
+  ctx.save()
+  ctx.fillStyle = "#7d2037"; pixel(ctx, ox, oy, dir, 0, -2 + drop, 8, 2)
+  ctx.fillStyle = "#d42a3c"; pixel(ctx, ox, oy, dir, 1, -4 + drop, 5, 3)
+  pixel(ctx, ox, oy, dir, 2, -5 + drop, 3, 1); pixel(ctx, ox, oy, dir, 5, -4 + drop, 2, 1)
+  ctx.fillStyle = "#f26370"; pixel(ctx, ox, oy, dir, 2, -4 + drop, 1, 2)
+  ctx.fillStyle = "#aab8cf"; pixel(ctx, ox, oy, dir, 0, -1 + drop, 8, 1)
+  ctx.fillStyle = "#f4f8ff"; pixel(ctx, ox, oy, dir, 1, -2 + drop, 6, 1)
+  pixel(ctx, ox, oy, dir, 7, -4 + drop, 2, 2)
+  if ((w.res || 1) >= 2) { ctx.fillStyle = "#ffffff"; pixel(ctx, ox, oy, dir, 1.5, -2 + drop, 4, 0.5) }
+  ctx.restore()
+}
+function drawCandyUmbrella(ctx, w, pal, ag, ox, oy, flex, colour) {
+  ctx.save()
+  var fine = (w.res || 1) >= 2, unit = fine ? 0.5 : 1
+  var sway = fine && !w.reducedMotion ? Math.round(Math.sin(w.ticks * 0.09 + ag.id * 1.7) * 2) * 0.5 : 0
+  var cx = ox + 4 + sway, top = oy - 11 - flex, base = oy - 7
+  for (var row = 0; row <= Math.round((base - top) / unit); row++) {
+    var q = (row + 1) / (Math.round((base - top) / unit) + 1)
+    var half = Math.round(Math.sqrt(1 - (1 - q) * (1 - q)) * 7 / unit) * unit, y = top + row * unit
+    var col = -half
+    for (var run = 0; run < 8 && col < half; run++) {
+      var stripe = Math.floor((col + 14 + row * unit) / 3)
+      var end = Math.min(half, (stripe + 1) * 3 - 14 - row * unit)
+      var x0 = Math.round((cx + col) / unit) * unit, x1 = Math.round((cx + end) / unit) * unit
+      ctx.fillStyle = stripe % 2 ? colour : "#f4f4ec"
+      if (x1 > x0) ctx.fillRect(x0, y, x1 - x0, unit)
+      col = end
+    }
+  }
+  ctx.fillStyle = "#b4bfd3"; ctx.fillRect(cx - 7, base + unit, 14, unit)
+  ctx.fillRect(cx - 7, base + unit, unit, 2); ctx.fillRect(cx + 7 - unit, base + unit, unit, 2)
+  ctx.fillStyle = pal.umbrellaStem; ctx.fillRect(cx, base + unit, unit, 12 - unit)
+  ctx.fillStyle = colour; ctx.fillRect(cx, top - 1, 1, 1)
+  ctx.restore()
+}
+// Ledge snow and the hatch tree are repainted only with the terrain. Snow is
+// inside the top of surviving ground; silhouettes and machinery stay readable.
+function drawChristmasGround(ctx, w) {
+  if (!w.season || w.season.hats !== "santa") return
+  var C = w.k.CELL, boxes = abyssReserved(w), unit = (w.res || 1) >= 2 ? 0.5 : 1
+  ctx.save(); ctx.fillStyle = "#d8e5f2"; ctx.globalAlpha = w.submerged ? 0.28 : 0.55
+  for (var y = w.k.SKY + 1; y < w.k.ROWS - 1; y++) for (var x = 2; x < w.k.COLS - 2; x++) {
+    var i = y * w.k.COLS + x, h = (Math.imul(x + w.level, 73) ^ y * 151) >>> 0
+    if (!w.terrain[i] || w.terrain[i - w.k.COLS] || h % 5 === 0) continue
+    if (!christmasClear(boxes, x * C, y * C - unit, C, unit * 2)) continue
+    ctx.fillRect(x * C + h % 2, y * C, C - h % 2, unit)
+    if (h % 4 === 0) ctx.fillRect(x * C + 1, y * C - unit, 2, unit)
+  }
+  ctx.restore(); drawChristmasTree(ctx, w, boxes)
+}
+function christmasClear(boxes, x, y, width, height) {
+  for (var i = 0; i < boxes.length; i++) {
+    var b = boxes[i]
+    if (x < b.x + b.width && x + width > b.x && y < b.y + b.height && y + height > b.y) return false
+  }
+  return true
+}
+function drawChristmasTree(ctx, w, boxes) {
+  var c = w.corridors[0], C = w.k.CELL, x = Math.round((c.startX + c.dir * 8) * C), foot = c.floorY * C
+  if (!christmasClear(boxes, x - 5, foot - 16, 10, 17)) return
+  if (!mechanismAir(w, x - 5, foot - 15) || !mechanismAir(w, x + 4, foot - 1)) return
+  for (var yy = c.floorY - 4; yy < c.floorY; yy++) for (var xx = Math.floor(x / C) - 1; xx <= Math.floor(x / C) + 1; xx++)
+    if (w.terrain[yy * w.k.COLS + xx]) return
+  if (!w.terrain[c.floorY * w.k.COLS + Math.floor(x / C)]) return
+  ctx.save(); ctx.fillStyle = "#6a4531"; ctx.fillRect(x - 1, foot - 3, 2, 3)
+  ctx.fillStyle = "#244c41"; ctx.fillRect(x - 4, foot - 6, 9, 3); ctx.fillRect(x - 3, foot - 10, 7, 3); ctx.fillRect(x - 1, foot - 13, 3, 3)
+  ctx.fillStyle = "#427865"; ctx.fillRect(x - 4, foot - 6, 3, 1); ctx.fillRect(x - 3, foot - 10, 3, 1)
+  ctx.fillStyle = "#e6c26b"; ctx.fillRect(x, foot - 15, 1, 3); ctx.fillRect(x - 1, foot - 14, 3, 1)
+  ctx.fillRect(x - 2, foot - 9, 1, 1); ctx.fillRect(x + 2, foot - 5, 1, 1)
+  ctx.fillStyle = "#d45b65"; ctx.fillRect(x + 1, foot - 8, 1, 1); ctx.fillRect(x - 3, foot - 5, 1, 1)
+  ctx.restore()
 }
