@@ -35,7 +35,16 @@ for (const [kind, repertoire] of Object.entries(D.IDLE_REPERTOIRE)) {
       }
       assert.deepEqual([...frames.keys()].sort(), [...repertoire].sort())
       // A 429 queue is short and poses throughout; everything else rests between fidgets.
-      assert.equal(quiet.size, kind === "queue" ? 0 : 1, "quiet stance never walks or bobs")
+      if (kind === "block" && res === 2) {
+        assert.equal(quiet.size, 3, "half-pixel breathing has three bounded hand poses")
+        // The new breath only moves the outstretched hands (art rows 19–23).
+        // The head, torso below the arms, and both planted feet remain still.
+        const bodies = [...quiet].map(frame => {
+          const buf = Buffer.from(frame, "base64"), row = 32 * res * 3
+          return Buffer.concat([buf.subarray(0, 19 * res * row), buf.subarray(23 * res * row)]).toString("base64")
+        })
+        assert.equal(new Set(bodies).size, 1, "resting blockers keep their head and boots fixed")
+      } else assert.equal(quiet.size, kind === "queue" ? 0 : 1, "quiet stance never walks or bobs")
       for (const [pose, pixels] of frames) {
         assert.ok([...pixels].some(frame => !quiet.has(frame)), `${pose} must read at res ${res}`)
         if ((["tap", "drum", "tie"].includes(pose) || (pose === "phone" && res === 2))) assert.ok(pixels.size > 1, `${pose} moves`)
