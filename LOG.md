@@ -5747,3 +5747,62 @@ ran sequentially under the shared test lock, Node heap 2,048 MB,
 **Next:** review and merge this branch; no push or deployment from this pass.
 
 Reviewed and merged by the loop. Finding 2: the patch notes are a native modal `<dialog>` with a Close button, and focus moves in, is contained and is restored. Finding 4: the 429 sign counts only live, walking members, so a gone one can't hold it up. Checked while merging: `queued()` runs for every live agent every tick and clears `queueFor` the moment a member isn't walking, so the walking-only count can't drop the sign early.
+
+## 287 — 2026-10-15 · Safe shipping and actual content names (on a branch)
+
+**Brief:** fix server-review findings 2–4 on `codex/build-fixes`, based on
+main `f28b2c5`. Build/cache changes only; source game files and panel paths
+stay as written.
+
+**Changed:**
+- `tools/ship.js` now counts every physical line, including escaped LF,
+  CRLF, CR and Unicode line separators. Escapes never skip a terminator;
+  the scanner and emitter both assert line-state alignment. Removing a
+  comment leaves its terminator, preserving ASI and restricted productions.
+- Regex recognition runs inside `${…}` too. Token context replaces the
+  twelve-character look-behind, including control conditions, spaced/commented
+  `return`, nested templates, spread and `extends` operands. Ambiguous slash
+  goals (brace endings, postfix operations, ASI, contextual keywords), module
+  syntax, unsupported code characters and nested/v regex sets use a whole-file
+  fallback. It emits the original unchanged and prints the reason; invalid
+  originals still fail `node --check` and cannot reach Wrangler.
+- Every emitted script gets a full SHA-256 filename computed from its actual
+  bytes. Only `dist/index.html` is rewritten, and `dist/_headers` gains exact
+  immutable rules for those files. Bare `/agents/*.js`, with or without a
+  query stamp, keep the original source and Workers Assets' revalidation
+  default. Numbered artwork/audio rules stay intact. Source stamps and the
+  shared build meta/version remain intact; `npm run stamp` reported no change.
+- The load-time tool follows the deployed HTML's script URLs and maps hashes
+  back to source names for its size/trace report. Otherwise it would silently
+  measure the untrimmed compatibility scripts. Its regression uses injected
+  page/transfer responses, requiring no network or additional browser run.
+
+**Regression evidence:** the review's silent string/template corruption and
+regex fixtures now compare evaluated values, not just parse success. Coverage
+also includes all five JS line endings, tagged raw templates, nested braces,
+escaped regex classes, keywords used as properties, explicit fallback notices,
+invalid-source rejection, deterministic hashes, changed-content URLs, removal
+of stale outputs, exact cache rules, unchanged source files/build stamps and
+complete asset copying. The shipped simulation matches source outcomes on ten
+levels; shipped Draw matches source pixels across all twenty biomes.
+
+**Local cache proof:** a bounded Miniflare/Chromium probe warmed version A,
+then swapped the same local origin to B. Bare `Sim.js` revalidated to B;
+A and B had distinct hashed URLs with one-year immutable caching and the
+JavaScript content type. Reloading the page executed B. No cache disabling,
+production requests or deployment. Probe/results:
+`/tmp/codex-build-fixes/cache-probe.mjs`, `cache-results.json`.
+
+**Checks:** `npm run stamp` and the actual local `node tools/ship.js` build
+passed. Full `npm run check` with coverage passed: **1,322 tests, zero
+failures/skips, 272.85 s**, including Factory art and every new value fixture.
+`npm run crap -- --threshold 30 --use-existing-coverage` passed at a maximum
+of **30.0**. They ran sequentially under the shared test lock, Node heap
+2,048 MB, `ulimit -v 6000000`, two workers and 120-second test timeouts.
+The hashed `dist/` page then reached its first board frame in **757 ms**, with
+zero page errors (`npm run loadtime -- --local --dist --net none --cpu 1
+--json`), also through the lock. Logs: `/tmp/codex-build-fixes/check.log`,
+`crap.log`, `dist-load.log`. All current scripts scan without fallback; Sim
+ships at 269.2 KB from 484.9 KB. `git diff --check` passed.
+
+**Next:** review and merge this branch; no push or deployment from this pass.

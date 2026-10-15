@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { parseArgs, pageScripts, scriptCost, summariseRuns, print, NETWORKS } from "../tools/loadtime.js"
+import { parseArgs, pageScripts, scriptCost, summariseRuns, print, transfer, NETWORKS } from "../tools/loadtime.js"
 
 // tools/loadtime.js: the parts that turn a trace and a few runs into a report.
 test("arguments: production by default, both networks, 4x CPU; unknown networks dropped", () => {
@@ -56,4 +56,21 @@ test("a load that never draws says so", async () => {
   assert.equal(result("fast3g", null, [], []).error, "no first frame in 30 s")
   const r = result("fast3g", { firstFrame: 900, fcp: 300, dcl: 880, longTasks: [[100, 120], [2000, 300]] }, [], [])
   assert.deepEqual([r.longTasks, r.longest, r.blocked], [1, 120, 70])
+})
+
+test("wire measurements follow deployed hashed URLs, retaining source sizes and readable names", async () => {
+  const hash = "a".repeat(64), urls = [], base = "https://local.invalid/"
+  const rows = await transfer(base, {
+    page: async url => {
+      assert.equal(url, base)
+      return '<script src="agents/Sim.' + hash + '.js"></script><script src="/agents/web.js?v=1"></script>'
+    },
+    measure: async url => { urls.push(url); return { bytes: 123, encoding: "br" } }
+  })
+  assert.deepEqual(urls, [base, base + "agents/Sim." + hash + ".js", base + "agents/web.js?v=1"])
+  assert.deepEqual(rows.map(r => r.file), ["index.html", "agents/Sim.js", "agents/web.js"])
+  assert.ok(rows.every(r => r.raw > r.wire && r.wire === 123 && r.encoding === "br"))
+  assert.deepEqual(scriptCost([{ ph: "X", name: "EvaluateScript", dur: 7000,
+    args: { data: { url: base + "agents/Sim." + hash + ".js" } } }]),
+    { "Sim.js": { compile: 0, background: 0, evaluate: 7 } })
 })
