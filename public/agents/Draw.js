@@ -2205,6 +2205,7 @@ function drawReadingGesture(ctx,pal,x,y,d,lift) {
 // shimmering up off the hot run, chilled air sinking onto the cold one.
 var AISLE_HOT_LIT = "#ff8a3d", AISLE_COLD_LIT = "#7dcfff"
 function drawAisles(ctx, w, pal) {
+  if (w.res === 2) return drawPageThermalAisles(ctx, w, pal)
   var C = w.k.CELL, cols = w.k.COLS
   for (var i = 0; i < w.aisles.length; i++) {
     var a = w.aisles[i], top = (a.y + 1) * C
@@ -2232,6 +2233,74 @@ function drawAisleCell(ctx, w, pal, x, top, hot) {
     ctx.fillRect(x + 1 + k * 2, top + dy, 0.5, 1)
   }
   ctx.restore()
+}
+
+// Page ventilation: inset grilles, counter-turning intake/exhaust fans and
+// sparse convection. Only actual surviving, exposed floor cells get hardware.
+// Air sits below head height and is clipped to clear air, behind every agent.
+var THERMAL_ROTOR = [
+  [[-1,0,2.5,0.5]],
+  [[-1,-0.5,1,0.5],[0.5,0.5,1,0.5]],
+  [[0,-0.5,0.5,2]],
+  [[-1,0.5,1,0.5],[0.5,-0.5,1,0.5]]
+]
+function drawPageThermalAisles(ctx,w,pal) {
+  var C=w.k.CELL,cols=w.k.COLS,T=w.terrain
+  ctx.save()
+  for(var i=0;i<w.aisles.length;i++) {
+    var a=w.aisles[i],top=(a.y+1)*C
+    for(var col=a.x0;col<a.x1;col++) {
+      if (!T[(a.y+1)*cols+col] || T[a.y*cols+col]) continue
+      var hot=(col<a.mid)===a.hotFirst,fan=col===a.x0||col===a.mid
+      drawThermalGrate(ctx,w,pal,col*C,top,hot,fan)
+      if ((col-a.x0)%3===1) drawThermalAir(ctx,w,col*C,top,hot)
+    }
+  }
+  ctx.restore()
+}
+function drawThermalGrate(ctx,w,pal,x,y,hot,fan) {
+  var C=w.k.CELL,lit=hot?AISLE_HOT_LIT:AISLE_COLD_LIT
+  ctx.fillStyle=pal.rigDark;ctx.fillRect(x,y,C,3)
+  ctx.fillStyle=pal.steelShade;ctx.fillRect(x+0.5,y+0.5,C-1,2)
+  ctx.fillStyle=pal.steelEdge;ctx.fillRect(x,y,C,0.5)
+  ctx.fillStyle=lit;ctx.fillRect(x+0.5,y+0.5,C-1,1)
+  ctx.fillStyle=pal.rigDark
+  if(fan) drawThermalRotor(ctx,w,pal,x+2,y+1.5,hot)
+  else {
+    ctx.fillRect(x+1,y+1.5,0.5,1)
+    ctx.fillRect(x+2.5,y+1.5,0.5,1)
+  }
+  ctx.fillStyle=pal.decorDim;ctx.fillRect(x,y+2.5,C,0.5)
+}
+function drawThermalRotor(ctx,w,pal,x,y,hot) {
+  var phase=w.reducedMotion?0:(Math.floor(w.ticks/8)+Math.floor(x/4))%4
+  if(hot)phase=(4-phase)%4
+  var blades=THERMAL_ROTOR[phase]
+  ctx.fillStyle=hot?AISLE_HOT_LIT:AISLE_COLD_LIT
+  ctx.fillRect(x-1.5,y-1.5,3,3)
+  ctx.fillStyle=pal.rigDark;ctx.fillRect(x-1,y-1,2,2)
+  ctx.fillStyle=pal.steelEdge
+  for(var i=0;i<blades.length;i++) {
+    var b=blades[i];ctx.fillRect(x+b[0],y+b[1],b[2],b[3])
+  }
+  ctx.fillStyle=pal.steelEdge;ctx.fillRect(x,y,0.5,0.5)
+}
+function drawThermalAir(ctx,w,x,top,hot) {
+  if(w.reducedMotion)return
+  var age=(w.ticks+x*1.25)%48,step=Math.floor(age/6),side=step%2
+  var y=hot?top-2-step:top-9+step,alpha=ctx.globalAlpha
+  ctx.fillStyle=hot?AISLE_HOT_LIT:AISLE_COLD_LIT
+  ctx.globalAlpha=alpha*(hot?0.55:0.42)*(1-age/96)
+  if(hot) {
+    moteFineRect(ctx,w,x+1+side*0.5,y,1,1)
+    moteFineRect(ctx,w,x+0.5+side*0.5,y+1,1,0.5)
+    moteFineRect(ctx,w,x+1+side*0.5,y+1.5,1.5,0.5)
+  } else {
+    moteFineRect(ctx,w,x+0.5+side*0.5,y,2,0.5)
+    moteFineRect(ctx,w,x+1+side*0.5,y+0.5,1,1)
+    moteFineRect(ctx,w,x+0.5,top-0.5,3,0.5)
+  }
+  ctx.globalAlpha=alpha
 }
 
 function drawBeltTreads(ctx, w, pal, x, top, shift) {
