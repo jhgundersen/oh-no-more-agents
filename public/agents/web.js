@@ -437,6 +437,7 @@
   }
 
   function afterFullscreen() {
+    syncLogoMotion()
     el.fullWord.textContent = isFullscreen() ? "on" : "off"
     el.fullWord.parentNode.setAttribute("aria-pressed", isFullscreen() ? "true" : "false")
     fitBoard()
@@ -956,10 +957,63 @@
     paintActors()
     saveState()
     paintTour()
+    repaintLogo()
     Array.prototype.forEach.call(el.themes.children, function (b) {
       b.classList.toggle("on", b.dataset.theme === name)
       b.setAttribute("aria-pressed", b.dataset.theme === name ? "true" : "false")
     })
+  }
+
+  // A cached masthead; four tiny umbrella poses, one second apart. The
+  // animation owns no game state and sleeps offscreen/hidden/fullscreen.
+  var logoState = null
+  function setupLogo() {
+    var canvas = document.getElementById("pageLogo")
+    if (!canvas || !canvas.getContext("2d")) return
+    logoState = { canvas: canvas, base: document.createElement("canvas"), phase: 0,
+      factor: 1, timer: null, visible: !!window.IntersectionObserver,
+      motion: window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true } }
+    canvas.hidden = false
+    document.getElementById("pageTitle").classList.add("logo-ready")
+    repaintLogo()
+    if (logoState.motion.addEventListener) logoState.motion.addEventListener("change", function () {
+      logoState.phase = 0; paintLogoFrame(); syncLogoMotion()
+    })
+    if (window.ResizeObserver) new ResizeObserver(repaintLogo).observe(canvas)
+    if (window.IntersectionObserver) new IntersectionObserver(function (entries) {
+      logoState.visible = entries[0].isIntersecting; syncLogoMotion()
+    }).observe(canvas)
+    window.addEventListener("resize", repaintLogo)
+    document.addEventListener("visibilitychange", syncLogoMotion)
+  }
+  function repaintLogo() {
+    if (!logoState) return
+    var s=logoState, width=s.canvas.getBoundingClientRect().width
+    s.factor=Math.max(1,Math.ceil(width/PAGE_LOGO_WIDTH*(window.devicePixelRatio||1)))
+    s.canvas.width=s.base.width=PAGE_LOGO_WIDTH*s.factor
+    s.canvas.height=s.base.height=PAGE_LOGO_HEIGHT*s.factor
+    var ctx=s.base.getContext("2d");ctx.setTransform(s.factor,0,0,s.factor,0,0)
+    drawPageLogoBase(ctx,THEMES[themeName])
+    s.phase=0;paintLogoFrame();syncLogoMotion()
+  }
+  function paintLogoFrame() {
+    var s=logoState,ctx=s.canvas.getContext("2d")
+    ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,s.canvas.width,s.canvas.height)
+    ctx.drawImage(s.base,0,0)
+    ctx.setTransform(s.factor,0,0,s.factor,0,0)
+    drawLogoUmbrella(ctx,THEMES[themeName],s.phase)
+  }
+  function logoCanSway() {
+    return logoState.visible && !document.hidden && !logoState.motion.matches && !isFullscreen()
+  }
+  function syncLogoMotion() {
+    if (!logoState) return
+    clearTimeout(logoState.timer);logoState.timer=null
+    if (!logoCanSway()) return
+    logoState.timer=setTimeout(function () {
+      if (!logoCanSway()) return
+      logoState.phase=(logoState.phase+1)%4;paintLogoFrame();syncLogoMotion()
+    },1000)
   }
 
   // Soundtrack
@@ -1122,6 +1176,7 @@
     //
     // For a kiosk, a second monitor or a screenshot — anywhere the page is the
     // only thing on screen and nobody is going to press `f`.
+    setupLogo()
     if (fullParam()) setFaux(true)
 
     fitBoard()

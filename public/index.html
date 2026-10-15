@@ -25,7 +25,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="a256d64d">
+<meta name="build" content="f62ff481">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
@@ -71,6 +71,11 @@
 			text-shadow: 2px 2px var(--ink), 4px 4px var(--muted);
 		}
 		.title-alarm { color: var(--accent); }
+		h1.logo-ready { width: 340px; max-width: 100%; line-height: 0; text-shadow: none; }
+		.logo-ready .header-words { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+		.logo-ready canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+		@media (min-width: 740px) { h1.logo-ready { width: 680px; } }
+
 		.sub {
 			font-size: 11px;
 			color: var(--dim);
@@ -332,7 +337,7 @@
 
 <body>
 
-	<h1><span class="title-alarm">Oh No!</span> More Agents</h1>
+	<h1 id="pageTitle"><span class="header-words"><span class="title-alarm">Oh No!</span> More Agents</span><canvas id="pageLogo" width="340" height="64" aria-hidden="true" hidden></canvas></h1>
 
 	<p class="sub">
 		Autonomous agents with no supervisor, no plan beyond the next two
@@ -422,14 +427,14 @@
 	</p>
 
 	<script src="agents/Sim.js?v=3a10324e"></script>
-	<script src="agents/Draw.js?v=c7e558d0"></script>
+	<script src="agents/Draw.js?v=f9c23ae9"></script>
 	<script src="agents/Palette.js?v=ff1f4919"></script>
 	<script src="agents/Outcome.js?v=1105e622"></script>
 	<script src="agents/share.js?v=c3e48a0d"></script>
 	<script src="agents/sfx.js?v=13e9c6e5"></script>
 	<script src="agents/season.js?v=dbb629c3"></script>
 	<script src="agents/news.js?v=cfe62b0f"></script>
-	<script src="agents/web.js?v=06381ec0"></script>
+	<script src="agents/web.js?v=e0fd746e"></script>
 
 </body>
 
