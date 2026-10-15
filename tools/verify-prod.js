@@ -53,7 +53,9 @@ export async function readOnly() {
   b.ev = async x => (await b.cmd("Runtime.evaluate", { expression: x, returnByValue: true, awaitPromise: true })).result.value
   b.open = async url => {
     await b.cmd("Page.navigate", { url })
-    for (let i = 0; i < 60 && !(await b.ev(`!!(window.AgentWorld && AgentWorld())`)); i++) await sleep(100)
+    // Up to 20 s: the first load after a deploy fetches every script cold
+    // from the edge, and 6 s was once not enough (deploy at 08:47, 2026-10-15).
+    for (let i = 0; i < 200 && !(await b.ev(`!!(window.AgentWorld && AgentWorld())`)); i++) await sleep(100)
   }
   return b
 }
@@ -167,8 +169,8 @@ async function cloudLevel(b, base) {
   for (const [w, h, mobile] of [[1280, 900, false], [390, 844, true]]) {
     await b.cmd("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: mobile ? 2 : 1, mobile })
     await b.open(base + "?level=20&seed=3")
-    const s = await b.ev(`({ biome: AgentWorld().biome, lift: !!AgentWorld().updraftLift, stops: document.querySelectorAll("#tour .tour-stop").length })`)
-    if (s.biome !== "The Cloud" || !s.lift || s.stops !== 20) out.push(`level 20 at ${w}px: ${JSON.stringify(s)}`)
+    const s = await b.ev(`window.AgentWorld && AgentWorld() && ({ biome: AgentWorld().biome, lift: !!AgentWorld().updraftLift, stops: document.querySelectorAll("#tour .tour-stop").length })`)
+    if (!s || s.biome !== "The Cloud" || !s.lift || s.stops !== 20) out.push(`level 20 at ${w}px: ${JSON.stringify(s)}`)
   }
   await b.cmd("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
   return out

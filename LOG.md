@@ -5975,3 +5975,41 @@ on f28b2c5), `--no-ff`, as approved.
     reload after a deploy.
   - Level 20, a `?daily&full=1` link, Next during a standup, and the patch
     notes by keyboard all work.
+
+## 293 — 2026-10-15 · Deploy (08:47), and a verify that waits for a cold edge
+
+**Deployed** build 7ee3fc5c (version 7979682d), replacing 84496cb6. It
+covers 280–292:
+- umbrellas sooner;
+- review findings 1, 3 and 5;
+- the review fixes;
+- `npm run verify`;
+- the Worker's capped bodies and retired buckets (this deploy ships the
+  Worker);
+- the build fixes with hashed script names.
+
+No new migration.
+
+**Before:** the full check (1,333 tests, at the merge), then `npm run smoke`,
+which passed (3 min, levels 1–7).
+
+**After:**
+- **Hashed scripts:** all nine scripts the page names are 200 and
+  `immutable`.
+- **Body cap:** a 2 MB chunked POST to `/api/saves` got 413. That was the one
+  production request that wasn't a GET; the cap comes before the quota and the
+  parse, so it wrote nothing.
+- **`npm run verify -- --previous 84496cb6`:** the first run threw a
+  TypeError in the level-20 check, because `AgentWorld` was not up within the
+  6 s that `open` waited. Every script fetched fine, and a second run passed
+  everything (5 counter writes refused): shipped files, build agreement, the
+  open tab reloading into the new build, level 20, `?daily&full=1`, Next
+  during a standup, and the patch notes by keyboard.
+- **The fix:** `open` now waits up to 20 s, and a page that never starts is
+  reported as a problem, not a crash.
+
+The first gate for this entry went red on one test: "every fifth level ends
+in a standup", with "level 3 moved on". That's one level-advance taking more
+than its 4 s poll while the full parallel run competed with Codex's caption
+validation for the machine. This change cannot reach that test, so it was a
+flake. The poll now waits up to 10 s, as the replay wait did earlier.
