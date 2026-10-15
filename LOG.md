@@ -9404,3 +9404,33 @@ Merge notes:
   file plus exactly the branch's two changes (the `drawUpdrafts` hook and
   the appended curl functions). The diff against main matches the branch's
   own diff line for line, and `node --check` passes.
+
+## 368 — 2026-10-15 · Deploy (16:27); verify waits for the edge to serve the new page
+
+**Deployed** build 4de7f9b0 (version 2b1901be), replacing 797541f9. It
+covers 359–367:
+- the director leaving home-stretch walkers alone (360);
+- the rubber duck;
+- the cutoff waiting for a duck talk (363);
+- the 429 service sign;
+- the updraft curls.
+
+**Before:** the gate (1,505 tests), then `npm run smoke` on the clean tree,
+which passed (3 min, levels 1–6).
+
+**After:**
+- **First verify, seconds after the upload, failed:**
+  - the hashed Sim file "differs from dist/";
+  - the open tab "did not reload" (it saw 797541f9);
+  - a page error, "Uncaught".
+- **A minute later,** the same Sim URL was byte-identical to `dist/` and
+  `/api/stats` named 4de7f9b0.
+- **Second verify:** `npm run verify -- --previous 797541f9` passed
+  (5 counter writes refused).
+
+That is two deploys in a row where verify ran before the edge had the new
+files.
+
+**Tool change:** `shipped()` now starts from `currentPage`, which polls the
+page for up to a minute until it carries the repo's build, alongside 359's
+`apiBuild`. `test/verify.test.js` passes.

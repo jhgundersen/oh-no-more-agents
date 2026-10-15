@@ -82,7 +82,7 @@ function get(url) {
 // The deploy itself: shipped files, build, stamps, images. Each part small,
 // because only a real deploy exercises them.
 export async function shipped(base) {
-  const index = (await get(base)).body.toString()
+  const index = await currentPage(base)
   const build = /name="build" content="([^"]+)"/.exec(index)[1]
   const srcs = [...index.matchAll(/<script src="([^"]+)"/g)].map(m => m[1])
   const out = [...await buildAgrees(base, build), ...stampsMatch(srcs), ...await filesShipped(base, srcs), ...await imagesServed(base)]
@@ -96,6 +96,21 @@ async function buildAgrees(base, build) {
   const repo = /BUILD = "([^"]+)"/.exec(fs.readFileSync(path.join(ROOT, "src/version.js"), "utf8"))[1]
   const api = await apiBuild(base, repo)
   return build === repo && repo === api ? [] : [`build disagrees: page ${build}, repo ${repo}, api ${api}`]
+}
+
+// The page as served once it carries the repo's build, or after a minute.
+// Straight after an upload the edge can still hand out the old page and old
+// hashed files; checking then fails a deploy that is fine (16:28 deploy,
+// 2026-10-15: a "differing" Sim, an open tab that "did not reload").
+async function currentPage(base, waitMs = 60000) {
+  const repo = /BUILD = "([^"]+)"/.exec(fs.readFileSync(path.join(ROOT, "src/version.js"), "utf8"))[1]
+  const end = Date.now() + waitMs
+  let index = (await get(base)).body.toString()
+  while (!index.includes(`name="build" content="${repo}"`) && Date.now() < end) {
+    await sleep(5000)
+    index = (await get(base)).body.toString()
+  }
+  return index
 }
 
 // The build /api/stats names, polled until it is `want` or a minute passes.
