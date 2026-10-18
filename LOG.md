@@ -10280,3 +10280,32 @@ at 318 px under DejaVu.
 
 Local gate: 1549/1549, CRAP green. This is a page change, so it ships with
 the next deploy.
+
+## 395 — 2026-10-18 · Handover before the herdr restart
+The herdr server is restarting (0.8.2 → 0.9.1), which ends every pane. Nothing
+was running: both agents were idle since the 2026-10-15 break, no test holds
+the testlock, and no dev server or browser run is ours.
+
+**State:** main is clean at d8d0764 (391–394, the GitHub check workflow and
+the DejaVu caption fix, landed after 390's note). Production is still
+c88604a4.
+
+**Not deployed yet:** everything in 390's list, plus 394's phone caption
+tightening.
+
+**Codex's parked branch:** `codex/thaw-art` at 0faf24d, in the worktree
+`../oh-no-codex`, which is clean. It holds Ice Cave page-portrait and thaw art
+(`tools/thaw-art.js`, `test/thaw-art.test.js`, frozen/mechanism fixture
+fixes). It is **not merge-ready**: its full check and coverage were cut off,
+so it needs a fresh green `npm run check` with coverage and then CRAP ≤ 30.
+Its own LOG note on that branch has the details. Its gate script and evidence
+are under `/tmp/codex-thaw-art/`, which a reboot would wipe; the branch itself
+is complete without them. The branch base is older than main, so merge main
+into it (expect a `public/index.html` and `src/version.js` stamp conflict, so
+re-run `npm run stamp`) before the gate.
+
+**Next, in order:** 390's list (deploy first, then level 225's straggler), then
+finish and review `codex/thaw-art`. Also unmerged, and deliberately left
+alone: `codex/review` and `codex/review-server`, which only hold the review
+reports (their findings were fixed on main), and the old
+`experiment/runaway-train-biome`.
