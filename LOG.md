@@ -10344,3 +10344,45 @@ or sibling-copy changes.
 **Next:** developer review/merge this branch, then a small `codex/living-racks-port`
 batch from main: distant rack fans and port gulls, drawing only, fixed reduced-
 motion poses, world-digest equivalence, FPS and desktop/390px comparisons.
+
+## 399 — 2026-10-26 · Living backdrops: sky, stacks and tunnel light
+
+Started `codex/living-sky-stacks` from main `032cb97`. Page-only Cloud puffs
+now drift at two slow speeds, with occasional soft sun glints. Library windows
+cast stepped light shafts with twelve travelling dust flecks each; two distant
+reading desks turn a paper leaf through six pixel poses, then settle. Subway's
+far wall catches five passing window reflections, followed by a quiet interval.
+The motion and silhouettes occupy more page pixels than the previous fans/gulls;
+agents, umbrellas and route fixtures retain their foreground priority.
+
+Runtime changes are confined to Draw.js. A versioned half-pixel air mask clips
+new paint around terrain, original props, signs and the Cloud's bank contours;
+it refreshes on both terrain-version and terrain-array changes. No RNG or world
+fields are added. Native/default/share art stays gated out. Reduced motion pins
+all new features; the existing page Library lamp dust now shares the still pose.
+
+Fresh `npm run check` with coverage: **1,562 passed, 0 failed**, 399.46 s;
+line/branch/function coverage **98.42% / 96.74% / 96.23%**.
+`npm run crap -- --threshold 30 --use-existing-coverage` passed on that same
+complete LCOV, maximum **30.0** across 2,451 functions. Five new focused tests
+cover air/contour clipping, cache replacement, retained context, fixed poses,
+quiet intervals and complete live world digests. One outer FIFO testlock holds
+capture, FPS, check and CRAP together; two test workers, 2GB Node heap, 6GB
+address-space cap and 3GB service memory. Paired FPS runs: ten seconds per biome
+at Brisk speed from tick 240, **60 FPS / p5 60 before and after**, **17 ms**
+worst frames, 18/13/13 active characters. CPU Library 12→14%, Subway 11→12%,
+Cloud 11→12%; no recorded long tasks.
+
+Before/after desktop and 390px phone captures, eight-phase films and detail
+previews: `/tmp/codex-living-sky-stacks/review/index.html`. Seed 3; Library
+capture tick 240, Subway 300 (lit phase), Cloud 318 (glint phase). Matching
+simulation state before/after; the animated review holds the simulation while
+sampling drawing phases. Preferred extension still unavailable; local throwaway
+headless profiles supplied the page evidence. Complete LCOV, metrics, source
+hashes and gate logs are archived beside the review. No push, deploy or sibling
+copy changes.
+
+**Next:** developer review/merge, resolving the two appended ambient helper
+blocks against the already reviewed rack/port branch and re-stamping if needed.
+Then continue a small backdrop batch in the quieter biomes with this more visible
+page-scale motion and the same digest, motion-preference, FPS and phone gates.
