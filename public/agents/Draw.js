@@ -3033,6 +3033,7 @@ function drawActors(ctx, w, pal, opts) {
   drawActorColony(ctx, w, pal, opts)
   drawWeatherTouch(ctx, w, pal)
   drawArrivals(ctx, w, pal)
+  drawLandingPuffs(ctx, w, pal)
   // Last, over everybody: whoever is standing in a fireball is behind it.
   if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
   drawOutage(ctx, w, pal)
@@ -9786,6 +9787,31 @@ function drawBeamArrival(ctx, w, ag) {
     return true
   }
   return false
+}
+
+// A real drop (the same threshold as landSquash's knees) kicks up two small
+// curls of dust from the feet at page resolution, rolling out and settling.
+// Frost has its own powder burst for the long ones (drawPowderBursts).
+var LANDING_PUFF = 8, LANDING_DUST = "#aab0bf"
+function drawLandingPuffs(ctx, w, pal) {
+  if (w.res !== 2) return
+  var C = w.k.CELL
+  ctx.save()
+  ctx.fillStyle = LANDING_DUST
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i], age = w.ticks - ag.landedAt
+    if (ag.gone || !(ag.landedFrom > 3) || !(age >= 0 && age < LANDING_PUFF)) continue
+    if (w.biome === "Frost" && ag.landedFrom >= 6) continue
+    var cx = Math.round(ag.x * C * 2) / 2, by = Math.round((ag.y + 1) * C * 2) / 2
+    var out = 2 + Math.floor(age * 1.5) / 2, up = Math.floor(age / 3) / 2
+    ctx.globalAlpha = 0.7 * (1 - age / LANDING_PUFF)
+    for (var side = -1; side <= 1; side += 2) {
+      var x = side > 0 ? cx + out : cx - out - 1.5
+      moteFineRect(ctx, w, x, by - 1 - up, 2, 1)
+      moteFineRect(ctx, w, x + (side > 0 ? 0.5 : 0), by - 2 - up, 1, 1)
+    }
+  }
+  ctx.restore()
 }
 
 // Frost's powder snow (Sim's killingFall): a long drop ends in a burst of

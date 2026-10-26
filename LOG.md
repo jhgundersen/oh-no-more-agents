@@ -10911,3 +10911,20 @@ a09ddc0. New `test/gait.test.js` checks the gait table: wide legs mean the
 body is down, crossing legs mean it is up, only a swinging foot lifts, the two
 steps swing different feet, and the bob is one pixel. The snow test now checks
 the cap against `weatherCrown` across all eight keys.
+
+## 413 — 2026-10-26 · Landings kick up dust
+
+A real drop got the knees' squash (`landSquash`, `landedFrom > 3`) but nothing
+at the feet. Only Frost's long drops threw up powder. `drawLandingPuffs` (after
+the colony, page only) gives every real landing two small curls of dust that
+roll outward from the feet and settle over 8 ticks (`LANDING_DUST #aab0bf`,
+drawn through `moteFineRect`, so never into the floor). Frost's long drops keep
+their powder instead. First try used `pal.dust`, which disappeared on dark
+floors.
+
+**Tests:** `test/landing-puff.test.js`: present on a real landing, in air,
+fading and rolling outward, gone by 8 ticks; nothing for a step down or off
+the page; read-only and RNG-free.
+
+**Next:** deploy, then umbrella secondary motion (tilt into the wind where
+there is wind) and idle fidgets for blocked agents.
