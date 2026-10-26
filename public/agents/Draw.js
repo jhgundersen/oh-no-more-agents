@@ -8420,7 +8420,8 @@ var AGENT_POSES = {
 var IDLE_REPERTOIRE = {
   block: ["tap", "watch", "fold"], wait: ["phone", "glance", "yawn"],
   camp: ["watch", "glance", "tie"], held: ["drum", "tie", "yawn"],
-  stuck: ["tie", "watch", "fold"],
+  // Stalled in one cell for a while: a stretch, the time, arms folded.
+  stuck: ["stretch", "watch", "fold"],
   // Held by a 429 sign: checking the status page, the time, and tapping a foot.
   queue: ["phone", "watch", "tap"]
 }
@@ -8450,7 +8451,7 @@ function agentIdle(w, ag) {
 var IDLE_SLEEVES = {
   watch: [[5, 9, 4, 2], [6, 8, 2, 2]], fold: [[0, 9, 8, 2]],
   phone: [[6, 9, 3, 2]], glance: [], yawn: [[6, 6, 2, 5]],
-  drum: [[6, 10, 4, 1]], tie: [[5, 8, 2, 3]], tap: []
+  drum: [[6, 10, 4, 1]], tie: [[5, 8, 2, 3]], tap: [], stretch: []
 }
 function drawIdleBody(ctx, w, pal, ag, ox, oy, dir, robe, drop, idle) {
   if ((w.res || 1) >= 2 && idle.kind === "block") return drawBracedBlocker(ctx, w, pal, ag, ox, oy, dir, robe, idle)
@@ -8480,12 +8481,32 @@ function drawIdleFine(ctx, pal, ag, ox, oy, dir, drop, idle, w) {
 
 var IDLE_GESTURES = {
   watch: drawIdleWatch, fold: drawIdleFold, phone: drawIdlePhone,
-  yawn: drawIdleYawn, drum: drawIdleDrum, tie: drawIdleTie
+  yawn: drawIdleYawn, drum: drawIdleDrum, tie: drawIdleTie, stretch: drawIdleStretch
 }
 function drawIdleGesture(ctx, w, pal, ag, ox, oy, dir, robe, drop, idle) {
   if (!idle) return
   var gesture = IDLE_GESTURES[idle.pose]
   if (gesture) gesture(ctx, w, pal, ox, oy + drop, dir, robe, idle.phase)
+}
+// Both arms up past the hat: half raised on the way up and down, full in the
+// middle of the gesture, the hands open at the top.
+function drawIdleStretch(ctx, w, pal, ox, oy, dir, robe, phase) {
+  var up = phase < 6 || phase >= 30 ? 2 : 0
+  ctx.fillStyle = robe
+  blit(ctx, ox, oy, dir, 0, 5, 1, 4)                        // upper arms, from the shoulders
+  blit(ctx, ox, oy, dir, 7, 5, 1, 4)
+  blit(ctx, ox, oy, dir, -1, 1 + up, 1, 5 - up)             // forearms, out past the hat
+  blit(ctx, ox, oy, dir, 8, 1 + up, 1, 5 - up)
+  ctx.fillStyle = pal.skin
+  blit(ctx, ox, oy, dir, -1, up, 1, 1)
+  blit(ctx, ox, oy, dir, 8, up, 1, 1)
+  if ((w.res || 1) < 2) return
+  ctx.fillStyle = robe
+  blitFine(ctx, ox, oy, dir, -0.5, 4.5, 1, 1)               // the elbows' bend
+  blitFine(ctx, ox, oy, dir, 7.5, 4.5, 1, 1)
+  ctx.fillStyle = pal.shirt
+  blitFine(ctx, ox, oy, dir, -1, 1 + up, 1, 0.5)            // cuffs
+  blitFine(ctx, ox, oy, dir, 8, 1 + up, 1, 0.5)
 }
 function drawIdleWatch(ctx, w, pal, ox, oy, dir, robe, phase) {
   ctx.fillStyle = pal.skin

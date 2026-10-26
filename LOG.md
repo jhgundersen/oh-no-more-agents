@@ -10938,3 +10938,16 @@ capped at 1.5 px. `drawPageFloat` and the rain splashes (406) both use it, so
 the splashes stay on the canopy. Tested in `test/gait.test.js`: no lean in
 still air, the lean's sign and cap, and the sway alone stays within a pixel
 on the half grid.
+
+## 415 — 2026-10-26 · A stretch for the stalled
+
+The idle repertoire already had tapping, the watch, folded arms, the phone, a
+glance, a yawn, drumming fingers and the tie. Missing from the supervisor's
+list was a stretch. An agent stalled in one cell (`stuck`, `still > 24`) now
+stretches instead of fiddling with its tie; the tie stays in the `camp` and
+`held` sets. Both arms go up past the hat with an elbow at the shoulder line,
+half raised for the first and last six ticks of the gesture and full in
+between, with cuffs and open hands at page resolution. The first version was
+two straight one-pixel poles beside the head and read as detached sticks.
+`test/idle.test.js` covers it with the rest of the repertoire: every pose
+reads, nothing is written, and the schedule is deterministic.
