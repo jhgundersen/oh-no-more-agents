@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import {setupReport} from '../tools/report-art.js'
 import {captureHomeTime} from '../tools/home-time-art.js'
 import {createHash} from 'node:crypto'
 import {loadCore} from '../tools/load-core.js'
@@ -35,7 +36,7 @@ test('home lights count rescues, keep lost windows dark, fill stands, and preser
    const w=S.generate(1,0,3);Object.assign(w,{saved,toRelease:total,lost:total-saved,doneTicks:300,ticks:1640,reducedMotion:reduced})
    const before=hash(JSON.stringify(w)),a=canvas(800,496),c=a.ctx,p=P.build(themeOf('tokyo-night').theme,1)
    const background=a.buf.slice();let lit=0,dark=0,calls=0;const fill=c.fillRect.bind(c)
-   c.fillRect=(x,y,w,h)=>{assert.ok(++calls<1000);if(w===2&&h===2){if(c.fillStyle==='#edc086')lit++;if(c.fillStyle==='#182332')dark++}fill(x,y,w,h)}
+   c.fillRect=(x,y,w,h)=>{assert.ok(++calls<1000);if(c.fillStyle==='#ffd45e')lit++;if(c.fillStyle==='#101b2b')dark++;fill(x,y,w,h)}
    c.fillStyle='#123456';c.globalAlpha=.8;D.drawHomeVignette(c,w,p,200,100)
    assert.equal(lit,saved);assert.equal(dark,total-saved);assert.equal(c.fillStyle,'#123456');assert.equal(c.globalAlpha,.8)
    assert.equal(hash(JSON.stringify(w)),before)
@@ -45,6 +46,16 @@ test('home lights count rescues, keep lost windows dark, fill stands, and preser
  const w={saved:12,toRelease:18,lost:6,doneTicks:8}
  assert.equal(D.homeVignetteCounts(w).lit,0);w.doneTicks=20;assert.equal(D.homeVignetteCounts(w).lit,6)
  w.doneTicks=32;assert.equal(D.homeVignetteCounts(w).lit,12)
+})
+
+test('the home row fits the original report plate and leaves mission header text clear',()=>{
+ for(const [kind,height] of [['all',91],['zero',91],['busy',203]]){
+  const w=setupReport(S.generate(8,0,3),kind);w.res=2;w.doneTicks=40
+  const l=D.pageReportLayout(w,{})
+  assert.equal(l.height,height);assert.equal(l.y,Math.round((248-height)/2));assert.equal(l.width,352)
+  assert.ok(l.vignetteY+20<l.y+70,'roof/door/stand finish before report facts')
+  assert.ok(l.y>=23,'mission banner stays above the card')
+ }
 })
 
 test('page commute holds tick zero, takes 0.8 seconds while paused, and consumes skipping input once',{timeout:30000},async()=>{

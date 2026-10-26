@@ -22,7 +22,7 @@ function recording(w, name = "tokyo-night") {
   D.clearLayer(ctx, w)
   const fill = ctx.fillRect.bind(ctx), card = w.done && res === 2 ? D.pageReportLayout(w,pal) : null
   ctx.fillRect = (x, y, width, height) => {
-    const home = card && y >= card.y+62 && y+height <= card.y+88
+    const home = card && y >= card.vignetteY-1 && y+height <= card.vignetteY+20
     if (home) { assert.ok(ctx.globalAlpha>=0&&ctx.globalAlpha<=1);assert.match(ctx.fillStyle,/^(#|rgba?\()/) }
     else { assert.equal(ctx.globalAlpha,1);assert.ok(Object.values(pal).includes(ctx.fillStyle),"palette ink only") }
     const grid = res >= 2 ? 2 : 1

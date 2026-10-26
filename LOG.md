@@ -10970,3 +10970,43 @@ hashes are archived in `/tmp/codex-home-time/evidence/`.
 
 Next: agents-developer review/merge. No push or deploy; all living biomes are
 already complete, and this branch adds only the moments between them.
+
+## 414 — 2026-10-26 · Homes within the original report card
+
+Review caught two problems in 413: adding a row made the report 26 pixels
+taller, cutting through the mission banner, and the flats read as grey blocks.
+The page report now has its pre-home outer dimensions again: 352×91 world
+pixels for simple reports and 352×203 for the busy report. Its busy-card top
+returns from y=10 to y=23. Tightened heading/title/verdict spacing fits the
+vignette above the divider without moving the facts or shrinking their fonts.
+The full MISSION COMPLETE — EXIT ONLINE label is readable at desktop and 390 px.
+
+Homes now have terracotta pitched roofs, chimneys, cream walls, doors with
+handles, and larger warm yellow windows with pale centers. Every rescued agent
+lights one window; lost agents keep dark panes. The folded-umbrella stand sits
+beside the last door. The small sky strip uses the shared dusk clock. Reduced
+motion shows the final lights immediately and holds the report's entrance pose.
+
+The approved train functions are source-identical to a19f8ab. Browser controls,
+Sim.js and Outcome.js are byte-identical; the native/share report paths retain
+their pixels. Regression tests now lock the old plate sizes and mission-header
+clearance, alongside the window counts, read-only state/RNG and fixed poses.
+
+Fresh actual-page comparisons against reviewed a19f8ab:
+`/tmp/codex-home-time-homes/review/index.html` (desktop and 390 px pages, board
+crops, animated home lights and retained train, plus reduced-motion cross-fades).
+The README records the fixture and reproduction commands.
+
+**Validation:** fresh full `npm run check` with coverage: 1,612 passed, 0 failed;
+98.46% line coverage. `npm run crap -- --threshold 30 --use-existing-coverage`
+passed, maximum 30. Shared test lock, 3 GB unit memory cap, 2 GB Node heap,
+6 GB address-space cap and two test workers; final batch peaked at 760 MB.
+
+Before/after `npm run fps` (levels 9/14/15, seed 3, tick 240, Brisk, 10 seconds
+each): 60 fps median/p5, 17 ms worst in both versions. Actively drawing busy
+reports also held 60 fps/p5, 17 ms worst at 1280 and 390 px in normal and reduced
+motion. Sixteen live commutes retained the same 60 fps/p5 and 17 ms worst frames,
+with every incoming world held at tick zero. Coverage, CRAP and source/image
+hashes are archived in `/tmp/codex-home-time-homes/evidence/`.
+
+Next: agents-developer review/merge of the revised hand-off. No push or deploy.

@@ -4275,14 +4275,14 @@ function pageReportRows(rows, width, size) {
 
 function pageReportLayout(w, pal) {
   var width = Math.min(352, w.k.COLS * w.k.CELL - 48), source = reportRows(w, pal), size = 2
-  var extra = w.res === 2 ? 26 : 0
+  var home = w.res === 2
   var body = pageReportRows(source, width, size)
   // The full house keeps its complete facts and badges, at 1.5px font pixels.
-  if (body.height + 78 + extra > w.k.ROWS * w.k.CELL - 8) { size = 1.5; body = pageReportRows(source, width, size) }
-  var height = body.height + 78 + extra, centreY = Math.round((w.k.ROWS * w.k.CELL - height) / 2)
+  if (body.height + 78 > w.k.ROWS * w.k.CELL - 8) { size = 1.5; body = pageReportRows(source, width, size) }
+  var height = body.height + 78, centreY = Math.round((w.k.ROWS * w.k.CELL - height) / 2)
   var y = Math.min(w.k.ROWS * w.k.CELL - height - 4, centreY + (w.reducedMotion ? 0 : Math.max(0, 10 - w.doneTicks)) * 2)
   var titleSize = Math.min(3, Math.floor((width - 24) / (homeTitle(w).length * 4 - 1) * 2) / 2)
-  return { width: width, height: height, y: y, size: size, rows: body.rows, lineStep: body.lineStep, titleY: y + 24, titleHeight: 5 * titleSize, titleSize: titleSize, vignetteHeight: extra }
+  return { width: width, height: height, y: y, size: size, rows: body.rows, lineStep: body.lineStep, titleY: y + (home ? 17 : 24), titleHeight: 5 * titleSize, titleSize: titleSize, vignetteHeight: home ? 20 : 0, vignetteY: y + 48 }
 }
 
 function pageReportInk(pal, ink) {
@@ -4310,15 +4310,15 @@ function drawPageLevelResults(ctx, w, pal) {
   var cx = Math.round(w.k.COLS * w.k.CELL / 2), l = pageReportLayout(w, pal), y = l.y
   drawTransitionPlate(ctx, w, pal, cx - l.width / 2, y, l.height, l.width)
   ctx.fillStyle = pal.label
-  drawTransitionText(ctx, reportHeading(w), cx, y + 9, 1.5)
+  drawTransitionText(ctx, reportHeading(w), cx, y + (l.vignetteHeight ? 5 : 9), 1.5)
   ctx.fillStyle = pal.label
   drawTransitionText(ctx, homeTitle(w), cx, l.titleY, l.titleSize)
   ctx.fillStyle = w.saved === 0 ? pal.fireHot : pal.exitLight
-  drawTransitionText(ctx, levelVerdict(w), cx, y + 46, 2)
+  drawTransitionText(ctx, levelVerdict(w), cx, y + (l.vignetteHeight ? 35 : 46), 2)
   ctx.fillStyle = pal.rockEdge
-  ctx.fillRect(cx - l.width / 2 + 12, y + 63 + l.vignetteHeight, l.width - 24, .5)
-  if (l.vignetteHeight) drawHomeVignette(ctx,w,pal,cx,y+62)
-  var at = y + 70 + l.vignetteHeight
+  ctx.fillRect(cx - l.width / 2 + 12, y + (l.vignetteHeight ? 68.5 : 63), l.width - 24, .5)
+  if (l.vignetteHeight) drawHomeVignette(ctx,w,pal,cx,l.vignetteY)
+  var at = y + 70
   for (var i = 0; i < l.rows.length; i++) {
     drawPageReportRow(ctx, w, pal, l.rows[i], cx, at, l)
     at += l.rows[i].step
@@ -23347,25 +23347,48 @@ function drawHomeVignette(ctx, w, pal, cx, y) {
   ctx.save()
   var counts = homeVignetteCounts(w), width = counts.houses*30+24, x = cx-width/2
   var per = Math.ceil(counts.total/counts.houses), alpha = ctx.globalAlpha
+  ctx.fillStyle = COMMUTE_SKIES[Math.min(4,Math.floor(duskAt(w.ticks)*4))]
+  ctx.fillRect(x-3,y-1,width+6,21)
   for (var h = 0; h < counts.houses; h++) {
     var hx = x+h*30
-    ctx.fillStyle = "#394153"
-    ctx.fillRect(hx,y+5,26,18); ctx.fillRect(hx+2,y+3,22,2)
-    ctx.fillStyle = "#252d3d"
-    ctx.fillRect(hx-1,y+4,28,1); ctx.fillRect(hx+20,y+18,3,5)
+    drawHomeHouse(ctx,hx,y)
     drawHomeWindows(ctx,w,counts,h,per,hx,y,alpha)
   }
-  drawHomeStand(ctx,w,pal,x+counts.houses*30,y,Math.min(16,counts.lit))
+  drawHomeStand(ctx,w,pal,x+counts.houses*30,y-3,Math.min(16,counts.lit))
   ctx.restore()
 }
+function drawHomeHouse(ctx, x, y) {
+  ctx.fillStyle = "#9a8879"
+  ctx.fillRect(x+2,y+6,22,13)
+  ctx.fillStyle = "#67545a"
+  ctx.fillRect(x+18,y+1,2,4)
+  ctx.fillStyle = "#a15e48"
+  for (var roof = 0; roof < 6; roof++) ctx.fillRect(x+11-roof*2,y+roof,2+roof*4,1)
+  ctx.fillStyle = "#49353e"
+  ctx.fillRect(x,y+6,26,1)
+  ctx.fillRect(x+17,y+11,6,1)
+  ctx.fillStyle = "#403b42"
+  ctx.fillRect(x+18,y+12,4,7)
+  ctx.fillStyle = "#ebbd72"
+  ctx.fillRect(x+18.5,y+15,0.5,0.5)
+  ctx.fillStyle = "#59545b"
+  ctx.fillRect(x+1,y+19,24,0.5)
+}
 function drawHomeWindows(ctx, w, counts, house, per, x, y, alpha) {
+  var cols = per > 4 ? 4 : 2, size = per > 4 ? 2 : 3
   for (var n = 0; n < per; n++) {
     var index = house*per+n
     if (index >= counts.total) break
-    var col = n%4, row = Math.floor(n/4), wx = x+3+col*5, wy = y+7+row*3
-    ctx.fillStyle = index < counts.lit ? "#edc086" : "#182332"
-    ctx.globalAlpha = alpha*(index < counts.lit ? 0.65+0.3*duskAt(w.ticks) : 1)
-    ctx.fillRect(wx,wy,2,2)
+    var wx = x+4+n%cols*(size+3), wy = y+8+Math.floor(n/cols)*(size+2)
+    if (per > 4) { wx = x+3+n%cols*4; wy = y+7+Math.floor(n/cols)*3 }
+    var lit = index < counts.lit
+    ctx.fillStyle = lit ? "#ffd45e" : "#101b2b"
+    ctx.globalAlpha = alpha*(lit ? 0.9+0.1*duskAt(w.ticks) : 1)
+    ctx.fillRect(wx,wy,size,size)
+    if (lit && size === 3) {
+      ctx.fillStyle = "#fff3b8"
+      ctx.fillRect(wx+1,wy+1,1,1)
+    }
   }
   ctx.globalAlpha = alpha
 }
