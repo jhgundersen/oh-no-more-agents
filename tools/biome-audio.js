@@ -3,7 +3,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {browser,serve} from './phone.js'
+import {browser,serve,settleCommute} from './phone.js'
 import {loadCore} from './load-core.js'
 export const AUDIO_BIOMES=loadCore('Sim.js').BIOMES
 export function wav(pcm,rate=12000){
@@ -85,7 +85,9 @@ export async function liveAudio(out,{root}={}){
   await ev("delete document.hidden;document.dispatchEvent(new Event('visibilitychange'))");await wait(500);await state('visible')
   await ev("document.getElementById('sfx').click()");await wait(300);await state('muted')
   await b.cmd('Runtime.evaluate',{expression:"document.getElementById('sfx').click()",userGesture:true});await wait(500);await state('unmuted')
-  await ev("document.getElementById('c-next').click()");await wait(500);await state('next-biome')
+  await ev("document.getElementById('c-next').click()");await wait(300);await state('commuting')
+  await settleCommute(ev)
+  await wait(250);await state('next-biome')
   await ev("document.getElementById('c-pause').click();const w=AgentWorld();w.done=true;w.doneTicks=0;w.moments=[];document.getElementById('c-pause').click()");await wait(300);await state('report')
   const shot=await b.cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(path.join(out,'phone-halloween.png'),Buffer.from(shot.data,'base64'))
   const cleanup=await ev(`(()=>{const t=__beds;return{sources:t.sources.filter(s=>s.loop).length,closed:t.sources.filter(s=>s.loop&&s.__closed).length,gainsClosed:t.gains.filter(g=>g.__closed).length,scenes:t.scenes.slice(-10)}})()`)

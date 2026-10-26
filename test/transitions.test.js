@@ -20,10 +20,11 @@ function recording(w, name = "tokyo-night") {
   const img = canvas(400 * res, 248 * res, "#010203"), ctx = img.ctx
   const pal = P.build(theme.theme, w.level), rects = []
   D.clearLayer(ctx, w)
-  const fill = ctx.fillRect.bind(ctx)
+  const fill = ctx.fillRect.bind(ctx), card = w.done && res === 2 ? D.pageReportLayout(w,pal) : null
   ctx.fillRect = (x, y, width, height) => {
-    assert.equal(ctx.globalAlpha, 1)
-    assert.ok(Object.values(pal).includes(ctx.fillStyle), "palette ink only")
+    const home = card && y >= card.y+62 && y+height <= card.y+88
+    if (home) { assert.ok(ctx.globalAlpha>=0&&ctx.globalAlpha<=1);assert.match(ctx.fillStyle,/^(#|rgba?\()/) }
+    else { assert.equal(ctx.globalAlpha,1);assert.ok(Object.values(pal).includes(ctx.fillStyle),"palette ink only") }
     const grid = res >= 2 ? 2 : 1
     for (const v of [x, y, width, height]) assert.equal(v * grid, Math.round(v * grid), "hard pixel grid")
     rects.push([x, y, width, height, ctx.fillStyle])
@@ -63,7 +64,7 @@ test("no commands or pixels outside the intro/done windows, even with a hold con
     const r = recording(w), blank = r.img.buf.slice()
     D.drawLevelTransition(r.ctx, w, r.pal)
     assert.equal(r.rects.length, 0)
-    assert.deepEqual(r.img.buf, blank)
+    assert.ok(same(r.img.buf, blank))
   }
 })
 
@@ -107,17 +108,17 @@ test("results include the live total, all verdicts, and override an unfinished i
 
 test("absent/invalid host hold keeps the plate visible indefinitely without a closing wipe", () => {
   for (const res of [1, 2]) for (const doneHold of [undefined, 0, -1, NaN]) {
-    const w = fresh(res); w.done = true; w.saved = 14; w.doneHold = doneHold
+    const w = fresh(res); w.done = true; w.saved = 14; w.doneHold = doneHold; w.reducedMotion = true
     const frames = []
     for (const age of [10, 85, 110, 5000]) {
       w.doneTicks = age
       const r = recording(w), blank = r.img.buf.slice()
       D.drawLevelClosing(r.ctx, w, r.pal)
-      assert.equal(r.rects.length, 0); assert.deepEqual(r.img.buf, blank)
+      assert.equal(r.rects.length, 0); assert.ok(same(r.img.buf, blank))
       D.drawLevelTransition(r.ctx, w, r.pal)
       frames.push(r.img.buf)
     }
-    for (const frame of frames) assert.deepEqual(frame, frames[0])
+    for (const frame of frames) assert.ok(same(frame, frames[0]))
   }
 })
 

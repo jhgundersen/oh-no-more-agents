@@ -81,9 +81,9 @@ test('report pause holds its clock, resumes by Space/tap, and excludes gameplay,
    const rewrites=observer.takeRecords().length;observer.disconnect();
    w.doneTicks=20;refresh();document.getElementById('board').click();const tapped=document.getElementById('pauseWord').textContent==='pause';document.getElementById('c-pause').click();
    document.getElementById('c-next').click();
-   return{lifted:held!==closing,resumed,restored,unchanged,rewrites,tapped,newLevel:!AgentWorld().done}
+   return{preserved:held===closing,resumed,restored,unchanged,rewrites,tapped,newLevel:!AgentWorld().done}
   })()`)
-  assert.deepEqual(closing,{lifted:true,resumed:true,restored:true,unchanged:true,rewrites:0,tapped:true,newLevel:true})
+  assert.deepEqual(closing,{preserved:true,resumed:true,restored:true,unchanged:true,rewrites:0,tapped:true,newLevel:true})
   assert.deepEqual(await state(),{overlay:true,hint:await ev('skyCardCaption(AgentWorld())'),pause:'resume'},'navigation clears report hold')
   // Fullscreen reserves no caption row; its existing resume control remains.
   await open('level=20&full=1')
@@ -101,7 +101,7 @@ test('report pause holds its clock, resumes by Space/tap, and excludes gameplay,
   await open('level=1')
   for(let i=0;i<5;i++){
    await ev(`(()=>{const w=AgentWorld();for(let j=0;j<400&&!w.done;j++)step(w);w.agents.forEach(a=>{a.state='saved';a.gone=false});Object.assign(w,{done:true,doneTicks:111,moments:[],saved:w.agents.length,released:w.toRelease});document.getElementById('c-pause').click()})()`)
-   await waitFor(i<4?'AgentWorld().level==='+String(i+2):'AgentWorld().level===5&&AgentWorld().doneTicks>111')
+   await waitFor(i<4?'AgentWorld().level==='+String(i+2)+'&&document.getElementById("commute").hidden':'AgentWorld().level===5&&AgentWorld().doneTicks>111')
    await ev("document.getElementById('c-pause').click()")
   }
   assert.deepEqual(await state(),{overlay:true,hint:'',pause:'resume'},'standup is not a report hold')

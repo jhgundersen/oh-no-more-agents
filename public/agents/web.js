@@ -478,6 +478,7 @@
   }
 
   function newLevel(n, seed) {
+    var trip = commuteSnapshot(n)
     // Any navigation ends the last level's intermission without its own
     // ending: a standup or replay left running drew over the new colony, and
     // the standup's finish then advanced again — Next during a standup
@@ -499,8 +500,9 @@
     rebuildPalette()
     paintTerrain()
     paintActors()
-    showLevelTitle()
+    if (!trip) showLevelTitle()
     render()
+    if (trip) startCommute(trip)
   }
 
   function advance(delta) { newLevel(level + delta); saveState() }
@@ -549,7 +551,7 @@
 
 
   function tick() {
-    if (!world) return
+    if (!world || commute) return
     if (standup) { stepStandup(); return }
     if (replay) { stepReplay(); return }
     step(world)
@@ -733,8 +735,64 @@
     if (!world) return
     if (world.done || world.replaying) hideLevelTitle()
     if (window.AgentSeason) window.AgentSeason.dress(world)
-    drawActors(actorCtx, world, palette, { labels: showLabels, intro: false, feed: isFullscreen(), heldReport: reportHeld() })
+    drawActors(actorCtx, world, palette, { labels: showLabels, intro: false, feed: isFullscreen(), heldReport: reportHeld(), closing: false })
     if (window.AgentSeason) window.AgentSeason.paint(actorCtx, world)
+  }
+
+  // The commute owns presentation time only. The next colony is generated
+  // once, then held at tick zero while this outgoing snapshot travels away.
+  var commute = null, commuteRAF = 0, commuteClick = false
+  function finishCommute(title) {
+    if (!commute) return
+    cancelAnimationFrame(commuteRAF)
+    commuteRAF = 0; commute = null
+    document.getElementById("commute").hidden = true
+    if (title !== false) { showLevelTitle(); render() }
+  }
+  function commuteSnapshot(n) {
+    finishCommute(false)
+    if (!world || Math.max(1,n) === level) return null
+    var image = document.createElement("canvas")
+    image.width = WIDTH*RES; image.height = HEIGHT*RES
+    var ctx = image.getContext("2d")
+    ctx.drawImage(terrainCtx.canvas,0,0); ctx.drawImage(actorCtx.canvas,0,0)
+    var title = document.getElementById("levelTitle")
+    if (!title.hidden) ctx.drawImage(title,0,0,image.width,image.height)
+    hideLevelTitle()
+    return { image:image, dusk:duskAt(world.ticks) }
+  }
+  function startCommute(trip) {
+    var c = document.getElementById("commute")
+    c.width = WIDTH*RES; c.height = HEIGHT*RES; c.hidden = false
+    trip.started = performance.now(); trip.reduced = world.reducedMotion; commute = trip
+    paintCommute(trip.started)
+    syncSfxScene()
+  }
+  function paintCommute(now) {
+    if (!commute) return
+    var progress = Math.min(1,(now-commute.started)/800)
+    if (progress >= 1) { finishCommute(); return }
+    var c = document.getElementById("commute"), ctx = c.getContext("2d")
+    ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,c.width,c.height)
+    var f = commuteFrame(progress,WIDTH,commute.reduced)
+    ctx.globalAlpha = f.opacity
+    if (f.front < WIDTH) {
+      var left = Math.max(0,f.front)*RES
+      ctx.drawImage(commute.image,left,0,c.width-left,c.height,left,0,c.width-left,c.height)
+    }
+    ctx.globalAlpha = 1; ctx.setTransform(RES,0,0,RES,0,0)
+    if (!commute.reduced) drawCommuteTrain(ctx,WIDTH,HEIGHT,f.tail,f.width,commute.dusk)
+    commuteRAF = requestAnimationFrame(paintCommute)
+  }
+  function skipCommute(ev) {
+    if (ev.type === "pointerdown" || ev.type === "pointercancel" || ev.type === "keydown") commuteClick = false
+    if (ev.type === "click" && commuteClick) {
+      commuteClick = false; ev.preventDefault(); ev.stopImmediatePropagation(); return
+    }
+    if (!commute) return
+    commuteClick = ev.type === "pointerdown"
+    finishCommute()
+    ev.preventDefault(); ev.stopImmediatePropagation()
   }
 
   // One cached image per level/theme. CSS fades only this transparent layer;
@@ -917,7 +975,7 @@
   }
 
   function syncSfxScene() {
-    if (window.AgentSfx && AgentSfx.scene) AgentSfx.scene(world, running && !document.hidden && !standup && !replay && !world.done)
+    if (window.AgentSfx && AgentSfx.scene) AgentSfx.scene(world, running && !commute && !document.hidden && !standup && !replay && !world.done)
   }
 
   function render() {
@@ -1438,6 +1496,9 @@
     document.addEventListener("webkitfullscreenchange", afterFullscreen)
     // A tap on an agent is a pep talk (Sim's pepTalk); anywhere else, or
     // while paused, it is pause as it always was.
+    ;["keydown","pointerdown","pointercancel","wheel","click"].forEach(function (type) {
+      document.addEventListener(type,skipCommute,{capture:true,passive:false})
+    })
     el.boardWrap.addEventListener("click", function (ev) {
       hideLevelTitle()
       if (standup) { endStandup(); return }
@@ -1500,7 +1561,7 @@
 
     // Pause the clock while hidden; throttled timers would consume game time.
     document.addEventListener("visibilitychange", function () {
-      if (document.hidden) { if (timer !== null) { clearInterval(timer); timer = null } }
+      if (document.hidden) { finishCommute(); if (timer !== null) { clearInterval(timer); timer = null } }
       else restartClock()
       syncSfxScene()
     })

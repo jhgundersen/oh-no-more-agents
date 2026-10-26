@@ -22,7 +22,7 @@ import zlib from "node:zlib"
 import https from "node:https"
 import http from "node:http"
 import { fileURLToPath } from "node:url"
-import { serve, browser } from "./phone.js"
+import { serve, browser, settleCommute } from "./phone.js"
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..")
 const PROD = "https://oh-no-more-agents.com/"
@@ -214,7 +214,10 @@ async function finishLevel(b, last) {
   for (let k = 0; k < 40 && (await b.ev(`AgentWorld().agents.length`)) < 2; k++) await sleep(100)
   const before = await b.ev(`AgentWorld().level`)
   await b.ev(FINISH)
-  if (!last) for (let k = 0; k < 40 && (await b.ev(`AgentWorld().level`)) === before; k++) await sleep(100)
+  if (!last) {
+    for (let k = 0; k < 40 && (await b.ev(`AgentWorld().level`)) === before; k++) await sleep(100)
+    await settleCommute(b.ev)
+  }
 }
 
 async function standupNext(b, base) {
@@ -223,7 +226,7 @@ async function standupNext(b, base) {
   await sleep(400)
   const during = await b.ev(`AgentWorld().level`)
   await press(b, "n", "KeyN", 78)
-  await sleep(600)
+  await settleCommute(b.ev,{live:true})
   const after = await b.ev(`({ level: AgentWorld().level, ticks: AgentWorld().ticks })`)
   return after.level === during + 1 && after.ticks > 0 ? [] : [`Next during a standup: ${during} -> ${after.level}, ticks ${after.ticks}`]
 }

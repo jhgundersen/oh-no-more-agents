@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { execSync } from "node:child_process"
-import { serve, browser } from "../tools/phone.js"
+import { serve, browser, settleCommute } from "../tools/phone.js"
 
 // Navigating during an intermission (review 2026-10-15, finding 1): a standup
 // or replay left running drew over the new colony, and the standup's own
@@ -27,7 +27,7 @@ async function toStandup(ev) {
     await ev(`(() => { const w = AgentWorld(); for (let k = 0; k < 400 && w.agents.length < 2 && !w.done; k++) step(w); if (w.agents.length < 2) throw Error("navigation fixture could not release two agents") })()`)
     const before = await ev(`AgentWorld().level`)
     await ev(`(() => { const w = AgentWorld(); w.agents.forEach(a => { a.state = "saved"; a.gone = false }); w.saved = w.agents.length; w.released = w.toRelease; w.done = true; w.doneTicks = 9999 })()`)
-    if (i < 4) for (let k = 0; k < 40 && (await ev(`AgentWorld().level`)) === before; k++) await sleep(100)
+    if (i < 4) for (let k = 0; k < 40 && (await ev(`AgentWorld().level === ${before} || !document.getElementById("commute").hidden`)); k++) await sleep(100)
   }
   await sleep(400)
   return ev(`AgentWorld().level`)
@@ -40,7 +40,7 @@ test("Next during a standup plays the next level, once; the daily during a stand
     let ev = await open(b, base + "?level=3&seed=42")
     const during = await toStandup(ev)
     await key(b, "n", "KeyN", 78)
-    await sleep(500)
+    await settleCommute(ev,{live:true})
     assert.equal(await ev(`AgentWorld().level`), during + 1, "one level on")
     assert.ok((await ev(`AgentWorld().ticks`)) > 0, "and it is being played, not drawn over")
     const r = await ev(`(() => { const b = document.getElementById("board").getBoundingClientRect(); return [b.left + 30, b.top + 30] })()`)
@@ -67,7 +67,7 @@ test("Next during an instant replay ends the replay and moves on one level", { s
     for (let i = 0; i < 60 && !rp; i++) { await sleep(100); rp = await ev(`AgentReplay()`) }
     assert.ok(rp, "a replay is running")
     await key(b, "n", "KeyN", 78)
-    await sleep(300)
+    await settleCommute(ev,{live:true})
     assert.equal(await ev(`AgentReplay()`), null)
     assert.equal(await ev(`AgentWorld().level`), 2)
     assert.ok((await ev(`AgentWorld().ticks`)) > 0)

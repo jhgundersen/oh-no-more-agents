@@ -4275,13 +4275,14 @@ function pageReportRows(rows, width, size) {
 
 function pageReportLayout(w, pal) {
   var width = Math.min(352, w.k.COLS * w.k.CELL - 48), source = reportRows(w, pal), size = 2
+  var extra = w.res === 2 ? 26 : 0
   var body = pageReportRows(source, width, size)
   // The full house keeps its complete facts and badges, at 1.5px font pixels.
-  if (body.height + 78 > w.k.ROWS * w.k.CELL - 8) { size = 1.5; body = pageReportRows(source, width, size) }
-  var height = body.height + 78, centreY = Math.round((w.k.ROWS * w.k.CELL - height) / 2)
-  var y = Math.min(w.k.ROWS * w.k.CELL - height - 4, centreY + Math.max(0, 10 - w.doneTicks) * 2)
+  if (body.height + 78 + extra > w.k.ROWS * w.k.CELL - 8) { size = 1.5; body = pageReportRows(source, width, size) }
+  var height = body.height + 78 + extra, centreY = Math.round((w.k.ROWS * w.k.CELL - height) / 2)
+  var y = Math.min(w.k.ROWS * w.k.CELL - height - 4, centreY + (w.reducedMotion ? 0 : Math.max(0, 10 - w.doneTicks)) * 2)
   var titleSize = Math.min(3, Math.floor((width - 24) / (homeTitle(w).length * 4 - 1) * 2) / 2)
-  return { width: width, height: height, y: y, size: size, rows: body.rows, lineStep: body.lineStep, titleY: y + 24, titleHeight: 5 * titleSize, titleSize: titleSize }
+  return { width: width, height: height, y: y, size: size, rows: body.rows, lineStep: body.lineStep, titleY: y + 24, titleHeight: 5 * titleSize, titleSize: titleSize, vignetteHeight: extra }
 }
 
 function pageReportInk(pal, ink) {
@@ -4315,8 +4316,9 @@ function drawPageLevelResults(ctx, w, pal) {
   ctx.fillStyle = w.saved === 0 ? pal.fireHot : pal.exitLight
   drawTransitionText(ctx, levelVerdict(w), cx, y + 46, 2)
   ctx.fillStyle = pal.rockEdge
-  ctx.fillRect(cx - l.width / 2 + 12, y + 63, l.width - 24, .5)
-  var at = y + 70
+  ctx.fillRect(cx - l.width / 2 + 12, y + 63 + l.vignetteHeight, l.width - 24, .5)
+  if (l.vignetteHeight) drawHomeVignette(ctx,w,pal,cx,y+62)
+  var at = y + 70 + l.vignetteHeight
   for (var i = 0; i < l.rows.length; i++) {
     drawPageReportRow(ctx, w, pal, l.rows[i], cx, at, l)
     at += l.rows[i].step
@@ -4472,7 +4474,7 @@ function drawLevelTransition(ctx, w, pal, opts) {
   if (w.done) {
     ctx.save()
     drawLevelResults(ctx, w, pal)
-    if (!((w.res || 1) >= 2 && opts && opts.heldReport)) drawLevelClosing(ctx, w, pal)
+    if (!(opts && opts.closing === false) && !((w.res || 1) >= 2 && opts && opts.heldReport)) drawLevelClosing(ctx, w, pal)
     ctx.restore()
   } else if (!(opts && opts.intro === false) && w.ticks >= 0 && w.ticks < LEVEL_INTRO_TICKS + (w.bossPost ? 20 : 0)) {
     ctx.save()
@@ -23280,4 +23282,99 @@ function drawFarPennants(ctx, scene, b, t, alpha) {
   drawCloudDraftRect(ctx,scene,b.x+7,b.y+8,13,1)
   drawCloudDraftRect(ctx,scene,b.x+7+billow,b.y+9,12,4)
   drawCloudDraftRect(ctx,scene,b.x+9+billow,b.y+13,8,0.5)
+}
+
+// A board-wide curtain carries a little commuter train. Geometry is pure;
+// web.js supplies the outgoing snapshot and a bounded wall-clock progress.
+function commuteFrame(progress, width, reduced) {
+  var p = Math.max(0,Math.min(1,progress)), train = 280
+  var tail = Math.floor((p*(width+train)-train)*2)/2
+  return {tail:tail,front:reduced ? 0 : tail+train,width:train,opacity:reduced ? 1-p : 1}
+}
+var COMMUTE_SKIES = ["#62524d","#51434f","#3e354d","#2c2d45","#1c253b"]
+function drawCommuteTrain(ctx, width, height, tail, trainWidth, dusk) {
+  ctx.save()
+  var tone = Math.min(4,Math.max(0,Math.floor(dusk*4))), y = Math.floor(height/2)-38
+  ctx.fillStyle = COMMUTE_SKIES[tone]
+  commuteRect(ctx,width,height,tail,0,trainWidth,height)
+  ctx.fillStyle = "#111a28"
+  commuteRect(ctx,width,height,tail+3,y+4,trainWidth-6,68)
+  commuteRect(ctx,width,height,tail+9,y,trainWidth-18,4)
+  ctx.fillStyle = "#384352"
+  commuteRect(ctx,width,height,tail+5,y+54,trainWidth-10,1)
+  for (var car = 0; car < 3; car++) drawCommuteCar(ctx,width,height,tail+12+car*88,y,tone)
+  ctx.fillStyle = "#0c1420"
+  for (var wheel = 0; wheel < 6; wheel++) {
+    var x = tail+19+wheel*45
+    commuteRect(ctx,width,height,x,y+69,12,5)
+    commuteRect(ctx,width,height,x+2,y+74,8,2)
+  }
+  // A folded umbrella on the destination board: still travelling home.
+  ctx.fillStyle = "#a79b86"
+  commuteRect(ctx,width,height,tail+trainWidth-25,y+44,1,10)
+  commuteRect(ctx,width,height,tail+trainWidth-27,y+42,5,1)
+  commuteRect(ctx,width,height,tail+trainWidth-28,y+43,7,1)
+  commuteRect(ctx,width,height,tail+trainWidth-28,y+44,1,1)
+  commuteRect(ctx,width,height,tail+trainWidth-22,y+44,1,1)
+  commuteRect(ctx,width,height,tail+trainWidth-27,y+54,3,1)
+  ctx.restore()
+}
+function commuteRect(ctx, width, height, x, y, w, h) {
+  var left = Math.max(0,x), top = Math.max(0,y)
+  var right = Math.min(width,x+w), bottom = Math.min(height,y+h)
+  if (right > left && bottom > top) ctx.fillRect(left,top,right-left,bottom-top)
+}
+function drawCommuteCar(ctx, width, height, x, y, tone) {
+  ctx.fillStyle = "#222c3a"
+  commuteRect(ctx,width,height,x+71,y+8,2,57)
+  ctx.fillStyle = tone > 1 ? "#ad9473" : "#8e8b85"
+  for (var window = 0; window < 4; window++) {
+    var wx = x+window*16
+    commuteRect(ctx,width,height,wx,y+14,12,19)
+    ctx.fillStyle = "#1c2532"
+    commuteRect(ctx,width,height,wx+4,y+24,5,9)
+    commuteRect(ctx,width,height,wx+5,y+21,3,3)
+    ctx.fillStyle = tone > 1 ? "#ad9473" : "#8e8b85"
+  }
+}
+function homeVignetteCounts(w) {
+  var saved = Math.max(0,Math.min(128,Math.floor(w.saved)||0))
+  var total = Math.max(saved,Math.min(128,Math.max(0,Math.floor(w.toRelease)||0)),Math.min(128,Math.max(0,Math.floor(w.lost)||0)+saved))
+  var lit = w.reducedMotion ? saved : Math.min(saved,Math.max(0,Math.floor((w.doneTicks-8)/2)))
+  return {total:total,saved:saved,lit:lit,houses:Math.max(3,Math.min(8,Math.ceil(total/4)))}
+}
+function drawHomeVignette(ctx, w, pal, cx, y) {
+  ctx.save()
+  var counts = homeVignetteCounts(w), width = counts.houses*30+24, x = cx-width/2
+  var per = Math.ceil(counts.total/counts.houses), alpha = ctx.globalAlpha
+  for (var h = 0; h < counts.houses; h++) {
+    var hx = x+h*30
+    ctx.fillStyle = "#394153"
+    ctx.fillRect(hx,y+5,26,18); ctx.fillRect(hx+2,y+3,22,2)
+    ctx.fillStyle = "#252d3d"
+    ctx.fillRect(hx-1,y+4,28,1); ctx.fillRect(hx+20,y+18,3,5)
+    drawHomeWindows(ctx,w,counts,h,per,hx,y,alpha)
+  }
+  drawHomeStand(ctx,w,pal,x+counts.houses*30,y,Math.min(16,counts.lit))
+  ctx.restore()
+}
+function drawHomeWindows(ctx, w, counts, house, per, x, y, alpha) {
+  for (var n = 0; n < per; n++) {
+    var index = house*per+n
+    if (index >= counts.total) break
+    var col = n%4, row = Math.floor(n/4), wx = x+3+col*5, wy = y+7+row*3
+    ctx.fillStyle = index < counts.lit ? "#edc086" : "#182332"
+    ctx.globalAlpha = alpha*(index < counts.lit ? 0.65+0.3*duskAt(w.ticks) : 1)
+    ctx.fillRect(wx,wy,2,2)
+  }
+  ctx.globalAlpha = alpha
+}
+function drawHomeStand(ctx, w, pal, x, y, count) {
+  ctx.fillStyle = "#222c3b"; ctx.fillRect(x+1,y+17,18,6)
+  for (var u = 0; u < count; u++) {
+    var ux = x+2+u%8*2, uy = y+7-Math.floor(u/8)*2
+    drawOfficeBrolly(ctx,w,pal,u,ux,uy,false)
+  }
+  ctx.fillStyle = "#5c6370"; ctx.fillRect(x+1,y+19,18,4)
+  ctx.fillStyle = pal.umbrellaRim; ctx.fillRect(x+1,y+18,18,0.5)
 }

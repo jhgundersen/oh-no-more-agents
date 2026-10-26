@@ -10911,3 +10911,62 @@ a09ddc0. New `test/gait.test.js` checks the gait table: wide legs mean the
 body is down, crossing legs mean it is up, only a swinging foot lifts, the two
 steps swing different feet, and the bob is one pixel. The snow test now checks
 the cap against `weatherCrown` across all eight keys.
+
+## 413 — 2026-10-26 · Home time: a commute between colonies
+
+The page now leaves a colony aboard a little three-car commuter train. Its
+silhouette travels through a curtain tinted by the outgoing world's shared
+`duskAt` clock, revealing the next colony over 800 ms. Window passengers and an
+umbrella travel with it. Reduced motion uses a stationary cross-fade instead;
+the page report also holds its entrance pose under that preference.
+
+`web.js` snapshots the outgoing board and owns this short presentation clock.
+The next colony is generated once, then stays at tick zero until the wipe ends.
+Any key, pointer, click or wheel skips it; a pointer's generated click is consumed
+with the skip, so that input cannot also pause, bet, or advance twice. A new
+deliberate click works immediately. Pause/speed do not stretch the wipe, hiding
+the page finishes it, and initial load/same-level restart have no commute.
+The page's old closing iris is disabled so the train can depart from the complete
+report; the native renderer retains its default iris.
+
+The end card has a small row of flats: one window per agent, lighting one by one
+for rescues while the lost agents' windows remain dark. Folded umbrellas use the
+existing office sprites and fill a stand by the last doorway. Reduced motion
+shows the final rescue count immediately; changing the system preference during
+a level is respected by that level's departure. The row reserves 26 world pixels;
+even the busy, seasonal report keeps all its facts, badges and existing Outcome
+copy on desktop, 390/360 px phones and landscape. Native/share report pixels are
+unchanged. Sim.js and Outcome.js remain byte-identical to main b32073f.
+
+Tests cover window counts, fixed reduced poses, bounded clipped train geometry,
+read-only state/RNG/style, and real keyboard/pointer/wheel skipping. Browser
+regressions retain report hold, replay and the five-colony standup path. The
+audio probe now checks a quiet commute and waits for its end before asserting
+the next biome bed; navigation probes likewise wait for the live colony rather
+than assuming the former 300/500 ms hard cut. A shared bounded
+`settleCommute` helper also handles title, standup and read-only verification
+probes; frozen standup fixtures skip through the real input path. The
+capture helper stages only presentation time and intersects the board with the
+viewport: a phone's intentional five-pixel board overhang otherwise makes CDP
+return a crop from the top of the page.
+
+Evidence: `/tmp/codex-home-time/review/index.html` (gallery) and `README.md`, with full desktop and 390 px
+before/after pages, animated commute and home-light comparisons, reduced-motion
+animations, individual frames and source-world/report-row metadata. Actual-page
+Outcome rows agree before/after. Baseline hard cuts are placed at 400 ms in the
+review loops for readability; live timing uses unmodified requestAnimationFrame.
+
+**Validation:** fresh `npm run check` with coverage: 1,611 passed, 0 failed;
+98.46% line coverage. `npm run crap -- --threshold 30 --use-existing-coverage`
+passed, maximum 30. All runs used the shared test lock, 3 GB unit limit,
+2 GB Node heap, 6 GB address-space cap and two test workers. Final batch peak:
+783 MB. Source hashes confirm the gated files stayed unchanged.
+
+Before/after `npm run fps`: levels 9/14/15, seed 3, tick 240, Brisk, 10 s each;
+60 fps median/p5, 17 ms worst frames in both versions. Sixteen live commutes
+(eight each normal/reduced) also held 60 fps/p5, 17 ms worst, took 816–833 ms,
+and kept every incoming colony at tick zero. Coverage, CRAP and source/image
+hashes are archived in `/tmp/codex-home-time/evidence/`.
+
+Next: agents-developer review/merge. No push or deploy; all living biomes are
+already complete, and this branch adds only the moments between them.
