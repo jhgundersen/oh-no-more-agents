@@ -7,7 +7,7 @@ function marks(w){
  const ctx=canvas(800,496).ctx,calls=[]
  ctx.fillStyle='#123456';ctx.globalAlpha=.6
  ctx.fillRect=(...r)=>{assert.ok(calls.length<1000);assert.ok(r.every(Number.isFinite));assert.ok(r[2]>0&&r[3]>0);assert.ok(r.every(n=>Number.isInteger(n*2)));calls.push([...r,ctx.fillStyle,ctx.globalAlpha])}
- D.drawBackdropLife(ctx,w)
+ D.drawRackFans(ctx,w);D.drawPortGulls(ctx,w)
  assert.equal(ctx.fillStyle,'#123456');assert.equal(ctx.globalAlpha,.6)
  return calls
 }

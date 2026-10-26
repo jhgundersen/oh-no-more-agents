@@ -10602,3 +10602,47 @@ theme's board, so it now compares the frames themselves. `npm run fps -- 5 11
 17 --from-tick 800`: 60 / p5 60, cpu 8–9%.
 
 **Next:** agent animation polish.
+
+## 404 — 2026-10-26 · Living rooftops, clockwork shadows and Jungle dusk
+
+(Codex wrote this as 403 on its branch; renumbered at the merge.)
+
+`codex/living-roofs-gears`, based on main's shared dusk helpers (9335779)
+plus its deployment note (4b3a95b). Rendering changes live only in Draw.js.
+Rooftops gets broader, curling chimney puffs, two distant ledge pigeons that
+shuffle and bob, and a far aircraft beacon. Clock Tower gets large, slowly
+turning gear shadows and a pendulum shadow, clipped behind foreground walls.
+Jungle gets swaying fronds and wandering fireflies. Half-pixel air masks
+protect terrain and fittings; layout caches invalidate on terrain version
+or array replacement. These additions run only at page resolution 2.
+
+Firefly and aircraft brightness use `duskAt(w.ticks)`. The developer's dusk,
+city windows and tower functions are untouched. Reduced motion fixes the
+new poses; the older Jungle light/humidity/butterflies, dial motion and
+chimney wisps now use fixed poses at page resolution too. Native and share
+recipes retain their original time. The rack/gull test now calls those two
+painters directly, keeping its biome-specific assertions scoped to them.
+
+**Validation:** fresh full `npm run check` with coverage, under the shared
+FIFO testlock, 3 GB scope and 2 GB Node heap, two test workers: 1579 passed,
+0 failed, 420 seconds; 98.44% lines / 96.78% branches / 96.32% functions.
+`npm run crap -- --threshold 30 --use-existing-coverage`: green, max 30.0;
+the new functions top out at 16.0. New bounded tests cover air clipping,
+RNG-free/read-only determinism, native/share gating, reduced-motion poses,
+shared dusk brightness, terrain cache replacement and rendered/plain live
+world digests across this batch and nearby biomes. Stamps are current.
+
+**Evidence:** `/tmp/codex-living-roofs-gears/review/index.html`: eight-phase
+before/after strips, enlarged details, 390 px previews, and actual 1280×900
+and 390×844 page captures for levels 5/16/17, seed 3. Baseline is 9335779;
+simulation held at tick 240 while the drawing clock shows late dusk/night.
+`npm run fps -- 5 16 17 --seconds 10 --speed 2 --from-tick 240` before and
+after: 60 fps / p5 60, worst 17 ms throughout; CPU before 10/10/11%, after
+10/12/10%. Coverage, CRAP, full logs and source/image SHA-256 provenance are
+archived in `/tmp/codex-living-roofs-gears/evidence/`. No push or deployment.
+
+**Next:** hand off to agents-developer, then Ruins/Frost/Desert on a fresh
+branch from main. Remaining in this ambient backdrop pass (12): Cavern,
+Ruins, Frost, Foundry, Ice Cave, Spaceship, Factory, Skyscraper, Trench,
+Desert, Mail Room and Building Site. Several already have foreground weather
+or machinery; this pass adds small distant scenery motions.
