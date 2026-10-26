@@ -21,11 +21,14 @@ function evaluator(b){return async expression=>{
 async function openView(b,ev,base,v){
  await b.cmd('Emulation.setDeviceMetricsOverride',{width:v.width,height:v.height,deviceScaleFactor:1,mobile:v.mobile})
  await b.cmd('Emulation.setTouchEmulationEnabled',{enabled:v.mobile})
- await b.cmd('Page.navigate',{url:base+'/?level='+v.level+'&seed=3'+(v.season?'&season='+v.season:'')})
+ await b.cmd('Page.navigate',{url:base+'/?level='+v.level+'&seed=3'+'&season='+(v.season||'none')})
  let ready=false
  for(let i=0;i<80;i++){if(await ev('window.AgentWorld?.()?.level==='+v.level)){ready=true;break}await sleep(40)}
  if(!ready)throw Error('Caption page did not become ready within 3.2 seconds')
- await ev('Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,1000))])')
+ // Load every declared face now: a face loads only once text first uses it, so a
+ // caption shown after fonts.ready would otherwise be measured in the fallback
+ // font on a slow machine (the CI runner, LOG 392).
+ await ev('Promise.race([Promise.allSettled([...document.fonts].map(f=>f.load())),new Promise(r=>setTimeout(r,5000))])')
 }
 const MEASURE=`(()=>{
  document.getElementById('c-pause').click();const w=AgentWorld();

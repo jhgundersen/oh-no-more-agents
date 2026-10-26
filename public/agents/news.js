@@ -8,10 +8,10 @@
   // Eight at most: when a line is added, the oldest (or least useful to a
   // watcher: keep the ones that say what a tap does) drops off.
   var NEWS = [
+    { id: "2026-10-15-ooo", text: "Added: out-of-office replies. Lost agents leave an auto-reply under the board." },
+    { id: "2026-10-15-incidents", text: "Added: a safety sign. Levels without an incident, counted until there is one." },
     { id: "2026-10-15-employee", text: "Added: Employee of the Level on every report. The plaque is real. The raise is not." },
     { id: "2026-10-15-daily", text: "Added: colony of the day, the same level and colony for everyone. Copy link shares it." },
-    { id: "2026-10-15-tour", text: "Added: The Cloud, a 20th biome, and a tour strip to visit all twenty. Bring an umbrella." },
-    { id: "2026-10-15-voices", text: "Added: voices, with sound on. Let's go, oh no, yippee. Any resemblance is a tribute." },
     { id: "2026-10-15-seasons", text: "Added: Halloween (Oct 24 to Nov 1) and Christmas (Dec 1 to 26). Same agents, worse hats." },
     { id: "2026-10-15-replay", text: "Added: instant replay. The level's best moment, again, because nobody saw it the first time." },
     { id: "2026-10-15-sweepstake", text: "Added: sweepstake. Tap an agent before anyone's home to back it. It will not try any harder." },

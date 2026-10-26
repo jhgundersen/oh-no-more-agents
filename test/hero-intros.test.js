@@ -52,7 +52,7 @@ test('actual-size hero captions fit all biographies and preserve event, pause, r
    assert.equal(r.caption.text,r.scale===1?r.expected:'');assert.ok(r.expected.startsWith(r.heroName));assert.equal(r.caption.hidden,r.scale===1?'false':'true')
    assert.equal(r.caption.font,'12px');assert.equal(r.caption.live,'off');assert.equal(r.caption.label,'Colony commentary')
    assert.ok(r.caption.x>=0&&r.caption.x+r.caption.width<=r.width);assert.ok(r.caption.y>=r.board.y+r.board.height)
-   const a=r.caption,b=a.textBox;if(r.scale===1){assert.ok(b.y>=a.y&&b.y+b.height<=a.y+a.height);assert.ok(b.x>=a.x&&b.x+b.width<=a.x+a.width)}
+   const a=r.caption,b=a.textBox;if(r.scale===1){const at=r.name+' caption '+JSON.stringify({x:a.x,y:a.y,width:a.width,height:a.height})+' text '+JSON.stringify(b)+' '+JSON.stringify(a.text);assert.ok(b.y>=a.y&&b.y+b.height<=a.y+a.height,at);assert.ok(b.x>=a.x&&b.x+b.width<=a.x+a.width,at)}
    if(r.width===390||r.name==='hero-landscape')assert.ok(r.stage.y+r.stage.height<=r.height+1)
   }
   const c=report.lifecycle;assert.deepEqual(c.fitting,{total:231,failures:[],width:336,height:30})

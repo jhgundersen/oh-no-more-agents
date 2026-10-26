@@ -67,7 +67,9 @@ function launchBrowser(args, profile) {
   const command = unit ? "systemd-run" : "chromium"
   const argv = unit ? ["--user", "--quiet", "--wait", "--pipe", "--collect", "--service-type=exec", "--unit=" + unit,
     "--property=MemoryMax=512M", "--property=TasksMax=256", "--property=RuntimeMaxSec=300", "chromium", ...args] : args
-  const proc = spawn(command, argv, { stdio: "ignore" })
+  const proc = spawn(command, argv, { stdio: ["ignore", "ignore", "pipe"] })
+  proc.stderrTail = ""
+  proc.stderr.on("data", d => { proc.stderrTail = (proc.stderrTail + d).slice(-600) })
   proc.on("error", e => { proc.launchError = e.message })
   return { proc, unit }
 }
@@ -78,11 +80,16 @@ function launchBrowser(args, profile) {
 export function activePort(profile) {
   try { return Number(fs.readFileSync(path.join(profile, "DevToolsActivePort"), "utf8").split("\n")[0]) || null } catch { return null }
 }
+// The last of what Chromium said, so a CI runner that aborts it says why.
+function startupLog(proc) {
+  const tail = proc.stderrTail.trim().split("\n").slice(-4).join(" | ")
+  return tail ? " — " + tail : ""
+}
 async function browserTargets(profile, proc) {
   var spent = 0, last = Date.now()
-  for (let i = 0; i < 60 && spent < 10000; i++) {
+  for (let i = 0; i < 150 && spent < 25000; i++) {
     spent += Math.min(600, Date.now() - last); last = Date.now()
-    if (proc.launchError || proc.exitCode !== null || proc.signalCode) throw Error("Headless browser exited at startup: " + (proc.launchError || proc.signalCode || proc.exitCode))
+    if (proc.launchError || proc.exitCode !== null || proc.signalCode) throw Error("Headless browser exited at startup: " + (proc.launchError || proc.signalCode || proc.exitCode) + startupLog(proc))
     const port = activePort(profile)
     if (port) try {
       const tabs = await (await fetch(`http://127.0.0.1:${port}/json`, { signal: AbortSignal.timeout(400) })).json()

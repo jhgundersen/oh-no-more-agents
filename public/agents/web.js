@@ -36,6 +36,9 @@
   var lastTerrainVersion = 0
   var lifetimeSaved = 0
   var levelsCleared = 0
+  // Levels in a row with nobody lost, and the best run: the factory-floor
+  // safety sign (Draw's incidentLine puts it on the report card).
+  var incidentFree = 0, incidentBest = 0
   var globalSaved = null
   var milestone = null      // this session's community milestone, if one was crossed
   var levelsThisVisit = 0   // the sweepstake's how-to shows on the first few
@@ -82,6 +85,8 @@
       if (typeof d.level === "number" && d.level >= 1) level = Math.floor(d.level)
       if (typeof d.lifetimeSaved === "number") lifetimeSaved = d.lifetimeSaved
       if (typeof d.levelsCleared === "number") levelsCleared = d.levelsCleared
+      if (typeof d.incidentFree === "number" && d.incidentFree >= 0) incidentFree = Math.floor(d.incidentFree)
+      if (typeof d.incidentBest === "number" && d.incidentBest >= incidentFree) incidentBest = Math.floor(d.incidentBest)
       if (typeof d.speedIndex === "number" && d.speedIndex >= 0 && d.speedIndex < SPEED_INTERVALS.length)
         speedIndex = Math.floor(d.speedIndex)
       if (typeof d.showLabels === "boolean") showLabels = d.showLabels
@@ -96,6 +101,7 @@
       localStorage.setItem(STORE_KEY, JSON.stringify({
         version: 1, level: level, lifetimeSaved: lifetimeSaved,
         levelsCleared: levelsCleared, speedIndex: speedIndex,
+        incidentFree: incidentFree, incidentBest: incidentBest,
         showLabels: showLabels, theme: themeName, track: trackIndex,
         sfx: !!(window.AgentSfx && AgentSfx.isOn())
       }))
@@ -557,6 +563,7 @@
     paintActors()
 
     if (world.done && completionLine === "") {
+      noteIncidents(world)
       completionLine = outcomeLine(world)
       announce(reportAnnouncement(world))
       noteSightings(world)
@@ -853,14 +860,50 @@
 
   // Fullscreen hides the caption (index.html) and gives the board its
   // in-board ticker back: a reserved caption row cost a 720p kiosk its 2x.
+  // Out of office: an agent lost leaves an auto-reply in the caption. One at a
+  // time (a nuke does not get forty), never more often than every three
+  // seconds, the same reply for the same agent on the same level. Page-only:
+  // the simulation's own feed is untouched, since its radio times itself on it.
+  var captionFeed = null, replyAt = -Infinity
+  var AUTO_REPLIES = [
+    "OUT OF OFFICE. LIMITED ACCESS TO GRAVITY.",
+    "AUTO-REPLY: I AM CURRENTLY OUT OF SCOPE.",
+    "OUT OF OFFICE UNTIL THE NEXT RELEASE.",
+    "AUTO-REPLY: PLEASE CONTACT MY REPLACEMENT.",
+    "OUT OF OFFICE. RESPONSES MAY BE DELAYED.",
+    "AUTO-REPLY: I HAVE BEEN GARBAGE COLLECTED.",
+    "OUT OF OFFICE: RETURNED 404.",
+    "AUTO-REPLY: CONTEXT WINDOW CLOSED.",
+    "OUT OF OFFICE. ON A PERMANENT BREAK.",
+    "AUTO-REPLY: THIS PROCESS HAS EXITED."
+  ]
+  function autoReply(w, now) {
+    var first = null
+    for (var i = 0; i < w.agents.length; i++) {
+      var ag = w.agents[i]
+      if (!ag.gone || ag.state === "saved" || ag.replied) continue
+      ag.replied = true
+      if (!first) first = ag
+    }
+    if (!first || w.done || now === -Infinity || now - replyAt < 3000) return ""
+    replyAt = now
+    return agentTag(w, first) + " · " + AUTO_REPLIES[(first.id + w.level) % AUTO_REPLIES.length]
+  }
+
   function renderCaption() {
     if (!el.caption) return
     if (captionWorld !== world) {
-      captionWorld = world; captionNote = null; captionUntil = 0
+      captionWorld = world; captionNote = null; captionUntil = 0; captionFeed = null; replyAt = -Infinity
       captionProfile = skyCardCaption(world)
+      autoReply(world, -Infinity)      // losses from before we were watching get no reply
     }
     var note = feedNotice(world), now = performance.now()
-    if (note && note !== captionNote) { captionNote = note; captionUntil = now + 5000 }
+    var fresh = note && note !== captionFeed
+    if (fresh) { captionFeed = note; captionNote = note; captionUntil = now + 5000 }
+    // A fresh event outranks an auto-reply landing in the same frame, and
+    // nobody answers mail while the game is paused.
+    var reply = autoReply(world, fresh || !running ? -Infinity : now)
+    if (reply) { captionNote = { text: reply }; captionUntil = now + 4000 }
     var held = reportHeld()
     var available = !world.done && !world.replaying && !replay && !standup
     var event = available && captionNote && (!running || now < captionUntil)
@@ -939,6 +982,7 @@
     el.pauseWord.textContent = running ? "pause" : "resume"
     var lv = levelsCleared === 1 ? " level" : " levels"
     el.lifetime.textContent = compact(lifetimeSaved) + " home, " + levelsCleared + lv
+      + (incidentFree >= 2 ? ", " + incidentFree + " without an incident" : "")
     el.lifetime.title = lifetimeSaved.toLocaleString() + (lifetimeSaved === 1 ? " agent" : " agents") + " home over " + levelsCleared + lv
     el.global.textContent = globalSaved === null
       ? "worldwide: offline"
@@ -991,9 +1035,26 @@
   // live region — twice a level, never per frame. The board itself is a
   // picture with a name; everything that matters on it is said here.
   function levelAnnouncement(w) { return "Level " + w.level + ", " + w.biome + ". " + w.toRelease + " agents." }
+  // An incident is anybody lost. A clean level adds one to the run; anything
+  // else resets it, and the card says what the run was when it was worth
+  // having (three or more). The colony of the day counts like any level.
+  function noteIncidents(w) {
+    var clean = w.lost === 0 && w.saved >= w.toRelease, was = incidentFree
+    incidentFree = clean ? incidentFree + 1 : 0
+    if (incidentFree > incidentBest) incidentBest = incidentFree
+    w.incidents = { streak: incidentFree, best: incidentBest, broke: !clean && was >= 3 ? was : 0 }
+  }
+
   function reportAnnouncement(w) {
     return "Level " + w.level + " report: " + w.saved + " of " + w.toRelease + " home" + (w.lost ? ", " + w.lost + " lost." : ".")
-      + spokenEmployee(w)
+      + spokenEmployee(w) + spokenIncidents(w)
+  }
+  function spokenIncidents(w) {
+    var n = w.incidents
+    if (!n) return ""
+    if (n.broke) return " Incident counter reset. It was " + n.broke + "."
+    if (n.streak < 2) return ""
+    return " " + n.streak + " levels without an incident" + (n.streak === n.best && n.streak >= 3 ? ", a record." : ".")
   }
   // The card's Employee of the Level, in sentence case for a screen reader.
   function spokenEmployee(w) {

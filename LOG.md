@@ -10116,32 +10116,231 @@ source proof, matched browser manifests and screenshots are under
 
 **Next:** review/merge the branch. No push or deployment.
 
-## 387 — 2026-10-15 · Cold storage, parked for a break (on a branch)
+## 387 — 2026-10-15 · Merged the transporter coils
 
-WIP on `codex/thaw-art`, from approved transporter `44ef025` merged with main
-`2b2dfd8`. Both histories are retained; the transporter entry is renumbered 386.
-Page-only Ice Cave portraits now have centred faceted ice, palms and a little
-condensation; rescues have clipped shards/meltwater and a stationary reduced-
-motion alternative. The stand-in no longer gets a phantom sweepstake coin.
-Native/default/res 3 pixels are unchanged; Sim/Outcome match that main base.
+Reviewed and merged by the loop: codex/transporter-art (44ef025, entry 386),
+`--no-ff`, as approved. Codex's entry is renumbered and the page is
+re-stamped. Drawing only, with no Sim.js change; the branch also carried
+the already-merged forecast plate, which git folded in.
 
-Before/after animation and actual desktop/390px phone evidence, including both
-seasons: `/tmp/codex-thaw-art/review/index.html`. World digests match. Source
-Draw `d4cde7db`, build `d6037c07`. FPS before/after stayed at 60 with 15 active
-characters. Eight new art checks and the expanded **35-test focused gate pass**.
-The old frozen/mechanism fixtures now perform real releases; the frozen search
-is bounded and large base64 assertions are replaced with hashes.
+## 388 — 2026-10-15 · Levels without an incident
 
-The first full run was **1,551 passed / 1 failed**: a synthetic thaw inside a
-Ruins wall. That fixture is corrected and included in the passing focused gate.
-The fresh full check/coverage was interrupted at Jon's requested break. Its
-owned service is stopped; partial output/LCOV is archived in
-`/tmp/codex-thaw-art/parked-2026-10-15/` and must not supply a CRAP result.
-Earlier failed results are under `pre-mechanism-fixture/` and `pre-readonly/`.
-Art, tools and stamps are coherent, but this is **not merge-ready**.
+**Chosen (autonomy, something new for watchers):** the factory-floor safety
+sign as office humour. It counts levels in a row with nobody lost, keeps
+the record, and resets with a short note. It gives every level a little at
+stake, and it is logic and page text, not art.
 
-**Next:** resume the frozen-source gate at `/tmp/codex-thaw-art/gate.sh`, using
-FIFO testlock, 2GB Node heap, `ulimit -v 6000000`, 3GB service memory and two
-test workers. Require a fresh green full `npm run check` with coverage, then
-CRAP threshold 30 using that complete LCOV; update this note with the results
-before review. No push or deployment. Stopped here for the break.
+**Built:**
+- **web.js:**
+  - `noteIncidents` runs at the end of every level, before the
+    announcement.
+  - A level with nobody lost and everyone home adds one to `incidentFree`;
+    anything else resets it.
+  - `incidentBest` keeps the record. Both are saved with the rest of the
+    page's state.
+  - The world gets `w.incidents = { streak, best, broke }`, where `broke` is
+    the run that just ended if it was 3 or more.
+  - The footer adds ", N without an incident" from 2 up.
+  - The screen-reader report adds the same sentence.
+- **Draw.js:** `incidentLine` puts a row on the page's report card, only
+  when it is news, in the warning colour when it resets. The panel's card
+  is unchanged.
+  - "N LEVELS WITHOUT AN INCIDENT" from 2 up, with " · RECORD" when it
+    equals the best (3 or more);
+  - "INCIDENT COUNTER RESET. IT WAS N." when a run of 3 or more ends.
+- **Patch notes:** "Added: a safety sign. Levels without an incident,
+  counted until there is one." It replaces the voices line; the list stays
+  at eight.
+
+**Checked:** headless on the local page, starting from a saved run of 3:
+- **A clean finish:** streak 4, a record. The footer reads "16 home, 1
+  level, 4 without an incident" and the announcement says "4 levels without
+  an incident, a record."
+- **Then a finish with 2 lost:** "Incident counter reset. It was 4." The
+  saved streak is 0. No page errors.
+
+**Tests:**
+- `test/incidents.test.js`: the line's thresholds, the record, the reset,
+  no line on res 1, and the warning colour.
+- `test/a11y.test.js` accepts the optional sentence.
+
+## 389 — 2026-10-15 · Out-of-office replies
+
+**Chosen (autonomy, something new for watchers):** a lost agent leaves an
+auto-reply in the caption line under the board, e.g. "AGENT 001 · OUT OF
+OFFICE. RESPONSES MAY BE DELAYED." Losses are the moments a watcher
+notices, and this makes each one a joke.
+
+**Built** (web.js, the page only):
+- **`autoReply`:** when an agent is newly gone without being saved, the
+  caption shows `agentTag` plus one of ten replies ("LIMITED ACCESS TO
+  GRAVITY", "I HAVE BEEN GARBAGE COLLECTED", "RETURNED 404", "CONTEXT WINDOW
+  CLOSED", …). The reply is picked by agent id and level, so a replay says
+  the same thing. It holds for 4 s.
+- **Limits:**
+  - one reply at a time, never more often than every 3 s (a nuke does not
+    get forty);
+  - none for losses from before the page started watching a world;
+  - none while paused;
+  - a fresh event note in the same frame wins.
+- **The sim's own feed is untouched,** because its radio times itself on
+  the feed and a page-side note there would move the radio lines.
+- **Fullscreen** hides the caption row (295), so no replies there; the
+  board's own ticker continues.
+- **Patch notes:** "Added: out-of-office replies. Lost agents leave an
+  auto-reply under the board." It replaces the tour line, which the tour
+  strip says for itself; the list stays at eight.
+
+**Checked:**
+- **Headless on the local page at 390×844:** removing an agent showed
+  "AGENT 001 · OUT OF OFFICE. RESPONSES MAY BE DELAYED."; a second loss
+  inside 3 s left it in place.
+- **The caption and hero-intro tests caught two priority slips,** both now
+  fixed:
+  - a reply had claimed the caption from a fresh "RICOCHET";
+  - a reply appeared in a paused capture.
+
+## 390 — 2026-10-15 · Stopped for a break
+
+**State:** main is clean at 99123ed. All of today's work is committed and
+gated; there are no dev/* branches or worktrees and nothing half-merged.
+Production is c88604a4 (18:17).
+
+**Not deployed yet**, waiting for the next deploy (`npm run smoke`, deploy,
+`npm run verify -- --previous c88604a4`):
+- the second-visit mine (384);
+- the transporter coils (386–387);
+- levels without an incident (388);
+- out-of-office replies (389).
+
+**Next, in order:**
+1. That deploy.
+2. Level 225's straggler (Jungle, 1 in 24 colonies): it walks floor 41 away
+   from the door, past the shaft at x94–96 that drops to the exit's floor
+   (369's notes).
+3. Level 295's red-team losses (65% home): tuning, not a bug, if anyone
+   wants it.
+4. For Codex, if wanted: the title card's 1.2 s hold now carries the
+   forecast plate (382); check it reads on phones at Brisk.
+
+## 391 — 2026-10-15 · The GitHub check workflow
+The last pushed run (38771728541) failed with 54 tests failing and 28
+cancelled, after 22 minutes. The previous green run predates the browser
+tests. On the ubuntu-24.04 runner, every headless Chromium launch exited at
+startup with SIGABRT, and the rest timed out at 120 s. Ubuntu 24.04 blocks
+unprivileged user namespaces through AppArmor, so Chromium's sandbox aborts.
+- check.yml lifts that block (`sysctl
+  kernel.apparmor_restrict_unprivileged_userns=0`), so the sandbox stays on.
+  It also prints `chromium --version` and caps the job at 30 minutes.
+- tools/phone.js keeps the last lines of Chromium's stderr and adds them to
+  "exited at startup", so a runner that still refuses says why.
+
+Local gate: 1549/1549, CRAP green. Not proven on the runner until the next
+push; the workflow is unpushed, like everything else.
+
+## 392 — 2026-10-15 · The check workflow, second pass
+After 391, run 38790281962 took 4 minutes, not 22: 1456 passed and 14
+failed. Chromium starts now, so the sandbox fix held. What was left:
+- Art tests diff against older reference commits with `git show`. The runner
+  checks out with depth 1, so those commits weren't there. The workflow now
+  fetches the full history.
+- One browser (in a11y) missed the 10 s discovery window while many test
+  files launched at once. The window is now 25 s; a healthy local browser
+  still answers in about one.
+- A hero-intros caption's text box measured taller than its box. A web font
+  loads only once text first uses it, so a caption shown after
+  `fonts.ready` could be measured in the fallback font. The caption harness
+  now loads every declared face up front, capped at 5 s.
+
+Local gate: 1549/1549, CRAP green.
+
+## 393 — 2026-10-15 · The check workflow, third pass
+Run 38791606208: 1547 passed, 2 failed.
+- a11y's first test missed even the 25 s window. It's the first file to
+  launch a browser, and it failed in both runs, so a cold first Chromium
+  launch looks likely. The workflow now warms Chromium once before the check.
+- hero-intros: a caption's text box still overflows on the runner. The
+  caption uses the system monospace font, so it depends on the machine; I
+  couldn't reproduce it here with Liberation, Nimbus or Adwaita Mono. The
+  assertion now prints both boxes and the text, and the workflow prints
+  `fc-match monospace`, so the next run says what to fix.
+
+Local gate: 1549/1549, CRAP green.
+
+## 394 — 2026-10-15 · Hero captions on a wider monospace
+Run 38793139302: 1548 passed, 1 failed. The Chromium warm-up fixed a11y. The
+runner's monospace is DejaVu Sans Mono. On it, the 360 px phone's Prompt
+Injection line took three rows: 42 px of text in a 30 px caption. Measured
+here with DejaVu loaded from a scratch fontconfig: all 231 hero lines fit two
+rows at 336 px, but with only about 2% to spare (at 324 px, one or two
+overflow). That's a real page bug for anyone whose monospace is a little
+wider, and many Linux phones and desktops use DejaVu. The phone-size caption
+now uses letter-spacing -0.3px, which gives about 6% slack: 0/231 overflow
+at 318 px under DejaVu.
+
+Local gate: 1549/1549, CRAP green. This is a page change, so it ships with
+the next deploy.
+
+## 395 — 2026-10-18 · Handover before the herdr restart
+The herdr server is restarting (0.8.2 → 0.9.1), which ends every pane. Nothing
+was running: both agents were idle since the 2026-10-15 break, no test holds
+the testlock, and no dev server or browser run is ours.
+
+**State:** main is clean at d8d0764 (391–394, the GitHub check workflow and
+the DejaVu caption fix, landed after 390's note). Production is still
+c88604a4.
+
+**Not deployed yet:** everything in 390's list, plus 394's phone caption
+tightening.
+
+**Codex's parked branch:** `codex/thaw-art` at 0faf24d, in the worktree
+`../oh-no-codex`, which is clean. It holds Ice Cave page-portrait and thaw art
+(`tools/thaw-art.js`, `test/thaw-art.test.js`, frozen/mechanism fixture
+fixes). It is **not merge-ready**: its full check and coverage were cut off,
+so it needs a fresh green `npm run check` with coverage and then CRAP ≤ 30.
+Its own LOG note on that branch has the details. Its gate script and evidence
+are under `/tmp/codex-thaw-art/`, which a reboot would wipe; the branch itself
+is complete without them. The branch base is older than main, so merge main
+into it (expect a `public/index.html` and `src/version.js` stamp conflict, so
+re-run `npm run stamp`) before the gate.
+
+**Next, in order:** 390's list (deploy first, then level 225's straggler), then
+finish and review `codex/thaw-art`. Also unmerged, and deliberately left
+alone: `codex/review` and `codex/review-server`, which only hold the review
+reports (their findings were fixed on main), and the old
+`experiment/runaway-train-biome`.
+
+## 396 — 2026-10-26 · Cold storage, thawed for review
+
+Resumed `codex/thaw-art` and merged main `715bc74`; kept both histories and
+regenerated the conflicting page/script/build stamps. Ice Cave page portraits
+have centred faceted ice, palms and condensation; real rescues shed clipped
+shards and meltwater. Reduced motion holds a stationary alternative. Native,
+default and share pixels are unchanged, and the stand-in gets no phantom coin.
+
+The first fresh full coverage gate exposed three browser-fixture failures.
+Halloween's newly active calendar overlay inserted a death message into hero
+biography evidence. Caption/standup captures now pin ordinary views to
+`season=none`, while explicit seasonal heroes settle observations before
+clearing their note. Sightings now waits for bounded page/tick readiness rather
+than fixed sleeps; standup startup gets a bounded five-second window. All 11
+focused browser checks pass. These are capture/test fixes, not gameplay changes.
+
+Fresh `npm run check` with coverage: **1,557 passed, 0 failed**, 399.03 s;
+line/branch/function coverage **98.42% / 96.73% / 96.25%**.
+`npm run crap -- --threshold 30 --use-existing-coverage` passed on that same
+complete LCOV, maximum **30.0** across 2,440 functions. FIFO testlock, two test
+workers, 2GB Node heap, 6GB address-space cap and 3GB service memory cap.
+Source/check/LCOV hashes: `/tmp/codex-thaw-art/gate-provenance.json`.
+
+Current before/after natural-rescue animation, contact sheet and actual desktop
+and 390px phone screenshots: `/tmp/codex-thaw-art/review/index.html` (levels 6
+and 46, matched ticks 120 and 215). Full logs and LCOV provenance are under
+`/tmp/codex-thaw-art/`; the first failed run is retained separately. The preferred
+Chromium extension was unavailable, so screenshots use the repository's local
+throwaway-profile headless capture tools. No production requests, push, deploy
+or sibling-copy changes.
+
+**Next:** developer review/merge this branch, then a small `codex/living-racks-port`
+batch from main: distant rack fans and port gulls, drawing only, fixed reduced-
+motion poses, world-digest equivalence, FPS and desktop/390px comparisons.
