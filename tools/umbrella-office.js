@@ -19,7 +19,7 @@ export function officeFrame(D,w,cache={},theme='tokyo-night'){
  if(cache.key!==key){cache.terrain=canvas(400*res,248*res,themeOf(theme).background);D.drawTerrain(cache.terrain.ctx,w,pal);cache.key=key}
  const img=crop(cache.terrain,box.x*res,box.y*res,box.width*res,box.height*res),set=img.ctx.setTransform.bind(img.ctx)
  img.ctx.setTransform=(a,b,c,d,e,f)=>set(a,b,c,d,e-box.x*res,f-box.y*res)
- D.drawActors(img.ctx,w,pal,{intro:false,feed:false});return img
+ D.drawActors(img.ctx,w,pal,{intro:false,feed:false,dusk:false});return img
 }
 function officeRow(out,D,old,level,season){
  const w=arrivalWorld(level),actual={tick:w.ticks,saved:w.saved,homeOrder:w.homeOrder.slice()},sheet=canvas(1536,300,'#121822'),caches=[{},{}]

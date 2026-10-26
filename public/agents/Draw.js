@@ -2992,6 +2992,9 @@ function drawSkyCountdown(ctx, pal, box, notice) {
 function drawActors(ctx, w, pal, opts) {
   var k = w.k
   clearLayer(ctx, w)
+  // opts.dusk === false leaves the light alone: for comparisons against a
+  // renderer from before the dusk, which have to see only their own change.
+  if (!(opts && opts.dusk === false)) drawDusk(ctx, w, pal)
   drawAnimatedLight(ctx, w, pal)
   drawBackdropLife(ctx, w)
   if (junglePage(w)) drawJungleLife(ctx, w)
@@ -3035,6 +3038,63 @@ function drawActors(ctx, w, pal, opts) {
   // Above the outage, so an event's or a boss's warning is never in the dark.
   drawEventBanner(ctx, w, pal)
   drawLevelTransition(ctx, w, pal, opts)
+}
+
+// ---------------------------------------------------------------------------
+// Clocking off: the light goes from late afternoon to dusk as the level runs
+// ---------------------------------------------------------------------------
+// The agents are going home, so it is about five o'clock. A level opens in
+// low gold sun, which sinks behind the horizon as the clock runs: an afterglow
+// along the bottom of the sky band goes amber, rose, then violet, a blue wash
+// settles over the board, and the exit's light comes on with a flicker, the
+// way a strip light does. It follows absolute ticks, not the time limit — a
+// median level ends near tick 1100, and the limit is 3300. Stepped in sixteenths
+// so the change is a pixel-art fade rather than a smooth one. Drawn on the
+// actor layer under everyone, at page resolution only (share art and the
+// native panel keep their light). Draw only.
+var DUSK_FROM = 240, DUSK_SPAN = 1400, DUSK_STEPS = 16, DUSK_LIGHTS = 5   // steps
+var DUSK_NIGHT = "#0a1030", DUSK_SUN = "#f0a050"
+var DUSK_GLOW = ["#f29a4a", "#e07a56", "#c8607a", "#8a5a8e", "#5a4a8a"]
+var DUSK_FLICKER = [1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1]
+function duskLevel(w) {
+  var t = (w.ticks - DUSK_FROM) / DUSK_SPAN
+  return t <= 0 ? 0 : Math.min(DUSK_STEPS, Math.floor(t * DUSK_STEPS)) / DUSK_STEPS
+}
+function drawDusk(ctx, w, pal) {
+  if (w.res !== 2 || w.ticks < 0) return
+  var d = duskLevel(w), W = w.k.COLS * w.k.CELL, H = w.k.ROWS * w.k.CELL
+  ctx.save()
+  // Gold sun to start, giving way to the blue of the evening.
+  ctx.fillStyle = DUSK_SUN; ctx.globalAlpha = 0.05 * Math.max(0, 1 - d * 3)
+  if (ctx.globalAlpha > 0) ctx.fillRect(0, 0, W, H)
+  ctx.fillStyle = DUSK_NIGHT; ctx.globalAlpha = 0.2 * d
+  if (d > 0) ctx.fillRect(0, 0, W, H)
+  drawDuskGlow(ctx, w, d, W)
+  ctx.restore()
+  drawDuskExitLight(ctx, w, pal, d)
+}
+// The afterglow: three stepped courses along the bottom of the sky band,
+// strongest as the sun goes down, with a dithered fringe on top.
+function drawDuskGlow(ctx, w, d, W) {
+  var glow = d < 0.4 ? 0.5 + d * 1.25 : 1 - (d - 0.4) * 1.1
+  var colour = DUSK_GLOW[Math.min(DUSK_GLOW.length - 1, Math.floor(d * DUSK_GLOW.length))]
+  var horizon = w.k.SKY * w.k.CELL, courses = [[2, 0.30], [3, 0.18], [4, 0.10]], y = horizon
+  ctx.fillStyle = colour
+  for (var i = 0; i < courses.length; i++) {
+    y -= courses[i][0]
+    ctx.globalAlpha = courses[i][1] * glow
+    ctx.fillRect(0, y, W, courses[i][0])
+  }
+  ctx.globalAlpha = 0.10 * glow
+  for (var x = 0; x < W; x += 2) ctx.fillRect(x + (x % 4 ? 1 : 0), y - 0.5, 0.5, 0.5)
+}
+// The exit's light comes on once the sun is low: a short flicker, then steady.
+function drawDuskExitLight(ctx, w, pal, d) {
+  if (d * DUSK_STEPS < DUSK_LIGHTS) return
+  var on = Math.ceil(DUSK_FROM + DUSK_LIGHTS * DUSK_SPAN / DUSK_STEPS), age = w.ticks - on
+  if (!w.reducedMotion && age >= 0 && age < DUSK_FLICKER.length * 2 && !DUSK_FLICKER[age >> 1]) return
+  var C = w.k.CELL, e = w.exit
+  drawLightPool(ctx, w, pal.exitGlow, (e.x + e.w / 2) * C, (e.y + e.h - 1) * C, 27, 17, 0.06 + 0.08 * Math.min(1, (d * DUSK_STEPS - DUSK_LIGHTS) / 5))
 }
 
 // The instant replay (the page re-simulates the level's best moment; see

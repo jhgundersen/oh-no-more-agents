@@ -10416,3 +10416,45 @@ right; nit, a gull jumps from the end of its span back to the start), then
 the dusk: the light shifts from late afternoon to dusk as the level runs. A
 median level lasts 1091 ticks (p10 729, p90 1586, levels 1–60) against a 3300-
 tick limit, so dusk follows absolute ticks, not the limit.
+
+## 399 — 2026-10-26 · Clocking off: the light goes down as the level runs
+
+Merged `codex/living-racks-port` (255e4e2, Codex's 397) first: gate
+1560/1560, CRAP max 30.0. Conflicts were only LOG order and stamps.
+
+The agents are going home, so it should feel like five o'clock. `drawDusk`
+(Draw.js, the actor layer, before everything else on it):
+- **Afternoon sun:** a faint gold wash (alpha 0.05) at the start, gone by a
+  third of the way into the dusk.
+- **Night wash:** `#0a1030` over the whole board, up to alpha 0.2. Drawn under
+  the actors, so agents, hazards and umbrellas stay crisp while the world
+  around them dims.
+- **Afterglow:** three stepped courses along the bottom of the sky band with a
+  dotted fringe, going amber, coral, rose, mauve, violet; strongest as the sun
+  goes down, then fading but not gone.
+- **Lights on:** at step 5 of 16 (tick 678), the exit gets a second, larger
+  light pool. It comes on with a 32-tick strip-light flicker; under reduced
+  motion it just comes on.
+
+It runs on absolute ticks, from tick 240 to tick 1640, in sixteenths. A median
+level ends near tick 1100 (p90 1586), so most levels reach late dusk and long
+ones reach night. Page resolution only (`w.res === 2`); share art and the
+native panel keep their light.
+
+**Tests.** `drawActors` takes `dusk: false`, for comparisons against a
+renderer from before the dusk; they have to see only their own change. Two
+did that and now pass it (harbour-page-art's sky digest, umbrella-office's
+"changes stay by the stand"; `tools/umbrella-office.js`'s `officeFrame` too).
+New `test/dusk.test.js`: stepped and monotonic clock; paints only at res 2 and
+tick ≥ 0; frames at full dusk are at least 5% darker on Jungle, Desert and
+Harbour, and brighter again with `dusk: false`; the flicker, and no flicker
+under reduced motion; read-only, RNG-free and deterministic in every theme.
+
+**Looked at:** levels 1, 5, 9, 11, 13, 15, 18 and 19 at forced ticks 300, 700,
+1100 and 1700, at page resolution and halved to phone size. Desert reads best:
+warm afternoon to blue dusk. Agents stay legible at phone size. `npm run fps --
+5 11 19 17`: 60 / p5 60, worst 17 ms, cpu 7–9%.
+
+**Next:** lights that come on in the scenery: office and skyline windows
+(Skyscraper, Rooftops, Harbour), streetlights, lamps flickering on. Then agent
+animation polish.

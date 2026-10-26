@@ -336,7 +336,7 @@ test("all new paint stays below the original warm sky and complete parent sky pi
   for (const name of Object.keys(THEMES)) for (const level of levels) for (const ticks of [0, 77, 240, 400]) {
     const { w, pal } = sample(level, name); w.ticks = ticks
     const img = canvas(800, 496)
-    D.drawTerrain(img.ctx, w, pal); D.drawActors(img.ctx, w, pal, {})
+    D.drawTerrain(img.ctx, w, pal); D.drawActors(img.ctx, w, pal, { dusk: false })
     hash.update(img.buf.subarray(0, 800 * 56 * 3))
   }
   // Captured from the approved Subway parent, before either Harbour page pass.

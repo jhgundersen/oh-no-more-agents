@@ -67,7 +67,7 @@ test('collection is static under ticks, fast speed, reduced motion and report ho
 test('direct crop matches full frame, palette/resolution invalidates terrain cache, and changes stay by the stand',()=>{
  for(const level of[8,10,13,19,20]){
   const w=arrivalWorld(level);w.saved=10;const cache={},small=officeFrame(D,w,cache),box=officeBox(w),full=canvas(800,496),colors=P.build(themeOf('tokyo-night').theme,level)
-  D.drawTerrain(full.ctx,w,colors);D.drawActors(full.ctx,w,colors,{intro:false,feed:false});assert.equal(hash(small.buf),hash(crop(full,box.x*2,box.y*2,256,128).buf))
+  D.drawTerrain(full.ctx,w,colors);D.drawActors(full.ctx,w,colors,{intro:false,feed:false,dusk:false});assert.equal(hash(small.buf),hash(crop(full,box.x*2,box.y*2,256,128).buf))
   const before=officeFrame(OLD,w),b=D.umbrellaOfficeLayout(w)
   for(let y=0;y<128;y++)for(let x=0;x<256;x++){const ax=x/2+box.x,ay=y/2+box.y;if(ax>=b.x&&ax<b.x+b.width&&ay>=b.foot-16&&ay<b.foot)continue;const at=(y*256+x)*3;for(let c=0;c<3;c++)assert.equal(small.buf[at+c],before.buf[at+c])}
   const first=cache.terrain;officeFrame(D,w,cache,'nord');assert.notEqual(cache.terrain,first);const next=cache.terrain;w.res=1;officeFrame(D,w,cache,'nord');assert.notEqual(cache.terrain,next)
