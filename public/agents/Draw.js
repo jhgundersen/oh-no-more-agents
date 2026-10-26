@@ -3033,6 +3033,7 @@ function drawActors(ctx, w, pal, opts) {
   drawActorColony(ctx, w, pal, opts)
   drawWeatherTouch(ctx, w, pal)
   drawArrivals(ctx, w, pal)
+  drawLostAndFound(ctx, w, pal)
   drawLandingPuffs(ctx, w, pal)
   drawSkillFlourishes(ctx, w, pal)
   // Last, over everybody: whoever is standing in a fireball is behind it.
@@ -3529,6 +3530,88 @@ function blockerShake(w, ag) {
     if (Math.abs(dx) < 3 && dx * o.dir > 0) return BLOCKER_SHAKE[(w.ticks >> 1) % BLOCKER_SHAKE.length]
   }
   return 0
+}
+
+// ---------------------------------------------------------------------------
+// Lost, and clocked in (page resolution, draw only)
+// ---------------------------------------------------------------------------
+// Losing an agent used to be the death pose and then nothing. Now the signal
+// goes first: ten ticks of scanline static over where it was, then a small
+// "404" wisp rises and fades. An agent that had its own umbrella lets go of
+// it, and the umbrella floats up and away on its own, open, rocking, until it
+// fades or meets a ceiling. The other end of the day gets the same badge as
+// going home (drawArrivals), the other way round: the agent just out of the
+// hatch blinks from grey to green. Sim's diedAt and lastReleaseAt are the
+// clocks, so nothing is stored or random; reduced motion keeps only a still,
+// fading "404".
+var LOST_STATIC = 10, LOST_WISP = [12, 60], LOST_DRIFT = 90, CLOCK_IN = 16
+var LOST_GLOW = "#cfd8ff"
+function drawLostAndFound(ctx, w, pal) {
+  if (w.res !== 2) return
+  ctx.save()
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (!ag.gone || ag.state === "saved" || ag.diedAt === undefined) continue
+    var age = w.ticks - ag.diedAt
+    if (age < 0) continue
+    if (!w.reducedMotion && age < LOST_STATIC) drawLostStatic(ctx, w, ag, age)
+    if (age >= LOST_WISP[0] && age < LOST_WISP[1]) drawLostWisp(ctx, w, ag, age)
+    if (!w.reducedMotion && (ag.ownBrolly || ag.floater) && age < LOST_DRIFT) drawLostBrolly(ctx, w, pal, ag, age)
+  }
+  drawClockIn(ctx, w)
+  ctx.restore()
+}
+// Scanlines where the agent was: every other half-pixel row in its box, each
+// a different length and offset per tick, from a small integer hash.
+function drawLostStatic(ctx, w, ag, age) {
+  var C = w.k.CELL, x0 = Math.round(ag.x * C * 2) / 2 - 4, foot = Math.round((ag.y + 1) * C * 2) / 2
+  ctx.fillStyle = LOST_GLOW
+  for (var r = 0; r < 14; r++) {
+    var h = (r * 73 + age * 151 + ag.id * 29) % 97
+    if (h % 3 === 0) continue
+    ctx.globalAlpha = (0.35 + (h % 5) * 0.08) * (1 - age / LOST_STATIC)
+    moteFineRect(ctx, w, x0 + (h % 4), foot - 1 - r, 2 + (h % 5), 0.5)
+  }
+}
+function drawLostWisp(ctx, w, ag, age) {
+  var C = w.k.CELL, t = age - LOST_WISP[0], span = LOST_WISP[1] - LOST_WISP[0]
+  var rise = w.reducedMotion ? 0 : Math.floor(t / 3) / 2
+  var sway = w.reducedMotion ? 0 : Math.round(Math.sin(t / 6 + ag.id) * 2) / 2
+  var x = Math.round(ag.x * C * 2) / 2 + sway, y = Math.round((ag.y + 1) * C) - 16 - rise
+  if (!mechanismAir(w, x, y) || !mechanismAir(w, x, y + 4)) return
+  ctx.globalAlpha = 0.85 * Math.min(1, t / 6, (span - t) / 12)
+  ctx.fillStyle = LOST_GLOW
+  drawTransitionText(ctx, "404", x, y, 1)
+}
+// Let go of, the umbrella rises, drifts away from where the agent faced (or
+// downwind in a gust) and rocks a little, fading over the last third.
+function drawLostBrolly(ctx, w, pal, ag, age) {
+  var C = w.k.CELL, away = w.wind ? (w.wind > 0 ? 1 : -1) : -(ag.dir || 1)
+  var x = Math.round((ag.x * C - 4.5 + away * age * 0.22 + Math.sin(age / 9 + ag.id) * 1.5) * 2) / 2
+  var y = Math.round(((ag.y + 1) * C - 10 - age * 0.35) * 2) / 2
+  if (!mechanismAir(w, x + 4.5, y - 12) || !mechanismAir(w, x + 4.5, y - 7)) return
+  ctx.globalAlpha = Math.min(1, (LOST_DRIFT - age) / 30)
+  // A whole-number flex: drawUmbrellaFine lifts the crown by half of it.
+  drawUmbrellaFine(ctx, pal, x, y, Math.round(Math.sin(age / 5 + ag.id)), brollyColour(w, pal, ag), 1, false, ctx.globalAlpha)
+}
+// The newest agent out of the hatch (Sim's lastReleaseAt; ids rise in
+// release order) gets a badge on the corner of its head: grey as it drops,
+// then green, with a one-tick flash as it comes online.
+function drawClockIn(ctx, w) {
+  var age = w.ticks - w.lastReleaseAt
+  if (!(w.lastReleaseAt >= 0) || age < 0 || age >= CLOCK_IN) return
+  var ag = null
+  for (var i = 0; i < w.agents.length; i++) if (!w.agents[i].gone && (!ag || w.agents[i].id > ag.id)) ag = w.agents[i]
+  if (!ag || !pageMotionAgent(w, ag) || ag.state === "saved") return
+  var x = pageAgentX(w, ag) + 6, y = pageAgentY(w, ag) + 2.5
+  ctx.globalAlpha = Math.min(1, (CLOCK_IN - age) / 4)
+  ctx.fillStyle = ARRIVAL_EDGE; ctx.fillRect(x - 0.5, y - 0.5, 2.5, 2.5)
+  ctx.fillStyle = age < 4 ? ARRIVAL_OFFLINE : ARRIVAL_ONLINE; ctx.fillRect(x, y, 1.5, 1.5)
+  if (age === 4 || age === 5) {
+    ctx.fillStyle = "#ffffff"; ctx.globalAlpha = age === 4 ? 0.8 : 0.4
+    ctx.fillRect(x - 1, y + 0.5, 0.5, 0.5); ctx.fillRect(x + 2, y + 0.5, 0.5, 0.5)
+    ctx.fillRect(x + 0.5, y - 1, 0.5, 0.5); ctx.fillRect(x + 0.5, y + 2, 0.5, 0.5)
+  }
 }
 
 // The instant replay (the page re-simulates the level's best moment; see

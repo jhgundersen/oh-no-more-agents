@@ -108,7 +108,8 @@ test('review exports every linked frame sheet and documents the actual nonunifor
 })
 
 test('the live discharge stays behind opaque faces, collars, eyes and umbrella rims',()=>{
- const{w,h,pal}=scene();w.feed=[];w.outage=null;w.milestone=null;w.particles=[]
+ // No other overlay in front of the colony either: the clock-in badge (LOG 422) included.
+ const{w,h,pal}=scene();w.feed=[];w.outage=null;w.milestone=null;w.particles=[];w.lastReleaseAt=-1
  const ag=Object.assign(S.spawn(w),{x:h.zx0+1.5,y:h.zy1,dir:1,state:'fall',floater:true,ownBrolly:true,fall:8,anim:8,trait:'steady',special:false,shotFor:0})
  w.agents=[ag];Object.assign(h,{phase:'fire',t:3,fired:1})
  const one=canvas(800,496),all=canvas(800,496);one.ctx.setTransform(2,0,0,2,0,0)

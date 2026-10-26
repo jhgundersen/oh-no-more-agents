@@ -11164,3 +11164,37 @@ covers 418–420:
 **Next:** lost-agent moments (an umbrella drifting off on its own, a "404"
 wisp or static, the next beat quiet) and a clock-in badge as agents drop out
 of the hatch.
+
+## 422 — 2026-10-26 · Lost, and clocked in
+
+A lost agent used to get its death pose and then nothing. `drawLostAndFound`
+(after the colony, page only), clocked by Sim's `diedAt`:
+- **Signal lost:** 10 ticks of scanline static over where the agent was
+  (`LOST_GLOW #cfd8ff`, lengths and offsets from a small integer hash of
+  row, tick and id), fading.
+- **A beat of nothing,** then a **"404" wisp** in the 3×5 ROM font, rising half
+  a pixel every three ticks with a little sway from tick 12, faded out by 60.
+  It is not drawn where it would overlap terrain.
+- **Its umbrella lets go:** an agent that had its own (`ownBrolly` or a
+  floater) sees it float up and away, open and rocking, drifting away from
+  where the agent faced (downwind in a gust). It fades over its last 30 of
+  90 ticks, or stops at a ceiling.
+- **Clocked in:** the newest agent out of the hatch (`lastReleaseAt`; ids
+  rise in release order) gets 409's badge the other way round: grey as it
+  drops, a one-tick flash to green, gone by tick 16.
+
+Reduced motion keeps only a still, fading "404" and the badge. One fix along
+the way: `drawUmbrellaFine` lifts the crown by half the flex it's given, so
+a half-step flex put the canopy off the half-pixel grid. The test's grid
+check caught it.
+
+The supervisor also asked for "a beat of silence before the next". That is
+audio (sfx.js, web only), and I've asked rather than guessed.
+
+**Tests:** `test/lost-found.test.js`: static then a gap then a rising wisp;
+reduced motion is still; the umbrella rises and drifts only if the agent had
+one; clock-in goes grey, green, gone, and only on the page; read-only and
+RNG-free. `storm-art`'s check that the colony's own pixels survive the full
+frame now clears `lastReleaseAt` too, as it already cleared the feed and the
+outage: its scene is five ticks after a release, so the badge sat on the
+head. `npm run fps -- 20 23 3`: 60 / p5 60. Images: `/tmp/claude-1000/-home-jonh-jonh-no-oh-no-more-agents/e002fc05-9f6f-4bf2-8a7d-f9df8ca0561b/scratchpad/lost-review/`.
