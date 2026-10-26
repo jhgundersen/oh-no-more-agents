@@ -75,12 +75,18 @@ test('narrow one-cell edge lanes stay inside their true footprint',()=>{
  const w=S.generate(60,0,3);w.res=2;w.updraft=new Uint8Array(100);w.updraft[4]=1;w.terrain.fill(0);w.terrainVersion++
  for(const tick of[1,32,100]){w.ticks=tick;const calls=marks(c=>D.drawCloudDrafts(c,w));assert.ok(calls.length>0);assert.ok(calls.every(c=>c[0]>=16&&c[0]+c[2]<=20))}
 })
-test('hazard tells, strike cores, agents and umbrellas retain their exact independent page paint',()=>{
+test('early hazard tells, strike cores, agents and umbrellas retain their independent page paint',()=>{
  const{w,a}=updraftScene(100,3),pal=P.build(themeOf('tokyo-night').theme,100),h=w.hazards.find(h=>h.kind==='lightning')
  updraftAdvance(w,40);assert.ok(a.state==='fall'&&a.floater&&a.fall>2,'the canopy is actually open')
  for(const reduced of[false,true])for(const[phase,t]of[['charge',16],['charge',45],['fire',0],['fire',5]]){
   w.reducedMotion=reduced;Object.assign(h,{phase,t,fired:1})
-  for(const draw of[(d,c)=>d.drawHazardKind(c,w,pal,h),(d,c)=>d.drawAgent(c,w,pal,a,{})]){const x=canvas(800,496),y=canvas(800,496);D.clearLayer(x.ctx,w);OLD.clearLayer(y.ctx,w);draw(D,x.ctx);draw(OLD,y.ctx);assert.equal(hash(x.buf),hash(y.buf))}
+  for(const [kind,draw] of[['hazard',(d,c)=>d.drawHazardKind(c,w,pal,h)],['agent',(d,c)=>d.drawAgent(c,w,pal,a,{})]]){
+   const x=canvas(800,496),y=canvas(800,496);D.clearLayer(x.ctx,w);OLD.clearLayer(y.ctx,w);draw(D,x.ctx);draw(OLD,y.ctx)
+   // The late cloud-belly forks are intentional hazard polish; the lethal
+   // strike, early tell and all agent/umbrella pixels remain independent.
+   if(kind==='hazard'&&phase==='charge'&&t===45)assert.notEqual(hash(x.buf),hash(y.buf),'late warning gains its new local forks')
+   else assert.equal(hash(x.buf),hash(y.buf))
+  }
  }
 })
 test('painting is deterministic, RNG-free and read-only across all themes and motion preferences',()=>{

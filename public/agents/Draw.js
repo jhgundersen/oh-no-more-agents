@@ -5994,7 +5994,7 @@ function poolImpactX(w, p) {
   return (p.x0 + p.x1 + 1) * w.k.CELL / 2
 }
 
-function drawPagePoolImpact(ctx, w, pal, p) {
+function drawLegacyPoolImpact(ctx, w, pal, p) {
   var age = w.ticks - p.ripple
   if (age < 0 || age >= (w.reducedMotion ? 6 : 36)) return
   var x = poolImpactX(w, p), y = p.surfaceY * w.k.CELL
@@ -7355,6 +7355,7 @@ function drawHzLightning(ctx, w, pal, h, geo) {
     ctx.fillRect(cx - 2, y1, 4, 1)                                           // scorched
     ctx.fillRect(cx - 1, y1 + 1, 2, 1)
   }
+  drawLightningPrelude(ctx,w,h,geo)
   ctx.restore()
 }
 
@@ -7389,6 +7390,7 @@ function drawPageStorm(ctx,w,pal,h,g) {
     var r=head[i];ctx.fillStyle=STORM_INKS[r.row];ctx.fillRect(r.x,r.y,r.width,r.height)
   }
   if(g.winding) drawStormTension(ctx,w,h,g,alpha)
+  drawLightningPrelude(ctx,w,h,g)
   if(g.live) drawStormDischarge(ctx,w,h,g,alpha)
   if(g.cool) drawStormAfterglow(ctx,w,h,g,alpha)
   ctx.restore()
@@ -7840,6 +7842,7 @@ function drawHzCrusher(ctx, w, pal, h, geo) {
   ctx.fillRect(x0 + 1, y0 + 5 + drop, wide - 2, 1)
   hzLamp(ctx, pal, h, geo, geo.cx - 2, y0 + 1)
   hzImpact(ctx, pal, h, geo, geo.cx, geo.y1, pal.rig)
+  drawCrusherLandingDust(ctx,w,pal,h,geo)
 }
 
 function hzSwing(g, h) {
@@ -23965,6 +23968,78 @@ function drawEnemyPoof(ctx,w,pal,en,age) {
     var size=2+i%2
     ctx.fillRect(x,y,size,size)
     ctx.fillRect(x+0.5,y-0.5,size-1,0.5)
+  }
+  ctx.restore()
+}
+
+
+// Impact polish uses the dated entry/phase records already kept by Sim.
+// The liquid mask still owns every splash pixel; the warning never fires early.
+function drawPagePoolImpact(ctx,w,pal,p) {
+  if (w.res!==2) return drawLegacyPoolImpact(ctx,w,pal,p)
+  var age=w.ticks-p.ripple
+  if (age<0 || age>=(w.reducedMotion?6:36)) return
+  var x=poolImpactX(w,p),y=p.surfaceY*w.k.CELL
+  var inherited=ctx.globalAlpha
+  ctx.save()
+  var radius=w.reducedMotion?4:2+Math.floor(age/2)
+  ctx.globalAlpha=inherited*(w.reducedMotion?0.6:1-age/36)
+  poolRibbon(ctx,w,p,x-radius-3,y+1,4,pal.poolGlint,0.9)
+  poolRibbon(ctx,w,p,x+radius,y+1,4,pal.poolGlint,0.9)
+  if (!w.reducedMotion) drawPoolSplashCrown(ctx,w,pal,p,x,y,age)
+  ctx.restore()
+}
+function drawPoolSplashCrown(ctx,w,pal,p,x,y,age) {
+  if (age>=20) return
+  ctx.globalAlpha*=0.9*(1-age/24)
+  if (age<14) {
+    var height=Math.max(0,6-Math.abs(age-5)*0.6)
+    for (var jet=-2;jet<=2;jet++) {
+      var lift=Math.round(height*(1-Math.abs(jet)*0.12)*2)/2
+      var jx=x+jet*(2+Math.floor(age/3)*0.5)
+      ctx.fillStyle=pal.poolLip
+      poolAccentRect(ctx,w,p,jx-0.5,y-lift,1.5,lift+1)
+      ctx.fillStyle=pal.poolGlint
+      poolAccentRect(ctx,w,p,jx-1,y-lift,2.5,1)
+    }
+  }
+  var up=Math.round((2+age*0.8-age*age*0.045)*2)/2
+  ctx.fillStyle=pal.poolGlint
+  for (var i=0;i<6;i++) {
+    var side=i%2?1:-1,spread=2+age*0.5+Math.floor(i/2)*1.5
+    poolAccentRect(ctx,w,p,x+side*spread,y-up+(i%3)*0.5,1.5,1)
+  }
+}
+function drawLightningPrelude(ctx,w,h,g) {
+  if (w.res!==2 || !g.winding || g.progress<0.4) return
+  var phase=w.reducedMotion?0:Math.floor(h.t/Math.max(3,12-Math.floor(g.progress*8)))%3
+  var inherited=ctx.globalAlpha
+  ctx.save();ctx.fillStyle=BOLT
+  ctx.globalAlpha=inherited*(w.reducedMotion?0.28:0.25+g.progress*0.2+phase*0.06)
+  // Three short forks crawl along the cloud belly, not down the lethal lane.
+  var step=Math.max(2,Math.floor((g.wide-4)/3))
+  for (var i=0;i<3;i++) {
+    var x=g.x0+2+i*step,y=g.y0+3+(i+phase)%2
+    moteFineRect(ctx,w,x,y,step-0.5,0.5)
+    moteFineRect(ctx,w,x+step-1,y+0.5,0.5,1)
+    moteFineRect(ctx,w,x+step-1.5,y+1.5,1.5,0.5)
+  }
+  ctx.restore()
+}
+function drawCrusherLandingDust(ctx,w,pal,h,g) {
+  if (w.res!==2 || h.throttled || !h.fired) return
+  var age=h.phase==="fire"?h.t:(h.phase==="rest"?20+h.t:-1)
+  if (age<0 || age>=30) return
+  var t=w.reducedMotion?8:age
+  var inherited=ctx.globalAlpha
+  ctx.save();ctx.fillStyle=pal.dust;ctx.globalAlpha=inherited*(w.reducedMotion?0.4:0.65*(1-age/30))
+  for (var i=0;i<8;i++) {
+    var side=i%2?1:-1,band=Math.floor(i/2)
+    var x=g.cx+side*(g.wide/2-2+band*2+t*0.35)
+    var y=g.y1-2-Math.min(4,Math.floor(t/4))-band%2
+    var size=3+band%2
+    ctx.fillRect(Math.round(x*2)/2,Math.round(y*2)/2,size,2+band%2)
+    ctx.fillRect(Math.round((x+0.5)*2)/2,y-0.5,size-1,0.5)
   }
   ctx.restore()
 }
