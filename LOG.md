@@ -10966,3 +10966,22 @@ it. Tested: the flake count by fall distance, and every flake's bottom on
 the surface.
 
 **Next:** deploy.
+
+## 417 — 2026-10-26 · Deploy (16:40): the walk, landings, wind, stretch and snow
+
+**Deployed** build 67a081fb (Worker version b0af35be), replacing 0b5f6719. It
+covers 411–416:
+- Codex's city-post backdrops;
+- the page gait (contact low, passing high);
+- landing dust;
+- umbrellas leaning in Desert gusts;
+- the stretch;
+- snow on umbrellas, and rain and snow on the canopy's real surface.
+
+**Before:** `npm run smoke` passed (3 min, levels 1–6); gate 1611/1611.
+**After:** `npm run verify -- --previous 0b5f6719` passed on the first run.
+
+`codex/home-time` (a19f8ab: the commuter-train transition and the home
+vignette) is on hold. The supervisor sent it back to Codex for two fixes (the
+card covers the header bar; the vignette is too dim). Review the new hash
+when it comes.
