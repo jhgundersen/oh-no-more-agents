@@ -2995,6 +2995,7 @@ function drawActors(ctx, w, pal, opts) {
   // opts.dusk === false leaves the light alone: for comparisons against a
   // renderer from before the dusk, which have to see only their own change.
   if (!(opts && opts.dusk === false)) drawDusk(ctx, w, pal)
+  drawSkyStackLife(ctx, w)
   drawAnimatedLight(ctx, w, pal)
   drawBackdropLife(ctx, w)
   if (junglePage(w)) drawJungleLife(ctx, w)
@@ -19304,15 +19305,15 @@ function drawReadingLadder(ctx, x, floor) {
 function drawReadingDust(ctx, w) {
   if (!libraryPage(w)) return
   ctx.save()
-  var lamps = readingLamps(w), boxes = abyssReserved(w)
+  var lamps = readingLamps(w), boxes = abyssReserved(w), t = w.res === 2 && w.reducedMotion ? 0 : w.ticks
   ctx.fillStyle = READING_DUST
   ctx.globalAlpha = 0.45
   for (var i = 0; i < lamps.length; i++) {
     var b = lamps[i]
     for (var mote = 0; mote < 6; mote++) {
-      var y = Math.floor((b.y + 6 + (w.ticks * (0.025 + mote * 0.005) + b.seed + mote * 3) % 14) * 2) / 2
+      var y = Math.floor((b.y + 6 + (t * (0.025 + mote * 0.005) + b.seed + mote * 3) % 14) * 2) / 2
       var width = 2 + Math.floor((y - b.y - 5) / 2.5) * 1.5
-      var sway = ((Math.floor(w.ticks / 24) + b.seed + mote * 7) % 13 - 6) / 6
+      var sway = ((Math.floor(t / 24) + b.seed + mote * 7) % 13 - 6) / 6
       var x = Math.floor((b.x + sway * width) * 2) / 2
       // Shared bounded accent clearance keeps terrain, exit, props, pits and
       // all original hazard zones clear, including a crossed cell corner.
@@ -22401,4 +22402,156 @@ function drawPortGulls(ctx, w) {
     portAccent(ctx, w, layout, x + 3, y + wing - 1, 1, 0.5)
   }
   ctx.restore()
+}
+
+// Distant page scenery lives on the transparent actor layer: the terrain is
+// cached. One half-pixel air mask also protects fixtures and Cloud contours.
+var SKY_STACK_CACHE = new WeakMap()
+function skyStackPage(w) {
+  return w.res === 2 && (w.biome === "The Cloud" || w.biome === "Library" || w.biome === "Subway")
+}
+function skyStackLayout(w) {
+  var old = SKY_STACK_CACHE.get(w)
+  if (old && old.version === w.terrainVersion && old.terrain === w.terrain) return old
+  var k = w.k, C = k.CELL, boxes = w.biome === "Subway" ? stationReserved(w) : abyssReserved(w)
+  var scene = { version:w.terrainVersion, terrain:w.terrain, width:k.COLS*C*2, height:k.ROWS*C*2, windows:[], desks:[] }
+  scene.mask = new Uint8Array(scene.width*scene.height)
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 0; x < k.COLS; x++)
+    if (w.terrain[y*k.COLS+x] === k.EMPTY) cloudDraftMaskRect(scene,{x:x*C,y:y*C,width:C,height:C},1)
+  skyStackFixtures(w, scene, boxes)
+  for (var b = 0; b < boxes.length; b++) cloudDraftMaskRect(scene,boxes[b],0)
+  SKY_STACK_CACHE.set(w,scene)
+  return scene
+}
+function skyStackFixtures(w, scene, boxes) {
+  if (w.biome === "The Cloud") {
+    var outline = cloudLayout(w).outline
+    for (var i = 0; i < outline.length; i++) cloudDraftMaskRect(scene,outline[i],0)
+  }
+  if (w.biome === "Subway") {
+    var station = stationLayout(w)
+    boxes.push.apply(boxes,station.panels.concat(station.tubes))
+  }
+  if (w.biome !== "Library") return
+  var lamps = readingLamps(w)
+  for (var l = 0; l < lamps.length; l++) boxes.push({x:lamps[l].x-12,y:lamps[l].y-4,width:24,height:27})
+  for (var row = 0; row < w.corridors.length && scene.windows.length < 2; row += 2) {
+    var window = stationPick(w,row,"window",18,21,27,boxes)
+    if (window) scene.windows.push(window)
+    var desk = stationPick(w,row,"desk",20,8,9,boxes)
+    if (desk) scene.desks.push(desk)
+  }
+  // The new fittings paint through the air mask too; their own boxes are not
+  // exclusions. Existing props and lamps remain protected around them.
+  for (var n = boxes.length-1; n >= 0; n--)
+    if (boxes[n].kind === "window" || boxes[n].kind === "desk") boxes.splice(n,1)
+}
+function drawSkyStackLife(ctx, w) {
+  if (!skyStackPage(w)) return
+  ctx.save()
+  var scene = skyStackLayout(w), t = w.reducedMotion ? 0 : w.ticks, alpha = ctx.globalAlpha
+  if (w.biome === "The Cloud") drawSkyPuffs(ctx,w,scene,t,alpha)
+  if (w.biome === "Library") drawStackWindows(ctx,w,scene,t,alpha)
+  if (w.biome === "Subway") drawTunnelWindows(ctx,w,scene,t,alpha)
+  ctx.restore()
+}
+function drawSkyPuffs(ctx, w, scene, t, alpha) {
+  var C = w.k.CELL
+  for (var row = 0; row < w.corridors.length; row++) {
+    var c = w.corridors[row], span = (c.x1-c.x0)*C+80
+    for (var layer = 0; layer < 2; layer++) {
+      var drift = Math.floor(t/(layer ? 5 : 10))/2
+      var x = c.x0*C-60+(drift+row*61+layer*137+w.level*7)%span
+      var y = c.floorY*C-24+layer*9, width = layer ? 38 : 54
+      ctx.fillStyle = layer ? "#8d819d" : "#6e6786"
+      ctx.globalAlpha = alpha*(layer ? 0.50 : 0.42)
+      var shape = cloudPuffRects(x,y,width,layer ? 9 : 12)
+      for (var p = 0; p < shape.length; p++) {
+        var b = shape[p]
+        drawCloudDraftRect(ctx,scene,b.x,b.y,b.width,b.height)
+      }
+      if (layer) drawSkyGlint(ctx,w,scene,x+25,y+1,t+row*71,alpha)
+    }
+  }
+}
+function drawSkyGlint(ctx, w, scene, x, y, t, alpha) {
+  var phase = w.reducedMotion ? 18 : t%300
+  if (phase >= 36) return
+  ctx.fillStyle = CLOUD_SUN
+  ctx.globalAlpha = alpha*Math.min(phase,36-phase)/18*0.38
+  drawCloudDraftRect(ctx,scene,x-3,y,7,0.5)
+  drawCloudDraftRect(ctx,scene,x,y-2,0.5,4.5)
+  ctx.globalAlpha *= 0.4
+  drawCloudDraftRect(ctx,scene,x-5,y+0.5,11,0.5)
+}
+function drawStackWindows(ctx, w, scene, t, alpha) {
+  for (var i = 0; i < scene.windows.length; i++) {
+    var b = scene.windows[i]
+    drawStackWindow(ctx,scene,b,alpha)
+    drawWindowDust(ctx,scene,b,t,alpha)
+  }
+  for (var d = 0; d < scene.desks.length; d++) drawDeskPage(ctx,scene,scene.desks[d],t,alpha)
+}
+function drawStackWindow(ctx, scene, b, alpha) {
+  ctx.globalAlpha = alpha*0.8; ctx.fillStyle = "#344650"
+  drawCloudDraftRect(ctx,scene,b.x,b.y,18,14)
+  ctx.fillStyle = "#829290"; ctx.globalAlpha = alpha*0.48
+  drawCloudDraftRect(ctx,scene,b.x+1,b.y+1,7,11)
+  drawCloudDraftRect(ctx,scene,b.x+10,b.y+1,7,11)
+  ctx.fillStyle = READING_WOOD; ctx.globalAlpha = alpha
+  drawCloudDraftRect(ctx,scene,b.x+8,b.y,2,14)
+  drawCloudDraftRect(ctx,scene,b.x,b.y+6,18,1)
+  ctx.fillStyle = READING_LIGHT
+  for (var band = 0; band < 8; band++) {
+    ctx.globalAlpha = alpha*(0.14-band*0.012)
+    drawCloudDraftRect(ctx,scene,b.x+1+band,b.y+13+band,16,1)
+  }
+}
+function drawWindowDust(ctx, scene, b, t, alpha) {
+  ctx.fillStyle = "#dbca98"; ctx.globalAlpha = alpha*0.68
+  for (var i = 0; i < 12; i++) {
+    var age = (t/2.5+i*17+b.seed)%100
+    var y = b.y+12+Math.floor(age/6)/2
+    var x = b.x+4+i%3*4+Math.round(Math.sin(t/48+i)*3)/2+Math.floor(age/20)/2
+    drawCloudDraftRect(ctx,scene,x,y,i%3===0 ? 1.5 : 1,0.5)
+  }
+}
+function drawDeskPage(ctx, scene, b, t, alpha) {
+  var x = b.x, y = b.y
+  ctx.globalAlpha = alpha; ctx.fillStyle = READING_WOOD
+  drawCloudDraftRect(ctx,scene,x,y+4,20,1)
+  drawCloudDraftRect(ctx,scene,x+2,y+5,1,3)
+  drawCloudDraftRect(ctx,scene,x+17,y+5,1,3)
+  ctx.fillStyle = "#a29173"
+  drawCloudDraftRect(ctx,scene,x+4,y+3,12,1)
+  ctx.fillStyle = "#c3b697"
+  drawCloudDraftRect(ctx,scene,x+4,y+1,5,2)
+  drawCloudDraftRect(ctx,scene,x+10,y+1,6,2)
+  var phase = Math.floor(((t+b.seed)%240)/8)-24
+  if (phase < 0) return
+  var leaf = [5,3,1,1,3,5][phase], lift = phase===2 || phase===3 ? 2 : 1
+  ctx.fillStyle = "#e0cfaa"
+  var left = phase < 3 ? x+9 : x+10-leaf
+  drawCloudDraftRect(ctx,scene,left,y+1-lift,leaf,2+lift)
+  ctx.fillStyle = READING_EDGE
+  drawCloudDraftRect(ctx,scene,x+9,y+1,0.5,3)
+}
+function drawTunnelWindows(ctx, w, scene, t, alpha) {
+  var C = w.k.CELL, phase = w.reducedMotion ? 54 : t%240
+  if (phase >= 120) return
+  ctx.fillStyle = "#d3c493"
+  var strength = Math.min(1,phase/15,(120-phase)/15)*alpha*0.22
+  for (var row = 0; row < w.corridors.length; row++) {
+    var c = w.corridors[row], y = c.floorY*C-22
+    var head = c.x0*C-90+phase*4
+    for (var light = 0; light < 5; light++) {
+      var x = head-light*24
+      ctx.globalAlpha = strength
+      drawCloudDraftRect(ctx,scene,x,y,10,10)
+      ctx.globalAlpha = strength*0.4
+      drawCloudDraftRect(ctx,scene,x-2,y+10,14,2)
+      ctx.globalAlpha = strength*0.25
+      drawCloudDraftRect(ctx,scene,x+2,y-1,7,1)
+    }
+  }
 }
