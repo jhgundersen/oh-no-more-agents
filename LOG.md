@@ -10646,3 +10646,41 @@ branch from main. Remaining in this ambient backdrop pass (12): Cavern,
 Ruins, Frost, Foundry, Ice Cave, Spaceship, Factory, Skyscraper, Trench,
 Desert, Mail Room and Building Site. Several already have foreground weather
 or machinery; this pass adds small distant scenery motions.
+
+## 405 — 2026-10-26 · Living stone and wind
+
+(Codex wrote this as 405 on its branch; renumbered at the merge.)
+
+`codex/living-stone-wind`, off main 4b3a95b. Draw.js adds two gently
+swaying ivy strands and sparse dust in Ruins, layered wind-blown snow plumes
+in Frost, and small far palms with wind-bent crowns and thin sand ribbons
+in Desert. These are distant silhouettes, with the agents and umbrellas
+remaining the brightest moving shapes. No simulation or world fields change.
+
+A small `quietBackdropLayout` reuses the sky/stacks half-pixel air/fixture
+mask and caches fitting sites by mask identity; replacing terrain or changing
+its version refreshes it. Only exact page resolution 2 draws these additions.
+Reduced motion fixes their poses and now also freezes existing page snow,
+aurora, breath, temple flames and mirages. Native/share clocks retain their
+old behaviour. The rack/gull test is scoped directly to those two painters.
+
+**Validation:** full green `npm run check` with coverage, shared FIFO lock,
+3 GB memory cap, 2 GB Node heap and two workers: 1578 passed, 0 failed,
+417 seconds; 98.44% lines / 96.77% branches / 96.31% functions. CRAP threshold
+30 with existing coverage: green, 2479 functions, max 30.0. Bounded tests
+cover read-only/RNG-free determinism, half-pixel air clipping, page gating,
+fixed reduced-motion frames, replaced masks and identical rendered/plain
+live digests across these and neighbouring biomes. Stamps are current.
+
+**Evidence:** `/tmp/codex-living-stone-wind/review/index.html` contains
+before/after eight-phase strips, enlarged details, 390 px previews and actual
+1280×900 / 390×844 browser captures for levels 2/3/11, seed 3. Baseline
+4b3a95b, simulation held at tick 240, drawing clock 700 onward. Before/after
+`npm run fps -- 2 3 11 --seconds 10 --speed 2 --from-tick 240`: all 60 fps,
+p5 60, worst 17 ms; CPU 10% in all six measurements. Coverage, CRAP, logs and
+source/image SHA-256 provenance: `/tmp/codex-living-stone-wind/evidence/`.
+No push or deploy.
+
+**Next:** developer handoff, then Foundry/Factory/Spaceship from fresh main.
+Remaining ambient backdrop pass (9): Cavern, Foundry, Ice Cave, Spaceship,
+Factory, Skyscraper, Trench, Mail Room and Building Site.
