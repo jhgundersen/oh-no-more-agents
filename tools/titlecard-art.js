@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {createHash} from 'node:crypto'
-import {serve,browser} from './phone.js'
+import {serve,browser,settleCommute} from './phone.js'
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),sha=x=>createHash('sha256').update(x).digest('hex'),ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..')
 function evaluator(b){
  return async expression=>{
@@ -64,7 +64,7 @@ async function timingChecks(b,ev){
  const reducedExpired=await ev('document.getElementById("levelTitle").hidden')
  await b.cmd('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]})
  await ev('document.getElementById("c-restart").click()');await sleep(2800)
- await ev('document.getElementById("c-next").click()');await sleep(650)
+ await ev('document.getElementById("c-next").click()');await settleCommute(ev)
  const reset=await ev('!document.getElementById("levelTitle").hidden')
  const snapshot=await ev(`(()=>{document.getElementById('c-restart').click();const w=AgentWorld(),before=JSON.stringify(w),expected=levelForecastCopy(forecastLines(w)).rows,stock=w.skills.floater,line=drawLevelForecastLine,calls=[];drawLevelForecastLine=function(ctx,text,...args){calls.push(text);return line(ctx,text,...args)};try{w.skills.floater=0;document.querySelector('#themes .theme.on').click()}finally{w.skills.floater=stock;drawLevelForecastLine=line}return JSON.stringify(calls)===JSON.stringify(expected)&&before===JSON.stringify(w)&&document.getElementById('announce').textContent.includes(forecastLines(w).join(' '))})()`)
  return{normal,fading,cached,expired,pure,reduced,reducedExpired,reset,snapshot}
@@ -87,10 +87,10 @@ async function exclusionChecks(ev){
  // Five completed levels lead to the normal standup, not another overlay.
  for(let i=0;i<5;i++){
   await ev(`(()=>{document.getElementById('c-restart').click();const w=AgentWorld();w.done=true;w.doneTicks=111;w.moments=[];w.agents=[spawn(w)];w.agents[0].state='saved';w.saved=1})()`)
-  await sleep(65)
+  await sleep(65);await settleCommute(ev,{skip:true})
  }
  const meeting=await ev('({hidden:document.getElementById("levelTitle").hidden,done:AgentWorld().done,ticks:AgentWorld().doneTicks})')
- await ev('document.getElementById("board").click()')
+ await ev('document.getElementById("board").click()');await settleCommute(ev)
  const next=await ev('!AgentWorld().done&&!document.getElementById("levelTitle").hidden')
  return{replay,report,meeting,next}
 }

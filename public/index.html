@@ -25,7 +25,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="4f025a99">
+<meta name="build" content="e31ac967">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
@@ -129,6 +129,7 @@
 			height: 100%;
 			image-rendering: pixelated;
 		}
+		#commute { pointer-events: none; z-index: 3; }
 		#levelTitle { pointer-events: none; animation: level-title-fade 3.2s linear both; }
 		@keyframes level-title-fade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 		@media (prefers-reduced-motion: reduce) {
@@ -457,6 +458,7 @@
 			<canvas id="terrain" role="img" aria-label="The game board: agents finding their own way home. Each level and its result are announced."></canvas>
 			<canvas id="actors" aria-hidden="true"></canvas>
 			<canvas id="levelTitle" aria-hidden="true" hidden></canvas>
+			<canvas id="commute" aria-hidden="true" hidden></canvas>
 			<div id="toast" role="status" aria-live="polite"></div>
 			<div id="announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 			<div id="tip" hidden>Tip: tap an agent. <span aria-hidden="true">&times;</span></div>
@@ -524,14 +526,14 @@
 	</p>
 
 	<script src="agents/Sim.js?v=1b460fb4"></script>
-	<script src="agents/Draw.js?v=463e95a3"></script>
+	<script src="agents/Draw.js?v=c44c9ee8"></script>
 	<script src="agents/Palette.js?v=ff1f4919"></script>
 	<script src="agents/Outcome.js?v=cb53ebab"></script>
 	<script src="agents/share.js?v=c3e48a0d"></script>
 	<script src="agents/sfx.js?v=443464e2"></script>
 	<script src="agents/season.js?v=30ab2597"></script>
 	<script src="agents/news.js?v=2ac9f1dc"></script>
-	<script src="agents/web.js?v=c1a1595a"></script>
+	<script src="agents/web.js?v=710fbe67"></script>
 
 </body>
 

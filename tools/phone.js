@@ -53,6 +53,17 @@ export function serve({ root = ROOT, brotli = false } = {}) {
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
+// Wait for the page's presentation trip rather than assuming an immediate cut.
+// Staged art clocks can skip through the same input path a person uses.
+export async function settleCommute(ev, {skip=false,live=false}={}) {
+  if (skip) await ev(`(() => { const c=document.getElementById("commute"); if(c&&!c.hidden) document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true})) })()`)
+  for (let i=0;i<100;i++) {
+    if (await ev(`(!document.getElementById("commute")||document.getElementById("commute").hidden)${live?'&&AgentWorld().ticks>0':''}`)) return
+    await sleep(25)
+  }
+  throw Error("Commute did not return control within 2.5 seconds")
+}
+
 // Chromium reserves a large virtual address cage. Under the test runner's
 // address-space cap, launch it through the user manager with a stricter *real*
 // memory budget instead; Node and the test workers keep their existing limits.

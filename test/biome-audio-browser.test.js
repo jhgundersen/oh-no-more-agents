@@ -30,7 +30,7 @@ test('live page keeps sound opt-in, respects pause/visibility/mute/report, and p
   const by=Object.fromEntries(r.states.map(x=>[x.name,x]))
   assert.equal(by['default-off'].on,false);assert.equal(by['default-off'].contexts,0)
   for(const name of['enabled','resumed','visible','unmuted','next-biome']){assert.equal(by[name].live,1,name);assert.equal(by[name].open,1,name);assert.equal(by[name].contexts,1)}
-  for(const name of['paused','hidden','muted','report']){assert.equal(by[name].live,0,name);assert.equal(by[name].open,0,name)}
+  for(const name of['paused','hidden','muted','report','commuting']){assert.equal(by[name].live,0,name);assert.equal(by[name].open,0,name)}
   const speeds=new Set()
   for(let i=0;i<3;i++){const s=by['speed-'+i];assert.equal(s.live,1);assert.equal(s.bedBuffers,1);speeds.add(s.speed)}
   assert.equal(speeds.size,3);assert.equal(by['next-biome'].biome,'Subway');assert.equal(r.cleanup.closed,r.cleanup.sources)

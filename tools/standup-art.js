@@ -4,7 +4,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {serve,browser} from './phone.js'
+import {serve,browser,settleCommute} from './phone.js'
 export const STANDUP_VIEWS=[
  {name:'desktop',width:1280,height:900,mobile:false,index:0},
  {name:'phone',width:390,height:844,mobile:true,index:2},
@@ -43,7 +43,7 @@ async function prepare(b,ev,base,v){
  for(let i=0;i<5;i++){
   await ev(`(()=>{const w=AgentWorld();for(let j=0;j<400&&!w.done;j++)step(w);w.agents.forEach(a=>{a.state='saved';a.gone=false});if(${i===4&&v.count===1})w.agents=w.agents.slice(0,1);Object.assign(w,{done:true,doneTicks:111,moments:[],saved:w.agents.length,released:w.toRelease});document.getElementById('c-pause').click()})()`)
   await waitFor(ev,i<4?'AgentWorld().level==='+String(i+2):'!!window.standupArt')
-  if(i<4)await ev("document.getElementById('c-pause').click()")
+  if(i<4){await settleCommute(ev,{skip:true});await ev("document.getElementById('c-pause').click()")}
  }
  await ev("document.getElementById('tip').hidden=true;scrollTo(0,0)")
 }
