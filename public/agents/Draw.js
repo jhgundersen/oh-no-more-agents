@@ -3313,16 +3313,26 @@ function drawWeatherTouch(ctx, w, pal) {
   }
   ctx.restore()
 }
+// The top of an open canopy dx from its centre: the first half-pixel row of
+// drawUmbrellaFine's dome (spread 1, radius 6.5, `top` to top + 4) that is
+// wide enough there.
+function canopySurface(top, dx) {
+  var rows = 8, a = Math.abs(dx) + 0.5
+  for (var r = 0; r <= rows; r++) {
+    var q = (r + 1) / (rows + 1)
+    if (Math.round(6.5 * Math.sqrt(1 - (1 - q) * (1 - q)) * 2) / 2 >= a) return top + r * 0.5
+  }
+  return top + rows * 0.5
+}
 function weatherCanopy(w, ag) { return ag.state === "fall" && ag.floater && ag.fall > 2 }
 function drawRainTouch(ctx, w, ag, x, y, t) {
   ctx.fillStyle = RAIN_COLOUR
   if (weatherCanopy(w, ag)) {
-    var cx = x + pageFloatSway(w, ag) + 4.5, top = y - 11
+    var cx = x + pageFloatSway(w, ag) + 4.5, top = pageCanopyTop(w, ag, y)
     for (var s = 0; s < RAIN_CANOPY.length; s++) {
       var dx = RAIN_CANOPY[s], age = (t + ag.id * 7 + s * 3) % 7
       if (age >= RAIN_SPLASH.length) continue
-      var surface = top + Math.round((1 - Math.sqrt(Math.max(0, 1 - dx * dx / 42))) * 4 * 2) / 2
-      drawWeatherMarks(ctx, w, cx + dx, surface - 0.5, RAIN_SPLASH[age], 0.95 - age * 0.15)
+      drawWeatherMarks(ctx, w, cx + dx, canopySurface(top, dx) - 0.5, RAIN_SPLASH[age], 0.95 - age * 0.15)
     }
     // Run-off: a drop gathers at a tip and falls clear every so often.
     var drip = (t + ag.id * 11) % 14, side = (ag.id % 2) ? 1 : -1
@@ -3334,8 +3344,21 @@ function drawRainTouch(ctx, w, ag, x, y, t) {
   var crown = weatherCrown(w, ag)
   if (tap < 3) drawWeatherMarks(ctx, w, x + crown.x + 4, y + crown.y - 0.5, RAIN_SPLASH[tap + 1], 0.7)
 }
+// Snow gathers on an open umbrella on the way down: a flake more on the
+// canopy every two cells fallen, five at most, across its crown.
+var SNOW_CANOPY = [-0.5, 2, -3, 4.5, -5.5]
+function drawSnowCanopy(ctx, w, ag, x, y) {
+  var flakes = Math.min(SNOW_CANOPY.length, Math.floor(ag.fall / 2))
+  var cx = x + pageFloatSway(w, ag) + 4.5, top = pageCanopyTop(w, ag, y)
+  ctx.fillStyle = SNOW_CAP; ctx.globalAlpha = 0.95
+  for (var i = 0; i < flakes; i++) {
+    var dx = SNOW_CANOPY[i]
+    moteFineRect(ctx, w, Math.round((cx + dx) * 2) / 2, canopySurface(top, dx) - 0.5, 1, 0.5)
+  }
+}
 function drawSnowCap(ctx, w, ag, x, y) {
-  if (weatherCanopy(w, ag) || ag.state === "climb") return
+  if (weatherCanopy(w, ag)) return drawSnowCanopy(ctx, w, ag, x, y)
+  if (ag.state === "climb") return
   var depth = Math.min(2, Math.floor((ag.anim || 0) / 220)) * 0.5
   if (depth <= 0) return
   // On the crown, which rides the body's bob and the trait's head offset the
@@ -21922,9 +21945,14 @@ function pageFloatSway(w,ag) {
   var lean=w.wind?Math.max(-1.5,Math.min(1.5,Math.round(w.wind*3*2)/2)):0
   return (w.reducedMotion?0:Math.round(Math.sin(w.ticks*0.09+ag.id*1.7)*2)/2)+lean
 }
+// How far the canopy breathes, and so where its top sits: drawUmbrellaFine
+// lifts the top by half the flex it is given, and the page gives it 2 × this.
+function pageFloatFlex(w,ag) { return w.reducedMotion?0:Math.round(Math.sin(w.ticks*0.13+ag.id*1.7)*2)/2 }
+function pageCanopyTop(w,ag,y) { return y-11-pageFloatFlex(w,ag)+Math.round((1-pageFloatSpread(ag))*6)/2 }
+function pageFloatSpread(ag) { return Math.min(1,Math.max(0.25,Math.ceil((ag.fall-2)*8)/8)) }
 function drawPageFloat(ctx,w,pal,ag,x,y,brolly) {
-  var spread=Math.min(1,Math.max(0.25,Math.ceil((ag.fall-2)*8)/8))
-  var flex=w.reducedMotion?0:Math.round(Math.sin(w.ticks*0.13+ag.id*1.7)*2)/2
+  var spread=pageFloatSpread(ag)
+  var flex=pageFloatFlex(w,ag)
   var sway=pageFloatSway(w,ag)
   ctx.save()
   drawUmbrellaFine(ctx,pal,x+sway,y,flex*2,brolly,spread,true)

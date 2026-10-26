@@ -96,3 +96,14 @@ test("weather paint is read-only, RNG-free and deterministic", () => {
     }
   } finally { Math.random = random }
 })
+
+test("snow gathers on an open umbrella on the way down, sitting on the dome", () => {
+  const { w, pal } = world(3), ag = floater(w)
+  w.reducedMotion = true
+  const flakes = fall => { ag.fall = fall; return marks(ctx => D.drawWeatherTouch(ctx, w, pal)).filter(c => c[4] === D.SNOW_CAP) }
+  assert.equal(flakes(3).length, 1); assert.equal(flakes(6).length, 3); assert.equal(flakes(40).length, 5)
+  const y = D.pageAgentY(w, ag), top = D.pageCanopyTop(w, ag, y), cx = D.pageAgentX(w, ag) + D.pageFloatSway(w, ag) + 4.5
+  for (const [x, fy, , h] of flakes(40)) assert.equal(fy + h, D.canopySurface(top, x - cx), "resting on the canopy")
+  // The dome's surface falls away from the crown to the rim.
+  assert.ok(D.canopySurface(0, 0) < D.canopySurface(0, 5) && D.canopySurface(0, 5) <= 4)
+})

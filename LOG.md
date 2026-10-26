@@ -10951,3 +10951,18 @@ between, with cuffs and open hands at page resolution. The first version was
 two straight one-pixel poles beside the head and read as detached sticks.
 `test/idle.test.js` covers it with the rest of the repertoire: every pose
 reads, nothing is written, and the schedule is deterministic.
+
+## 416 — 2026-10-26 · Snow on the umbrellas
+
+In Frost an open umbrella now gathers snow on the way down: a flake every two
+cells fallen, five at most, spread across the crown (`drawSnowCanopy`). The
+first try hovered half a pixel to a pixel above the dome. Two reasons: my
+dome curve was not `drawUmbrellaFine`'s, and the page canopy's breathing
+`flex` moves its top. Now `canopySurface(top, dx)` walks the same half-pixel
+rows the canopy is drawn with, and `pageCanopyTop` applies the same flex and
+spread (`pageFloatFlex`, `pageFloatSpread`, factored out of `drawPageFloat`).
+406's rain crowns use them too, so they land on the canopy rather than near
+it. Tested: the flake count by fall distance, and every flake's bottom on
+the surface.
+
+**Next:** deploy.
