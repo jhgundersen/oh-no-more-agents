@@ -11412,3 +11412,30 @@ world digests through actual live steps. No push or deployment.
 **Next:** hand this ready branch to agents-developer and stop, per Jon's
 instruction. All three requested groups have separate hand-offs; start
 nothing further.
+
+## 429 — 2026-10-26 · Deploy (19:01) and stop: page life and hazard beats
+
+**Deployed** build 75d29b23 (Worker version 6ab2a34c), replacing cb9b389a. It
+covers 426–428:
+- Codex's baddies-on-duty;
+- the page around the board (427);
+- Codex's hazard-beats (f0f8a66, renumbered 428): liquid entry crowns and
+  ripples, the late-charge cloud-belly flicker, crusher impact dust. Gate
+  1648/1648, CRAP green.
+
+**Before:** `npm run smoke` passed (3 min, levels 1–7).
+**After:** `npm run verify -- --previous cb9b389a` passed on the first run.
+
+**Stopped here at Jon's request.** main is clean and pushed. Production is
+75d29b23. Every Codex branch handed off today is merged (thaw-art through
+hazard-beats); nothing is half-merged and no gate is running. Codex's
+worktree `../oh-no-codex` sits at `codex/hazard-beats` (merged).
+
+**Next, when work resumes:**
+1. The skill cards act on hover, on press and on use, but they are display
+   `div`s with no keyboard focus. If keyboard parity matters, it needs a
+   decision on whether they should become real controls.
+2. Graphics ideas not yet done: footprints or puddle ripples at walkers' feet
+   in rain (a foot-splash attempt was dropped mid-round), and a stronger
+   build tamp.
+3. Older items from 390: level 225's straggler; level 295's red-team losses.
