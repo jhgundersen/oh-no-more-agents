@@ -11240,3 +11240,20 @@ review evidence. No push or deployment.
 
 **Next:** hand off this Bomb-only branch; then enemies/guards on a fresh branch
 off main, followed by water/acid, lightning and crushers on a third branch.
+
+## 424 — 2026-10-26 · Paperwork, not gore
+
+Merged first: `codex/bang-and-baddies` (732b020, bomb only; Codex's 422,
+renumbered 423): a fuse spark, a chunky warm blast and ring, arcing rubble
+that settles, and a fading scorch. Gate 1632/1632. The first CRAP run failed
+on `panelContact` in `tools/page-panels.js` (38.5% covered, CRAP 39.2):
+untouched code whose browser test lost coverage while Codex's focused run
+shared the machine. A clean rerun passed (71.4%, CRAP 13.8).
+
+The supervisor saw red squares around a red-team death on level 20 and read
+them as blood. They were older: Sim's `blood` particles, which
+`drawBloodDrop` drew in `pal.blood` with a trail. On the page (`res === 2`)
+`drawPaperwork` now draws the same particles, with the same motion and fade,
+as scraps of cream paper (`PAPER #ece6d4`) with a ruled blue line and a
+darker edge. Each scrap turns over as its life ticks down: wide, wide, then
+on edge. The native panel and share art keep their drops.

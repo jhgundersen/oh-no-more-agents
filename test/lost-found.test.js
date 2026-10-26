@@ -84,3 +84,13 @@ test("lost-and-found paint is read-only and RNG-free", () => {
     }
   } finally { Math.random = random }
 })
+
+test("what flies off a lost agent on the page is paperwork: cream scraps with a ruled line, no red", () => {
+  const ctx = canvas(800, 496).ctx, calls = []
+  ctx.fillRect = (...r) => calls.push([...r, ctx.fillStyle])
+  for (let life = 0; life < 9; life++) D.drawPaperwork(ctx, { x: 50, y: 30, life }, 4, 2)
+  const colours = new Set(calls.map(c => c[4]))
+  assert.ok(colours.has(D.PAPER) && colours.has(D.PAPER_RULE) && colours.has(D.PAPER_EDGE))
+  assert.equal(new Set(calls.filter(c => c[4] === D.PAPER).map(c => c[2])).size, 2, "tumbling: wide, then on edge")
+  for (const c of calls) assert.ok(c.slice(0, 4).every(n => Number.isInteger(n * 2)))
+})

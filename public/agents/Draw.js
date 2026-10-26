@@ -4768,6 +4768,20 @@ function drawBloodDrop(ctx, d, C) {
   ctx.globalAlpha = alpha
 }
 
+// On the page what flies off a lost agent is paperwork, not gore: scraps of
+// cream paper with a ruled blue line, tumbling (each one turns over as its
+// life ticks down, wide then narrow). The same particles, positions and fade;
+// the native panel and share art keep their drops.
+var PAPER = "#ece6d4", PAPER_RULE = "#7c9cc8", PAPER_EDGE = "#a49c86"
+function drawPaperwork(ctx, d, C, i) {
+  var x = Math.round(d.x * C * 2) / 2, y = Math.round(d.y * C * 2) / 2
+  var flat = Math.floor((d.life || 0) / 3 + i) % 3
+  var wide = flat === 2 ? 1 : 2.5, tall = flat === 2 ? 2 : 1.5
+  ctx.fillStyle = PAPER_EDGE; ctx.fillRect(x, y, wide, tall)
+  ctx.fillStyle = PAPER; ctx.fillRect(x, y, wide - 0.5, tall - 0.5)
+  if (flat !== 2) { ctx.fillStyle = PAPER_RULE; ctx.fillRect(x, y + 0.5, wide - 0.5, 0.5) }
+}
+
 function drawActorParticles(ctx, w, pal) {
   var k = w.k
   for (var p = 0; p < w.particles.length; p++) {
@@ -4777,7 +4791,8 @@ function drawActorParticles(ctx, w, pal) {
     if (d.blood) {
       ctx.globalAlpha = Math.min(1, d.life / 24)
       ctx.fillStyle = pal.blood
-      if ((w.res || 1) >= 2) drawBloodDrop(ctx, d, k.CELL)
+      if (w.res === 2) drawPaperwork(ctx, d, k.CELL, p)
+      else if ((w.res || 1) >= 2) drawBloodDrop(ctx, d, k.CELL)
       else ctx.fillRect(Math.round(d.x * k.CELL), Math.round(d.y * k.CELL), 3, 3)
     } else {
       ctx.globalAlpha = 0.55
