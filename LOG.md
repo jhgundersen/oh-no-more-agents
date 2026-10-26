@@ -11311,3 +11311,48 @@ Coverage and logs archived beside the evidence. No push or deployment.
 **Next:** hand off the enemy/guard branch, then finish the last group on
 `codex/hazard-beats`: water/green-liquid entry crowns, lightning warning
 flicker and crusher impact dust, keeping the existing simulation clocks.
+
+## 427 — 2026-10-26 · The page around the board comes alive
+
+Merged first: `codex/baddies-on-duty` (8049ddf, enemies and guards only;
+Codex's 424, renumbered 426). Gate 1638/1638, CRAP max 30.
+
+The supervisor's round for the page outside the board:
+- **Logo** (web.js `paintLogoFrame`/`nextLogoIdle`, drawn by Draw's
+  `drawLogo*`). Between sways the little agent sometimes twirls its umbrella:
+  three quick frames with the canopy spinning edge-on, on the umbrella's own
+  slanted shaft. Sometimes it glances up at the EXIT thought. In a raining
+  level (`WEATHER_RAIN`) a drop falls onto the canopy and bursts. Idles run
+  at 160 ms a frame between the usual 1 s sways. At dusk (`duskAt` of the
+  board, checked on each render) the EXIT thought glows gold. All of it
+  sleeps with the existing logo motion: offscreen, hidden, fullscreen,
+  reduced motion. The glow is light, not motion, so it shows either way.
+- **Skill cards.** Each icon does its job once in four frames
+  (`SKILL_ICON_ACTIONS`, built from its own 14×14 rows: bricks laid one by
+  one, a canopy unfurling, a fuse spark flickering, a pick or shovel moving a
+  pixel, a climber pulling up, a blocker's arms out). It plays on hover or
+  press and whenever an agent takes that skill, and the card gives a short
+  CSS squash (`transform` only) as its count drops. The cards are a readout,
+  not controls, so there is no focus to mirror; I didn't add tabindex to
+  make them look like buttons. Reduced motion keeps the still icon and no
+  squash.
+- **Home bar.** A 4×8 commuter (`drawCommutePip`) walks along the bar, a pixel
+  a frame with its legs going, to where the fill has got to. It is drawn on
+  a canvas inside `.track`, over the brick grid, sized by a ResizeObserver
+  rather than read back after each width write. Reduced motion puts it
+  straight there.
+
+**Checked in Chromium:** at 1280×900 and 390×844, the boxes of the toolbar,
+the track, the board and the logo, and the document size, are identical to
+HEAD's; no page errors. Hovering a card animates the icon and it returns to
+rest; a rescue walks the commuter. New `test/page-life.test.js`: frames on
+the grid and ending at rest; logo extras inside the logo; the glow only at
+dusk; the pip; and in the browser, hover, walking, no layout shift and
+reduced motion held still. Two existing harnesses measured the new
+behaviour as a fault. `logo-art` counted 6 logo paints in three sways
+(bound 3–5); the extra one is the EXIT glow repainting once when the board's
+dusk step changes, so the bound is now 6. `toolbar-icons` measured a 16 px
+icon as 18.4 px: its pause click renders once, the counts drop, and the
+squash's first key (1.15×) was on screen. Its READ clears the squash before
+measuring the resting layout. Images: `/tmp/claude-1000/-home-jonh-jonh-no-oh-no-more-agents/e002fc05-9f6f-4bf2-8a7d-f9df8ca0561b/scratchpad/page-after/` (desktop.png,
+phone.png, phone-bar.png, logo-extras.png, twirl.png).

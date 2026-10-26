@@ -25,7 +25,7 @@
 	<!-- Content hash of this page as served, written by tools/stamp-assets.js.
 	     web.js compares it with the build the Worker reports and reloads between
 	     levels when a deploy has moved on without it. -->
-<meta name="build" content="1107c0e6">
+<meta name="build" content="ef08af3c">
 	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-1-16.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-1-32.png">
 	<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-1.png">
@@ -246,6 +246,13 @@
 			background: repeating-linear-gradient(90deg, transparent 0 6px, var(--ink) 6px 8px);
 			pointer-events: none;
 		}
+		/* The commuter walking the Home bar (web.js commuteTo): over the brick
+		   grid, inside the track's own box, so nothing around it moves. */
+		.commute-bar { position: absolute; left: 0; top: 0; width: 100%; height: 8px; z-index: 1; image-rendering: pixelated; pointer-events: none; }
+		/* A skill card gives as its count goes down (web.js squashSkill). */
+		.skill.squash .skill-stock { animation: skill-squash 240ms steps(3, end); transform-origin: 50% 100%; }
+		@keyframes skill-squash { 0% { transform: scale(1.15, 0.8); } 50% { transform: scale(0.95, 1.08); } }
+		@media (prefers-reduced-motion: reduce) { .skill.squash .skill-stock { animation: none; } }
 		#bar {
 			height: 100%; width: 0; background: var(--accent);
 			box-shadow: inset 0 2px color-mix(in srgb, var(--fg) 40%, var(--accent));
@@ -526,14 +533,14 @@
 	</p>
 
 	<script src="agents/Sim.js?v=1b460fb4"></script>
-	<script src="agents/Draw.js?v=df3212b9"></script>
+	<script src="agents/Draw.js?v=3c4a665f"></script>
 	<script src="agents/Palette.js?v=ff1f4919"></script>
 	<script src="agents/Outcome.js?v=cb53ebab"></script>
 	<script src="agents/share.js?v=c3e48a0d"></script>
 	<script src="agents/sfx.js?v=443464e2"></script>
 	<script src="agents/season.js?v=30ab2597"></script>
 	<script src="agents/news.js?v=2ac9f1dc"></script>
-	<script src="agents/web.js?v=710fbe67"></script>
+	<script src="agents/web.js?v=0aeaa839"></script>
 
 </body>
 

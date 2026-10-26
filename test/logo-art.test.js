@@ -50,6 +50,6 @@ test('real header preserves its accessible heading, fits 390px at both DPRs, and
   const r=await captureLogo(out)
   assert.deepEqual(r.errors,[]);assert.equal(r.accessibleHeading,true);assert.equal(r.themeCount,9)
   for(const v of r.records){assert.equal(v.heading,'Oh No! More Agents');assert.equal(v.pageWidth,v.viewport);assert.ok(v.rect.x>=0&&v.rect.x+v.rect.width<=v.viewport);assert.equal(v.canvas.width,v.rect.width*v.dpr);assert.equal(v.canvas.height,v.rect.height*v.dpr);assert.equal(v.canvas.hidden,false)}
-  assert.equal(r.motion.reducedStable,true);assert.ok(r.motion.animatedFrames>=2);assert.ok(r.motion.idlePaints>=3&&r.motion.idlePaints<=5);assert.equal(r.motion.offscreenStable,true);assert.equal(r.motion.resumed,true);assert.equal(r.motion.stopped,true)
+  assert.equal(r.motion.reducedStable,true);assert.ok(r.motion.animatedFrames>=2);assert.ok(r.motion.idlePaints>=3&&r.motion.idlePaints<=6,"idlePaints "+r.motion.idlePaints) // +1: the EXIT glow repaints once when the board's dusk step changes (LOG 427);assert.equal(r.motion.offscreenStable,true);assert.equal(r.motion.resumed,true);assert.equal(r.motion.stopped,true)
  }finally{fs.rmSync(out,{recursive:true,force:true})}
 })

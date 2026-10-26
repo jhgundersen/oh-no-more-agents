@@ -3615,6 +3615,101 @@ function drawClockIn(ctx, w) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// The page around the board: skill icons in action, the logo's idles, the
+// commuter on the Home bar. Pure drawing called by the web host (web.js);
+// nothing here reads or writes a world.
+// ---------------------------------------------------------------------------
+// Each skill icon does its job once in four frames, made from its own 14x14
+// pixel rows: rows hidden (a brick not laid yet, a canopy still furled), or a
+// band of rows moved a pixel (a pick lifting, a shovel going in).
+var SKILL_ICON_ACTIONS = {
+  builder: [{ hide: [0, 10] }, { hide: [0, 7] }, { hide: [0, 4] }, {}],
+  floater: [{ hide: [1, 5] }, { hide: [1, 3] }, { hide: [1, 1] }, {}],
+  bomber: [{ hide: [0, 2] }, {}, { hide: [0, 2] }, {}],
+  digger: [{ move: [0, 7, 0, 1] }, { move: [0, 7, 0, 2] }, { move: [0, 7, 0, 1] }, {}],
+  basher: [{ move: [0, 8, -1, -1] }, { move: [0, 8, 1, 0] }, { move: [0, 8, 0, 0] }, {}],
+  miner: [{ move: [1, 13, 0, -1] }, { move: [1, 13, 1, 1] }, { move: [1, 13, 0, 0] }, {}],
+  climber: [{ move: [0, 13, 0, -1] }, { move: [0, 13, 0, -2] }, { move: [0, 13, 0, -1] }, {}],
+  blocker: [{ hide: [5, 6] }, {}, { hide: [5, 6] }, {}]
+}
+// The rows of one frame: `hide` blanks rows a..b; `move` shifts rows a..b by
+// (dx, dy) on the 14x14 grid, with whatever falls off the edge dropped.
+function skillIconFrameRows(name, frame) {
+  var base = SKILL_ICON_PIXELS[name], step = (SKILL_ICON_ACTIONS[name] || [])[frame]
+  if (!base || !step) return base
+  var rows = base.slice(), blank = ".............."
+  if (step.hide) for (var r = step.hide[0]; r <= step.hide[1]; r++) rows[r] = blank
+  if (step.move) {
+    var m = step.move, band = base.slice(m[0], m[1] + 1)
+    for (var b = m[0]; b <= m[1]; b++) rows[b] = blank
+    for (var i = 0; i < band.length; i++) {
+      var y = m[0] + i + m[3]
+      if (y < 0 || y >= rows.length) continue
+      var line = m[2] > 0 ? "..".slice(0, m[2]) + band[i].slice(0, 14 - m[2]) : m[2] < 0 ? band[i].slice(-m[2]) + "..".slice(0, -m[2]) : band[i]
+      rows[y] = mergeIconRow(rows[y], line)
+    }
+  }
+  return rows
+}
+function mergeIconRow(under, over) {
+  var out = ""
+  for (var i = 0; i < 14; i++) out += over[i] !== "." ? over[i] : under[i]
+  return out
+}
+function drawSkillIconFrame(ctx, name, frame) {
+  var rows = skillIconFrameRows(name, frame)
+  if (rows) drawUiPixels(ctx, rows, 1, 1)
+}
+
+// The logo's small agent between sways (drawLogoUmbrella's phases): a twirl
+// draws the canopy edge-on for two beats; a glance turns the eye up toward
+// the EXIT thought; in a raining level a drop falls onto the canopy and
+// bursts; at dusk (duskAt) the EXIT thought glows.
+function drawLogoTwirl(ctx, colours, step) {
+  var x = 53
+  ctx.save()
+  ctx.fillStyle = "#aab4cb"                      // the same slant as drawLogoUmbrella's shaft
+  for (var y = 44; y < 53; y++) ctx.fillRect(Math.round(51 + (x - 51) * (53 - y) / 9), y, 1, 1)
+  ctx.fillStyle = "#16161c"; ctx.fillRect(x - 1 - step, 39, 2 + step * 2, 7)
+  ctx.fillStyle = colours.accent; ctx.fillRect(x - step, 40, step * 2 || 1, 5)
+  ctx.fillStyle = "#e9edf7"; ctx.fillRect(x - step, 40, 1, 2)
+  ctx.restore()
+}
+function drawLogoGlance(ctx) {
+  ctx.fillStyle = "#f0c8a0"; ctx.fillRect(40, 47, 1, 1)
+  ctx.fillStyle = "#16161c"; ctx.fillRect(41, 46, 1, 1)
+}
+var LOGO_DROP = [[53, 33, 1, 2], [53, 36, 1, 2], [50, 37, 1, 1, 56, 37, 1, 1]]
+function drawLogoRaindrop(ctx, step) {
+  var d = LOGO_DROP[step]
+  if (!d) return
+  ctx.fillStyle = "#9fd3ff"
+  for (var i = 0; i < d.length; i += 4) ctx.fillRect(d[i], d[i + 1], d[i + 2], d[i + 3])
+}
+function drawLogoExitGlow(ctx, colours, dusk) {
+  if (!(dusk > 0)) return
+  ctx.save()
+  ctx.globalAlpha = 0.25 + 0.5 * dusk
+  ctx.fillStyle = "#ffd27a"
+  ctx.fillRect(314, 1, 25, 1); ctx.fillRect(314, 14, 25, 1); ctx.fillRect(314, 1, 1, 14); ctx.fillRect(338, 1, 1, 14)
+  ctx.globalAlpha = Math.min(1, 0.4 + dusk)
+  drawTransitionText(ctx, "EXIT", 326, 6, 1)
+  ctx.restore()
+}
+
+// The commuter on the Home bar: a 4x8 agent (hat, face, suit, legs), legs
+// apart on odd steps. `x` is its left edge in CSS pixels on the bar's canvas.
+function drawCommutePip(ctx, x, step, colours) {
+  x = Math.round(x)
+  ctx.fillStyle = "#16161c"; ctx.fillRect(x, 0, 4, 2)
+  ctx.fillStyle = "#f0c8a0"; ctx.fillRect(x + 1, 2, 3, 2)
+  ctx.fillStyle = colours.foreground; ctx.fillRect(x, 4, 4, 2)
+  ctx.fillStyle = "#16161c"
+  if (step % 2) { ctx.fillRect(x, 6, 1, 2); ctx.fillRect(x + 3, 6, 1, 2) }
+  else ctx.fillRect(x + 1, 6, 2, 2)
+}
+
 // The instant replay (the page re-simulates the level's best moment; see
 // web.js): letterbox bars, and a tag with a recording dot in the corner below
 // the sky band, so the hero's card and event warnings stay readable.

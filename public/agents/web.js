@@ -862,8 +862,32 @@
       cell.appendChild(label)
       cell.appendChild(stock)
       el.toolbar.appendChild(cell)
-      el.skillNodes[name] = { cell: cell, count: count }
+      var node = el.skillNodes[name] = { cell: cell, count: count, icon: icon.getContext("2d"), name: name, prev: null, timer: 0 }
+      cell.addEventListener("pointerenter", function () { playSkillIcon(node) })
+      cell.addEventListener("pointerdown", function () { playSkillIcon(node) })
     })
+  }
+
+  // The icon does its job once (Draw's SKILL_ICON_ACTIONS, four frames), on
+  // hover or press and whenever an agent takes one; the card gives a short
+  // squash as its count goes down. The cards are a readout, not controls, so
+  // there is no focus to mirror. Reduced motion keeps the still icon.
+  function iconMotion() { return !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) }
+  function playSkillIcon(node) {
+    if (node.timer || !iconMotion()) return
+    var frame = 0
+    var next = function () {
+      node.icon.clearRect(0, 0, 16, 16)
+      if (frame < 4) { drawSkillIconFrame(node.icon, node.name, frame++); node.timer = setTimeout(next, 90) }
+      else { drawSkillIcon(node.icon, node.name); node.timer = 0 }
+    }
+    next()
+  }
+  function squashSkill(node) {
+    if (!iconMotion()) return
+    node.cell.classList.remove("squash")
+    void node.cell.offsetWidth
+    node.cell.classList.add("squash")
   }
 
   // The rescue counter is a community total that only ever goes up, and the
@@ -980,6 +1004,7 @@
 
   function render() {
     if (!world) return
+    logoDusk()
     syncSfxScene()
     renderCaption()
     // The bar is the whole colony. There is no second, smaller number to
@@ -997,6 +1022,7 @@
     else if (world.saved === 0) el.home.className = ""
     el.home.textContent = world.saved + "/" + total
     el.bar.style.width = (total > 0 ? Math.min(1, world.saved / total) * 100 : 0) + "%"
+    commuteTo(total > 0 ? Math.min(1, world.saved / total) : 0)
 
     var left = Math.max(0, Math.ceil((world.timeLimit - world.ticks) / 30))
     if (world.nuking) {
@@ -1023,6 +1049,8 @@
       var count = world.skills[name] || 0
       var used = world.lastUsed[name]
       var recent = used !== undefined && (world.ticks - used) < 20
+      if (node.prev !== null && count < node.prev) { playSkillIcon(node); squashSkill(node) }
+      node.prev = count
       node.count.textContent = count
       node.count.dataset.pulse = count % 2 // replay the CSS blink on consecutive spends
       node.cell.classList.toggle("recent", recent)
@@ -1253,11 +1281,52 @@
 
   // A cached masthead; four tiny umbrella poses, one second apart. The
   // animation owns no game state and sleeps offscreen/hidden/fullscreen.
+  // The Home bar's commuter: a little agent walking along the bar to where
+  // the fill has got to, a pixel a frame, legs going (Draw's drawCommutePip).
+  // It owns nothing; reduced motion puts it straight there.
+  var commuter = null
+  function setupCommuter() {
+    var track = el.bar && el.bar.parentNode
+    if (!track || !document.createElement("canvas").getContext) return
+    var canvas = document.createElement("canvas")
+    canvas.className = "commute-bar"; canvas.setAttribute("aria-hidden", "true")
+    track.appendChild(canvas)
+    commuter = { canvas: canvas, ctx: canvas.getContext("2d"), x: 0, target: 0, frame: 0, raf: 0, width: 0, fraction: 0 }
+    // Sized from the observer, never read back right after the bar's width is
+    // written, which would force a layout on every tick.
+    var size = function () {
+      commuter.width = canvas.width = Math.round(canvas.getBoundingClientRect().width); canvas.height = 8
+      commuter.drawn = null; commuteTo(commuter.fraction)
+    }
+    if (window.ResizeObserver) new ResizeObserver(size).observe(track); else size()
+  }
+  function commuteTo(fraction) {
+    if (!commuter || !commuter.ctx) return
+    var c = commuter
+    c.fraction = fraction
+    c.target = Math.max(0, Math.round(fraction * c.width) - 5)
+    if (c.target < c.x || !iconMotion()) c.x = c.target
+    if (!c.raf) stepCommuter()
+  }
+  function stepCommuter() {
+    var c = commuter
+    c.raf = 0
+    if (c.x < c.target) { c.x++; if (c.x % 3 === 0) c.frame++ }
+    var key = c.x + ":" + c.frame + ":" + themeName
+    if (key !== c.drawn) {
+      c.drawn = key
+      c.ctx.clearRect(0, 0, c.canvas.width, 8)
+      drawCommutePip(c.ctx, c.x, c.x < c.target ? c.frame : 0, THEMES[themeName])
+    }
+    if (c.x < c.target) c.raf = requestAnimationFrame(stepCommuter)
+  }
+
   var logoState = null
   function setupLogo() {
     var canvas = document.getElementById("pageLogo")
     if (!canvas || !canvas.getContext("2d")) return
     logoState = { canvas: canvas, base: document.createElement("canvas"), phase: 0,
+      beat: 0, seq: null, dusk: 0,
       factor: 1, timer: null, visible: !!window.IntersectionObserver,
       motion: window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: true } }
     canvas.hidden = false
@@ -1288,7 +1357,28 @@
     ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,s.canvas.width,s.canvas.height)
     ctx.drawImage(s.base,0,0)
     ctx.setTransform(s.factor,0,0,s.factor,0,0)
-    drawLogoUmbrella(ctx,THEMES[themeName],s.phase)
+    var q=s.seq,colours=THEMES[themeName]
+    if (q && q.kind==="twirl") drawLogoTwirl(ctx,colours,LOGO_TWIRL[q.step])
+    else drawLogoUmbrella(ctx,colours,s.phase)
+    if (q && q.kind==="glance") drawLogoGlance(ctx)
+    if (q && q.kind==="rain") drawLogoRaindrop(ctx,q.step)
+    drawLogoExitGlow(ctx,colours,s.dusk)
+  }
+  // Between sways the little agent sometimes twirls its umbrella or glances
+  // up at the EXIT thought, and in a raining level a drop lands on it. Each is
+  // a short run of quicker frames; the dusk glow follows the board (render).
+  var LOGO_TWIRL=[2,0,2]
+  function nextLogoIdle(s) {
+    s.beat++
+    if (s.beat%14===0) return {kind:"twirl",step:0,len:LOGO_TWIRL.length}
+    if (s.beat%14===7) return {kind:"glance",step:0,len:6}
+    if (world && WEATHER_RAIN[world.biome] && s.beat%3===1) return {kind:"rain",step:0,len:LOGO_DROP.length}
+    return null
+  }
+  function logoDusk() {
+    if (!logoState || !world) return
+    var d=world.res===2?duskAt(world.ticks):0
+    if (d!==logoState.dusk) { logoState.dusk=d; paintLogoFrame() }
   }
   function logoCanSway() {
     return logoState.visible && !document.hidden && !logoState.motion.matches && !isFullscreen()
@@ -1299,8 +1389,11 @@
     if (!logoCanSway()) return
     logoState.timer=setTimeout(function () {
       if (!logoCanSway()) return
-      logoState.phase=(logoState.phase+1)%4;paintLogoFrame();syncLogoMotion()
-    },1000)
+      var s=logoState
+      if (s.seq && ++s.seq.step<s.seq.len) { paintLogoFrame(); syncLogoMotion(); return }
+      s.seq=null
+      s.phase=(s.phase+1)%4;s.seq=nextLogoIdle(s);paintLogoFrame();syncLogoMotion()
+    },logoState.seq?160:1000)
   }
 
   // Soundtrack
@@ -1375,6 +1468,7 @@
     el.biome = document.getElementById("biome")
     el.home = document.getElementById("home")
     el.bar = document.getElementById("bar")
+    setupCommuter()
     el.clock = document.getElementById("clock")
     el.toolbar = document.getElementById("toolbar")
     el.caption = document.getElementById("eventCaption")
