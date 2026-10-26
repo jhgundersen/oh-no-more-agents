@@ -42,11 +42,12 @@ test("on the page: a finished level records its sightings in this browser; with 
     try {
       await b.cmd("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
       if (blocked) await b.cmd("Page.addScriptToEvaluateOnNewDocument", { source: `Object.defineProperty(window, "localStorage", { get() { throw new Error("blocked") } })` })
-      await b.cmd("Page.navigate", { url: `http://127.0.0.1:${server.address().port}/?level=3&seed=42` })
-      await sleep(1500)
+      await b.cmd("Page.navigate", { url: `http://127.0.0.1:${server.address().port}/?level=3&seed=42&season=none` })
       const ev = async e => (await b.cmd("Runtime.evaluate", { expression: e, returnByValue: true })).result.value
+      for (let i = 0; i < 100 && !await ev("window.AgentWorld?.()?.level === 3"); i++) await sleep(50)
+      assert.equal(await ev("window.AgentWorld?.()?.level"), 3, "page ready within five seconds")
       await ev(`(() => { const w = AgentWorld(); w.agiId = 1; w.duckAppeared = true; w.done = true; w.doneTicks = 0 })()`)
-      await sleep(300)
+      for (let i = 0; i < 100 && !await ev("AgentWorld().doneTicks > 0"); i++) await sleep(50)
       const r = await ev(`(() => { const w = AgentWorld(); let stored = null; try { stored = localStorage.getItem("oh-no-more-agents-sightings") } catch (e) { stored = "blocked" } return { s: w.sightings || null, stored } })()`)
       if (blocked) { assert.equal(r.s, null); assert.equal(r.stored, "blocked") }
       else { assert.deepEqual(r.s, { seen: ["agi", "duck"], fresh: ["agi", "duck"] }); assert.equal(r.stored, JSON.stringify(["agi", "duck"])) }

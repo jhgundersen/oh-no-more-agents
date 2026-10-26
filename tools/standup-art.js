@@ -16,14 +16,14 @@ export const STANDUP_VIEWS=[
 const sleep=ms=>new Promise(r=>setTimeout(r,ms))
 function evaluator(b){return async expression=>{const r=await b.cmd('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value}}
 async function waitFor(ev,expression){
- for(let i=0;i<100;i++){if(await ev(expression))return;await sleep(20)}
+ for(let i=0;i<100;i++){if(await ev(expression))return;await sleep(50)}
  throw Error('Standup wait exceeded 100 polls: '+expression+'; '+JSON.stringify(await ev('({level:window.AgentWorld?.()?.level,t:window.standupArt?.t,pause:document.getElementById("pauseWord")?.textContent})')))
 }
 async function prepare(b,ev,base,v){
  await b.cmd('Emulation.setDeviceMetricsOverride',{width:v.width,height:v.height,deviceScaleFactor:1,mobile:v.mobile})
  await b.cmd('Emulation.setTouchEmulationEnabled',{enabled:v.mobile})
  await b.cmd('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:v.reduced?'reduce':'no-preference'}]})
- await b.cmd('Page.navigate',{url:base+'/?level=1&seed=3'})
+ await b.cmd('Page.navigate',{url:base+'/?level=1&seed=3&season=none'})
  await waitFor(ev,'window.AgentWorld?.()?.level===1&&!AgentWorld().done')
  await ev('Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,1000))])')
  await ev(`(()=>{

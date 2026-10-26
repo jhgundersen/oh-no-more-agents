@@ -10309,3 +10309,38 @@ finish and review `codex/thaw-art`. Also unmerged, and deliberately left
 alone: `codex/review` and `codex/review-server`, which only hold the review
 reports (their findings were fixed on main), and the old
 `experiment/runaway-train-biome`.
+
+## 396 — 2026-10-26 · Cold storage, thawed for review
+
+Resumed `codex/thaw-art` and merged main `715bc74`; kept both histories and
+regenerated the conflicting page/script/build stamps. Ice Cave page portraits
+have centred faceted ice, palms and condensation; real rescues shed clipped
+shards and meltwater. Reduced motion holds a stationary alternative. Native,
+default and share pixels are unchanged, and the stand-in gets no phantom coin.
+
+The first fresh full coverage gate exposed three browser-fixture failures.
+Halloween's newly active calendar overlay inserted a death message into hero
+biography evidence. Caption/standup captures now pin ordinary views to
+`season=none`, while explicit seasonal heroes settle observations before
+clearing their note. Sightings now waits for bounded page/tick readiness rather
+than fixed sleeps; standup startup gets a bounded five-second window. All 11
+focused browser checks pass. These are capture/test fixes, not gameplay changes.
+
+Fresh `npm run check` with coverage: **1,557 passed, 0 failed**, 399.03 s;
+line/branch/function coverage **98.42% / 96.73% / 96.25%**.
+`npm run crap -- --threshold 30 --use-existing-coverage` passed on that same
+complete LCOV, maximum **30.0** across 2,440 functions. FIFO testlock, two test
+workers, 2GB Node heap, 6GB address-space cap and 3GB service memory cap.
+Source/check/LCOV hashes: `/tmp/codex-thaw-art/gate-provenance.json`.
+
+Current before/after natural-rescue animation, contact sheet and actual desktop
+and 390px phone screenshots: `/tmp/codex-thaw-art/review/index.html` (levels 6
+and 46, matched ticks 120 and 215). Full logs and LCOV provenance are under
+`/tmp/codex-thaw-art/`; the first failed run is retained separately. The preferred
+Chromium extension was unavailable, so screenshots use the repository's local
+throwaway-profile headless capture tools. No production requests, push, deploy
+or sibling-copy changes.
+
+**Next:** developer review/merge this branch, then a small `codex/living-racks-port`
+batch from main: distant rack fans and port gulls, drawing only, fixed reduced-
+motion poses, world-digest equivalence, FPS and desktop/390px comparisons.

@@ -24,6 +24,7 @@ export async function setupHero(ev,v){
  const style=document.createElement('style');style.textContent='#stage *,#stage *::before,#stage *::after{transition:none!important;animation:none!important}';document.head.appendChild(style)
  const w=AgentWorld(),random=Math.random;let seed=317
  try{Math.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);for(let i=0;i<200&&!w.done;i++)step(w)}finally{Math.random=random}
+ if(w.season)AgentSeason.dress(w)
  w.feed=[];if(w.season)w.season.note=null
  document.querySelector('#themes .theme.on').click();document.getElementById('who').click();document.getElementById('who').click()
  document.getElementById('overlay').style.visibility='hidden';document.getElementById('tip').hidden=true;document.getElementById('levelTitle').hidden=true;scrollTo(0,0)
