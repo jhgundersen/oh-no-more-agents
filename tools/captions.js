@@ -18,10 +18,12 @@ function evaluator(b){return async expression=>{
  if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails))
  return r.result.value
 }}
+// A view without a season pins ?season=none: otherwise the viewer's calendar
+// picks one, and in late October every view grew Halloween captions.
 async function openView(b,ev,base,v){
  await b.cmd('Emulation.setDeviceMetricsOverride',{width:v.width,height:v.height,deviceScaleFactor:1,mobile:v.mobile})
  await b.cmd('Emulation.setTouchEmulationEnabled',{enabled:v.mobile})
- await b.cmd('Page.navigate',{url:base+'/?level='+v.level+'&seed=3'+(v.season?'&season='+v.season:'')})
+ await b.cmd('Page.navigate',{url:base+'/?level='+v.level+'&seed=3&season='+(v.season||'none')})
  let ready=false
  for(let i=0;i<80;i++){if(await ev('window.AgentWorld?.()?.level==='+v.level)){ready=true;break}await sleep(40)}
  if(!ready)throw Error('Caption page did not become ready within 3.2 seconds')
