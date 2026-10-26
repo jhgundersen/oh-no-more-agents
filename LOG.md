@@ -11164,3 +11164,43 @@ covers 418–420:
 **Next:** lost-agent moments (an umbrella drifting off on its own, a "404"
 wisp or static, the next beat quiet) and a clock-in badge as agents drop out
 of the hatch.
+
+## 422 — 2026-10-26 · A spark, a bang, and the dust settling
+
+First of the supervisor's three hazard/enemy polish groups: Bomb only, on
+`codex/bang-and-baddies`. Main 9133313 is incorporated. The page fuse shrinks
+in eight half-pixel steps with a steady centre spark and flying flecks that
+quicken in the last second. Its five-second informational countdown remains.
+A detonation now grows a chunky warm burst, sheds an expanding smoke ring,
+throws twelve ballistic clods, and briefly chars surviving terrain. Each clod
+stops at its first terrain landing; its bounded trajectory is recomputed from
+the existing blast date, never recorded into Sim. All aftermath expires with
+the existing 26-tick blast. Mines and other recorded blasts share this art,
+since the existing record intentionally has no cause field.
+
+Reduced motion gets a fixed quiet scorch and settled rubble, with no blast
+light, fireball, smoke ring or flying flecks. The page light pulse is gentler;
+res 1/native and res 3/share retain their previous blast and fuse pixels.
+The developer's skill poses and flourishes are untouched. Runtime edits live
+only in Draw.js; no simulation, world fields, or RNG changes.
+
+`tools/bomb-art.js` stages a charge on a real seeded Factory corridor and calls
+actual stepBomb for the cut. It captures desktop and 390 px page shots, plus
+38 clocked countdown/aftermath frames. The matched 76 normal before/after
+frames have identical complete world JSON. Evidence, animated comparisons,
+reduced-motion strips and reproduction notes:
+`/tmp/codex-bang-and-baddies/review/index.html`.
+
+**Validation:** capped shared-lock full `npm run check`: 1628/1628, 98.47%
+line coverage; `npm run crap -- --threshold 30 --use-existing-coverage`:
+maximum 30.0. New tests bound draw calls, clip edges, check half-pixels,
+styles/RNG/read-only behaviour, preserve native/share hashes, exercise arcs,
+settling and fading, fix reduced poses, and compare complete world digests
+through 180 actual Bomb steps. Browser captures have no errors. Live
+`npm run fps -- 8 --seconds 10 --speed 2`: before/after 60 fps, p5 60,
+worst 17 ms. Repeated one- and twelve-blast probes at both widths, normal
+and reduced, also 60/p5 60/worst 17 ms. Coverage and logs archived beside
+review evidence. No push or deployment.
+
+**Next:** hand off this Bomb-only branch; then enemies/guards on a fresh branch
+off main, followed by water/acid, lightning and crushers on a third branch.

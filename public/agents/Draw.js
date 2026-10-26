@@ -144,11 +144,12 @@ function drawHazardLight(ctx, w, pal, h) {
 }
 
 function drawBlastLight(ctx, w, pal, b) {
+  if (w.res === 2 && w.reducedMotion) return
   var age = w.ticks - b.t
   if (age < 0 || age >= 13) return
   var C = w.k.CELL, radius = b.r * C
   drawLightPool(ctx, w, age < 2 ? BLAST_CORE : BLAST_MID, b.x * C, b.y * C,
-    radius * 1.8 + 8, radius * 1.3 + 6, 0.32 * (1 - age / 13))
+    radius * 1.8 + 8, radius * 1.3 + 6, (w.res === 2 ? 0.10 : 0.32) * (1 - age / 13))
 }
 
 function drawTransportLight(ctx, w, p) {
@@ -10667,6 +10668,10 @@ var BLAST_RIM = "#c2402a", BLAST_MID = "#ff8a35", BLAST_CORE = "#ffe68a"
 // size is the real radius, so a mine reads bigger than a bomb because it is,
 // and a drone's pop stays a pop.
 function drawBlast(ctx, w, pal, b) {
+  if (w.res === 2) { drawPageBlast(ctx,w,pal,b); return }
+  drawLegacyBlast(ctx,w,pal,b)
+}
+function drawLegacyBlast(ctx, w, pal, b) {
   var a = w.ticks - b.t
   if (a < 0 || a > 26) return
   var C = w.k.CELL, cx = b.x * C, cy = b.y * C, R = b.r * C
@@ -11109,7 +11114,7 @@ function drawFineBomb(ctx, pal, ag, ox, oy, dir) {
 }
 
 function drawBombFuse(ctx, w, pal, ag, ox, oy, dir) {
-  var y = 10 + bombCrouch(ag), fuse = Math.max(0.5, Math.ceil((ag.fuse || 0) / 30) * 0.5)
+  var y = 10 + bombCrouch(ag), fuse = Math.max(0.5, Math.ceil((ag.fuse || 0) / (w.res === 2 ? 18.75 : 30)) * 0.5)
   ctx.fillStyle = pal.rigDark
   blitFine(ctx, ox, oy, dir, 2.5, y, 3, 3)
   ctx.fillStyle = pal.urgent
@@ -11121,6 +11126,7 @@ function drawBombFuse(ctx, w, pal, ag, ox, oy, dir) {
   blitFine(ctx, ox, oy, dir, 5.5, y + 1, 1, 1)
   ctx.fillStyle = pal.rig
   blitFine(ctx, ox, oy, dir, 4, y - fuse, 0.5, fuse)
+  if (w.res === 2) { drawCountdownSpark(ctx,w,pal,ag,ox,oy,dir,y-fuse); return }
   ctx.fillStyle = pal.fireHot
   blitFine(ctx, ox, oy, dir, 3.5 + (ag.fuse % 2) * 0.5, y - fuse - 0.5, 1, 0.5)
   if (ag.fuse < 15) {
@@ -23590,4 +23596,116 @@ function drawHomeStand(ctx, w, pal, x, y, count) {
   }
   ctx.fillStyle = "#5c6370"; ctx.fillRect(x+1,y+19,18,4)
   ctx.fillStyle = pal.umbrellaRim; ctx.fillRect(x+1,y+18,18,0.5)
+}
+
+
+// Bombs, mines and other recorded blasts share these page-only effects. The
+// existing blast record supplies the entire clock: no new simulation state.
+function blastBlock(ctx,w,x,y,width,height) {
+  var left=Math.max(0,Math.round(x*2)/2),top=Math.max(0,Math.round(y*2)/2)
+  var right=Math.min(w.k.COLS*w.k.CELL,Math.round((x+width)*2)/2)
+  var bottom=Math.min(w.k.ROWS*w.k.CELL,Math.round((y+height)*2)/2)
+  if (right>left && bottom>top) ctx.fillRect(left,top,right-left,bottom-top)
+}
+function blastSolid(w,x,y) {
+  var col=Math.floor(x/w.k.CELL),row=Math.floor(y/w.k.CELL)
+  return col>=0 && col<w.k.COLS && row>=0 && row<w.k.ROWS && w.terrain[row*w.k.COLS+col]!==w.k.EMPTY
+}
+function drawPageBlast(ctx,w,pal,b) {
+  var age=w.ticks-b.t
+  if (age<0 || age>26) return
+  ctx.save()
+  drawBlastScorch(ctx,w,b,w.reducedMotion?12:age)
+  if (w.reducedMotion) drawBlastRubble(ctx,w,pal,b,26,true)
+  else {
+    drawBlastSmokeRing(ctx,w,pal,b,age)
+    drawChunkyFireball(ctx,w,b,age)
+    drawBlastRubble(ctx,w,pal,b,age,false)
+  }
+  ctx.restore()
+}
+function drawBlastScorch(ctx,w,b,age) {
+  var C=w.k.CELL,R=b.r*C
+  ctx.fillStyle="#27222a";ctx.globalAlpha=0.42*(1-age/27)
+  for (var i=0;i<20;i++) {
+    var angle=i*Math.PI/10
+    for (var depth=0;depth<4;depth++) {
+      var r=R-2+depth*2,x=b.x*C+Math.cos(angle)*r,y=b.y*C+Math.sin(angle)*r
+      if (!blastSolid(w,x,y)) continue
+      blastBlock(ctx,w,x-1,y,3,1.5)
+      break
+    }
+  }
+}
+function drawChunkyFireball(ctx,w,b,age) {
+  if (age>=12) return
+  var R=b.r*w.k.CELL,grow=Math.min(1,(age+1)/4),fade=Math.min(1,(12-age)/5)
+  var layers=[[BLAST_RIM,1],[BLAST_MID,0.72],[BLAST_CORE,0.36]]
+  for (var l=0;l<3;l++) {
+    ctx.fillStyle=layers[l][0];ctx.globalAlpha=fade*(l===2?0.75:0.9)
+    var radius=Math.max(2,Math.round(R*grow*layers[l][1]))
+    drawBlastChunks(ctx,w,b.x*w.k.CELL,b.y*w.k.CELL-age*0.25,radius,b.t+l*3+Math.floor(age/2))
+  }
+  // A small warm pulse, never a board-wide white flash.
+  if (age<3) {
+    ctx.fillStyle=BLAST_CORE;ctx.globalAlpha=0.16*(1-age/3)
+    drawBlastChunks(ctx,w,b.x*w.k.CELL,b.y*w.k.CELL,Math.max(2,Math.round(R*0.5)),0)
+  }
+}
+function drawBlastChunks(ctx,w,cx,cy,radius,seed) {
+  for (var row=-radius;row<=radius;row+=2) {
+    var half=Math.round(Math.sqrt(Math.max(0,radius*radius-row*row))/2)*2
+    half+=Math.round(Math.sin(row*1.7+seed))*2
+    if (half>0) blastBlock(ctx,w,cx-half,cy+row,half*2,2)
+  }
+}
+function drawBlastSmokeRing(ctx,w,pal,b,age) {
+  if (age<3 || age>23) return
+  var C=w.k.CELL,spread=b.r*C*0.55+age*0.85
+  ctx.globalAlpha=0.55*(1-(age-3)/24)
+  for (var i=0;i<18;i++) {
+    var angle=i*Math.PI/9,x=b.x*C+Math.cos(angle)*spread,y=b.y*C+Math.sin(angle)*spread*0.55-age*0.3
+    var size=2+i%3
+    ctx.fillStyle=i%2?pal.dust:pal.rigDark
+    blastBlock(ctx,w,x-size/2,y-size/2,size,size)
+    blastBlock(ctx,w,x-size/2-0.5,y-size/2+1,size+1,size-1)
+  }
+}
+function blastRubblePose(w,b,index,age) {
+  var C=w.k.CELL,cx=b.x*C+(index%3-1)*b.r*C*0.2,cy=b.y*C-2
+  var vx=(index%7-3)*0.48,vy=-1.4-index%3*0.35,x=cx,y=cy,settled=false
+  for (var tick=1;tick<=Math.min(26,age);tick++) {
+    var nextX=cx+vx*tick,nextY=cy+vy*tick+0.12*tick*tick
+    x=nextX
+    if (tick>3 && nextY>=y && blastSolid(w,nextX,nextY+2)) {
+      y=Math.floor((nextY+2)/C)*C-2;settled=true;break
+    }
+    y=nextY
+  }
+  return{x:Math.round(x*2)/2,y:Math.round(y*2)/2,settled:settled}
+}
+function drawBlastRubble(ctx,w,pal,b,age,quiet) {
+  ctx.globalAlpha=quiet?0.55:Math.min(0.9,(27-age)/7)
+  for (var i=0;i<12;i++) {
+    var p=blastRubblePose(w,b,i,age),width=i%3?2:3
+    ctx.fillStyle=i%2?pal.dirt:pal.rock
+    blastBlock(ctx,w,p.x,p.y,width,2)
+    ctx.fillStyle=pal.dust
+    blastBlock(ctx,w,p.x,p.y,width,0.5)
+  }
+}
+function drawCountdownSpark(ctx,w,pal,ag,ox,oy,dir,y) {
+  var phase=w.reducedMotion?0:Math.floor((150-ag.fuse)/3)%4
+  ctx.fillStyle=pal.fireHot
+  blitFine(ctx,ox,oy,dir,3.5,y-0.5,1.5,0.5)
+  blitFine(ctx,ox,oy,dir,4,y-1,0.5,1.5)
+  ctx.fillStyle=pal.exitLight
+  blitFine(ctx,ox,oy,dir,4,y-0.5,0.5,0.5)
+  if (w.reducedMotion) return
+  ctx.fillStyle=pal.fireHot
+  blitFine(ctx,ox,oy,dir,2.5+phase*0.5,y-1-phase*0.5,0.5,0.5)
+  if (ag.fuse<30) {
+    blitFine(ctx,ox,oy,dir,5.5,y-1-(phase%2),0.5,0.5)
+    blitFine(ctx,ox,oy,dir,2,y-2+(phase%2)*0.5,0.5,0.5)
+  }
 }
