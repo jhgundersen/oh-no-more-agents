@@ -61,8 +61,11 @@ test("the board darkens as the clock runs, and the agents are drawn over it", ()
     const early = brightness(frame(D.DUSK_FROM)), late = brightness(frame(D.DUSK_FROM + D.DUSK_SPAN))
     assert.ok(late < early * 0.95, `level ${level}: ${late.toFixed(1)} against ${early.toFixed(1)}`)
     const calls = marks(ctx => { w.ticks = D.DUSK_FROM + D.DUSK_SPAN; D.drawDusk(ctx, w, pal) })
-    assert.ok(calls.some(c => c[0] === 0 && c[1] === 0 && c[2] === 400 && c[3] === 248 && c[4] === D.DUSK_NIGHT), "a full-board night wash")
-    assert.ok(brightness(frame(D.DUSK_FROM + D.DUSK_SPAN, { dusk: false })) > late, "dusk: false leaves the light alone")
+    const night = D.DUSK_OUTDOOR[w.biome] ? D.DUSK_EVENING : D.DUSK_NIGHT
+    assert.ok(calls.some(c => c[0] === 0 && c[1] === 0 && c[2] === 400 && c[3] === 248 && c[4] === night), "a full-board night wash")
+    // Outdoors the night is a blue that can be no darker than the board, so
+    // compare pictures here, not brightness.
+    assert.notEqual(hash(frame(D.DUSK_FROM + D.DUSK_SPAN, { dusk: false }).buf), hash(frame(D.DUSK_FROM + D.DUSK_SPAN).buf), "dusk: false leaves the light alone")
   }
 })
 
@@ -140,4 +143,28 @@ test("on the Rooftops the city's windows come on one by one, only where the towe
   assert.equal(D.duskCityWindows(w), windows, "cached")
   w.ticks = D.DUSK_FROM + D.DUSK_SPAN
   assert.equal(marks(ctx => D.drawDuskCity(ctx, w, 1)).length, windows.length)
+})
+
+test("outdoors the evening passes through a sunset: a warm wash and lit platform tops around tick 870", () => {
+  assert.equal(D.duskSunset(0), 0); assert.equal(D.duskSunset(0.45), 1); assert.equal(D.duskSunset(0.8), 0)
+  const { w, pal } = world(11), at = ticks => { w.ticks = ticks; return marks(ctx => D.drawDusk(ctx, w, pal)) }
+  assert.equal(w.biome, "Desert")
+  const rims = D.duskRimRuns(w)
+  assert.ok(rims.length > 10)
+  for (const r of rims) { assert.notEqual(w.terrain[r.y * 100 + r.x], 0); assert.equal(w.terrain[(r.y - 1) * 100 + r.x], 0) }
+  const sunset = at(870), night = at(1640)
+  assert.ok(sunset.some(c => c[4] === D.DUSK_SUNSET), "warm wash")
+  assert.ok(sunset.filter(c => c[4] === D.DUSK_RIM).length >= rims.length, "a rim on every platform top")
+  assert.ok(!night.some(c => c[4] === D.DUSK_RIM || c[4] === D.DUSK_SUNSET), "gone by night")
+  const indoor = world(14); indoor.w.ticks = 870
+  assert.ok(!marks(ctx => D.drawDusk(ctx, indoor.w, indoor.pal)).some(c => c[4] === D.DUSK_RIM), "no sunset indoors")
+})
+
+test("agents keep their contrast at night: a stepped glow behind each one still out", () => {
+  const { w, pal } = world(5); w.ticks = 1640
+  const out = w.agents.filter(a => !a.gone && a.state !== "saved").length
+  const glow = marks(ctx => D.drawDusk(ctx, w, pal)).filter(c => c[4] === D.DUSK_BACKING)
+  assert.ok(out > 0); assert.equal(glow.length, out * 10, "two five-course glows each")
+  w.ticks = 200
+  assert.equal(marks(ctx => D.drawDusk(ctx, w, pal)).filter(c => c[4] === D.DUSK_BACKING).length, 0, "none in daylight")
 })

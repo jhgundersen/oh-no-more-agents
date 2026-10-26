@@ -10569,3 +10569,36 @@ counter writes refused).
 **Next:** agent animation polish (walk cycle, secondary motion, idle
 fidgets), then arrivals as a small reward. Review `codex/living-roofs-gears`
 when it lands.
+
+## 403 — 2026-10-26 · A sunset outdoors, and agents that stay out of the dark
+
+The supervisor's notes on 401: Desert and Jungle at tick 1640 looked greyed and
+muddy, a dim filter rather than an evening. At night in the Jungle the agents
+started to sink into the background.
+
+**Sunset** (`DUSK_OUTDOOR`: Ruins, Frost, Jungle, Desert, Building Site,
+Rooftops, Harbour, The Cloud). `duskSunset(d)` peaks at d = 0.45 (tick ~870)
+and is zero before 0.15 and after 0.75 (tick ~700 to ~1100 is its heart).
+While it lasts:
+- a warm wash (`DUSK_SUNSET`, up to 0.15);
+- a rim of low sun on every platform top. `duskRimRuns` gives the solid
+  runs with air above, cached until the terrain changes: a 0.5 px line at
+  0.85 and a 1 px line under it at 0.35;
+- the horizon afterglow at 1.8×, capped at 0.6.
+
+Then the night outdoors is blue rather than dim: `DUSK_EVENING #14206a` at
+`0.30 · d^1.7`. Indoors is unchanged.
+
+**Contrast:** `drawDuskBacking` puts two stepped octagonal glows
+(`drawLightSteps`, `DUSK_BACKING #c9d2ff`) behind each agent still out,
+taller for a floater under its umbrella, at 0.07 × d each. They are drawn
+under the colony, so the agents themselves are untouched. A plain rectangle
+read as a selection box; the stepped shape reads as light.
+
+**Tests:** two new (sunset parts on and off, a rim on every top, none indoors;
+the glow per agent, none in daylight). One assertion compared brightness with
+and without the dusk. Outdoors at night the blue can be brighter than a dark
+theme's board, so it now compares the frames themselves. `npm run fps -- 5 11
+17 --from-tick 800`: 60 / p5 60, cpu 8–9%.
+
+**Next:** agent animation polish.

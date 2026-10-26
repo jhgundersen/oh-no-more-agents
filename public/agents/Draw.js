@@ -3056,6 +3056,9 @@ function drawActors(ctx, w, pal, opts) {
 var DUSK_FROM = 240, DUSK_SPAN = 1400, DUSK_STEPS = 16, DUSK_LIGHTS = 5   // steps
 var DUSK_NIGHT = "#0a1030", DUSK_SUN = "#f0a050", DUSK_BLUE = "#4a6cc0", DUSK_WASH = 0.34
 var DUSK_GLOW = ["#f29a4a", "#e07a56", "#c8607a", "#8a5a8e", "#5a4a8a"]
+var DUSK_SUNSET = "#ff6a3c", DUSK_RIM = "#ffb867", DUSK_EVENING = "#14206a", DUSK_BACKING = "#c9d2ff"
+var DUSK_OUTDOOR = { "Ruins": true, "Frost": true, "Jungle": true, "Desert": true, "Building Site": true,
+  "Rooftops": true, "Harbour": true, "The Cloud": true }
 var DUSK_FLICKER = [1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1]
 // How far into the dusk a tick is, 0 (afternoon) to 1 (night), in sixteenths.
 // The one clock for everything that should follow the light: lamps, windows,
@@ -3072,27 +3075,90 @@ function drawDusk(ctx, w, pal) {
   // Gold sun to start, giving way to the blue of the evening.
   ctx.fillStyle = DUSK_SUN; ctx.globalAlpha = 0.05 * Math.max(0, 1 - d * 3)
   if (ctx.globalAlpha > 0) ctx.fillRect(0, 0, W, H)
+  var outdoor = DUSK_OUTDOOR[w.biome], sun = duskSunset(d)
+  // Outdoors the evening passes through a sunset before the blue: a warm
+  // wash and a rim of low sun along every platform top (duskSunset peaks
+  // around tick 870, between 700 and 1100).
+  if (outdoor && sun > 0) {
+    ctx.fillStyle = DUSK_SUNSET; ctx.globalAlpha = 0.15 * sun
+    ctx.fillRect(0, 0, W, H)
+  }
   // Slow to start and deep by the end: a third of the way in it is barely
   // there, and by full dusk an indoor level has plainly gone dark outside.
-  ctx.fillStyle = DUSK_NIGHT; ctx.globalAlpha = DUSK_WASH * Math.pow(d, 1.4)
+  // Outdoors the night is a deeper blue rather than a dimmer grey.
+  ctx.fillStyle = outdoor ? DUSK_EVENING : DUSK_NIGHT
+  ctx.globalAlpha = outdoor ? 0.30 * Math.pow(d, 1.7) : DUSK_WASH * Math.pow(d, 1.4)
   if (d > 0) ctx.fillRect(0, 0, W, H)
-  drawDuskGlow(ctx, w, d, W)
+  if (outdoor && sun > 0) drawDuskRims(ctx, w, sun)
+  drawDuskGlow(ctx, w, d, W, outdoor ? 1.8 : 1)
   drawDuskCity(ctx, w, d)
   drawDuskPanes(ctx, w, d)
+  drawDuskBacking(ctx, w, d)
   ctx.restore()
   drawDuskLamps(ctx, w, pal, d)
   drawDuskExitLight(ctx, w, pal, d)
 }
+// The sunset's strength for a moment of the dusk: none before 0.15, full at
+// 0.45, gone again by 0.75 when the blue takes over.
+function duskSunset(d) { return Math.max(0, 1 - Math.abs(d - 0.45) / 0.3) }
+// Low sun catching the top edge of every platform: runs of solid cells with
+// air above, cached until the terrain changes.
+var DUSK_RIMS = new WeakMap()
+function duskRimRuns(w) {
+  var old = DUSK_RIMS.get(w)
+  if (old && old.version === w.terrainVersion && old.terrain === w.terrain) return old.runs
+  var k = w.k, runs = []
+  for (var y = k.SKY; y < k.ROWS; y++) {
+    var start = -1
+    for (var x = 0; x <= k.COLS; x++) {
+      var top = x < k.COLS && w.terrain[y * k.COLS + x] !== k.EMPTY && w.terrain[(y - 1) * k.COLS + x] === k.EMPTY
+      if (top && start < 0) start = x
+      if (!top && start >= 0) { runs.push({ x: start, y: y, length: x - start }); start = -1 }
+    }
+  }
+  DUSK_RIMS.set(w, { version: w.terrainVersion, terrain: w.terrain, runs: runs })
+  return runs
+}
+function drawDuskRims(ctx, w, sun) {
+  var runs = duskRimRuns(w), C = w.k.CELL
+  ctx.fillStyle = DUSK_RIM
+  for (var i = 0; i < runs.length; i++) {
+    var r = runs[i]
+    ctx.globalAlpha = 0.85 * sun
+    ctx.fillRect(r.x * C, r.y * C, r.length * C, 0.5)
+    ctx.globalAlpha = 0.35 * sun
+    ctx.fillRect(r.x * C, r.y * C + 0.5, r.length * C, 1)
+  }
+}
+// Whoever is still out keeps their contrast as the light goes: a faint
+// stepped glow of evening light behind each agent (and an open umbrella),
+// drawn under the colony, so dark suits do not sink into a dark board.
+function drawDuskBacking(ctx, w, d) {
+  if (d <= 0) return
+  var C = w.k.CELL
+  ctx.fillStyle = DUSK_BACKING
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state === "saved") continue
+    var x = Math.round(ag.x * C * 2) / 2, foot = Math.round((ag.y + 1) * C * 2) / 2
+    var canopy = ag.state === "fall" && ag.floater ? 4.5 : 0
+    ctx.globalAlpha = 0.07 * d
+    drawLightSteps(ctx, x, foot - 9 - canopy, 7, 10 + canopy)
+    ctx.globalAlpha = 0.07 * d
+    drawLightSteps(ctx, x, foot - 9 - canopy, 4.5, 8 + canopy)
+  }
+}
 // The afterglow: three stepped courses along the bottom of the sky band,
-// strongest as the sun goes down, with a dithered fringe on top.
-function drawDuskGlow(ctx, w, d, W) {
-  var glow = d < 0.4 ? 0.5 + d * 1.25 : 1 - (d - 0.4) * 1.1
+// strongest as the sun goes down, with a dithered fringe on top. Outdoors,
+// where the sky is the point, it is stronger.
+function drawDuskGlow(ctx, w, d, W, gain) {
+  var glow = (d < 0.4 ? 0.5 + d * 1.25 : 1 - (d - 0.4) * 1.1) * gain
   var colour = DUSK_GLOW[Math.min(DUSK_GLOW.length - 1, Math.floor(d * DUSK_GLOW.length))]
   var horizon = w.k.SKY * w.k.CELL, courses = [[2, 0.30], [3, 0.18], [4, 0.10]], y = horizon
   ctx.fillStyle = colour
   for (var i = 0; i < courses.length; i++) {
     y -= courses[i][0]
-    ctx.globalAlpha = courses[i][1] * glow
+    ctx.globalAlpha = Math.min(0.6, courses[i][1] * glow)
     ctx.fillRect(0, y, W, courses[i][0])
   }
   ctx.globalAlpha = 0.10 * glow
