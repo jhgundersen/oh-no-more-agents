@@ -17676,7 +17676,7 @@ function drawFrostAurora(ctx, w) {
   var C = w.k.CELL, top = w.k.SKY * C, wide = w.k.COLS * C
   // Mirror backFrost's deterministic ridge, so the live ribbon stays BEHIND
   // every original peak as well as the terrain. This is a local stream only.
-  var ridge = 30, r = backRng(w), t = w.ticks
+  var ridge = 30, r = backRng(w), t = quietBackdropTick(w)
   for (var x = 0; x < wide; x += 3) {
     ridge = Math.max(10, Math.min(70, ridge + Math.floor(r() * 13) - 6))
     var horizon = top + 70 - ridge
@@ -17692,7 +17692,7 @@ function drawFrostAurora(ctx, w) {
 }
 
 function drawFrostSnow(ctx, w) {
-  var wide = w.k.COLS * w.k.CELL, tall = w.k.ROWS * w.k.CELL, t = w.ticks
+  var wide = w.k.COLS * w.k.CELL, tall = w.k.ROWS * w.k.CELL, t = quietBackdropTick(w)
   // The original motes still draw. These brighter near flakes give them depth;
   // an occasional gust bends the fall, without a simulation wind or clock.
   var gust = Math.max(0, Math.sin(t / 95 + w.level) - 0.65) * 12
@@ -17713,7 +17713,7 @@ function drawFrostSnow(ctx, w) {
 function drawFrostBreath(ctx, w) {
   var C = w.k.CELL
   for (var i = 0; i < w.agents.length; i++) {
-    var ag = w.agents[i], age = (w.ticks + ag.id * 17) % 96
+    var ag = w.agents[i], age = (quietBackdropTick(w) + ag.id * 17) % 96
     if (ag.gone || ag.state !== "walk" || age >= 24) continue
     var x = Math.round(ag.x * C) + ag.dir * (5 + Math.floor(age / 5) * 0.5)
     var y = Math.round((ag.y + 1) * C) - SPRITE_PX + 6 - Math.floor(age / 8) * 0.5
@@ -17881,7 +17881,7 @@ function drawDesertSandCap(ctx, w, x, y) {
 function drawDesertHeat(ctx, w) {
   if (!desertPage(w)) return
   ctx.save()
-  var C = w.k.CELL, wide = w.k.COLS * C, t = w.ticks
+  var C = w.k.CELL, wide = w.k.COLS * C, t = quietBackdropTick(w)
   // Low, broken mirage bands above long floors; a visual ripple, never a
   // transform of the terrain or actors. Existing wind and Model Drift remain
   // independent and draw afterwards. Every rectangle clips to current air.
@@ -18101,7 +18101,7 @@ function drawRuinsTorches(ctx, w, pal) {
 }
 
 function drawRuinsFlame(ctx, w, x, y, seed) {
-  var flick = (Math.floor(w.ticks / 5) + seed) % 4
+  var flick = (Math.floor(quietBackdropTick(w) / 5) + seed) % 4
   ctx.fillStyle = RUINS_FLAME
   ctx.globalAlpha = 0.035 + flick * 0.008
   for (var row = -9; row < 8; row++) {
@@ -22470,6 +22470,7 @@ function drawCloudDrafts(ctx,w) {
 // Small distant motions are painted on the transparent actor layer because
 // the terrain/backdrop is cached. Air and fixture masks keep them behind play.
 function drawBackdropLife(ctx, w) {
+  drawStoneWindLife(ctx, w)
   drawRackFans(ctx, w)
   drawPortGulls(ctx, w)
 }
@@ -22682,4 +22683,73 @@ function drawTunnelWindows(ctx, w, scene, t, alpha) {
       drawCloudDraftRect(ctx,scene,x+2,y-1,7,1)
     }
   }
+}
+
+
+// Distant foliage and weather use the existing air/fixture mask. The cached
+// fitting sites are visual only and are discarded when excavation changes air.
+var QUIET_BACKDROP_CACHE = new WeakMap()
+function quietBackdropTick(w) { return w.res === 2 && w.reducedMotion ? 0 : w.ticks }
+function quietBackdropLayout(w) {
+  var air = skyStackLayout(w), old = QUIET_BACKDROP_CACHE.get(w)
+  if (old && old.air === air) return old
+  var scene = {air:air,mask:air.mask,width:air.width,height:air.height,sites:[]}, boxes = abyssReserved(w)
+  for (var row = 0; row < w.corridors.length; row++) {
+    var site = stationPick(w,row,"backdrop",28,14,17,boxes)
+    if (site) scene.sites.push(site)
+  }
+  QUIET_BACKDROP_CACHE.set(w,scene)
+  return scene
+}
+function drawStoneWindLife(ctx, w) {
+  if (w.res !== 2 || (w.biome !== "Ruins" && w.biome !== "Frost" && w.biome !== "Desert")) return
+  ctx.save()
+  var scene = quietBackdropLayout(w), t = quietBackdropTick(w), alpha = ctx.globalAlpha
+  for (var i = 0; i < scene.sites.length; i++) {
+    var b = scene.sites[i]
+    if (w.biome === "Ruins") drawTempleIvy(ctx,scene,b,t,alpha)
+    if (w.biome === "Frost") drawRidgePlumes(ctx,scene,b,t,alpha)
+    if (w.biome === "Desert") drawOasisPalm(ctx,scene,b,t,alpha)
+  }
+  ctx.restore()
+}
+function drawTempleIvy(ctx, scene, b, t, alpha) {
+  ctx.globalAlpha = alpha*0.65; ctx.fillStyle = "#6e7960"
+  for (var stem = 0; stem < 2; stem++) for (var d = 0; d < 13; d++) {
+    var sway = Math.round(Math.sin(t/52+b.seed+stem)*d/8*2)/2
+    var x = b.x+8+stem*12+sway, y = b.y+d
+    drawCloudDraftRect(ctx,scene,x,y,0.5,1)
+    if (d%3 === 0) drawCloudDraftRect(ctx,scene,x+(d%2 ? -2 : 0.5),y,2,1.5)
+  }
+  ctx.fillStyle = "#bcae8d"; ctx.globalAlpha = alpha*0.3
+  for (var mote = 0; mote < 4; mote++) {
+    var age = (t/3+mote*17+b.seed)%60
+    drawCloudDraftRect(ctx,scene,b.x+3+mote*6+Math.floor(age/12)/2,b.y+2+Math.floor(age/5)/2,1,0.5)
+  }
+}
+function drawRidgePlumes(ctx, scene, b, t, alpha) {
+  ctx.fillStyle = "#b7cbd6"
+  for (var tail = 0; tail < 3; tail++) {
+    var age = (t/2+b.seed+tail*25)%90
+    var x = b.x+Math.floor(age/5)/2, y = b.y+11-tail*2-Math.floor(age/25)/2
+    var width = 5+Math.floor(age/10), fade = Math.min(1,age/15,(90-age)/20)
+    ctx.globalAlpha = alpha*0.4*fade
+    drawCloudDraftRect(ctx,scene,x,y,width,1)
+    ctx.globalAlpha = alpha*0.2*fade
+    drawCloudDraftRect(ctx,scene,x+3,y-1,width-3,0.5)
+  }
+}
+function drawOasisPalm(ctx, scene, b, t, alpha) {
+  var sway = Math.round(Math.sin(t/60+b.seed)*3*2)/2
+  ctx.fillStyle = "#665f4c"; ctx.globalAlpha = alpha*0.6
+  for (var d = 0; d < 13; d++)
+    drawCloudDraftRect(ctx,scene,b.x+13+Math.round(sway*d/13*2)/2,b.y+13-d,1,1)
+  ctx.fillStyle = "#758064"
+  for (var side = -1; side <= 1; side += 2) for (var leaf = 0; leaf < 8; leaf++) {
+    var y = b.y+1+Math.floor(leaf*leaf/18), x = b.x+13+sway+side*leaf
+    drawCloudDraftRect(ctx,scene,x,y,2,1)
+  }
+  ctx.fillStyle = "#d2ad77"; ctx.globalAlpha = alpha*0.22
+  var drift = Math.floor((t+b.seed)%180/8)/2
+  drawCloudDraftRect(ctx,scene,b.x+drift,b.y+14,13,0.5)
 }
