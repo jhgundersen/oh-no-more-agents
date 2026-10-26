@@ -10794,3 +10794,25 @@ No push or deployment.
 
 **Next:** hand off, then the final ambient backdrop group from fresh main:
 Skyscraper, Mail Room and Building Site (3 remaining).
+
+## 409 — 2026-10-26 · Logged off: getting home is a small reward
+
+An arrival had the wave and the fade into the door, but nothing that said "and
+that's them done for the day". `drawArrivals` (after the colony, page only)
+adds two things, both clocked by Sim's `ag.fade` (0 to 14, then gone):
+- **The door brightens** for the first 10 ticks of each arrival: a light pool
+  and a wash over the door face, falling off with the fade.
+- **A status badge**, a chat app's dot on the corner of the head. It is green
+  as the agent arrives and turns grey ("offline") from fade 6, fading out
+  with the agent. It has a dark edge so it reads on a bright door and on a
+  dark board alike.
+
+First try: a hollow "away" ring rising over the head. On the bright door it
+vanished, and in amber it read as a halo, which is the wrong thing to say
+about somebody who just got home. Hence the badge on the corner.
+
+**Tests:** `test/arrivals.test.js`: green then grey; the door only for the
+first ticks; page only; read-only and RNG-free.
+
+**Next:** deploy this batch (dusk outdoors, weather, arrivals, four Codex art
+merges). Then the level-to-level transition.

@@ -3032,6 +3032,7 @@ function drawActors(ctx, w, pal, opts) {
   drawActorFixtures(ctx, w, pal)
   drawActorColony(ctx, w, pal, opts)
   drawWeatherTouch(ctx, w, pal)
+  drawArrivals(ctx, w, pal)
   // Last, over everybody: whoever is standing in a fireball is behind it.
   if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
   drawOutage(ctx, w, pal)
@@ -3351,6 +3352,46 @@ function drawWeatherMarks(ctx, w, x, y, marks, alpha) {
     var m = marks[i]
     moteFineRect(ctx, w, Math.round((x + m[0]) * 2) / 2, Math.round((y + m[1]) * 2) / 2, m[2], m[3])
   }
+}
+
+// ---------------------------------------------------------------------------
+// Logged off: getting home is a small reward (page resolution, draw only)
+// ---------------------------------------------------------------------------
+// Each arrival brightens the door for a moment, and the agent's status badge,
+// a chat app's little green dot on the corner of its head, goes grey: logged
+// off. Sim's ag.fade (0..14, then gone) is the clock, so nothing here is
+// stored or random. (A ring above the head read as a halo, which is the wrong
+// thing to say about somebody who just got home.)
+var ARRIVAL_ONLINE = "#57d36b", ARRIVAL_OFFLINE = "#8a90a0", ARRIVAL_EDGE = "#1a1d26", ARRIVAL_FLASH = 10
+function drawArrivals(ctx, w, pal) {
+  if (w.res !== 2) return
+  var flash = 0
+  ctx.save()
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state !== "saved" || !(ag.fade >= 0)) continue
+    flash = Math.max(flash, 1 - ag.fade / ARRIVAL_FLASH)
+    drawStatusBadge(ctx, w, ag)
+  }
+  ctx.restore()
+  if (flash > 0) drawArrivalFlash(ctx, w, pal, flash)
+}
+function drawStatusBadge(ctx, w, ag) {
+  var x = pageAgentX(w, ag) + pageHomeStep(w, ag) + 6, y = pageAgentY(w, ag) - agentHomeLift(w, ag) + 2.5
+  ctx.globalAlpha = Math.max(0, 1 - ag.fade / 15)
+  ctx.fillStyle = ARRIVAL_EDGE
+  ctx.fillRect(x - 0.5, y - 0.5, 2.5, 2.5)
+  ctx.fillStyle = ag.fade < 6 ? ARRIVAL_ONLINE : ARRIVAL_OFFLINE
+  ctx.fillRect(x, y, 1.5, 1.5)
+}
+// The door lights up as someone comes through it.
+function drawArrivalFlash(ctx, w, pal, flash) {
+  var C = w.k.CELL, e = w.exit
+  drawLightPool(ctx, w, pal.exitGlow, (e.x + e.w / 2) * C, (e.y + e.h - 1) * C, 20, 14, 0.16 * flash)
+  ctx.save()
+  ctx.globalAlpha = 0.22 * flash; ctx.fillStyle = pal.exitLight
+  ctx.fillRect(e.x * C + 1, e.y * C + 1, e.w * C - 2, e.h * C - 2)
+  ctx.restore()
 }
 
 // The instant replay (the page re-simulates the level's best moment; see
