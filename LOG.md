@@ -10684,3 +10684,32 @@ No push or deploy.
 **Next:** developer handoff, then Foundry/Factory/Spaceship from fresh main.
 Remaining ambient backdrop pass (9): Cavern, Foundry, Ice Cave, Spaceship,
 Factory, Skyscraper, Trench, Mail Room and Building Site.
+
+## 406 — 2026-10-26 · Weather that touches the colony
+
+The rain on the Rooftops and in the Cloud, and the snow in Frost, fell straight
+through everybody. `drawWeatherTouch` (Draw.js, after the colony, page
+resolution only) makes it land:
+- **Rain on umbrellas:** four strike points across an open canopy, each
+  throwing a four-frame crown of droplets (`RAIN_SPLASH`) on its own phase
+  (id and slot), and now and then a drop gathering at a tip and falling clear.
+  The canopy's own sway is followed.
+- **Rain on hats:** with no umbrella overhead, a drop taps the crown every 23
+  ticks or so.
+- **Snow on hats:** it settles with the steps an agent has walked in it
+  (`ag.anim`): half a pixel from 220 steps, a full pixel from 440, never more,
+  plus a line along the brim behind. Not while climbing or under a canopy.
+- The crown rides half the walking bob (`-0.5 + gait drop / 2`). That was
+  measured from rendered pixels; the first cap floated half a pixel above the
+  hat on the high step.
+
+All marks go through `moteFineRect`, so nothing is drawn inside terrain. A
+floater under a ceiling gets its splashes clipped, which is right: no rain
+reaches it there. Reduced motion holds one pose.
+
+**Tests:** `test/weather-touch.test.js`: only the three biomes and only res 2;
+splashes on most ticks, all in air and on this umbrella; the snow depth, its
+cap and its bob; read-only, RNG-free and deterministic. `npm run fps -- 17 20
+3`: 60 / p5 60.
+
+**Next:** walk-cycle polish, then arrivals as a small reward.

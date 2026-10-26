@@ -3031,6 +3031,7 @@ function drawActors(ctx, w, pal, opts) {
 
   drawActorFixtures(ctx, w, pal)
   drawActorColony(ctx, w, pal, opts)
+  drawWeatherTouch(ctx, w, pal)
   // Last, over everybody: whoever is standing in a fireball is behind it.
   if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
   drawOutage(ctx, w, pal)
@@ -3281,6 +3282,75 @@ function drawDuskExitLight(ctx, w, pal, d) {
   if (!w.reducedMotion && age >= 0 && age < DUSK_FLICKER.length * 2 && !DUSK_FLICKER[age >> 1]) return
   var C = w.k.CELL, e = w.exit
   drawLightPool(ctx, w, pal.exitGlow, (e.x + e.w / 2) * C, (e.y + e.h - 1) * C, 27, 17, 0.06 + 0.08 * Math.min(1, (d * DUSK_STEPS - DUSK_LIGHTS) / 5))
+}
+
+// ---------------------------------------------------------------------------
+// Weather that touches the colony (page resolution, draw only)
+// ---------------------------------------------------------------------------
+// The rain on the Rooftops and in the Cloud, and the snow in Frost, fell
+// straight through everybody. Now rain bursts off an open umbrella in little
+// crowns and runs off its tips, taps on hats, and snow settles on hats the
+// longer an agent has been out walking in it (ag.anim counts its steps).
+// Everything keys off ticks and ids: no random draws, nothing stored.
+var WEATHER_RAIN = { "Rooftops": true, "The Cloud": true }
+var WEATHER_SNOW = { "Frost": true }
+var RAIN_SPLASH = [[[0, 0, 0.5, 0.5]], [[-1, -0.5, 0.5, 0.5], [1, -0.5, 0.5, 0.5]],
+  [[-1.5, -1, 0.5, 0.5], [1.5, -1, 0.5, 0.5]], [[-2, -0.5, 0.5, 0.5], [2, -0.5, 0.5, 0.5]]]
+var RAIN_CANOPY = [-4.5, -1.5, 1.5, 4.5]  // where drops hit the canopy, from its centre
+var RAIN_COLOUR = "#d4e0f6", SNOW_CAP = "#eef4fa", SNOW_EDGE = "#c4d2de"
+function drawWeatherTouch(ctx, w, pal) {
+  if (w.res !== 2 || (!WEATHER_RAIN[w.biome] && !WEATHER_SNOW[w.biome])) return
+  var t = w.reducedMotion ? 0 : w.ticks
+  ctx.save()
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || ag.state === "saved" || !pageMotionAgent(w, ag)) continue
+    var x = pageAgentX(w, ag), y = pageAgentY(w, ag)
+    if (WEATHER_RAIN[w.biome]) drawRainTouch(ctx, w, ag, x, y, t)
+    else drawSnowCap(ctx, w, ag, x, y)
+  }
+  ctx.restore()
+}
+function weatherCanopy(w, ag) { return ag.state === "fall" && ag.floater && ag.fall > 2 }
+function drawRainTouch(ctx, w, ag, x, y, t) {
+  ctx.fillStyle = RAIN_COLOUR
+  if (weatherCanopy(w, ag)) {
+    var sway = w.reducedMotion ? 0 : Math.round(Math.sin(w.ticks * 0.09 + ag.id * 1.7) * 2) / 2
+    var cx = x + sway + 4.5, top = y - 11
+    for (var s = 0; s < RAIN_CANOPY.length; s++) {
+      var dx = RAIN_CANOPY[s], age = (t + ag.id * 7 + s * 3) % 7
+      if (age >= RAIN_SPLASH.length) continue
+      var surface = top + Math.round((1 - Math.sqrt(Math.max(0, 1 - dx * dx / 42))) * 4 * 2) / 2
+      drawWeatherMarks(ctx, w, cx + dx, surface - 0.5, RAIN_SPLASH[age], 0.95 - age * 0.15)
+    }
+    // Run-off: a drop gathers at a tip and falls clear every so often.
+    var drip = (t + ag.id * 11) % 14, side = (ag.id % 2) ? 1 : -1
+    if (drip < 6) drawWeatherMarks(ctx, w, cx + side * 6.5 - (side > 0 ? 0.5 : 0), y - 5.5 + drip, [[0, 0, 0.5, 1]], 0.7)
+    return
+  }
+  // No umbrella over them: now and then a drop taps the hat brim.
+  var tap = (t + ag.id * 13) % 23
+  var crown = -0.5 + (ag.state === "walk" ? pageGait(ag)[1] / 2 : 0)
+  if (tap < 3) drawWeatherMarks(ctx, w, x + 4, y + crown - 0.5, RAIN_SPLASH[tap + 1], 0.7)
+}
+function drawSnowCap(ctx, w, ag, x, y) {
+  if (weatherCanopy(w, ag) || ag.state === "climb") return
+  var depth = Math.min(2, Math.floor((ag.anim || 0) / 220)) * 0.5
+  if (depth <= 0) return
+  // On the crown, which rides half the walking bob, and a line of it along
+  // the brim behind (mirrored by dir).
+  var crown = -0.5 + (ag.state === "walk" ? pageGait(ag)[1] / 2 : 0)
+  ctx.fillStyle = SNOW_CAP; ctx.globalAlpha = 0.9
+  blitFine(ctx, x, y, ag.dir, 2, crown - depth, 4, depth)
+  ctx.fillStyle = SNOW_EDGE
+  blitFine(ctx, x, y, ag.dir, 0.5, crown, 1.5, 0.5)
+}
+function drawWeatherMarks(ctx, w, x, y, marks, alpha) {
+  ctx.globalAlpha = alpha
+  for (var i = 0; i < marks.length; i++) {
+    var m = marks[i]
+    moteFineRect(ctx, w, Math.round((x + m[0]) * 2) / 2, Math.round((y + m[1]) * 2) / 2, m[2], m[3])
+  }
 }
 
 // The instant replay (the page re-simulates the level's best moment; see
