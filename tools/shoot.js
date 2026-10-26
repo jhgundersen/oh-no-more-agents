@@ -7,19 +7,29 @@
 //   node tools/shoot.js crop 8               a close crop, for texture
 //   node tools/shoot.js biomes               one of each biome, stacked
 //   node tools/shoot.js themes 8             one level in every theme
+//   node tools/shoot.js dusk 14              one colony through the dusk, side by side
 //
-// Options: --seed N, --ticks N, --theme NAME, --res N, --scale N, --labels, --out DIR.
+// Options: --seed N, --ticks N, --clock N, --theme NAME, --res N, --scale N,
+// --labels, --out DIR.
 //
 // `--ticks` is how far the level is played before the frame is taken; the
 // default puts the colony out on the board and some of it in trouble. Every
 // command pins the colony seed unless told otherwise, so two runs of the same
 // command produce the same image and a diff between them means a real change.
 //
+// `--clock` draws the frame at that tick instead, after `--ticks` of play: the
+// same colony and positions under another light. `dusk` does that at four
+// moments (tick 240, the sun still up, to 1640, full dusk).
+//
+// The default is what the page shows: page resolution (2), with the options
+// the page passes, so dusk, light pools and every page-only pass are in it.
+// `--res 1` is the Omarchy panel and `--res 3` share art; neither has the dusk.
+//
 // Shots land in shots/ and are not committed.
 
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { load, frame, crop, stack, writePNG, THEMES } from "./render.js"
+import { load, frame, crop, stack, side, writePNG, THEMES } from "./render.js"
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(HERE, "..")
@@ -39,11 +49,12 @@ const level = Number(positional[0] || 8)
 const seed = opt("seed") === undefined ? undefined : Number(opt("seed"))
 const ticks = Number(opt("ticks", 240))
 const theme = String(opt("theme", "tokyo-night"))
-// --res draws the way the page does (2) or the way the Omarchy panel does (1,
-// the default here so old shots stay comparable). --scale multiplies the
-// output on top, so `--res 2 --scale 1` is the same size as `--scale 2`.
-const res = Number(opt("res", 1))
-const scale = Number(opt("scale", 2 / res))
+// --res draws the way the page does (2, the default) or the way the Omarchy
+// panel does (1). --scale multiplies the output on top; by default a shot is
+// 800 wide whatever the resolution, so `--res 1` is scaled 2 to match.
+const res = Number(opt("res", 2))
+const scale = Number(opt("scale", Math.max(1, 2 / res)))
+const clock = opt("clock") === undefined ? undefined : Number(opt("clock"))
 const labels = opt("labels", false) === true
 const outDir = path.resolve(ROOT, String(opt("out", "shots")))
 
@@ -51,7 +62,8 @@ const S = load("Sim.js")
 const D = load("Draw.js")
 const P = load("Palette.js")
 
-const shot = o => frame(S, D, P, { level, seed, ticks, theme, labels, res, ...o })
+const page = res === 2
+const shot = o => frame(S, D, P, { level, seed, ticks, theme, labels, res, page, clock, ...o })
 
 function report(r, note) {
   console.log(`  ${path.relative(ROOT, r.file)}  ${r.width}x${r.height}${note ? "  " + note : ""}`)
@@ -75,7 +87,7 @@ if (cmd === "level") {
   const names = []
   for (let i = 0; i < S.BIOMES.length; i++) {
     const lv = i + 1
-    const { img, world } = frame(S, D, P, { level: lv, seed, ticks, theme, labels, res })
+    const { img, world } = shot({ level: lv })
     images.push(img)
     names.push(`${lv} ${world.biome}`)
   }
@@ -84,13 +96,19 @@ if (cmd === "level") {
 } else if (cmd === "themes") {
   const images = []
   for (const name of Object.keys(THEMES)) {
-    images.push(frame(S, D, P, { level, seed, ticks, theme: name, labels, res }).img)
+    images.push(shot({ theme: name }).img)
   }
   report(writePNG(path.join(outDir, `themes-${level}.png`), stack(images), scale),
     Object.keys(THEMES).join(", "))
 
+} else if (cmd === "dusk") {
+  const moments = [240, 700, 1100, 1640]
+  const frames = moments.map(t => shot({ clock: t }))
+  report(writePNG(path.join(outDir, `dusk-${level}.png`), side(frames.map(f => f.img)), scale),
+    `${frames[0].world.biome}, drawn at ticks ${moments.join(", ")}`)
+
 } else {
   console.error(`unknown command: ${cmd}`)
-  console.error("try: level | crop | biomes | themes")
+  console.error("try: level | crop | biomes | themes | dusk")
   process.exit(1)
 }

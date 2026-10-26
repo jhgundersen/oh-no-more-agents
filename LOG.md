@@ -10502,3 +10502,56 @@ copy changes.
 blocks against the already reviewed rack/port branch and re-stamping if needed.
 Then continue a small backdrop batch in the quieter biomes with this more visible
 page-scale motion and the same digest, motion-preference, FPS and phone gates.
+
+## 401 — 2026-10-26 · The dusk indoors, the city's windows, and shots that show it
+
+The supervisor rendered Mail Room at ticks 60 and 900 with `--res 3` and saw no
+dusk. There were two reasons. `npm run shot` defaulted to res 1 (the Omarchy
+panel), and `--res 3` is share art; the dusk is page-only (res 2). And indoors
+the 399 wash was too faint to read even at the page's resolution.
+
+**Shots show the page.** `tools/shoot.js` now defaults to res 2 with the
+options the page passes to `drawActors` (no canvas intro card or feed line),
+still 800 wide. `--clock N` draws the frame at tick N after `--ticks` of play,
+and `npm run shot dusk N` puts one colony side by side at ticks 240, 700, 1100
+and 1640. `render.js` grew `frame({ page, clock })` and `side()`.
+docs/checking.md says which resolution is which.
+
+**The dusk indoors** (Draw.js, the "Clocking off" block):
+- **Wash:** now `0.34 · d^1.4`, up from `0.2 · d`. About the same a third of
+  the way in, nearly twice as deep at full dusk.
+- **`duskLights(w)`:** a cached list of window panes and lamps, built per
+  biome from the layouts the backdrops already use (`DUSK_ROOM_LIGHTS`), plus
+  the molten and coolant pools anywhere. Skyscraper's curtain wall
+  (`officeWindows`) gives the panes; Library's lamps are its hanging and table
+  lamps (`readingLamps`); Mail Room's are its lamp decor.
+- **Panes:** amber (`DUSK_SUN`) to clear glass at 0.4, then blue (`DUSK_BLUE`).
+  Library's reading-room windows (Codex's `drawStackWindow`) get the same tint
+  through `drawStackDusk`.
+- **Lamps:** a light pool each, growing with the dusk, drawn over the wash, so
+  they glow brighter as the room around them dims.
+- **Rooftops city:** windows in the distant towers come on one by one
+  (`duskCityWindows`), about a third of the slots by full dusk. They show only
+  through open air, clear of the near towers, signs, fittings and the play
+  reservations. A window that has just come on is a beat brighter.
+  `drawNightCity`'s two loops moved into `nightBackTower`/`nightFrontTower`,
+  same pixels, so Codex's Rooftops art can share the geometry.
+- **`duskAt(ticks)`:** the shared clock, 0 to 1 in sixteenths, for anything
+  that should follow the light. Codex's fireflies and aircraft light will use
+  it (`codex/living-roofs-gears`).
+
+**Tests.** `test/dusk.test.js` now has 9 tests. New ones cover pane colours,
+the light lists and their cache, a 12% darkening at full dusk on Skyscraper,
+Library and Mail Room while staying within 6% at tick 700, the Rooftops
+windows (all in air, lit in order, cached), and the shot path. Codex's
+sky-stacks test checked "fixed under reduced motion" between ticks 60 and 709.
+The windows now follow the dusk, which is light, not motion, so both ticks
+are before `DUSK_FROM`.
+
+**Looked at:** levels 9, 13, 14, 17, 11 and 5 without dusk, then at ticks 240,
+900 and 1640. The clearest are Skyscraper's glazing (amber to blue) and the
+Library (windows turn, lamps glow). `npm run fps -- 9 13 14 17`: 60 / p5 60,
+worst 17 ms, cpu 7%.
+
+**Next:** deploy this batch (the dusk and Codex's three art merges). Then agent
+animation polish.

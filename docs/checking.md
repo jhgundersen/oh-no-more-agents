@@ -170,7 +170,14 @@ npm run shot level 8          # one level, as the page draws it
 npm run shot crop 8           # a close crop, for texture rather than layout
 npm run shot biomes           # one of each biome, stacked
 npm run shot themes 8         # one level in every theme
+npm run shot dusk 14          # one colony at four moments of the dusk
 ```
+
+A shot is what the page shows: page resolution (2), with the page's own
+`drawActors` options, so the dusk and every page-only pass are in it.
+`--res 1` is the Omarchy panel and `--res 3` share art, and neither has the
+dusk. `--clock N` draws the frame at tick N after `--ticks` of play, which is
+how to see one colony under another light.
 
 `tools/render.js` rasterises `Draw.js` straight to a PNG with no browser and no
 dependencies — the core files only call `fillRect` and a few no-ops, so a

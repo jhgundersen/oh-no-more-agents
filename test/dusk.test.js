@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { createHash } from "node:crypto"
-import { load, canvas, themeOf, THEMES } from "../tools/render.js"
+import { load, canvas, themeOf, THEMES, frame, side } from "../tools/render.js"
 
 // The working day ends during the level (Draw's drawDusk): late-afternoon sun,
 // an afterglow, a blue wash and the exit's light coming on. Page resolution
@@ -93,4 +93,51 @@ test("dusk paint is read-only, RNG-free and deterministic in every palette", () 
       }
     }
   } finally { Math.random = random }
+})
+
+test("indoors the panes go amber to blue and the lamps are listed from the room's own layout", () => {
+  assert.equal(D.duskPane(0).colour, D.DUSK_SUN); assert.ok(D.duskPane(0).alpha > 0)
+  assert.equal(D.duskPane(0.4).alpha, 0, "clear glass between the two")
+  assert.equal(D.duskPane(1).colour, D.DUSK_BLUE); assert.ok(D.duskPane(1).alpha > D.duskPane(0.6).alpha)
+  const sky = world(9), lib = world(13), mail = world(14)
+  assert.equal(sky.w.biome, "Skyscraper"); assert.ok(D.duskLights(sky.w).panes.length >= 8)
+  assert.ok(D.duskLights(lib.w).lamps.length >= 4); assert.ok(D.duskLights(mail.w).lamps.length >= 1)
+  const first = D.duskLights(lib.w)
+  assert.equal(D.duskLights(lib.w), first, "cached")
+  lib.w.terrainVersion++
+  assert.notEqual(D.duskLights(lib.w), first, "rebuilt when the terrain changes")
+})
+
+test("by full dusk an indoor level is plainly darker, and early on it is barely touched", () => {
+  for (const level of [9, 13, 14]) {
+    const { w, pal } = world(level), frame = ticks => {
+      const img = canvas(800, 496, themeOf("tokyo-night").background); w.ticks = ticks
+      D.drawTerrain(img.ctx, w, pal); D.drawActors(img.ctx, w, pal, { intro: false, feed: false }); return brightness(img)
+    }, plain = (() => { const img = canvas(800, 496, themeOf("tokyo-night").background); w.ticks = 700
+      D.drawTerrain(img.ctx, w, pal); D.drawActors(img.ctx, w, pal, { intro: false, feed: false, dusk: false }); return brightness(img) })()
+    assert.ok(frame(D.DUSK_FROM + D.DUSK_SPAN) < frame(D.DUSK_FROM) * 0.88, `level ${level} darkens`)
+    assert.ok(Math.abs(frame(700) - plain) < plain * 0.06, `level ${level} is subtle early`)
+  }
+})
+
+test("shots can draw what the page draws: page options, any clock, side by side", () => {
+  const at = clock => frame(S, D, P, { level: 14, ticks: 60, res: 2, page: true, clock })
+  const early = at(240), late = at(1640)
+  assert.equal(late.world.ticks, 1640)
+  assert.ok(brightness(late.img) < brightness(early.img), "the clock moves the light, not the colony")
+  const two = side([early.img, late.img], 4)
+  assert.deepEqual([two.W, two.H], [1604, 496])
+  assert.deepEqual(Array.from(two.buf.subarray((800 + 4) * 3, (800 + 4) * 3 + 3)), Array.from(late.img.buf.subarray(0, 3)))
+})
+
+test("on the Rooftops the city's windows come on one by one, only where the towers show", () => {
+  const { w } = world(17)
+  assert.equal(w.biome, "Rooftops")
+  const windows = D.duskCityWindows(w), lit = d => windows.filter(p => p.step <= d * D.DUSK_STEPS).length
+  assert.ok(windows.length > 40)
+  assert.equal(lit(0), 0); assert.ok(lit(0.5) > 0 && lit(0.5) < lit(1)); assert.equal(lit(1), windows.length)
+  for (const p of windows) for (let y = p.y; y < p.y + 3; y += 0.5) for (let x = p.x; x < p.x + 2; x += 0.5) assert.ok(D.mechanismAir(w, x, y))
+  assert.equal(D.duskCityWindows(w), windows, "cached")
+  w.ticks = D.DUSK_FROM + D.DUSK_SPAN
+  assert.equal(marks(ctx => D.drawDuskCity(ctx, w, 1)).length, windows.length)
 })

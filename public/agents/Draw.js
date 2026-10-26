@@ -3054,13 +3054,17 @@ function drawActors(ctx, w, pal, opts) {
 // actor layer under everyone, at page resolution only (share art and the
 // native panel keep their light). Draw only.
 var DUSK_FROM = 240, DUSK_SPAN = 1400, DUSK_STEPS = 16, DUSK_LIGHTS = 5   // steps
-var DUSK_NIGHT = "#0a1030", DUSK_SUN = "#f0a050"
+var DUSK_NIGHT = "#0a1030", DUSK_SUN = "#f0a050", DUSK_BLUE = "#4a6cc0", DUSK_WASH = 0.34
 var DUSK_GLOW = ["#f29a4a", "#e07a56", "#c8607a", "#8a5a8e", "#5a4a8a"]
 var DUSK_FLICKER = [1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1]
-function duskLevel(w) {
-  var t = (w.ticks - DUSK_FROM) / DUSK_SPAN
+// How far into the dusk a tick is, 0 (afternoon) to 1 (night), in sixteenths.
+// The one clock for everything that should follow the light: lamps, windows,
+// fireflies. Keyed on a tick so a caller can ask about any moment.
+function duskAt(ticks) {
+  var t = (ticks - DUSK_FROM) / DUSK_SPAN
   return t <= 0 ? 0 : Math.min(DUSK_STEPS, Math.floor(t * DUSK_STEPS)) / DUSK_STEPS
 }
+function duskLevel(w) { return duskAt(w.ticks) }
 function drawDusk(ctx, w, pal) {
   if (w.res !== 2 || w.ticks < 0) return
   var d = duskLevel(w), W = w.k.COLS * w.k.CELL, H = w.k.ROWS * w.k.CELL
@@ -3068,10 +3072,15 @@ function drawDusk(ctx, w, pal) {
   // Gold sun to start, giving way to the blue of the evening.
   ctx.fillStyle = DUSK_SUN; ctx.globalAlpha = 0.05 * Math.max(0, 1 - d * 3)
   if (ctx.globalAlpha > 0) ctx.fillRect(0, 0, W, H)
-  ctx.fillStyle = DUSK_NIGHT; ctx.globalAlpha = 0.2 * d
+  // Slow to start and deep by the end: a third of the way in it is barely
+  // there, and by full dusk an indoor level has plainly gone dark outside.
+  ctx.fillStyle = DUSK_NIGHT; ctx.globalAlpha = DUSK_WASH * Math.pow(d, 1.4)
   if (d > 0) ctx.fillRect(0, 0, W, H)
   drawDuskGlow(ctx, w, d, W)
+  drawDuskCity(ctx, w, d)
+  drawDuskPanes(ctx, w, d)
   ctx.restore()
+  drawDuskLamps(ctx, w, pal, d)
   drawDuskExitLight(ctx, w, pal, d)
 }
 // The afterglow: three stepped courses along the bottom of the sky band,
@@ -3088,6 +3097,116 @@ function drawDuskGlow(ctx, w, d, W) {
   }
   ctx.globalAlpha = 0.10 * glow
   for (var x = 0; x < W; x += 2) ctx.fillRect(x + (x % 4 ? 1 : 0), y - 0.5, 0.5, 0.5)
+}
+// The city goes home too: on the Rooftops, office windows in the distant
+// towers come on one by one as the light goes, about a third of the slots by
+// full dusk. Only where the tower shows through open air, clear of the near
+// towers, signs, fittings and everything reserved for play.
+var DUSK_CITY = new WeakMap()
+function duskCityWindows(w) {
+  var old = DUSK_CITY.get(w)
+  if (old && old.version === w.terrainVersion && old.terrain === w.terrain) return old.windows
+  var boxes = nightReserved(w), fittings = nightFixtures(w), signs = nightSigns(w), front = [], out = []
+  for (var f = 0; f < fittings.length; f++) boxes.push(nightFixtureBox(fittings[f]))
+  for (var s = 0; s < signs.length; s++) boxes.push({ x: signs[s].x - 3, y: signs[s].y - 3, width: signs[s].width + 6, height: signs[s].height + 6 })
+  for (var j = 0; j < 12; j++) front.push(nightFrontTower(w, j))
+  for (var i = 0; i < 11; i++) duskTowerWindows(w, nightBackTower(w, i), front, boxes, out)
+  for (var k = 0; k < front.length; k++) duskTowerWindows(w, front[k], [], boxes, out)
+  DUSK_CITY.set(w, { version: w.terrainVersion, terrain: w.terrain, windows: out })
+  return out
+}
+function duskTowerWindows(w, b, cover, boxes, out) {
+  var top = b.y - b.height
+  for (var y = top + 9; y + 7 <= b.y; y += 6) for (var x = b.x + 4; x + 6 <= b.x + b.width; x += 4) {
+    var h = (x * 73 + y * 151 + b.seed * 29 + 9973) % 97
+    if (h % 3) continue
+    if (!postalBoxClear(w, { x: x, y: y, width: 2, height: 3 }, boxes) || !assemblyUnreserved(cover, x, y, 2, 3)) continue
+    out.push({ x: x, y: y, step: 2 + h % 14 })
+  }
+}
+function drawDuskCity(ctx, w, d) {
+  if (!rooftopsPage(w)) return
+  var windows = duskCityWindows(w), step = d * DUSK_STEPS
+  ctx.save()
+  ctx.fillStyle = NIGHT_WINDOW
+  for (var i = 0; i < windows.length; i++) {
+    var p = windows[i]
+    if (p.step > step) continue
+    // Just switched on: a beat brighter, the way a strip light settles.
+    ctx.globalAlpha = p.step === step ? 0.75 : 0.5
+    ctx.fillRect(p.x, p.y, 2, 3)
+  }
+  ctx.restore()
+}
+// Indoors the dusk is told by what is lit. `duskLights` lists, per biome,
+// the window panes that look outside and the lamps in the room, from the same
+// layouts the backdrops are drawn from; cached until the terrain changes.
+// Panes go from afternoon amber to evening blue; lamps get a light pool that
+// grows with the dusk, drawn over the wash, so they glow brighter by contrast.
+var DUSK_ROOMS = new WeakMap()
+function duskLights(w) {
+  var old = DUSK_ROOMS.get(w)
+  if (old && old.version === w.terrainVersion && old.terrain === w.terrain) return old
+  var out = { version: w.terrainVersion, terrain: w.terrain, panes: [], lamps: [] }
+  duskPoolLamps(w, out.lamps)
+  var room = DUSK_ROOM_LIGHTS[w.biome]
+  if (room) room(w, out)
+  DUSK_ROOMS.set(w, out)
+  return out
+}
+// Molten and coolant pools light their room the way they do on the terrain.
+function duskPoolLamps(w, lamps) {
+  var C = w.k.CELL
+  for (var i = 0; i < w.pits.length; i++) {
+    var p = w.pits[i]
+    if (p.liquid !== "lava" && p.liquid !== "slag" && p.liquid !== "coolant") continue
+    var wide = (p.x1 - p.x0 + 1) * C
+    lamps.push({ x: p.x0 * C + wide / 2, y: p.surfaceY * C - 2, rx: Math.min(30, wide / 2 + 9), ry: 13, colour: "poolLip" })
+  }
+}
+function duskDecorLamps(w, lamps, isLamp, dx, dy, rx, ry) {
+  var C = w.k.CELL
+  for (var i = 0; i < w.decor.length; i++) {
+    var d = w.decor[i]
+    if (isLamp(d) && lightDecorAlive(w, d)) lamps.push({ x: d.x * C + dx, y: (d.y + 1) * C + dy, rx: rx, ry: ry, colour: "oreEdge" })
+  }
+}
+var DUSK_ROOM_LIGHTS = {
+  "Library": function (w, out) {
+    duskDecorLamps(w, out.lamps, function (d) { return d.kind === "hang" || d.kind === "tuft" }, 2, -2, 13, 11)
+    var lamps = readingLamps(w)
+    for (var i = 0; i < lamps.length; i++) out.lamps.push({ x: lamps[i].x, y: lamps[i].y + 8, rx: 12, ry: 10, colour: READING_LIGHT })
+  },
+  "Mail Room": function (w, out) {
+    duskDecorLamps(w, out.lamps, function (d) { return d.kind === "tuft" || (d.kind === "spire" && d.seed % 3 === 0) }, 4, -8, 11, 9)
+  },
+  "Skyscraper": function (w, out) {
+    for (var row = 0; row < w.corridors.length; row++) {
+      var windows = officeWindows(w, row)
+      for (var i = 0; i < windows.length; i++) {
+        var b = windows[i]
+        out.panes.push({ x: b.x + 1.5, y: b.y + 1, width: b.width - 3, height: b.height - 2.5 })
+      }
+    }
+  }
+}
+// The pane colour for a moment of the dusk: amber, then clear, then blue.
+function duskPane(d) {
+  return d < 0.4 ? { colour: DUSK_SUN, alpha: 0.16 * (1 - d / 0.4) } : { colour: DUSK_BLUE, alpha: 0.22 * Math.min(1, (d - 0.4) / 0.5) }
+}
+function drawDuskPanes(ctx, w, d) {
+  var panes = duskLights(w).panes, tint = duskPane(d)
+  if (!panes.length || tint.alpha <= 0) return
+  ctx.fillStyle = tint.colour; ctx.globalAlpha = tint.alpha
+  for (var i = 0; i < panes.length; i++) ctx.fillRect(panes[i].x, panes[i].y, panes[i].width, panes[i].height)
+}
+function drawDuskLamps(ctx, w, pal, d) {
+  if (d <= 0) return
+  var lamps = duskLights(w).lamps
+  for (var i = 0; i < lamps.length; i++) {
+    var l = lamps[i]
+    drawLightPool(ctx, w, pal[l.colour] || l.colour, l.x, l.y, l.rx, l.ry, 0.16 * d)
+  }
 }
 // The exit's light comes on once the sun is low: a short flicker, then steady.
 function drawDuskExitLight(ctx, w, pal, d) {
@@ -20094,18 +20213,18 @@ function drawNightCity(ctx, w) {
   if (!rooftopsPage(w)) return
   ctx.save()
   // A single distant city, not a repeated terrace on each playable storey.
-  for (var i = 0; i < 11; i++) {
-    var seed = w.level * 7 + i * 19
-    drawNightTower(ctx, { x: i * 37 - 4, y: 248, width: 29 + seed % 7,
-      height: 116 + seed % 69, seed: seed, colour: NIGHT_BACK })
-  }
-  for (var j = 0; j < 12; j++) {
-    var tall = j === 2 || j === 10
-    drawNightTower(ctx, { x: j * 34 - 4, y: 78, width: tall ? 19 : 25 + j % 3 * 3,
-      height: tall ? 65 : 26 + (j * 13 + w.level) % 27,
-      seed: w.level + j * 23, colour: NIGHT_BRICK })
-  }
+  for (var i = 0; i < 11; i++) drawNightTower(ctx, nightBackTower(w, i))
+  for (var j = 0; j < 12; j++) drawNightTower(ctx, nightFrontTower(w, j))
   ctx.restore()
+}
+function nightBackTower(w, i) {
+  var seed = w.level * 7 + i * 19
+  return { x: i * 37 - 4, y: 248, width: 29 + seed % 7, height: 116 + seed % 69, seed: seed, colour: NIGHT_BACK }
+}
+function nightFrontTower(w, j) {
+  var tall = j === 2 || j === 10
+  return { x: j * 34 - 4, y: 78, width: tall ? 19 : 25 + j % 3 * 3,
+    height: tall ? 65 : 26 + (j * 13 + w.level) % 27, seed: w.level + j * 23, colour: NIGHT_BRICK }
 }
 function drawNightTower(ctx, b) {
   var top = b.y - b.height
@@ -22488,9 +22607,18 @@ function drawStackWindows(ctx, w, scene, t, alpha) {
   for (var i = 0; i < scene.windows.length; i++) {
     var b = scene.windows[i]
     drawStackWindow(ctx,scene,b,alpha)
+    drawStackDusk(ctx,w,scene,b,alpha)
     drawWindowDust(ctx,scene,b,t,alpha)
   }
   for (var d = 0; d < scene.desks.length; d++) drawDeskPage(ctx,scene,scene.desks[d],t,alpha)
+}
+// The reading-room windows follow the dusk (duskPane), amber to blue.
+function drawStackDusk(ctx, w, scene, b, alpha) {
+  var tint = duskPane(duskLevel(w))
+  if (tint.alpha <= 0) return
+  ctx.fillStyle = tint.colour; ctx.globalAlpha = alpha*Math.min(1,tint.alpha*2)
+  drawCloudDraftRect(ctx,scene,b.x+1,b.y+1,7,11)
+  drawCloudDraftRect(ctx,scene,b.x+10,b.y+1,7,11)
 }
 function drawStackWindow(ctx, scene, b, alpha) {
   ctx.globalAlpha = alpha*0.8; ctx.fillStyle = "#344650"

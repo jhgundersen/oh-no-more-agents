@@ -24,7 +24,8 @@ test('new motion is visible at page resolution, fixed under reduced motion and s
  for(const level of[13,18,20,33,38,40]){
   const w=S.generate(level,0,3);w.res=2;w.ticks=60;const first=marks(w);assert.ok(first.length>0)
   w.ticks=95;assert.notDeepEqual(marks(w),first)
-  w.reducedMotion=true;const still=marks(w);w.ticks=709;assert.deepEqual(marks(w),still)
+  // Both before DUSK_FROM: the windows follow the dusk, which is light, not motion.
+  w.reducedMotion=true;const still=marks(w);w.ticks=D.DUSK_FROM;assert.deepEqual(marks(w),still)
   const cached=D.skyStackLayout(w);assert.equal(D.skyStackLayout(w),cached)
   w.terrain=new Uint8Array(w.terrain).fill(w.k.ROCK);assert.notEqual(D.skyStackLayout(w),cached);assert.equal(marks(w).length,0)
   w.terrain.fill(w.k.EMPTY);w.terrainVersion++;assert.ok(marks(w).length>0)

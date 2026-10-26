@@ -314,14 +314,35 @@ function filteredRows(raw, stride, height) {
 }
 
 // Generate a level, run it for a while, and draw one frame of it.
-export function frame(S, D, P, { level, seed, ticks, theme, labels, res }) {
+//
+// `page` draws the actor layer with the options the page itself passes
+// (web.js paintActors): no canvas intro card or feed line, because the page
+// shows those in the DOM. `clock`, when given, is the tick the frame is drawn
+// at, after `ticks` of play: the same colony at another moment of the dusk.
+export function frame(S, D, P, { level, seed, ticks, theme, labels, res, page, clock }) {
   const t = themeOf(theme)
   const w = S.generate(level, 0, seed === undefined ? level * 7919 + 13 : seed)
   for (let i = 0; i < (ticks === undefined ? 240 : ticks); i++) S.step(w)
   const pal = P.build(t.theme, level)
   w.res = res || 1
+  if (clock !== undefined) w.ticks = clock
   const img = canvas(w.k.COLS * w.k.CELL * w.res, w.k.ROWS * w.k.CELL * w.res, t.background)
   D.drawTerrain(img.ctx, w, pal)
-  D.drawActors(img.ctx, w, pal, { labels: !!labels })
+  D.drawActors(img.ctx, w, pal, page ? { labels: !!labels, intro: false, feed: false } : { labels: !!labels })
   return { img, world: w }
+}
+
+// Images side by side, top-aligned, with a gap: the horizontal stack().
+export function side(images, gap) {
+  gap = gap || 4
+  const W = images.reduce((n, i) => n + i.W, 0) + gap * (images.length - 1)
+  const H = Math.max(...images.map(i => i.H))
+  const out = canvas(W, H, "#000000")
+  let ox = 0
+  for (const img of images) {
+    for (let y = 0; y < img.H; y++)
+      out.buf.set(img.buf.subarray(y * img.W * 3, (y + 1) * img.W * 3), (y * W + ox) * 3)
+    ox += img.W + gap
+  }
+  return out
 }
