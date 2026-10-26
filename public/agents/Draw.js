@@ -10195,20 +10195,20 @@ function drawFoundryPour(ctx, w, b) {
   if (b.kind === 2) { drawConverterFlame(ctx, w, b); return }
   // The distant metal is deliberately dimmer than an agent's face. All live
   // marks clip against current terrain; sparks never travel through a wall.
-  var cycle = (w.ticks + b.phase) % 210, x = b.x + (b.kind === 1 ? 13.5 : -14), bottom = b.y - 4
+  var cycle = (quietBackdropTick(w) + b.phase) % 210, x = b.x + (b.kind === 1 ? 13.5 : -14), bottom = b.y - 4
   ctx.fillStyle = FOUNDRY_HEAT
-  ctx.globalAlpha = 0.22 + 0.04 * Math.sin(w.ticks / 21 + b.phase)
+  ctx.globalAlpha = 0.22 + 0.04 * Math.sin(quietBackdropTick(w) / 21 + b.phase)
   moteFineRect(ctx, w, b.x - 4, b.y - 4, 8, 1)
   if (cycle >= 105) return
   ctx.globalAlpha = 0.65
   for (var row = 0; row < 15; row++) {
-    var shift = Math.floor((w.ticks + row * 3) / 7) % 2 * 0.5
+    var shift = Math.floor((quietBackdropTick(w) + row * 3) / 7) % 2 * 0.5
     moteFineRect(ctx, w, x + shift, bottom - 15 + row, 1, 1)
   }
   ctx.fillStyle = FOUNDRY_HOT; ctx.globalAlpha = 0.65
   moteFineRect(ctx, w, x + 0.5, bottom - 13, 0.5, 12)
   for (var sp = 0; sp < 9; sp++) {
-    var age = (w.ticks + b.phase + sp * 7) % 36
+    var age = (quietBackdropTick(w) + b.phase + sp * 7) % 36
     var dx = (sp % 2 ? -1 : 1) * age * (0.12 + sp % 3 * 0.06)
     var dy = -age * 0.42 + age * age * 0.018
     var sx = Math.round((x + dx) * 2) / 2, sy = Math.round((bottom + dy) * 2) / 2
@@ -10221,7 +10221,7 @@ function drawFoundryPour(ctx, w, b) {
 // The converter's blow: a tongue of flame from its mouth into the hood,
 // flickering, taller for half its cycle, with sparks thrown up and out.
 function drawConverterFlame(ctx, w, b) {
-  var t = w.ticks + b.phase, blow = (t % 240) < 150
+  var t = quietBackdropTick(w) + b.phase, blow = (t % 240) < 150
   var tall = blow ? 3 + (Math.floor(t / 4) % 2) : 1
   var mx = b.x + 7, my = b.y - 21
   for (var row = 0; row < tall; row++) {
@@ -10248,7 +10248,7 @@ function drawFoundrySeams(ctx, w) {
   for (var i = 0; i < 30; i++) {
     var x = 6 + (i * 23 + w.level * 7) % (w.k.COLS - 12)
     var y = w.k.SKY + 3 + (i * 13 + w.level * 3) % (w.k.ROWS - w.k.SKY - 6)
-    var pulse = 0.17 + 0.07 * Math.sin(w.ticks / 32 + x + y)
+    var pulse = 0.17 + 0.07 * Math.sin(quietBackdropTick(w) / 32 + x + y)
     for (var part = 0; part < 3; part++) {
       var yy = y + part, xx = x, m = w.terrain[yy * w.k.COLS + xx]
       if (m !== w.k.ROCK && m !== w.k.DIRT && m !== w.k.ORE) continue
@@ -17656,7 +17656,7 @@ function drawSpaceshipInstruments(ctx, w, pal) {
 }
 
 function drawSpaceshipDisplay(ctx, w, b) {
-  var clock = w.ticks + b.phase, sweep = Math.floor(clock / 12) % 11
+  var clock = quietBackdropTick(w) + b.phase, sweep = Math.floor(clock / 12) % 11
   ctx.fillStyle = SHIP_LIGHTS[0]
   ctx.globalAlpha = 0.65
   ctx.fillRect(b.x + 2, b.y + 3, 10, 1)
@@ -18783,7 +18783,7 @@ function drawAssemblyLife(ctx, w) {
       // Green operating lamp, with a restrained amber cycle at the top.
       ink.fillStyle = ASSEMBLY_LIGHT
       ink.fillRect(b.x + b.width - 7, b.y - 20, 3, 1)
-      ink.fillStyle = (w.ticks + b.phase) % 120 < 30 ? ASSEMBLY_SIGN : ASSEMBLY_YELLOW
+      ink.fillStyle = (quietBackdropTick(w) + b.phase) % 120 < 30 ? ASSEMBLY_SIGN : ASSEMBLY_YELLOW
       ink.fillRect(b.x + b.width - 7, b.y - 22, 3, 1)
     }
   }
@@ -18791,7 +18791,7 @@ function drawAssemblyLife(ctx, w) {
 }
 
 function drawAssemblyProducts(ctx, w, b) {
-  var travel = Math.floor((w.ticks + b.phase) / 5) * b.dir
+  var travel = Math.floor((quietBackdropTick(w) + b.phase) / 5) * b.dir
   // Rolling highlights and packages share a direction; agents' belts below
   // still have their own exact motion, direction and support tests.
   ctx.fillStyle = ASSEMBLY_EDGE
@@ -18819,7 +18819,7 @@ function drawAssemblyCrate(ctx, x, y, kind) {
 }
 
 function drawAssemblyRobot(ctx, w, b) {
-  var cycle = (w.ticks + b.phase) % 180, swing = Math.sin(cycle * Math.PI / 90)
+  var cycle = (quietBackdropTick(w) + b.phase) % 180, swing = Math.sin(cycle * Math.PI / 90)
   var sx = b.x + 15, sy = b.y - 12
   var ex = sx + 5 + Math.round(swing * 3 * 2) / 2, ey = sy - 8 - Math.round(swing * 2) / 2
   var tx = sx + 17 + Math.round(swing * 3 * 2) / 2, ty = sy - 3
@@ -22536,6 +22536,7 @@ function drawCloudDrafts(ctx,w) {
 // Small distant motions are painted on the transparent actor layer because
 // the terrain/backdrop is cached. Air and fixture masks keep them behind play.
 function drawBackdropLife(ctx, w) {
+  drawWorkLightLife(ctx, w)
   drawRackFans(ctx, w)
   drawPortGulls(ctx, w)
 }
@@ -22748,4 +22749,84 @@ function drawTunnelWindows(ctx, w, scene, t, alpha) {
       drawCloudDraftRect(ctx,scene,x+2,y-1,7,1)
     }
   }
+}
+
+
+// Distant foliage and weather use the existing air/fixture mask. The cached
+// fitting sites are visual only and are discarded when excavation changes air.
+var QUIET_BACKDROP_CACHE = new WeakMap()
+function quietBackdropTick(w) { return w.res === 2 && w.reducedMotion ? 0 : w.ticks }
+function quietBackdropLayout(w) {
+  var air = skyStackLayout(w), old = QUIET_BACKDROP_CACHE.get(w)
+  if (old && old.air === air) return old
+  var scene = {air:air,mask:air.mask,width:air.width,height:air.height,sites:[]}, boxes = abyssReserved(w)
+  for (var row = 0; row < w.corridors.length; row++) {
+    var site = stationPick(w,row,"backdrop",28,14,17,boxes)
+    if (site) scene.sites.push(site)
+  }
+  QUIET_BACKDROP_CACHE.set(w,scene)
+  return scene
+}
+
+// Far machinery is deliberately slower and quieter than the playable works.
+function drawWorkLightLife(ctx, w) {
+  if (w.res !== 2 || (w.biome !== "Foundry" && w.biome !== "Factory" && w.biome !== "Spaceship")) return
+  ctx.save()
+  var scene = quietBackdropLayout(w), t = quietBackdropTick(w), alpha = ctx.globalAlpha
+  for (var i = 0; i < scene.sites.length; i++) {
+    var b = scene.sites[i]
+    if (w.biome === "Foundry") drawFarBellows(ctx,w,scene,b,t,alpha)
+    if (w.biome === "Factory") drawFarRollers(ctx,scene,b,t,alpha)
+    if (w.biome === "Spaceship") drawFarPorthole(ctx,w,scene,b,t,alpha)
+  }
+  ctx.restore()
+}
+function drawFarBellows(ctx, w, scene, b, t, alpha) {
+  var squeeze = Math.round((1+Math.sin(t/45+b.seed))*2)/2
+  ctx.fillStyle = "#575056"; ctx.globalAlpha = alpha*0.65
+  drawCloudDraftRect(ctx,scene,b.x+2,b.y+4,3,10)
+  drawCloudDraftRect(ctx,scene,b.x+18-squeeze,b.y+4,3,10)
+  ctx.fillStyle = "#89716b"
+  for (var fold = 0; fold < 5; fold++)
+    drawCloudDraftRect(ctx,scene,b.x+6+fold*(2-squeeze/5),b.y+5+fold%2,1,7-fold%2*2)
+  ctx.fillStyle = "#b47751"; ctx.globalAlpha = alpha*(0.15+0.2*duskAt(w.ticks))
+  drawCloudDraftRect(ctx,scene,b.x+22,b.y+7,4,5)
+  drawFarSteam(ctx,scene,b,t,alpha,"#b8a5a2")
+}
+function drawFarRollers(ctx, scene, b, t, alpha) {
+  ctx.fillStyle = "#444e59"; ctx.globalAlpha = alpha*0.65
+  drawCloudDraftRect(ctx,scene,b.x,b.y+9,28,4)
+  ctx.fillStyle = "#899499"
+  for (var roller = 0; roller < 4; roller++) {
+    var x = b.x+3+roller*7, phase = Math.floor(t/8+roller)%4
+    drawCloudDraftRect(ctx,scene,x,b.y+10,3,2)
+    ctx.fillStyle = "#454e58"
+    drawCloudDraftRect(ctx,scene,x+phase%3,b.y+10,0.5,2)
+    ctx.fillStyle = "#899499"
+  }
+  drawFarSteam(ctx,scene,b,t,alpha,"#a0acac")
+}
+function drawFarSteam(ctx, scene, b, t, alpha, color) {
+  ctx.fillStyle = color
+  for (var puff = 0; puff < 3; puff++) {
+    var age = (t/3+b.seed+puff*17)%90
+    if (age > 45) continue
+    ctx.globalAlpha = alpha*0.2*(1-age/45)
+    drawCloudDraftRect(ctx,scene,b.x+21+Math.floor(age/12)/2,b.y+5-Math.floor(age/6)/2,3+Math.floor(age/15),1)
+  }
+}
+function drawFarPorthole(ctx, w, scene, b, t, alpha) {
+  ctx.globalAlpha = alpha*0.7; ctx.fillStyle = "#536374"
+  drawCloudDraftRect(ctx,scene,b.x+3,b.y+1,21,12)
+  ctx.fillStyle = "#182634"
+  drawCloudDraftRect(ctx,scene,b.x+4,b.y+2,19,10)
+  var dusk = duskAt(w.ticks)
+  ctx.fillStyle = "#a4b7cb"; ctx.globalAlpha = alpha*(0.3+dusk*0.35)
+  for (var star = 0; star < 7; star++) {
+    var x = b.x+5+(star*7+Math.floor(t/(star%2 ? 18 : 30))/2)%16
+    drawCloudDraftRect(ctx,scene,x,b.y+3+star*5%8,star%3 ? 0.5 : 1,0.5)
+  }
+  var blink = Math.floor((t+b.seed)/30)%4
+  ctx.fillStyle = "#82b9b1"; ctx.globalAlpha = alpha*(0.15+dusk*0.5)
+  drawCloudDraftRect(ctx,scene,b.x+5+blink*4,b.y+13,2,0.5)
 }

@@ -10602,3 +10602,44 @@ theme's board, so it now compares the frames themselves. `npm run fps -- 5 11
 17 --from-tick 800`: 60 / p5 60, cpu 8–9%.
 
 **Next:** agent animation polish.
+
+## 406 — 2026-10-26 · Living works and cabin lights
+
+`codex/living-work-lights`, off main a197fee. Draw.js adds breathing far
+bellows and soft exhaust to Foundry, slowly changing roller seams and steam
+to Factory, and drifting stars with a navigation-lamp sequence in Spaceship
+portholes. The furnace, stars and lamps grow with `duskAt(w.ticks)`. Muted
+fittings remain behind actors and umbrellas; exact resolution 2 only.
+
+Reuses the identical `quietBackdropLayout` helper from living-stone-wind;
+merge that branch first and retain one copy of the shared helper. Reduced
+motion fixes the new poses and the existing pour/converter/seam, instrument,
+product and assembly-arm scenery. Native/share art retains its old clock.
+
+**Fixture repair:** the first full check found one failure: umbrella-office's
+outside-stand crop compared Factory scenery against 2b12360. Its scoped
+comparison now renders today's scene with the stand disabled, so spill still
+fails while unrelated new scenery is allowed. The historical renderer still
+independently verifies native/share pixels. Focused stand tests: 8/8 green.
+The first failed log is retained; no art changed after the FPS measurements.
+
+**Validation:** fresh full green check after that fixture repair, with coverage,
+FIFO testlock, 3 GB memory limit, 2 GB heap and two workers: 1581 passed,
+0 failed, 421 seconds; 98.44% lines / 96.78% branches / 96.31% functions.
+CRAP threshold 30 with existing coverage: green, 2484 functions, max 30.0.
+New bounded tests cover air clipping, RNG-free/read-only determinism, exact
+page gating, fixed motion poses, shared dusk brightness, replaced terrain
+masks and unchanged rendered/plain live world digests. Stamps are current.
+
+**Evidence:** `/tmp/codex-living-work-lights/review/index.html`: before/after
+animation strips, enlarged details, 390 px previews and actual 1280×900 /
+390×844 captures for levels 4/7/8, seed 3. Baseline a197fee; simulation held
+at tick 240, drawing clock 1100 onward. `npm run fps -- 4 7 8 --seconds 10
+--speed 2 --from-tick 240`, before and after: 60 fps / p5 60 / worst 17 ms;
+CPU before 10/11/13%, after 11/11/16%. Coverage, CRAP, full logs and source/
+image SHA-256 provenance: `/tmp/codex-living-work-lights/evidence/`.
+No push or deployment.
+
+**Next:** hand off, then Cavern/Ice Cave/Trench from main. Remaining ambient
+backdrop pass (6): Cavern, Ice Cave, Trench, Skyscraper, Mail Room and
+Building Site.
