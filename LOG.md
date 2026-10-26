@@ -10816,3 +10816,22 @@ first ticks; page only; read-only and RNG-free.
 
 **Next:** deploy this batch (dusk outdoors, weather, arrivals, four Codex art
 merges). Then the level-to-level transition.
+
+## 410 — 2026-10-26 · Deploy (15:29): sunset, weather, arrivals and four backdrop batches
+
+**Deployed** build 0b5f6719 (Worker version 66210276), replacing 8ec79c51. It
+covers 403–409:
+- the outdoor sunset and the glow that keeps agents readable at night;
+- Codex's rooftops/clockwork/Jungle, stone and wind, works and cabin lights,
+  and depths;
+- weather on umbrellas and hats;
+- the logged-off badge and the door brightening on each arrival.
+
+**Before:** `npm run smoke` passed (3 min, levels 1–7); gate 1602/1602.
+**After:** `npm run verify -- --previous 8ec79c51` passed on the first run.
+
+The supervisor has given level transitions and an end-of-level "home"
+vignette to Codex (`codex/home-time`), so they are off my list.
+
+**Next:** merge `codex/living-city-post` (13caeaf, the last three biomes'
+backdrops), then agent animation: the walk, secondary motion and landings.
