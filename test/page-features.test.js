@@ -11,8 +11,12 @@ const sleep = ms => new Promise(r => setTimeout(r, ms))
 async function page(b, url) {
   await b.cmd("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
   await b.cmd("Page.navigate", { url })
-  await sleep(1500)
-  return async expr => (await b.cmd("Runtime.evaluate", { expression: expr, returnByValue: true, awaitPromise: true })).result.value
+  await sleep(300)
+  const ev = async expr => (await b.cmd("Runtime.evaluate", { expression: expr, returnByValue: true, awaitPromise: true })).result.value
+  // Polled, not slept: on a loaded machine the page took longer than 1.5 s.
+  for (let i = 0; i < 100 && !(await ev("!!(window.AgentWorld && AgentWorld())")); i++) await sleep(50)
+  assert.ok(await ev("!!(window.AgentWorld && AgentWorld())"), "page ready within five seconds")
+  return ev
 }
 
 test("a shared link opens that level with that colony, once, and copying makes a toast", { skip: !chromium && "no chromium", timeout: 60000 }, async () => {
