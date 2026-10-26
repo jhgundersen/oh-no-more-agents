@@ -21,3 +21,14 @@ test("the page walk is low at contact, high at passing, and lifts only the swing
   assert.ok(Math.max(...drops) - Math.min(...drops) === 1, "a one-pixel bob")
   assert.ok(gait.slice(0, 4).some(g => g[2]) && gait.slice(4).some(g => g[3]), "the two steps swing different feet")
 })
+
+test("a floating umbrella leans downwind in a gust, a pixel and a half at most", () => {
+  const ag = { id: 3 }, w = { ticks: 100, reducedMotion: true }
+  assert.equal(D.pageFloatSway(w, ag), 0)
+  for (const [wind, lean] of [[0.2, 0.5], [0.5, 1.5], [1, 1.5], [-0.5, -1.5]]) {
+    w.wind = wind
+    assert.equal(D.pageFloatSway(w, ag), lean, `wind ${wind}`)
+  }
+  w.reducedMotion = false; w.wind = 0
+  for (let t = 0; t < 200; t++) { w.ticks = t; const s = D.pageFloatSway(w, ag); assert.ok(Math.abs(s) <= 1 && Number.isInteger(s * 2)) }
+})

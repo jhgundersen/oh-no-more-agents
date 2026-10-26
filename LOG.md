@@ -10928,3 +10928,13 @@ the page; read-only and RNG-free.
 
 **Next:** deploy, then umbrella secondary motion (tilt into the wind where
 there is wind) and idle fidgets for blocked agents.
+
+## 414 — 2026-10-26 · Umbrellas lean into the gust
+
+In the Desert's gusts (Sim's `w.wind`) a floater drifts, but its umbrella held
+the same upright sway. `pageFloatSway` is now the one source of the canopy's
+offset over the grip: its own slow sway, plus a lean of `wind × 3` downwind,
+capped at 1.5 px. `drawPageFloat` and the rain splashes (406) both use it, so
+the splashes stay on the canopy. Tested in `test/gait.test.js`: no lean in
+still air, the lean's sign and cap, and the sway alone stays within a pixel
+on the half grid.

@@ -3317,8 +3317,7 @@ function weatherCanopy(w, ag) { return ag.state === "fall" && ag.floater && ag.f
 function drawRainTouch(ctx, w, ag, x, y, t) {
   ctx.fillStyle = RAIN_COLOUR
   if (weatherCanopy(w, ag)) {
-    var sway = w.reducedMotion ? 0 : Math.round(Math.sin(w.ticks * 0.09 + ag.id * 1.7) * 2) / 2
-    var cx = x + sway + 4.5, top = y - 11
+    var cx = x + pageFloatSway(w, ag) + 4.5, top = y - 11
     for (var s = 0; s < RAIN_CANOPY.length; s++) {
       var dx = RAIN_CANOPY[s], age = (t + ag.id * 7 + s * 3) % 7
       if (age >= RAIN_SPLASH.length) continue
@@ -21896,10 +21895,16 @@ function drawPageBlock(ctx,w,pal,ag,x,y,d,robe) {
   drawFineShoes(ctx,pal,x,y,d,0,15.5,6,15.5,2);ctx.restore()
 }
 
+// The canopy's sideways offset over the grip: its own slow sway, and in a
+// gust (Sim's w.wind, the Desert) a lean of up to a pixel and a half downwind.
+function pageFloatSway(w,ag) {
+  var lean=w.wind?Math.max(-1.5,Math.min(1.5,Math.round(w.wind*3*2)/2)):0
+  return (w.reducedMotion?0:Math.round(Math.sin(w.ticks*0.09+ag.id*1.7)*2)/2)+lean
+}
 function drawPageFloat(ctx,w,pal,ag,x,y,brolly) {
   var spread=Math.min(1,Math.max(0.25,Math.ceil((ag.fall-2)*8)/8))
   var flex=w.reducedMotion?0:Math.round(Math.sin(w.ticks*0.13+ag.id*1.7)*2)/2
-  var sway=w.reducedMotion?0:Math.round(Math.sin(w.ticks*0.09+ag.id*1.7)*2)/2
+  var sway=pageFloatSway(w,ag)
   ctx.save()
   drawUmbrellaFine(ctx,pal,x+sway,y,flex*2,brolly,spread,true)
   var grip=ag.dir>0?8:-0.5
