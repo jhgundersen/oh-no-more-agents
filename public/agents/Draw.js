@@ -19113,7 +19113,7 @@ function drawOfficeLife(ctx, w) {
   for (var row = 0; row < w.corridors.length; row++) {
     var windows = officeWindows(w, row)
     for (var i = 0; i < windows.length; i++) {
-      var b = windows[i], phase = Math.floor((w.ticks + b.seed) / 160) % 5
+      var b = windows[i], phase = Math.floor((quietBackdropTick(w) + b.seed) / 160) % 5
       // Only the windows off in the cached recipe can light up live. The
       // buildings never move; a slow light cycle suggests distant overtime.
       for (var j = 0; j < 5; j++) drawOfficeCityLights(ink, b, j, 5 + (b.seed + j * 17) % 12, phase + 1)
@@ -19810,7 +19810,7 @@ function drawPostalCycle(ctx, w) {
     ctx.fillStyle = this.fillStyle; ctx.fillRect(x, y, width, height)
   } }
   for (var i = 0; i < stations.length; i++) {
-    var b = stations[i], phase = Math.floor(((w.ticks + b.seed) % 120) / 30)
+    var b = stations[i], phase = Math.floor(((quietBackdropTick(w) + b.seed) % 120) / 30)
     var x = b.x + [-11, -3, 4, 12][phase], y = b.base - 7
     // A stamp must not survive on its own when the envelope is occluded.
     if (abyssClear(w, x, y, 4, 2, boxes)) {
@@ -20098,7 +20098,7 @@ function drawWorkDrums(ctx, w) {
   for (var i = 0; i < mixers.length; i++) {
     var b = mixers[i]
     if (!workMixerClear(w, b, boxes)) continue
-    var phase = Math.floor((w.ticks + b.seed) / b.rate) % 4
+    var phase = Math.floor((quietBackdropTick(w) + b.seed) / b.rate) % 4
     var x = b.x + [3, 6, 7, 4][phase], y = b.base + [-10, -11, -8, -7][phase]
     ctx.fillStyle = WORK_EDGE
     ctx.fillRect(x, y, 1.5, 0.5)
@@ -22647,6 +22647,7 @@ function drawCloudDrafts(ctx,w) {
 // Small distant motions are painted on the transparent actor layer because
 // the terrain/backdrop is cached. Air and fixture masks keep them behind play.
 function drawBackdropLife(ctx, w) {
+  drawCityPostLife(ctx, w)
   drawDeepWaterLife(ctx, w)
   drawStoneWindLife(ctx, w)
   drawWorkLightLife(ctx, w)
@@ -23201,4 +23202,70 @@ function drawFarKelp(ctx, w, scene, b, t, alpha) {
     var y = b.y+13-Math.floor((t/6+b.seed+mote*17)%60)/5
     drawCloudDraftRect(ctx,scene,b.x+3+mote*9+Math.round(Math.sin(t/70+mote)*2)/2,Math.round(y*2)/2,0.5,0.5)
   }
+}
+
+
+// Back-office air, mail belts and site cloth finish the distant scenery pass.
+function drawCityPostLife(ctx, w) {
+  if (w.res !== 2 || (w.biome !== "Skyscraper" && w.biome !== "Mail Room" && w.biome !== "Building Site")) return
+  ctx.save()
+  var scene = quietBackdropLayout(w), t = quietBackdropTick(w), alpha = ctx.globalAlpha
+  for (var i = 0; i < scene.sites.length; i++) {
+    var b = scene.sites[i]
+    if (w.biome === "Skyscraper") drawFarDeskFan(ctx,scene,b,t,alpha)
+    if (w.biome === "Mail Room") drawFarMail(ctx,scene,b,t,alpha)
+    if (w.biome === "Building Site") drawFarPennants(ctx,scene,b,t,alpha)
+  }
+  ctx.restore()
+}
+function drawFarDeskFan(ctx, scene, b, t, alpha) {
+  var x = b.x+8, y = b.y+6, spin = t/15+b.seed
+  ctx.fillStyle = "#667681"; ctx.globalAlpha = alpha*0.65
+  drawCloudDraftRect(ctx,scene,x-3,y+7,8,1)
+  drawCloudDraftRect(ctx,scene,x,y+4,1,3)
+  for (var rim = 0; rim < 20; rim++) {
+    var angle = rim*Math.PI/10
+    drawCloudDraftRect(ctx,scene,x+Math.round(Math.cos(angle)*5*2)/2,y+Math.round(Math.sin(angle)*5*2)/2,1,1)
+  }
+  ctx.fillStyle = "#9aa8ae"; ctx.globalAlpha = alpha*0.6
+  for (var blade = 0; blade < 3; blade++) for (var d = 1; d < 5; d++) {
+    var a = spin+blade*Math.PI*2/3
+    drawCloudDraftRect(ctx,scene,x+Math.round(Math.cos(a)*d*2)/2,y+Math.round(Math.sin(a)*d*2)/2,1,1)
+  }
+  ctx.fillStyle = "#94958c"; ctx.globalAlpha = alpha*0.55
+  var lift = Math.round(Math.sin(t/35+b.seed)*2*2)/2
+  drawCloudDraftRect(ctx,scene,b.x+20,b.y+11+lift,6,0.5)
+  drawCloudDraftRect(ctx,scene,b.x+25,b.y+10+lift,1,1)
+}
+function drawFarMail(ctx, scene, b, t, alpha) {
+  ctx.fillStyle = "#635e62"; ctx.globalAlpha = alpha*0.65
+  drawCloudDraftRect(ctx,scene,b.x,b.y+11,28,2)
+  ctx.fillStyle = "#acaa96"; ctx.globalAlpha = alpha*0.7
+  for (var envelope = 0; envelope < 2; envelope++) {
+    var x = b.x+Math.floor((t/10+b.seed+envelope*12)%22)/2
+    drawCloudDraftRect(ctx,scene,x,b.y+8,6,3)
+    ctx.fillStyle = "#777f82"
+    drawCloudDraftRect(ctx,scene,x+1,b.y+9,3,0.5)
+    ctx.fillStyle = "#acaa96"
+  }
+  var swing = Math.round(Math.sin(t/55+b.seed)*2*2)/2
+  ctx.fillStyle = "#858c82"; ctx.globalAlpha = alpha*0.5
+  drawCloudDraftRect(ctx,scene,b.x+23,b.y,0.5,3)
+  drawCloudDraftRect(ctx,scene,b.x+21+swing,b.y+3,5,3)
+}
+function drawFarPennants(ctx, scene, b, t, alpha) {
+  ctx.fillStyle = "#7b827a"; ctx.globalAlpha = alpha*0.55
+  drawCloudDraftRect(ctx,scene,b.x,b.y+2,28,0.5)
+  for (var flag = 0; flag < 4; flag++) {
+    var flap = Math.round(Math.sin(t/22+b.seed+flag)*2*2)/2, x = b.x+2+flag*7
+    ctx.fillStyle = flag%2 ? "#718c95" : "#a09161"
+    drawCloudDraftRect(ctx,scene,x,b.y+2.5,4,1)
+    drawCloudDraftRect(ctx,scene,x+flap/2,b.y+3.5,3,1)
+    drawCloudDraftRect(ctx,scene,x+Math.round(flap*2)/2+1,b.y+4.5,1,2)
+  }
+  ctx.fillStyle = "#637e80"; ctx.globalAlpha = alpha*0.45
+  var billow = Math.round(Math.sin(t/48+b.seed)*2*2)/2
+  drawCloudDraftRect(ctx,scene,b.x+7,b.y+8,13,1)
+  drawCloudDraftRect(ctx,scene,b.x+7+billow,b.y+9,12,4)
+  drawCloudDraftRect(ctx,scene,b.x+9+billow,b.y+13,8,0.5)
 }

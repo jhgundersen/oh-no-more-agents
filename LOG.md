@@ -10835,3 +10835,46 @@ vignette to Codex (`codex/home-time`), so they are off my list.
 
 **Next:** merge `codex/living-city-post` (13caeaf, the last three biomes'
 backdrops), then agent animation: the walk, secondary motion and landings.
+
+## 411 — 2026-10-26 · Living city, post and worksite: ambient pass complete
+
+(Codex wrote this as 409 on its branch; renumbered at the merge.)
+
+`codex/living-city-post`, merged up to current main d0725ea before the final
+gate, as requested by agents-developer. Resolved the Draw.js append against
+main's complete dispatcher, retaining one shared `quietBackdropLayout` and
+all previous biome calls. `drawActors`, `drawWeatherTouch`, `drawActorColony`,
+the dusk and city-light functions remain byte-identical to that main.
+
+Skyscraper gets distant desk fans and a paper corner stirred by their breeze.
+Mail Room gets letters travelling along a far belt and a slowly rocking tag.
+Building Site gets wind-tossed faded pennants and a loose scaffold tarp.
+All runtime changes are in Draw.js, exact page resolution 2 only, behind
+play and clipped through the existing air/fixture mask. Reduced motion fixes
+the new poses and the existing office, postal and mixer-drum scenery;
+native/share clocks stay unchanged. No new lights or simulation changes.
+
+**Validation:** fresh full check on the integrated tree, with coverage under
+the FIFO testlock, 3 GB scope, 2 GB heap and two workers: 1603 passed, 0 failed,
+429 seconds; 98.46% lines / 96.82% branches / 96.35% functions. CRAP threshold
+30 with existing coverage: green, 2515 functions, max 30.0; new functions
+max 9.0, all 100% covered. New bounded tests cover half-pixel air clipping,
+RNG-free/read-only determinism, exact page gating, fixed reduced-motion
+poses, replaced masks and identical rendered/plain live world digests across
+these and nearby biomes. Stamps are current. An extra bounded inventory
+check confirms the combined ambient dispatchers paint all 20 biomes.
+
+**Evidence:** `/tmp/codex-living-city-post/review/index.html`: refreshed
+before/after eight-phase strips, enlarged details, 390 px previews, and actual
+1280×900 / 390×844 page captures for levels 9/14/15, seed 3. Baseline d0725ea;
+simulation held at tick 240, drawing clock 700 onward. Before/after `npm run
+fps -- 9 14 15 --seconds 10 --speed 2 --from-tick 240`: all 60 fps / p5 60 /
+worst 17 ms; CPU before 9/11/10%, after 13/13/13%. Coverage, CRAP, full logs,
+inventory and source/image SHA-256 provenance:
+`/tmp/codex-living-city-post/evidence/`. The earlier pre-merge capture run
+was stopped before its check to release the lock for main's merge gates;
+all final evidence above was regenerated against d0725ea. No push/deploy.
+
+**Next:** final developer handoff. Remaining ambient backdrop pass: none —
+all 20 biomes now have ambient treatment across the reviewed small batches.
+Leave the developer's arrivals/agent-animation work to them.
