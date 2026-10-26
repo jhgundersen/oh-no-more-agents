@@ -11257,3 +11257,15 @@ them as blood. They were older: Sim's `blood` particles, which
 as scraps of cream paper (`PAPER #ece6d4`) with a ruled blue line and a
 darker edge. Each scrap turns over as its life ticks down: wide, wide, then
 on edge. The native panel and share art keep their drops.
+
+## 425 — 2026-10-26 · Deploy (18:18): lost and clocked in, bombs, paperwork
+
+**Deployed** build cb9b389a (Worker version 3e8367b7), replacing 9c03f472. It
+covers 422–424: the lost-agent moments and the clock-in badge, Codex's bomb
+polish, and paperwork for blood on the page.
+
+**Before:** `npm run smoke` passed (3 min, levels 1–7); gate 1633/1633.
+**After:** `npm run verify -- --previous 9c03f472` passed on the first run.
+
+**Next:** merge `codex/baddies-on-duty` (8049ddf), then `codex/hazard-beats`
+when it lands.
