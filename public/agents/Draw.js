@@ -11452,11 +11452,14 @@ function drawEnemy(ctx, w, pal, en, opts) {
   var m = enemyMotion(w, en)
   var ox = Math.round(en.x * w.k.CELL) - SPRITE_W / 2 - en.dir * enemyRecoil(en)
   var oy = Math.round((en.y + 1) * w.k.CELL) - SPRITE_PX - m.bob
+  var life = pageEnemyPose(w, en)
+  ox += life.x; oy += life.y
   var fn = en.boss && en.kind !== "bouncer" ? drawModerator : (ENEMY_DRAW[en.kind] || drawGunner)
   fn(ctx, w, pal, en, ox, oy, en.dir, m)
   if (en.boss && en.kind === "bouncer" && (w.res || 1) < 2)
     drawHeadBouncerCrown(ctx, en, ox, oy)
   if ((w.res || 1) >= 2) drawCastEnemyKit(ctx, w, en, ox, oy, en.dir)
+  drawPageEnemyFidget(ctx, w, en, ox, oy)
   drawEnemyQuip(ctx, w, pal, en, ox, oy)
   if (opts && opts.labels) drawEnemyLabel(ctx, w, en, ox, oy)
   ctx.globalAlpha = 1
@@ -11906,6 +11909,8 @@ function drawEnemyDefeat(ctx, w, pal, en) {
   if (!en.gone || en.diedAt === undefined) return
   var age = w.ticks - en.diedAt
   if (age < 0 || age >= ENEMY_DEFEAT_TICKS) return
+  if (w.res === 2 && w.reducedMotion) age = 20
+  drawEnemyPoof(ctx, w, pal, en, age)
   if ((w.res || 1) >= 2) drawCastRicochet(ctx, w, en, age)
   var draw = Object.prototype.hasOwnProperty.call(ENEMY_DEFEAT_DRAW, en.kind)
     ? ENEMY_DEFEAT_DRAW[en.kind] : drawDefeatGunner
@@ -23791,4 +23796,65 @@ function drawCountdownSpark(ctx,w,pal,ag,ox,oy,dir,y) {
     blitFine(ctx,ox,oy,dir,5.5,y-1-(phase%2),0.5,0.5)
     blitFine(ctx,ox,oy,dir,2,y-2+(phase%2)*0.5,0.5,0.5)
   }
+}
+
+
+// The red team gets its own breathing and preparatory beats, separate from
+// colony skill poses. Every cue reads an existing action clock or target.
+function pageEnemyPose(w,en) {
+  if (w.res!==2 || w.reducedMotion || en.throttled>0 || en.boss) return{x:0,y:0}
+  if (en.state==="aim") {
+    var span=en.kind==="sniper"?36:(en.kind==="harpoon"?46:8)
+    var stage=Math.min(3,Math.floor(en.timer*4/span))
+    return{x:-en.dir*[0,1,2,0.5][stage],y:0}
+  }
+  if (en.state==="recover" && en.hurtAt!==undefined && !en.boss && en.kind!=="bouncer") {
+    var age=w.ticks-en.hurtAt
+    if (age>=0 && age<12) return{x:en.dir*[0,-1,1,-0.5][Math.floor(age/3)],y:0}
+  }
+  if (["camp","operate","reload","hover"].indexOf(en.state)<0 || en.shotFor>0) return{x:0,y:0}
+  var beat=Math.floor(((w.ticks+(en.id||0)*17)%120)/30)
+  return{x:0,y:[0,-0.5,-1,-0.5][beat]}
+}
+function drawPageEnemyFidget(ctx,w,en,ox,oy) {
+  if (w.res!==2 || w.reducedMotion || en.throttled>0) return
+  if (en.kind==="bouncer") drawGuardKnuckles(ctx,w,en,ox,oy)
+  if (en.state==="aim") drawEnemyBrace(ctx,en,ox,oy)
+}
+function drawGuardKnuckles(ctx,w,en,ox,oy) {
+  if (en.state!=="walk" || !bouncerPalm(w,en)) return
+  var phase=(w.ticks+(en.id||0)*19)%96
+  if (phase>=24) return
+  // The raised stop hand flexes, then opens again before a scuffle.
+  var curl=phase<8?1:(phase<16?2:1)
+  ctx.fillStyle=BOUNCER_DARK
+  blitFine(ctx,ox,oy,en.dir,12,3,2,2)
+  ctx.fillStyle=BOUNCER_SKIN
+  blitFine(ctx,ox,oy,en.dir,12-curl*0.5,4,2+curl*0.5,2)
+  ctx.fillStyle="#94735f"
+  blitFine(ctx,ox,oy,en.dir,12,4.5,1.5,0.5)
+}
+function drawEnemyBrace(ctx,en,ox,oy) {
+  // A supporting elbow draws in, then seats under the weapon. This is not a
+  // muzzle flash: the existing aim and discharge still announce the shot.
+  if (en.kind!=="gun" && en.kind!=="harpoon") return
+  var span=en.kind==="harpoon"?46:8,late=en.timer>=span/2
+  ctx.fillStyle=en.kind==="harpoon"?"#34313a":"#8f1f35"
+  blitFine(ctx,ox,oy,en.dir,5,9,2,late?2:3)
+  ctx.fillStyle="#b9a59a"
+  blitFine(ctx,ox,oy,en.dir,6.5,late?8:10,2,1)
+}
+function drawEnemyPoof(ctx,w,pal,en,age) {
+  if (w.res!==2 || age<8 || age>=28) return
+  var t=w.reducedMotion?12:age-8,C=w.k.CELL
+  ctx.save();ctx.fillStyle=pal.dust;ctx.globalAlpha=0.5*(1-t/24)
+  for (var i=0;i<7;i++) {
+    var angle=(i+0.5)*Math.PI/7,spread=3+t*0.65
+    var x=Math.round((en.x*C+Math.cos(angle)*spread)*2)/2
+    var y=Math.round(((en.y+1)*C-Math.sin(angle)*(3+t*0.4))*2)/2
+    var size=2+i%2
+    ctx.fillRect(x,y,size,size)
+    ctx.fillRect(x+0.5,y-0.5,size-1,0.5)
+  }
+  ctx.restore()
 }

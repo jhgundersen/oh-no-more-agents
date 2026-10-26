@@ -11240,3 +11240,43 @@ review evidence. No push or deployment.
 
 **Next:** hand off this Bomb-only branch; then enemies/guards on a fresh branch
 off main, followed by water/acid, lightning and crushers on a third branch.
+
+## 424 — 2026-10-26 · The red team takes a breath
+
+Second of the supervisor's three polish groups, on `codex/baddies-on-duty`:
+ordinary enemies shift their weight while posted or waiting, lean into their
+existing aim timer, and seat a supporting elbow under the weapon. A guard's
+raised stop hand briefly flexes its fingers. A dated defeat kicks a little
+semicircle of dust around the established fallen body and dropped kit. The
+existing boss crown, stagger geometry, muzzle and shot timing remain anchored.
+Reduced motion disables the new idle/brace/finger loops and uses a fixed
+settled defeat until the existing expiry; native/default and res 3/share
+retain their previous pixels. Runtime edits are only in Draw.js; no world
+writes, random draws or simulation changes. Agent skill actions are untouched.
+
+The first full gate caught a Moderator muzzle regression from applying the
+ordinary-enemy lean to the boss origin. That run was stopped. Boss origins
+now bypass that motion; the focused preflight includes both existing crown
+and Moderator muzzle tests. Main d302dff (including the approved Bomb branch)
+was merged and the entire check and coverage rerun on the integrated tree.
+
+`tools/enemy-life-art.js` stages four enemy kinds on a real Library corridor,
+with solid ground under each and two umbrella-carrying witnesses. Its existing
+idle/aim/reload/defeat clocks drive 51 timed poses; all 102 matched before/after
+worlds are identical. Full desktop and 390 px PNGs, timed GIFs, reduced poses
+and reproduction notes: `/tmp/codex-baddies-on-duty/review/index.html`.
+These are explicit pose demonstrations, not a claimed live fight.
+
+**Validation:** capped, shared-lock full `npm run check`: 1637/1637, 98.48%
+line coverage. `npm run crap -- --threshold 30 --use-existing-coverage`:
+maximum 30.0. Tests cover seven kinds, both directions and five palettes,
+bounded half-pixel rendering, RNG/read-only behaviour, fixed reduced poses,
+native/share hashes, 180 live enemy steps with complete world digests, and
+actual desktop/phone captures. Live npm FPS on levels 6/13/18, before/after:
+60 fps, p5 60, worst 17 ms. A six-second idle/aim/fire/defeat fixture at both
+widths, normal and reduced, also 60/p5 60/worst 17 ms, no browser errors.
+Coverage and logs archived beside the evidence. No push or deployment.
+
+**Next:** hand off the enemy/guard branch, then finish the last group on
+`codex/hazard-beats`: water/green-liquid entry crowns, lightning warning
+flicker and crusher impact dust, keeping the existing simulation clocks.
