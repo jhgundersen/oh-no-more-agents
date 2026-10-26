@@ -10345,6 +10345,43 @@ or sibling-copy changes.
 batch from main: distant rack fans and port gulls, drawing only, fixed reduced-
 motion poses, world-digest equivalence, FPS and desktop/390px comparisons.
 
+## 397 — 2026-10-26 · Living backdrops: rack fans and port gulls
+
+Started `codex/living-racks-port` from main `e948b64` (fast-forwarded to its readiness fix `1484670`), independently of the
+thaw-art branch. Small four-pose fans now turn inside the Data Center's distant
+rack cabinets; Harbour gulls glide and flap over the container port. The existing
+rack lamps and lighthouse stay as they were. Pixel/half-pixel rectangles, subdued
+colours, slow phases, no smooth transforms or new dependencies.
+
+Only Draw.js changes runtime behaviour. Because terrain/backdrops are cached,
+the small live accents use the transparent actor pass before mechanisms,
+characters and umbrellas. Existing air/fixture masks occlude them; no terrain
+repainting, simulation fields or RNG are added. Reduced motion pins both new
+animations to fixed poses. Default/native/share drawing remains untouched. The first full run caught the
+new details reaching resolution 3; exact page gating fixes both old-pixel
+comparisons. All 20 focused ambient/umbrella-office/WHO checks then pass.
+
+Fresh `npm run check` with coverage: **1,552 passed, 0 failed**, 398.16 s;
+line/branch/function coverage **98.42% / 96.73% / 96.22%**.
+`npm run crap -- --threshold 30 --use-existing-coverage` passed on that same
+complete LCOV, maximum **30.0**. One outer FIFO testlock covers capture, FPS,
+check and CRAP; two test workers, 2GB Node heap, 6GB address-space cap, 3GB
+service memory. Complete LCOV, metrics and source hashes are archived with the
+evidence. Paired `npm run fps` runs at Brisk speed from tick 240, ten seconds
+per level: **60 FPS / p5 60 before and after**, worst frame **17 ms**, 17/14
+active characters. CPU 11→10% for Data Center, 10→10% for Harbour; no long tasks.
+
+Before/after four-phase animation and actual desktop/390px phone screenshots:
+`/tmp/codex-living-racks-port/review/index.html` (levels 12/19, seed 3,
+simulation tick 240 held for matched captures). Evidence and gate logs stay
+under `/tmp/codex-living-racks-port/`. Preferred Chromium extension unavailable;
+the repository's local throwaway-profile headless tools supplied captures/FPS.
+No push, deploy or sibling-copy changes.
+
+**Next:** developer review/merge this small batch, then another small backdrop
+batch, starting with Cloud drifting puffs and checking Library's existing dust
+before adding more. Retain the same motion, digest, FPS and phone evidence gates.
+
 ## 398 — 2026-10-26 · Deploy (12:10), with the thaw art merged first
 
 (397 is Codex's `codex/living-racks-port` note, which lands with that merge.)

@@ -2993,6 +2993,7 @@ function drawActors(ctx, w, pal, opts) {
   var k = w.k
   clearLayer(ctx, w)
   drawAnimatedLight(ctx, w, pal)
+  drawBackdropLife(ctx, w)
   if (junglePage(w)) drawJungleLife(ctx, w)
   if (iceCavePage(w)) drawGlacierLife(ctx, w)
   drawAssemblyLife(ctx, w)
@@ -22282,6 +22283,62 @@ function drawCloudDrafts(ctx,w) {
       var y=Math.round((top+tall-((phase+s*tall/count+b.x*3)%tall))*2)/2
       drawCloudDraftCurl(ctx,scene,b,y,alpha)
     }
+  }
+  ctx.restore()
+}
+
+// Small distant motions are painted on the transparent actor layer because
+// the terrain/backdrop is cached. Air and fixture masks keep them behind play.
+function drawBackdropLife(ctx, w) {
+  drawRackFans(ctx, w)
+  drawPortGulls(ctx, w)
+}
+function drawRackFans(ctx, w) {
+  if (w.res !== 2 || !dataCenterPage(w)) return
+  ctx.save()
+  var boxes = dataReserved(w)
+  for (var row = 0; row < w.corridors.length; row++) {
+    var racks = dataCabinets(w, row)
+    for (var i = 0; i < racks.length; i++) {
+      var b = racks[i], x = b.x + 4, y = b.y + 4
+      if (!abyssClear(w, x, y, 7, 7, boxes)) continue
+      var phase = w.reducedMotion ? 0 : Math.floor((w.ticks + b.seed) / 8) % 4
+      drawRackFan(ctx, x, y, phase)
+    }
+  }
+  ctx.restore()
+}
+var RACK_FAN_TIPS = [[0, -2, 1, 2], [1, -1.5, 1, 1], [-2, 0, 2, 1], [-1.5, -1.5, 1, 1]]
+function drawRackFan(ctx, x, y, phase) {
+  ctx.fillStyle = DATA_SLOT
+  ctx.fillRect(x + 1, y, 5, 7); ctx.fillRect(x, y + 1, 7, 5)
+  ctx.fillStyle = DATA_FACE
+  ctx.fillRect(x + 1, y + 1, 5, 5)
+  ctx.fillStyle = DATA_EDGE
+  // Unequal blade tips make four poses legible without smooth rotation.
+  var b = RACK_FAN_TIPS[phase]
+  ctx.fillRect(x + 3 + b[0], y + 3 + b[1], b[2], b[3])
+  ctx.fillRect(x + 3 - b[0] - b[2] + 1, y + 3 - b[1] - b[3] + 1, b[2], b[3])
+  ctx.fillStyle = DATA_CABLE
+  ctx.fillRect(x + 3, y + 3, 1, 1)
+}
+function drawPortGulls(ctx, w) {
+  if (w.res !== 2 || !portPage(w)) return
+  ctx.save()
+  ctx.fillStyle = "#9ba49a"
+  ctx.globalAlpha *= 0.6
+  var t = w.reducedMotion ? 0 : w.ticks, layout = portLayout(w), C = w.k.CELL
+  for (var row = 0; row < w.corridors.length; row++) {
+    var c = w.corridors[row], span = Math.max(1, (c.x1 - c.x0 - 8) * C)
+    var drift = (Math.floor(t / 5) + row * 67 + w.level * 13) % span
+    var x = (c.x0 + 4) * C + (row % 2 ? span - drift : drift)
+    var y = c.floorY * C - 22 + Math.round(Math.sin(t / 70 + row) * 2) / 2
+    var wing = [0, -0.5, -1, -0.5][Math.floor((t + row * 17) / 12) % 4]
+    portAccent(ctx, w, layout, x, y, 1, 0.5)
+    portAccent(ctx, w, layout, x - 2, y + wing - 0.5, 2, 0.5)
+    portAccent(ctx, w, layout, x + 1, y + wing - 0.5, 2, 0.5)
+    portAccent(ctx, w, layout, x - 3, y + wing - 1, 1, 0.5)
+    portAccent(ctx, w, layout, x + 3, y + wing - 1, 1, 0.5)
   }
   ctx.restore()
 }
