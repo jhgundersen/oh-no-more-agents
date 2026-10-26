@@ -10756,3 +10756,41 @@ No push or deployment.
 **Next:** hand off, then Cavern/Ice Cave/Trench from main. Remaining ambient
 backdrop pass (6): Cavern, Ice Cave, Trench, Skyscraper, Mail Room and
 Building Site.
+
+## 408 — 2026-10-26 · Living depths
+
+(Codex wrote this as 407 on its branch; renumbered at the merge.)
+
+`codex/living-deep-water`, off main 2e5e4a2. Cavern gets slow far drips
+falling into a narrow back-wall pool, with spreading rings and quiet pauses.
+Ice Cave gets layered cold veils and an occasional facet glint. Trench gets
+three-stem kelp clumps swaying slowly and sparse rising plankton. The new
+ice glints and plankton grow with `duskAt(w.ticks)`. All runtime changes are
+in Draw.js, page resolution 2 only, using the shared air/fixture mask.
+
+Reduced motion fixes the new poses and the older fungal light/grit, glacier
+light/glints and abyss fish/bubbles/kelp. Native/share clocks stay unchanged.
+The scoped umbrella-office comparison fix from living-work-lights is also
+included here because Trench's crop contains new scenery; retain the single
+identical fix when merging. Its historical native/share reference remains.
+
+**Validation:** fresh full check with coverage, FIFO testlock, 3 GB scope,
+2 GB heap, two workers: 1590 passed, 0 failed, 420 seconds; 98.45% lines /
+96.80% branches / 96.34% functions. CRAP threshold 30 with existing coverage:
+green, 2501 functions, max 30.0. Bounded new tests cover exact page gating,
+half-pixel air clipping, RNG-free/read-only determinism, fixed reduced-motion
+poses, shared dusk brightness, terrain-mask replacement and unchanged live
+world digests against plain simulation in neighbouring biomes too. Stamps
+are current; focused umbrella-office tests also pass 8/8.
+
+**Evidence:** `/tmp/codex-living-deep-water/review/index.html` contains
+before/after eight-phase strips, enlarged details, 390 px previews and all
+1280×900 / 390×844 page captures for levels 1/6/10, seed 3. Baseline 2e5e4a2;
+simulation held at tick 240, drawing clock 1100 onward. Before/after `npm run
+fps -- 1 6 10 --seconds 10 --speed 2 --from-tick 240`: all 60 fps / p5 60 /
+worst 17 ms; CPU before 9/11/9%, after 9/11/10%. Coverage, CRAP, logs and
+source/image SHA-256 provenance: `/tmp/codex-living-deep-water/evidence/`.
+No push or deployment.
+
+**Next:** hand off, then the final ambient backdrop group from fresh main:
+Skyscraper, Mail Room and Building Site (3 remaining).
