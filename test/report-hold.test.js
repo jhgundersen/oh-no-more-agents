@@ -56,7 +56,7 @@ test('held reports and resume hints fit actual desktop, phones, landscape and se
 test('report pause holds its clock, resumes by Space/tap, and excludes gameplay, replay and standup',{timeout:30000},async()=>{
  const server=await serve(),b=await browser()
  const ev=async expression=>{const r=await b.cmd('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value}
- const waitFor=async expression=>{for(let i=0;i<80;i++){if(await ev(expression))return;await sleep(25)}assert.fail('Timed out: '+expression+'; '+JSON.stringify({state:await ev('({level:AgentWorld()?.level,ticks:AgentWorld()?.ticks,doneTicks:AgentWorld()?.doneTicks,pause:document.getElementById("pauseWord").textContent})'),errors:b.errors}))}
+ const waitFor=async expression=>{for(let i=0;i<200;i++){if(await ev(expression))return;await sleep(25)}assert.fail('Timed out: '+expression+'; '+JSON.stringify({state:await ev('({level:window.AgentWorld?.()?.level,ticks:window.AgentWorld?.()?.ticks,doneTicks:window.AgentWorld?.()?.doneTicks,pause:document.getElementById("pauseWord").textContent})'),errors:b.errors}))}
  const open=async query=>{
   await b.cmd('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/?seed=3&'+query})
   await waitFor('!!window.AgentWorld?.()&&!AgentWorld().done')

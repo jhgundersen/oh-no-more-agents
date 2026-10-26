@@ -11311,3 +11311,57 @@ Coverage and logs archived beside the evidence. No push or deployment.
 **Next:** hand off the enemy/guard branch, then finish the last group on
 `codex/hazard-beats`: water/green-liquid entry crowns, lightning warning
 flicker and crusher impact dust, keeping the existing simulation clocks.
+
+## 427 — 2026-10-26 · A splash, a crackle, and a ceiling landing
+
+Third and final group of the supervisor's Bomb/enemy/hazard polish round,
+on `codex/hazard-beats`. Main 0fe6717, including the approved enemy branch,
+was merged before final capture and validation. Runtime edits stay in
+Draw.js; web.js and the developer's logo, toolbar and home-bar work are
+untouched. index.html and src/version.js change only through stamping.
+
+Liquid entry now throws a five-pronged crown, bright ballistic droplets
+and wider receding ripples. All pixels still pass through the existing
+liquid/terrain mask, with its eight-pixel headroom limit. The effect uses
+sink/sinkEnemy's dated entry position; every existing liquid material uses
+its own palette. No new liquid type or damage rule is introduced. Lightning
+gets three short forks crawling and gently flickering along the cloud belly
+in the latter part of the actual charge; it does not draw a strike early.
+A crusher kicks eight chunky dust puffs out from its edges on impact,
+fading through its existing fire/rest clock. Reduced motion keeps fixed
+ripple accents, steady warning forks and a fixed dust pose. The original
+six-tick reduced entry mark, 36-tick normal entry lifetime, early quiet tell,
+strike cores, native/default and share pixels remain intact. No simulation
+changes, world writes or random draws from rendering.
+
+`tools/hazard-beat-art.js` stages actual sink/noteDeaths entries and advances
+real generated lightning/crusher fixtures through stepOneHazard. A fixed
+local seed covers both the staged entry pose and its cosmetic dust. Its
+288 matched before/after frames have identical complete world digests and
+zero browser errors. Four scenarios at desktop and 390 px, full-page PNG
+pairs, timed GIFs and reduced-motion sequences:
+`/tmp/codex-hazard-beats/review/index.html`. The Jungle pool keeps its
+existing water simulation. Evidence includes reproduction notes, logs,
+coverage and source/image hashes.
+
+The first full run found an updraft test pinning the intentionally replaced
+late warning and a report-host startup wait expiring after two seconds.
+The updraft test now explicitly expects only that late-warning change,
+still comparing early tells, strike cores and all agent/umbrella pixels
+exactly. Report startup gets a bounded five-second readiness poll and a
+safe diagnostic when AgentWorld is not yet defined. No host behaviour was
+changed. Their focused preflight passes 15/15; the hazard preflight passes
+125/125.
+
+**Validation:** fresh capped, shared-lock full `npm run check`: 1644/1644,
+98.48% line coverage. `npm run crap -- --threshold 30
+--use-existing-coverage`: maximum 30.0. Live npm FPS before/after on levels
+2/18/20/25: 60 fps, p5 60, worst 17 ms. Sixteen effect probes (four scenarios,
+two widths, normal/reduced) also 60/p5 60/worst 17 ms, no browser errors.
+The tests cover clipping/masks, bounded half-pixels, state/RNG preservation,
+fixed reduced poses, native/share hashes, browser captures and complete
+world digests through actual live steps. No push or deployment.
+
+**Next:** hand this ready branch to agents-developer and stop, per Jon's
+instruction. All three requested groups have separate hand-offs; start
+nothing further.
