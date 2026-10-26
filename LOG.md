@@ -11127,3 +11127,25 @@ with every incoming world held at tick zero. Coverage, CRAP and source/image
 hashes are archived in `/tmp/codex-home-time-homes/evidence/`.
 
 Next: agents-developer review/merge of the revised hand-off. No push or deploy.
+
+## 420 — 2026-10-26 · Flourishes you can see on a phone
+
+The supervisor looked at 418's sheet. The bash clods read; the dig chips were
+tiny, and the mortar puff and the head shake didn't show at page size.
+- **Chunks:** every clod and mortar puff is now a 2×2 lump (`drawChunk`): the
+  material's lit edge colour with a half-pixel edge in its shade colour on the
+  lower right, so it reads as a lump and not a speck. The mortar uses
+  `LANDING_DUST` over `DUST_EDGE #5d6372`.
+- **Head shake:** ±1.5 px over the 16 ticks (it was ±1). At each end a bead
+  of sweat (`SWEAT #9fd3ff`, with a white glint) flicks off the far side of
+  the head.
+
+Merged first: `codex/home-time` (6eb566b, approved by the supervisor after
+two fixes; Codex's 414, renumbered 419). Its index.html conflicts were stamp
+lines only; the new `#commute` canvas merged cleanly. Gate 1622/1622, CRAP
+max 30.
+
+Review images:
+`/tmp/claude-1000/-home-jonh-jonh-no-oh-no-more-agents/e002fc05-9f6f-4bf2-8a7d-f9df8ca0561b/scratchpad/skill-review/`
+(`after2-skills.png` for dig, build and block on real levels;
+`blocker-shake-after.png` for a posed walker meeting a blocker).

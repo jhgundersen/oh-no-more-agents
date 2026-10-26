@@ -3445,6 +3445,7 @@ function drawSkillFlourishes(ctx, w, pal) {
     else if (ag.state === "dig") drawCutChips(ctx, w, pal, ag, 0)
     else if (ag.state === "build") drawBrickTamp(ctx, w, pal, ag)
     else if (ag.state === "fall" && ag.floater) drawCanopySnap(ctx, w, ag)
+    else if (ag.state === "block") drawBlockerSweat(ctx, w, ag)
   }
   ctx.restore()
 }
@@ -3454,7 +3455,13 @@ function cutMaterial(w, pal, ag, ahead) {
   var C = w.k.CELL, cx = Math.floor(ag.x) + (ahead ? ag.dir * 2 : 0), cy = Math.floor(ag.y) + (ahead ? 0 : 1)
   var m = cx >= 0 && cx < w.k.COLS && cy >= 0 && cy < w.k.ROWS ? w.terrain[cy * w.k.COLS + cx] : 0
   if (!m) m = w.k.DIRT
-  return { fill: materialFill(w.k, pal, m), edge: materialEdge(w.k, pal, m) }
+  return { lit: materialEdge(w.k, pal, m), dark: materialShade(w.k, pal, m) }
+}
+// A 2x2 chunk with a half-pixel darker edge on its lower right, so it reads as
+// a lump, not a speck, even at phone size.
+function drawChunk(ctx, w, x, y, lit, dark) {
+  ctx.fillStyle = dark; moteFineRect(ctx, w, x, y, 2, 2)
+  ctx.fillStyle = lit; moteFineRect(ctx, w, x, y, 1.5, 1.5)
 }
 // Four clods per stroke, thrown back out of the cut (a basher's face is
 // ahead; a digger's is underfoot, so its clods go up and to both sides),
@@ -3472,8 +3479,7 @@ function drawCutChips(ctx, w, pal, ag, ahead) {
     // Out past the agent's own outline, so a clod is never lost on the suit.
     var x = Math.round((ox + side * (3 + arc[0] * age * 2.2)) * 2) / 2
     var y = Math.round((oy + arc[1] * age * 1.6 + age * age * 0.18) * 2) / 2
-    ctx.fillStyle = mat.edge; moteFineRect(ctx, w, x, y, k % 2 ? 1 : 1.5, 1)
-    ctx.fillStyle = mat.fill; moteFineRect(ctx, w, x + 0.5, y + 0.5, 0.5, 0.5)
+    drawChunk(ctx, w, x, y, mat.lit, mat.dark)
   }
 }
 // A brick goes down on timer 0 (Sim's stepBuild): the palm pats it twice and
@@ -3484,9 +3490,11 @@ function drawBrickTamp(ctx, w, pal, ag) {
   var x = pageAgentX(w, ag), y = pageAgentY(w, ag)
   ctx.globalAlpha = 1; ctx.fillStyle = pal.skin
   if (age !== 1) blitFine(ctx, x, y, ag.dir, 10.5, 15, 1.5, 0.5)
-  ctx.fillStyle = LANDING_DUST; ctx.globalAlpha = 0.7 - age * 0.2
-  blitFine(ctx, x, y, ag.dir, 8 - age * 0.5, 15.5 - age * 0.5, 1, 0.5)
-  blitFine(ctx, x, y, ag.dir, 14 + age * 0.5, 15.5 - age * 0.5, 1, 0.5)
+  ctx.globalAlpha = 0.9 - age * 0.25
+  for (var end = 0; end < 2; end++) {
+    var bx = end ? 14 + age : 7 - age, px = ag.dir > 0 ? x + bx : x + SPRITE_W - bx - 2
+    drawChunk(ctx, w, Math.round(px * 2) / 2, y + 14 - age * 0.5, LANDING_DUST, DUST_EDGE)
+  }
 }
 // The canopy reaches full spread when ag.fall passes 2 + 7/8 (drawPageFloat's
 // spread); for the next few eighths a ring of air puffs off its rim.
@@ -3501,8 +3509,17 @@ function drawCanopySnap(ctx, w, ag) {
   }
   moteFineRect(ctx, w, cx - 0.5, pageCanopyTop(w, ag, y) - 1.5 - step * 0.5, 1, 0.5)
 }
+// At the ends of a head shake a bead of sweat flicks off the far side.
+function drawBlockerSweat(ctx, w, ag) {
+  var shake = blockerShake(w, ag)
+  if (Math.abs(shake) < 1.5) return
+  var side = shake > 0 ? 1 : -1, x = pageAgentX(w, ag) + 4 + side * 5.5, y = pageAgentY(w, ag) + 1.5
+  ctx.globalAlpha = 1; ctx.fillStyle = SWEAT
+  moteFineRect(ctx, w, x, y, 1, 1); moteFineRect(ctx, w, x + 0.25 - 0.25, y + 1, 1, 0.5)
+  ctx.fillStyle = "#ffffff"; moteFineRect(ctx, w, x, y, 0.5, 0.5)
+}
 // Somebody walking up to a blocker gets a head shake: no.
-var BLOCKER_SHAKE = [0, 0.5, 1, 0.5, 0, -0.5, -1, -0.5]
+var BLOCKER_SHAKE = [0, 1, 1.5, 1, 0, -1, -1.5, -1], SWEAT = "#9fd3ff"
 function blockerShake(w, ag) {
   if (ag.state !== "block" || w.reducedMotion || w.res !== 2) return 0
   for (var i = 0; i < w.agents.length; i++) {
@@ -9928,7 +9945,7 @@ function drawBeamArrival(ctx, w, ag) {
 // A real drop (the same threshold as landSquash's knees) kicks up two small
 // curls of dust from the feet at page resolution, rolling out and settling.
 // Frost has its own powder burst for the long ones (drawPowderBursts).
-var LANDING_PUFF = 8, LANDING_DUST = "#aab0bf"
+var LANDING_PUFF = 8, LANDING_DUST = "#aab0bf", DUST_EDGE = "#5d6372"
 function drawLandingPuffs(ctx, w, pal) {
   if (w.res !== 2) return
   var C = w.k.CELL
