@@ -3331,20 +3331,26 @@ function drawRainTouch(ctx, w, ag, x, y, t) {
   }
   // No umbrella over them: now and then a drop taps the hat brim.
   var tap = (t + ag.id * 13) % 23
-  var crown = -0.5 + (ag.state === "walk" ? pageGait(ag)[1] / 2 : 0)
-  if (tap < 3) drawWeatherMarks(ctx, w, x + 4, y + crown - 0.5, RAIN_SPLASH[tap + 1], 0.7)
+  var crown = weatherCrown(w, ag)
+  if (tap < 3) drawWeatherMarks(ctx, w, x + crown.x + 4, y + crown.y - 0.5, RAIN_SPLASH[tap + 1], 0.7)
 }
 function drawSnowCap(ctx, w, ag, x, y) {
   if (weatherCanopy(w, ag) || ag.state === "climb") return
   var depth = Math.min(2, Math.floor((ag.anim || 0) / 220)) * 0.5
   if (depth <= 0) return
-  // On the crown, which rides half the walking bob, and a line of it along
-  // the brim behind (mirrored by dir).
-  var crown = -0.5 + (ag.state === "walk" ? pageGait(ag)[1] / 2 : 0)
+  // On the crown, which rides the body's bob and the trait's head offset the
+  // way drawAgentDryHead draws it, and a line along the back of the head.
+  var crown = weatherCrown(w, ag)
   ctx.fillStyle = SNOW_CAP; ctx.globalAlpha = 0.9
-  blitFine(ctx, x, y, ag.dir, 2, crown - depth, 4, depth)
+  blitFine(ctx, x + crown.x, y, ag.dir, 2, crown.y - depth, 4, depth)
   ctx.fillStyle = SNOW_EDGE
-  blitFine(ctx, x, y, ag.dir, 0.5, crown, 1.5, 0.5)
+  blitFine(ctx, x + crown.x, y, ag.dir, 0, crown.y + 1 - 0.5, 2, 0.5)
+}
+// Where the top of the head is, in sprite coordinates: the same drop and
+// trait offset drawAgent hands drawAgentDryHead.
+function weatherCrown(w, ag) {
+  var look = traitHeadOffset(w, ag)
+  return { x: ag.dir * look.x, y: agentDrawMotion(w, ag, ag.state, agentIdle(w, ag)).drop + look.y }
 }
 function drawWeatherMarks(ctx, w, x, y, marks, alpha) {
   ctx.globalAlpha = alpha
@@ -21693,8 +21699,14 @@ var AGENT_BLOCK_BREATH = [0,0,0.5,0.5,0,0,-0.5,-0.5]
 var AGENT_HOME_LIFT = [0,0.5,1,0.5,0,0.5,1,0.5]
 var AGENT_HOME_WAVE = [0,0.5,1,0.5]
 var AGENT_FALL_FEET = [[0.5,0],[0,0.5]]
-var AGENT_GAIT = [[0,-1,0,0,0],[0.5,-0.5,0,0,0.5],[1,0,0.5,0,0.5],[0.5,-0.5,0.5,0,0],
-  [0,-1,0,0,0],[-0.5,-0.5,0,0,-0.5],[-1,0,0,0.5,-0.5],[-0.5,-0.5,0,0.5,0]]
+// [lead, drop, back foot lift, front foot lift, tie flap], two steps of four.
+// Each step: contact (legs widest, body settling), down (weight taken, body
+// lowest), passing (legs crossed, swinging foot lifted, body highest), reach
+// (the foot going forward, body coming down). The first version had it the
+// other way round: legs together when the body was lowest, apart when it
+// was highest, which reads as a shuffle.
+var AGENT_GAIT = [[-1,0,0,0,0],[-0.5,0.5,0,0,0.5],[0.5,-0.5,1,0,0.5],[0,-0.5,0.5,0,0],
+  [-1,0,0,0,0],[-0.5,0.5,0,0,-0.5],[0.5,-0.5,0,1,-0.5],[0,-0.5,0,0.5,0]]
 var AGENT_PICK = [[8,4,9],[9,4.5,9],[11,6.5,10],[12,9,11],[11.5,10,11],[9.5,7,10]]
 var AGENT_SPADE = [[9,15,12.5],[9.5,14.5,12],[10,13,11.5],[11,11.5,11],[11,10.5,10.5],[10,12,11.5],[9.5,14,12]]
 var AGENT_BRICK = [[8,9],[8.5,9.5],[9.5,11],[10.5,12.5],[11,14],[10,14]]

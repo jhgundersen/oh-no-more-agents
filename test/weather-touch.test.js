@@ -73,8 +73,13 @@ test("snow settles on a hat the longer the agent has walked in it, and rides the
   assert.equal(cap(100).length, 0, "fresh out: no snow yet")
   assert.equal(cap(300)[0][3], 0.5)
   assert.equal(cap(1000)[0][3], 1, "never more than a pixel")
-  const high = cap(800)[0][1], low = cap(804)[0][1]
-  assert.equal(low - high, 0.5, "follows the head down")
+  // The cap sits on the crown wherever the gait and trait put the head.
+  for (const anim of [800, 802, 804, 806, 808, 810, 812, 814]) {
+    const c = cap(anim)[0]
+    assert.equal(c[1] + c[3], D.pageAgentY(w, ag) + D.weatherCrown(w, ag).y, `anim ${anim}`)
+  }
+  ag.anim = 802; const low = D.weatherCrown(w, ag).y; ag.anim = 804; const high = D.weatherCrown(w, ag).y  // down, then passing
+  assert.ok(low > high, "the gait moves the head, and the cap with it")
   ag.state = "climb"; assert.equal(cap(1000).length, 0)
 })
 

@@ -10878,3 +10878,36 @@ all final evidence above was regenerated against d0725ea. No push/deploy.
 **Next:** final developer handoff. Remaining ambient backdrop pass: none —
 all 20 biomes now have ambient treatment across the reviewed small batches.
 Leave the developer's arrivals/agent-animation work to them.
+
+## 412 — 2026-10-26 · A walk instead of a shuffle
+
+Merged `codex/living-city-post` first (Codex's 411, renumbered): Skyscraper
+desk fans and paper, Mail Room letters, Building Site pennants and tarp. With
+it all 20 biomes have backdrop life. Gate 1606/1606, CRAP max 30.
+
+**The page walk** (`AGENT_GAIT`, eight keys over two steps) had its bob
+inverted against its stride. Legs are 2 px wide at x `2 + lead` and
+`4 − lead`, so `lead ±1` put both legs at x 3: legs together while the body
+was at its lowest. The one wide stance came with the body at its highest. In
+close-up it read as a shuffle. drawAgent's own comment says it should be the
+other way: "on the passing frames, legs together, the body is at the top of
+its stride". Each step is now four keys:
+- **contact:** legs widest, body settling, arms out;
+- **down:** weight taken, body lowest;
+- **passing:** legs crossed, the swinging foot lifted a pixel, body highest;
+- **reach:** foot going forward, half lifted.
+
+The second step swings the other foot. The tie flap follows the same beats.
+
+**Snow and rain on hats** now take the head's position the way
+`drawAgentDryHead` draws it (`weatherCrown`: `agentDrawMotion(...).drop` plus
+`traitHeadOffset`), rather than 406's half-bob measured off one agent.
+Checked on dumped pixels: the cap sits on the crown row in every key.
+
+**Tests:** `test/who-art` held the page's WHO-off colony to a pre-WHO renderer
+(a09ddc0), which the new walk no longer matches. At res 2 it now checks that
+WHO-off draws exactly what no options draw; native and share still match
+a09ddc0. New `test/gait.test.js` checks the gait table: wide legs mean the
+body is down, crossing legs mean it is up, only a swinging foot lifts, the two
+steps swing different feet, and the bob is one pixel. The snow test now checks
+the cap against `weatherCrown` across all eight keys.
