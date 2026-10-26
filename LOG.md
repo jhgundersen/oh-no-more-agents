@@ -10555,3 +10555,17 @@ worst 17 ms, cpu 7%.
 
 **Next:** deploy this batch (the dusk and Codex's three art merges). Then agent
 animation polish.
+
+## 402 — 2026-10-26 · Deploy (13:59): the dusk and three art merges
+
+**Deployed** build 8ec79c51 (Worker version 6e401613), replacing 635db1e4. It
+covers 397–401: rack fans and port gulls, Cloud/Library/Subway backdrop life,
+the dusk (399, 401) and shots at page resolution.
+
+**Before:** `npm run smoke` passed (3 min, levels 1–7); gate 1574/1574.
+**After:** `npm run verify -- --previous 635db1e4` passed on the first run (5
+counter writes refused).
+
+**Next:** agent animation polish (walk cycle, secondary motion, idle
+fidgets), then arrivals as a small reward. Review `codex/living-roofs-gears`
+when it lands.
