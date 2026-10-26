@@ -17449,7 +17449,7 @@ function drawCavernLife(ctx, w, pal) {
 
 function drawCavernFungalLight(ctx, w, d) {
   var x = d.x * w.k.CELL - 7.5, base = (d.y + 1) * w.k.CELL
-  var pulse = 0.12 + 0.035 * Math.sin(w.ticks / 43 + d.seed)
+  var pulse = 0.12 + 0.035 * Math.sin(quietBackdropTick(w) / 43 + d.seed)
   drawLightPool(ctx, w, CAVERN_GLOW, x + 2, base - 3, 10, 6, pulse)
   ctx.fillStyle = CAVERN_CORE; ctx.globalAlpha = 0.32 + pulse
   for (var i = 0; i < 3; i++) {
@@ -17460,7 +17460,7 @@ function drawCavernFungalLight(ctx, w, d) {
 }
 
 function drawCavernGrit(ctx, w, pal, d) {
-  var age = (w.ticks + d.seed) % 211
+  var age = (quietBackdropTick(w) + d.seed) % 211
   if (age >= 17) return
   var x = d.x * w.k.CELL + 3, y = d.y * w.k.CELL + 2 + d.size * 3 + Math.floor(age * age / 20) * 0.5
   ctx.fillStyle = pal.dust; ctx.globalAlpha = 0.25 * (1 - age / 17)
@@ -18551,7 +18551,7 @@ function drawGlacierLife(ctx, w) {
 function drawGlacierGlow(ctx, w, row, floor) {
   var wide = w.k.COLS * w.k.CELL
   ctx.fillStyle = GLACIER_LIT
-  ctx.globalAlpha = 0.08 + 0.035 * Math.sin(w.ticks / 100 + row)
+  ctx.globalAlpha = 0.08 + 0.035 * Math.sin(quietBackdropTick(w) / 100 + row)
   // Cold light wells behind the play; clipped to current air after events dig
   // or grow ice. Half-pixel strips keep the light hard-edged on the page.
   for (var n = 0; n < 5; n++) {
@@ -18562,8 +18562,8 @@ function drawGlacierGlow(ctx, w, row, floor) {
   ctx.globalAlpha = 0.3
   ctx.fillStyle = GLACIER_FROST
   for (var i = 0; i < 7; i++) {
-    var mx = (i * 59 + w.level * 17 + Math.floor(w.ticks / 12)) % (wide - 4)
-    var my = floor - 24 + ((i * 7 + row * 11 + Math.floor(w.ticks / 20)) % 17)
+    var mx = (i * 59 + w.level * 17 + Math.floor(quietBackdropTick(w) / 12)) % (wide - 4)
+    var my = floor - 24 + ((i * 7 + row * 11 + Math.floor(quietBackdropTick(w) / 20)) % 17)
     glacierAirRect(ctx, w, mx, my, 0.5, 0.5)
   }
 }
@@ -18583,7 +18583,7 @@ function glacierAirRect(ctx, w, x, y, width, height) {
 }
 
 function drawGlacierGlint(ctx, w, x, y, seed) {
-  var phase = (w.ticks + seed % 211) % 211
+  var phase = (quietBackdropTick(w) + seed % 211) % 211
   if (phase >= 30) return
   var shine = Math.sin(phase / 30 * Math.PI)
   ctx.fillStyle = GLACIER_FLASH; ctx.globalAlpha = shine * 0.85
@@ -19166,7 +19166,7 @@ function drawAbyssLife(ctx, w) {
   ink.fillStyle = ABYSS_RIM
   for (var i = 0; i < 8; i++) {
     var s = shafts[i % 4], c = w.corridors[i % w.corridors.length]
-    var phase = w.ticks * 0.015 + i * 1.7
+    var phase = quietBackdropTick(w) * 0.015 + i * 1.7
     var x = s.x + Math.round(Math.sin(phase) * 4 * 2) / 2
     var y = c.floorY * w.k.CELL - 16 + i % 3
     ink.fillRect(x, y, 4, 0.5); ink.fillRect(x + 3.5, y + 0.5, 0.5, 1)
@@ -19176,8 +19176,8 @@ function drawAbyssLife(ctx, w) {
   ink.fillStyle = ABYSS_BUBBLE
   var beds = abyssKelpBeds(w)
   for (var bubble = 0; bubble < 12; bubble++) {
-    var bed = beds[bubble % beds.length], rise = (w.ticks * 0.10 + bubble * 7) % 32
-    var bx = bed.x + 17 + Math.round(Math.sin(w.ticks * 0.025 + bubble) * 2 * 2) / 2
+    var bed = beds[bubble % beds.length], rise = (quietBackdropTick(w) * 0.10 + bubble * 7) % 32
+    var bx = bed.x + 17 + Math.round(Math.sin(quietBackdropTick(w) * 0.025 + bubble) * 2 * 2) / 2
     var by = Math.round((bed.y - rise - 2) * 2) / 2
     drawAbyssBubble(ink, bx, by)
   }
@@ -19188,7 +19188,7 @@ function drawAbyssLife(ctx, w) {
     var b = beds[k], height = 16 + b.seed % 13
     var row = Math.floor((height - 1) / 2) * 2
     var tipX = b.x + Math.round(Math.sin(row / 6) * 3)
-    var sway = Math.round(Math.sin(w.ticks * 0.035 + k) * 2) / 2
+    var sway = Math.round(Math.sin(quietBackdropTick(w) * 0.035 + k) * 2) / 2
     ink.fillRect(tipX + sway, b.y - row - 2, 2, 0.5)
   }
   ctx.restore()
@@ -22536,6 +22536,7 @@ function drawCloudDrafts(ctx,w) {
 // Small distant motions are painted on the transparent actor layer because
 // the terrain/backdrop is cached. Air and fixture masks keep them behind play.
 function drawBackdropLife(ctx, w) {
+  drawDeepWaterLife(ctx, w)
   drawStoneWindLife(ctx, w)
   drawRackFans(ctx, w)
   drawPortGulls(ctx, w)
@@ -22966,4 +22967,64 @@ function drawOasisPalm(ctx, scene, b, t, alpha) {
   ctx.fillStyle = "#d2ad77"; ctx.globalAlpha = alpha*0.22
   var drift = Math.floor((t+b.seed)%180/8)/2
   drawCloudDraftRect(ctx,scene,b.x+drift,b.y+14,13,0.5)
+}
+
+
+// Slow distant water and foliage keep the underground commute alive.
+function drawDeepWaterLife(ctx, w) {
+  if (w.res !== 2 || (w.biome !== "Cavern" && w.biome !== "Ice Cave" && w.biome !== "Trench")) return
+  ctx.save()
+  var scene = quietBackdropLayout(w), t = quietBackdropTick(w), alpha = ctx.globalAlpha
+  for (var i = 0; i < scene.sites.length; i++) {
+    var b = scene.sites[i]
+    if (w.biome === "Cavern") drawFarDrip(ctx,scene,b,t,alpha)
+    if (w.biome === "Ice Cave") drawIceVeil(ctx,w,scene,b,t,alpha)
+    if (w.biome === "Trench") drawFarKelp(ctx,w,scene,b,t,alpha)
+  }
+  ctx.restore()
+}
+function drawFarDrip(ctx, scene, b, t, alpha) {
+  var age = (t+b.seed)%130, x = b.x+14
+  ctx.fillStyle = "#48626c"; ctx.globalAlpha = alpha*0.3
+  drawCloudDraftRect(ctx,scene,x-8,b.y+13,16,1)
+  ctx.fillStyle = "#779597"; ctx.globalAlpha = alpha*0.5
+  drawCloudDraftRect(ctx,scene,x-1,b.y,3,1)
+  if (age < 42) {
+    var y = b.y+2+Math.floor(age/4)
+    drawCloudDraftRect(ctx,scene,x,y,0.5,1.5)
+    return
+  }
+  if (age > 80) return
+  var radius = 2+Math.floor((age-42)/8)/2
+  ctx.globalAlpha = alpha*0.35*(80-age)/38
+  drawCloudDraftRect(ctx,scene,x-radius,b.y+13,radius*2,0.5)
+  drawCloudDraftRect(ctx,scene,x-radius-1,b.y+12.5,1,0.5)
+  drawCloudDraftRect(ctx,scene,x+radius,b.y+12.5,1,0.5)
+}
+function drawIceVeil(ctx, w, scene, b, t, alpha) {
+  ctx.fillStyle = "#8faac2"
+  for (var band = 0; band < 3; band++) {
+    var drift = Math.floor((t/5+b.seed+band*19)%45)/2
+    ctx.globalAlpha = alpha*(0.16-band*0.03)
+    drawCloudDraftRect(ctx,scene,b.x+drift,b.y+4+band*3,12-band*2,1)
+    drawCloudDraftRect(ctx,scene,b.x+drift+3,b.y+3+band*3,7-band,0.5)
+  }
+  var phase = (t+b.seed)%180, glint = Math.max(0,1-Math.abs(phase-90)/18)
+  ctx.fillStyle = "#bfd8e3"; ctx.globalAlpha = alpha*(0.25+0.4*duskAt(w.ticks))*glint
+  drawCloudDraftRect(ctx,scene,b.x+21,b.y+4,0.5,3)
+  drawCloudDraftRect(ctx,scene,b.x+20,b.y+5,2.5,0.5)
+}
+function drawFarKelp(ctx, w, scene, b, t, alpha) {
+  ctx.globalAlpha = alpha*0.65; ctx.fillStyle = "#487f78"
+  for (var stem = 0; stem < 3; stem++) for (var d = 0; d < 14; d++) {
+    var sway = Math.sin(t/65+b.seed+stem+d/7)*d/6
+    var x = b.x+5+stem*8+Math.round(sway*2)/2, y = b.y+14-d
+    drawCloudDraftRect(ctx,scene,x,y,1,1)
+    if (d%4 === 2) drawCloudDraftRect(ctx,scene,x+(stem%2 ? -3 : 1),y-1,3,1)
+  }
+  ctx.fillStyle = "#9ec6a7"; ctx.globalAlpha = alpha*(0.15+0.3*duskAt(w.ticks))
+  for (var mote = 0; mote < 3; mote++) {
+    var y = b.y+13-Math.floor((t/6+b.seed+mote*17)%60)/5
+    drawCloudDraftRect(ctx,scene,b.x+3+mote*9+Math.round(Math.sin(t/70+mote)*2)/2,Math.round(y*2)/2,0.5,0.5)
+  }
 }

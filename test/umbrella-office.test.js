@@ -10,6 +10,9 @@ import {renderer} from '../tools/gag-art.js'
 import {arrivalWorld} from '../tools/exit-welcome.js'
 import {officeFrame,officeBox,officeReview,OFFICE_SEASONS} from '../tools/umbrella-office.js'
 const S=load('Sim.js'),D=load('Draw.js'),P=load('Palette.js'),OLD=renderer(execFileSync('git',['show','2b12360:public/agents/Draw.js'],{maxBuffer:4<<20}).toString()),hash=x=>createHash('sha256').update(x).digest('hex')
+// Isolate the stand from today's scenery. The historical renderer above
+// remains the independent native/share byte-preservation reference.
+const WITHOUT_OFFICE=renderer(fs.readFileSync(new URL('../public/agents/Draw.js',import.meta.url),'utf8').replace(/function drawUmbrellaOffice\([^)]*\)\s*\{/, '$& return;'))
 const pal=P.build(themeOf('tokyo-night').theme,1)
 function marks(w){const ctx=canvas(400,248).ctx,calls=[];ctx.fillStyle='#123456';ctx.globalAlpha=.35;ctx.fillRect=(...r)=>{assert.ok(calls.length<128,'bounded paint budget');assert.ok(r.every(Number.isFinite)&&r[2]>0&&r[3]>0);assert.ok(r.every(n=>Number.isInteger(n*2)));calls.push([...r,ctx.fillStyle,ctx.globalAlpha])};D.drawUmbrellaOffice(ctx,w,pal);assert.equal(ctx.fillStyle,'#123456');assert.equal(ctx.globalAlpha,.35);return calls}
 test('twenty biome stands use only supported air outside the exit, in every palette and season',()=>{
@@ -68,7 +71,7 @@ test('direct crop matches full frame, palette/resolution invalidates terrain cac
  for(const level of[8,10,13,19,20]){
   const w=arrivalWorld(level);w.saved=10;const cache={},small=officeFrame(D,w,cache),box=officeBox(w),full=canvas(800,496),colors=P.build(themeOf('tokyo-night').theme,level)
   D.drawTerrain(full.ctx,w,colors);D.drawActors(full.ctx,w,colors,{intro:false,feed:false,dusk:false});assert.equal(hash(small.buf),hash(crop(full,box.x*2,box.y*2,256,128).buf))
-  const before=officeFrame(OLD,w),b=D.umbrellaOfficeLayout(w)
+  const before=officeFrame(WITHOUT_OFFICE,w),b=D.umbrellaOfficeLayout(w)
   for(let y=0;y<128;y++)for(let x=0;x<256;x++){const ax=x/2+box.x,ay=y/2+box.y;if(ax>=b.x&&ax<b.x+b.width&&ay>=b.foot-16&&ay<b.foot)continue;const at=(y*256+x)*3;for(let c=0;c<3;c++)assert.equal(small.buf[at+c],before.buf[at+c])}
   const first=cache.terrain;officeFrame(D,w,cache,'nord');assert.notEqual(cache.terrain,first);const next=cache.terrain;w.res=1;officeFrame(D,w,cache,'nord');assert.notEqual(cache.terrain,next)
  }
