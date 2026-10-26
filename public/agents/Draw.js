@@ -18321,10 +18321,10 @@ function drawJungleShaftLight(ctx, w, b) {
   // Posterised shafts of sunlight, clipped cell by cell to the current ground.
   // Kept above ankle height; no full-board wash over the original earth.
   ctx.fillStyle = JUNGLE_LIGHT
-  var drift = Math.round(Math.sin(w.ticks / 130 + b.seed) * 2 * 2) / 2
+  var drift = Math.round(Math.sin(roofGearsTick(w) / 130 + b.seed) * 2 * 2) / 2
   for (var r = 0; r < 22; r++) {
     var x = b.x - 18 + Math.floor(r / 2) + drift, y = b.y - 29 + r
-    ctx.globalAlpha = (0.075 + 0.015 * Math.sin(w.ticks / 90 + b.seed)) * (1 - r / 32)
+    ctx.globalAlpha = (0.075 + 0.015 * Math.sin(roofGearsTick(w) / 90 + b.seed)) * (1 - r / 32)
     jungleAirRect(ctx, w, x, y, 7 + Math.floor(r / 6), 1)
     ctx.globalAlpha *= 0.45
     jungleAirRect(ctx, w, x + 12, y, 3, 1)
@@ -18334,18 +18334,18 @@ function drawJungleShaftLight(ctx, w, b) {
 function drawJungleHumidity(ctx, w, b) {
   ctx.fillStyle = JUNGLE_MIST
   for (var p = 0; p < 5; p++) {
-    var x = b.x - 24 + p * 16 + Math.floor(w.ticks / 35 + b.seed) % 13
+    var x = b.x - 24 + p * 16 + Math.floor(roofGearsTick(w) / 35 + b.seed) % 13
     var y = b.y - 22 + p % 3 * 2
-    ctx.globalAlpha = 0.065 + 0.025 * Math.sin(w.ticks / 60 + p + b.seed)
+    ctx.globalAlpha = 0.065 + 0.025 * Math.sin(roofGearsTick(w) / 60 + p + b.seed)
     jungleAirRect(ctx, w, x, y, 18, 1)
     jungleAirRect(ctx, w, x + 5, y + 1, 10, 0.5)
   }
 }
 
 function drawJungleButterfly(ctx, w, b) {
-  var x = b.x + 19 + Math.round(Math.sin(w.ticks / 43 + b.seed) * 13 * 2) / 2
-  var y = b.y - 17 + Math.round(Math.sin(w.ticks / 27 + b.seed) * 3 * 2) / 2
-  var flap = Math.floor(w.ticks / 5 + b.seed) % 3, width = flap === 1 ? 0.5 : 2
+  var x = b.x + 19 + Math.round(Math.sin(roofGearsTick(w) / 43 + b.seed) * 13 * 2) / 2
+  var y = b.y - 17 + Math.round(Math.sin(roofGearsTick(w) / 27 + b.seed) * 3 * 2) / 2
+  var flap = Math.floor(roofGearsTick(w) / 5 + b.seed) % 3, width = flap === 1 ? 0.5 : 2
   ctx.globalAlpha = 0.9
   ctx.fillStyle = JUNGLE_WINGS[b.seed % 2]
   moteFineRect(ctx, w, x - width, y - 1, width, 2)
@@ -20136,7 +20136,7 @@ function drawDialMotion(ctx, w) {
   ctx.restore()
 }
 function drawDialSpin(ink, w, g) {
-  var spin = w.ticks / g.speed * g.dir
+  var spin = roofGearsTick(w) / g.speed * g.dir
   for (var spoke = 0; spoke < 3; spoke++) {
     var a = spin + spoke * Math.PI * 2 / 3
     for (var d = 4; d < g.r - 2; d++) {
@@ -20155,14 +20155,14 @@ function drawDialHands(ink, w) {
   var f = dialGeometry(w)
   ink.fillStyle = DIAL_METAL
   for (var hand = 0; hand < 2; hand++) {
-    var angle = -w.ticks / (hand ? 18000 : 1500) - (hand ? 2.5 : 1.2)
+    var angle = -roofGearsTick(w) / (hand ? 18000 : 1500) - (hand ? 2.5 : 1.2)
     for (var d = 4; d < (hand ? 36 : 64); d++)
       ink.fillRect(Math.round((f.x + Math.cos(angle) * d) * 2) / 2,
         Math.round((f.y + Math.sin(angle) * d) * 2) / 2, 1, 1)
   }
 }
 function drawDialPendulum(ink, w) {
-  var f = clockFace(w), beat = Math.sin(w.ticks * Math.PI / 30)
+  var f = clockFace(w), beat = Math.sin(roofGearsTick(w) * Math.PI / 30)
   var pivot = f.x + 96, x = pivot - Math.round(beat * 10), y = f.y + 60
   ink.fillStyle = DIAL_METAL
   for (var d = 0; d < 66; d += 2)
@@ -20178,8 +20178,8 @@ function drawDialDust(ink, w) {
   var f = dialGeometry(w)
   ink.fillStyle = DIAL_LIGHT
   for (var i = 0; i < 12; i++) {
-    var x = f.x - 70 + (i * 23 + w.level * 7) % 130 - Math.floor(w.ticks / 40 + i) % 5
-    var y = f.y - 35 + Math.floor((w.ticks * (0.018 + i * 0.002) + i * 17) % 95 * 2) / 2
+    var x = f.x - 70 + (i * 23 + w.level * 7) % 130 - Math.floor(roofGearsTick(w) / 40 + i) % 5
+    var y = f.y - 35 + Math.floor((roofGearsTick(w) * (0.018 + i * 0.002) + i * 17) % 95 * 2) / 2
     ink.fillRect(x, y, 0.5, 0.5)
   }
 }
@@ -20445,7 +20445,7 @@ function drawNightWisps(ctx, w) {
     var b = roofs[i]
     if (b.kind !== 1 || !nightSupported(w, nightFixtureBox(b), boxes)) continue
     for (var j = 0; j < 4; j++) {
-      var age = (w.ticks * 0.08 + b.seed + j * 5) % 20
+      var age = (roofGearsTick(w) * 0.08 + b.seed + j * 5) % 20
       var x = b.x + 2 + Math.round(age * 0.3 * 2) / 2
       var y = b.y - 14 - Math.round(age * 0.4 * 2) / 2
       ctx.globalAlpha = 0.13 - Math.floor(age / 5) * 0.025
@@ -22472,6 +22472,7 @@ function drawCloudDrafts(ctx,w) {
 function drawBackdropLife(ctx, w) {
   drawRackFans(ctx, w)
   drawPortGulls(ctx, w)
+  drawRoofGearsLife(ctx, w)
 }
 function drawRackFans(ctx, w) {
   if (w.res !== 2 || !dataCenterPage(w)) return
@@ -22681,5 +22682,153 @@ function drawTunnelWindows(ctx, w, scene, t, alpha) {
       ctx.globalAlpha = strength*0.25
       drawCloudDraftRect(ctx,scene,x+2,y-1,7,1)
     }
+  }
+}
+
+// Quiet silhouettes sit in the air behind play; fixtures and terrain always
+// occlude them. Layouts follow excavations without storing anything in a world.
+var ROOF_GEARS_CACHE = new WeakMap()
+function roofGearsPage(w) {
+  return w.res === 2 && (w.biome === "Rooftops" || w.biome === "Clock Tower" || w.biome === "Jungle")
+}
+function roofGearsTick(w) { return w.res === 2 && w.reducedMotion ? 0 : w.ticks }
+function roofGearsLayout(w) {
+  var old = ROOF_GEARS_CACHE.get(w)
+  if (old && old.version === w.terrainVersion && old.terrain === w.terrain) return old
+  var k = w.k, C = k.CELL, boxes = abyssReserved(w)
+  if (w.biome === "Rooftops") boxes = nightReserved(w)
+  if (w.biome === "Clock Tower") boxes = dialReserved(w)
+  var scene = {version:w.terrainVersion,terrain:w.terrain,width:k.COLS*C*2,height:k.ROWS*C*2,sites:[],chimneys:[]}
+  scene.mask = new Uint8Array(scene.width*scene.height)
+  for (var y = k.SKY; y < k.ROWS; y++) for (var x = 0; x < k.COLS; x++)
+    if (w.terrain[y*k.COLS+x] === k.EMPTY) cloudDraftMaskRect(scene,{x:x*C,y:y*C,width:C,height:C},1)
+  if (w.biome === "Rooftops") {
+    var fixtures = nightFixtures(w)
+    for (var f = 0; f < fixtures.length; f++) {
+      boxes.push(nightFixtureBox(fixtures[f]))
+      if (fixtures[f].kind === 1) scene.chimneys.push(fixtures[f])
+    }
+  }
+  for (var b = 0; b < boxes.length; b++) cloudDraftMaskRect(scene,boxes[b],0)
+  for (var row = 0; row < w.corridors.length; row += w.biome === "Rooftops" ? 2 : 1) {
+    var site = stationPick(w,row,"ambient",32,16,18,boxes)
+    if (site) scene.sites.push(site)
+  }
+  ROOF_GEARS_CACHE.set(w,scene)
+  return scene
+}
+function drawRoofGearsLife(ctx, w) {
+  if (!roofGearsPage(w)) return
+  ctx.save()
+  var scene = roofGearsLayout(w), t = roofGearsTick(w), alpha = ctx.globalAlpha
+  if (w.biome === "Rooftops") drawRoofLife(ctx,w,scene,t,alpha)
+  if (w.biome === "Clock Tower") drawGearShadows(ctx,scene,t,alpha)
+  if (w.biome === "Jungle") drawGroveLife(ctx,w,scene,t,alpha)
+  ctx.restore()
+}
+function drawRoofLife(ctx, w, scene, t, alpha) {
+  drawRoofSmoke(ctx,scene,t,alpha)
+  for (var i = 0; i < scene.sites.length; i++) {
+    var b = scene.sites[i]
+    ctx.globalAlpha = alpha*0.65; ctx.fillStyle = "#404959"
+    drawCloudDraftRect(ctx,scene,b.x,b.y+16,32,1)
+    drawRoofBird(ctx,scene,b,t,0,alpha)
+    drawRoofBird(ctx,scene,b,t,1,alpha)
+  }
+  drawRoofAircraft(ctx,w,scene,t,alpha)
+}
+function drawRoofSmoke(ctx, scene, t, alpha) {
+  ctx.fillStyle = "#9c9aa6"
+  for (var i = 0; i < scene.chimneys.length; i++) {
+    var b = scene.chimneys[i]
+    for (var puff = 0; puff < 5; puff++) {
+      var age = (t/4+b.seed+puff*9)%45
+      var x = b.x+1+Math.round((age*0.24+Math.sin(age/7)*2)*2)/2
+      var y = b.y-14-Math.floor(age/3)/2, width = 3+Math.floor(age/12)
+      ctx.globalAlpha = alpha*(0.28-age*0.004)
+      drawCloudDraftRect(ctx,scene,x,y,width,1.5)
+      drawCloudDraftRect(ctx,scene,x+1,y-1,width-1,1)
+    }
+  }
+}
+function drawRoofBird(ctx, scene, b, t, bird, alpha) {
+  var step = Math.floor((t+b.seed+bird*71)%270/18)
+  var shuffle = step < 4 ? step : step < 11 ? 3 : 14-step
+  var x = b.x+3+bird*14+shuffle, y = b.y+13
+  ctx.globalAlpha = alpha*0.75; ctx.fillStyle = "#88909b"
+  drawCloudDraftRect(ctx,scene,x,y,5,2)
+  drawCloudDraftRect(ctx,scene,x+4,y-1-(step%3===0 ? 0.5 : 0),2,2)
+  ctx.fillStyle = "#b6b4aa"
+  drawCloudDraftRect(ctx,scene,x+6,y,1,0.5)
+  ctx.fillStyle = "#596273"
+  drawCloudDraftRect(ctx,scene,x+1,y,3,1)
+}
+function drawRoofAircraft(ctx, w, scene, t, alpha) {
+  if (!scene.sites.length) return
+  var b = scene.sites[0], x = b.x+Math.floor(t/16)%300, y = b.y+2
+  ctx.globalAlpha = alpha*0.4; ctx.fillStyle = "#8c90a0"
+  drawCloudDraftRect(ctx,scene,x,y,6,0.5)
+  var dusk = duskAt(w.ticks), blink = w.reducedMotion || t%100 < 14
+  if (!blink || dusk === 0) return
+  ctx.globalAlpha = alpha*dusk*0.85; ctx.fillStyle = "#ee9a8c"
+  drawCloudDraftRect(ctx,scene,x+5,y-0.5,1,1)
+}
+function drawGearShadows(ctx, scene, t, alpha) {
+  ctx.globalAlpha = alpha*0.48; ctx.fillStyle = "#111820"
+  for (var i = 0; i < scene.sites.length; i++) {
+    var b = scene.sites[i], x = b.x+21, y = b.y+12, spin = t/220*(i%2 ? -1 : 1)
+    drawShadowWheel(ctx,scene,x,y,23,spin)
+    drawShadowPendulum(ctx,scene,b,t)
+  }
+}
+function drawShadowWheel(ctx, scene, x, y, radius, spin) {
+  for (var ring = 0; ring < 48; ring++) {
+    var a = ring*Math.PI/24
+    drawCloudDraftRect(ctx,scene,Math.round((x+Math.cos(a)*radius)*2)/2,Math.round((y+Math.sin(a)*radius)*2)/2,2,2)
+  }
+  for (var tooth = 0; tooth < 12; tooth++) {
+    var angle = spin+tooth*Math.PI/6
+    drawCloudDraftRect(ctx,scene,Math.round((x+Math.cos(angle)*(radius+2))*2)/2,Math.round((y+Math.sin(angle)*(radius+2))*2)/2,3,3)
+  }
+  for (var spoke = 0; spoke < 4; spoke++) for (var d = 2; d < radius; d += 2) {
+    var s = spin+spoke*Math.PI/2
+    drawCloudDraftRect(ctx,scene,Math.round((x+Math.cos(s)*d)*2)/2,Math.round((y+Math.sin(s)*d)*2)/2,2,2)
+  }
+}
+function drawShadowPendulum(ctx, scene, b, t) {
+  var swing = Math.sin(t/45)*8, pivot = b.x+40
+  for (var d = 0; d < 20; d++)
+    drawCloudDraftRect(ctx,scene,pivot+Math.round(swing*d/20*2)/2,b.y+d,1.5,1)
+  drawCloudDraftRect(ctx,scene,pivot+Math.round(swing*2)/2-2,b.y+19,6,4)
+}
+function drawGroveLife(ctx, w, scene, t, alpha) {
+  ctx.globalAlpha = alpha*0.65
+  for (var i = 0; i < scene.sites.length; i++) drawGroveFrond(ctx,scene,scene.sites[i],t)
+  drawGroveFireflies(ctx,w,scene,t,alpha)
+}
+function drawGroveFrond(ctx, scene, b, t) {
+  var sway = Math.sin(t/45+b.seed)*3
+  ctx.fillStyle = "#52705a"
+  for (var height = 0; height < 16; height++) {
+    var x = b.x+24+Math.round(sway*height/20*2)/2, y = b.y+17-height
+    drawCloudDraftRect(ctx,scene,x,y,1,1)
+    if (height%3 !== 0) continue
+    var leaf = 7-Math.floor(height/4)
+    drawCloudDraftRect(ctx,scene,x-leaf,y-1,leaf,1.5)
+    drawCloudDraftRect(ctx,scene,x+1,y-2,leaf,1.5)
+  }
+}
+function drawGroveFireflies(ctx, w, scene, t, alpha) {
+  var dusk = duskAt(w.ticks)
+  if (dusk === 0) return
+  for (var i = 0; i < scene.sites.length; i++) for (var mote = 0; mote < 5; mote++) {
+    var b = scene.sites[i], phase = t/30+mote*1.7+b.seed
+    var x = b.x+5+mote*8+Math.round(Math.sin(phase/2)*3*2)/2
+    var y = b.y+5+Math.round((Math.sin(phase)*4+mote%2*4)*2)/2
+    var glow = w.reducedMotion ? 0.8 : 0.35+Math.max(0,Math.sin(phase))*0.65
+    ctx.fillStyle = "#9dbb65"; ctx.globalAlpha = alpha*dusk*glow*0.15
+    drawCloudDraftRect(ctx,scene,x-1.5,y-1,4,3)
+    ctx.fillStyle = "#d8df8e"; ctx.globalAlpha = alpha*dusk*glow*0.85
+    drawCloudDraftRect(ctx,scene,x,y,1.5,1)
   }
 }
