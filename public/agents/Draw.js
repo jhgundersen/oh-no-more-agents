@@ -3034,6 +3034,7 @@ function drawActors(ctx, w, pal, opts) {
   drawWeatherTouch(ctx, w, pal)
   drawArrivals(ctx, w, pal)
   drawLandingPuffs(ctx, w, pal)
+  drawSkillFlourishes(ctx, w, pal)
   // Last, over everybody: whoever is standing in a fireball is behind it.
   if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
   drawOutage(ctx, w, pal)
@@ -3421,6 +3422,96 @@ function drawArrivalFlash(ctx, w, pal, flash) {
   ctx.globalAlpha = 0.22 * flash; ctx.fillStyle = pal.exitLight
   ctx.fillRect(e.x * C + 1, e.y * C + 1, e.w * C - 2, e.h * C - 2)
   ctx.restore()
+}
+
+// ---------------------------------------------------------------------------
+// Skill flourishes (page resolution, draw only)
+// ---------------------------------------------------------------------------
+// The skills already had their poses and tools. These are the beats that make
+// a job feel done: chips and clods off the face a basher or digger is cutting,
+// a tamp on each brick a builder lays, a blocker shaking its head at whoever
+// walks up, and a puff as a floater's umbrella snaps fully open. Every clock
+// is one Sim already keeps (ag.timer since the last cut or brick, ag.fall), so
+// nothing is stored or random, and reduced motion leaves them out.
+var CHIP_ARCS = [[0.55, -0.9], [0.9, -0.55], [0.35, -1.15], [1.1, -0.3]]
+var CHIP_TICKS = 6
+function drawSkillFlourishes(ctx, w, pal) {
+  if (w.res !== 2 || w.reducedMotion) return
+  ctx.save()
+  for (var i = 0; i < w.agents.length; i++) {
+    var ag = w.agents[i]
+    if (ag.gone || !pageMotionAgent(w, ag)) continue
+    if (ag.state === "bash") drawCutChips(ctx, w, pal, ag, 1)
+    else if (ag.state === "dig") drawCutChips(ctx, w, pal, ag, 0)
+    else if (ag.state === "build") drawBrickTamp(ctx, w, pal, ag)
+    else if (ag.state === "fall" && ag.floater) drawCanopySnap(ctx, w, ag)
+  }
+  ctx.restore()
+}
+// The material being cut, from the cell beyond the face (or under the feet
+// for a digger), so rock throws grey chips and dirt brown clods.
+function cutMaterial(w, pal, ag, ahead) {
+  var C = w.k.CELL, cx = Math.floor(ag.x) + (ahead ? ag.dir * 2 : 0), cy = Math.floor(ag.y) + (ahead ? 0 : 1)
+  var m = cx >= 0 && cx < w.k.COLS && cy >= 0 && cy < w.k.ROWS ? w.terrain[cy * w.k.COLS + cx] : 0
+  if (!m) m = w.k.DIRT
+  return { fill: materialFill(w.k, pal, m), edge: materialEdge(w.k, pal, m) }
+}
+// Four clods per stroke, thrown back out of the cut (a basher's face is
+// ahead; a digger's is underfoot, so its clods go up and to both sides),
+// falling under a little gravity and fading by the next stroke.
+function drawCutChips(ctx, w, pal, ag, ahead) {
+  var age = ag.timer || 0
+  if (age >= CHIP_TICKS) return
+  var C = w.k.CELL, mat = cutMaterial(w, pal, ag, ahead)
+  // From the agent's own (open) cell, by the tool: the cell being cut is
+  // often still solid on the first ticks, and a chip in it would be clipped.
+  var ox = ag.x * C, oy = (ag.y + 1) * C - (ahead ? 7 : 1.5)
+  ctx.globalAlpha = 1 - age / CHIP_TICKS
+  for (var k = 0; k < CHIP_ARCS.length; k++) {
+    var arc = CHIP_ARCS[(k + ag.id) % CHIP_ARCS.length], side = ahead ? -ag.dir : (k % 2 ? 1 : -1)
+    // Out past the agent's own outline, so a clod is never lost on the suit.
+    var x = Math.round((ox + side * (3 + arc[0] * age * 2.2)) * 2) / 2
+    var y = Math.round((oy + arc[1] * age * 1.6 + age * age * 0.18) * 2) / 2
+    ctx.fillStyle = mat.edge; moteFineRect(ctx, w, x, y, k % 2 ? 1 : 1.5, 1)
+    ctx.fillStyle = mat.fill; moteFineRect(ctx, w, x + 0.5, y + 0.5, 0.5, 0.5)
+  }
+}
+// A brick goes down on timer 0 (Sim's stepBuild): the palm pats it twice and
+// two puffs of mortar dust leave its ends.
+function drawBrickTamp(ctx, w, pal, ag) {
+  var age = ag.timer || 0
+  if (age > 2) return
+  var x = pageAgentX(w, ag), y = pageAgentY(w, ag)
+  ctx.globalAlpha = 1; ctx.fillStyle = pal.skin
+  if (age !== 1) blitFine(ctx, x, y, ag.dir, 10.5, 15, 1.5, 0.5)
+  ctx.fillStyle = LANDING_DUST; ctx.globalAlpha = 0.7 - age * 0.2
+  blitFine(ctx, x, y, ag.dir, 8 - age * 0.5, 15.5 - age * 0.5, 1, 0.5)
+  blitFine(ctx, x, y, ag.dir, 14 + age * 0.5, 15.5 - age * 0.5, 1, 0.5)
+}
+// The canopy reaches full spread when ag.fall passes 2 + 7/8 (drawPageFloat's
+// spread); for the next few eighths a ring of air puffs off its rim.
+function drawCanopySnap(ctx, w, ag) {
+  var step = Math.floor((ag.fall - 2.875) * 8)
+  if (!(step >= 0 && step < 4)) return
+  var x = pageAgentX(w, ag), y = pageAgentY(w, ag), cx = x + pageFloatSway(w, ag) + 4.5, rim = y - 7
+  ctx.fillStyle = LANDING_DUST; ctx.globalAlpha = 0.8 - step * 0.2
+  for (var side = -1; side <= 1; side += 2) {
+    moteFineRect(ctx, w, Math.round((cx + side * (7.5 + step)) * 2) / 2 - (side < 0 ? 1 : 0), rim - step * 0.5, 1, 0.5)
+    moteFineRect(ctx, w, Math.round((cx + side * (5 + step * 0.5)) * 2) / 2 - (side < 0 ? 1 : 0), rim - 3 - step * 0.5, 1, 0.5)
+  }
+  moteFineRect(ctx, w, cx - 0.5, pageCanopyTop(w, ag, y) - 1.5 - step * 0.5, 1, 0.5)
+}
+// Somebody walking up to a blocker gets a head shake: no.
+var BLOCKER_SHAKE = [0, 0.5, 1, 0.5, 0, -0.5, -1, -0.5]
+function blockerShake(w, ag) {
+  if (ag.state !== "block" || w.reducedMotion || w.res !== 2) return 0
+  for (var i = 0; i < w.agents.length; i++) {
+    var o = w.agents[i]
+    if (o === ag || o.gone || o.state !== "walk" || Math.abs(o.y - ag.y) > 1) continue
+    var dx = ag.x - o.x
+    if (Math.abs(dx) < 3 && dx * o.dir > 0) return BLOCKER_SHAKE[(w.ticks >> 1) % BLOCKER_SHAKE.length]
+  }
+  return 0
 }
 
 // The instant replay (the page re-simulates the level's best moment; see
@@ -10668,6 +10759,8 @@ function agentTraitLook(w, ag) {
   return TRAIT_LOOKS[ag.trait] || null
 }
 function traitHeadOffset(w, ag) {
+  var shake = blockerShake(w, ag)
+  if (shake) return { x: shake, y: 0 }
   var look = agentTraitLook(w, ag)
   if (!look || w.submerged) return { x: 0, y: 0 }
   // Peeks are brief and staggered by id, with no random draw or pose memory.

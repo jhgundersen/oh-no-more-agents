@@ -10985,3 +10985,44 @@ covers 411–416:
 vignette) is on hold. The supervisor sent it back to Codex for two fixes (the
 card covers the header bar; the vignette is too dim). Review the new hash
 when it comes.
+
+## 418 — 2026-10-26 · Skill flourishes: chips, a tamp, a snap and a "nope"
+
+The supervisor's round: give each skill a satisfying beat at page resolution.
+I filmed every skill on real levels first (`tools/agent-art.js` strips, plus
+close-ups of the first agent doing each skill on levels 1–40). The poses and
+tools were already there: the pick, the spade, the brick from hand to floor,
+hand-over-hand climbing, the blocker's braced arms and breathing, the
+umbrella unfolding by eighths. Missing were the beats that make a job feel
+done. `drawSkillFlourishes` (after the colony, page only, off under reduced
+motion) adds them, each clocked by something Sim already keeps:
+- **Bash and dig:** four clods per stroke (`ag.timer` since the cut, gone by
+  the next at 6 ticks), in the cut material's lit edge colour with a fill
+  corner. A basher's go back over its shoulder; a digger's spray up out of
+  the hole to both sides. They fall under a little gravity and fade.
+
+  Two first tries failed. Clods that started inside the face were clipped
+  while they were brightest, because the cell being cut is often still solid.
+  And clods thrown slowly vanished against the digger's own dark suit. They
+  now start in the agent's open cell and clear its outline in the first tick.
+- **Build:** on timer 0 (Sim's `stepBuild` lays a brick) the palm pats it,
+  then two puffs of mortar dust leave the brick's ends.
+- **Float:** as the canopy reaches full spread (`ag.fall` past 2⅞, the same
+  eighths `drawPageFloat` uses), a ring of air puffs off its rim and crown
+  for four eighths.
+- **Block:** someone walking toward a blocker within three cells, on its row,
+  gets a head shake (`blockerShake`, ±1 px over 16 ticks), through
+  `traitHeadOffset`, so the snow cap and rain taps follow the head. A ±½ px
+  shake read as nothing.
+
+The fidgets for agents waiting or stuck were already in place and are
+staggered: phone, watch and foot tap in a 429 queue; drum, tie and yawn when
+held; stretch (415), watch and folded arms when stuck. Each has a period of
+`180 + id % 3 · 23` and a clock offset of `id · 47`, so a crowd never moves
+together.
+
+**Tests:** `test/skill-flourish.test.js`: bash and dig clods in air, fading
+and gone by the next stroke, none at res 1 or under reduced motion; the
+tamp; the snap's window; the shake only toward an approaching walker, never
+away or under reduced motion; read-only and RNG-free. `npm run fps -- 1 2 6
+4`: 60 / p5 60.
