@@ -10344,3 +10344,38 @@ or sibling-copy changes.
 **Next:** developer review/merge this branch, then a small `codex/living-racks-port`
 batch from main: distant rack fans and port gulls, drawing only, fixed reduced-
 motion poses, world-digest equivalence, FPS and desktop/390px comparisons.
+
+## 398 — 2026-10-26 · Deploy (12:10), with the thaw art merged first
+
+(397 is Codex's `codex/living-racks-port` note, which lands with that merge.)
+
+**Deployed** build 635db1e4 (Worker version 437279a4), replacing c88604a4.
+It covers 384–396: the second-visit mine, the transporter coils, levels
+without an incident, out-of-office replies, the GitHub check workflow, the
+DejaVu caption fix and the Ice Cave thaw art.
+
+**Two test fixes on the way.** Today falls inside season.js's Halloween window
+(24 Oct – 1 Nov), so a page opened without `?season=` dresses for it. Under it
+`hero-intros` failed every run: the desktop view's caption picked up a
+Halloween death pun. The page is right (event captions show at any scale), the
+fixture was not, so `tools/captions.js` pins `season=none` for views that
+don't name a season (Codex found and fixed the same on its branch). Then
+`page-features`' standup test failed twice under load (load average 9 with
+Codex's gate running): it slept 1.5 s and assumed the page had booted. It now
+polls for `AgentWorld()` for up to five seconds.
+
+**Merged** `codex/thaw-art` (b586b3a) after review: a faceted ice prism around
+the frozen colleague instead of a flat pane, shards and meltwater on release,
+page resolution only. One conflict, `tools/captions.js`, where both sides made
+the same change. Gate on the merge: 1557/1557; `npm run crap -- --threshold
+30` passed (max 30.0).
+
+**Before:** `npm run smoke` passed on the merged tree (3 min, levels 1–7).
+**After:** `npm run verify -- --previous c88604a4` passed on the first run (5
+counter writes refused).
+
+**Next:** merge `codex/living-racks-port` (reviewed: rack fans and gulls look
+right; nit, a gull jumps from the end of its span back to the start), then
+the dusk: the light shifts from late afternoon to dusk as the level runs. A
+median level lasts 1091 ticks (p10 729, p90 1586, levels 1–60) against a 3300-
+tick limit, so dusk follows absolute ticks, not the limit.
