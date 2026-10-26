@@ -11149,3 +11149,18 @@ Review images:
 `/tmp/claude-1000/-home-jonh-jonh-no-oh-no-more-agents/e002fc05-9f6f-4bf2-8a7d-f9df8ca0561b/scratchpad/skill-review/`
 (`after2-skills.png` for dig, build and block on real levels;
 `blocker-shake-after.png` for a posed walker meeting a blocker).
+
+## 421 — 2026-10-26 · Deploy (17:16): skill flourishes and home time
+
+**Deployed** build 9c03f472 (Worker version 60fd50a8), replacing 67a081fb. It
+covers 418–420:
+- the skill flourishes and the follow-up that makes them readable on a phone;
+- Codex's home-time: the commuter-train wipe between levels and the homes on
+  the report card.
+
+**Before:** `npm run smoke` passed (3 min, levels 1–7); gate 1622/1622.
+**After:** `npm run verify -- --previous 67a081fb` passed on the first run.
+
+**Next:** lost-agent moments (an umbrella drifting off on its own, a "404"
+wisp or static, the next beat quiet) and a clock-in badge as agents drop out
+of the hatch.
