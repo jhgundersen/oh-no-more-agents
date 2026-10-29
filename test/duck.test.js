@@ -124,5 +124,4 @@ test("report card, outcome and commit line know about the duck", () => {
     }
     assert.ok(hit > 0)
   } finally { Math.random = random }
-  assert.match(D.commitLine({ ...box(), saved: 9, toRelease: 10, lost: 1, ducked: 1, hallucinations: 0, hazardKills: 0, brollyLandings: 0, eventLog: [] }), /RUBBER-DUCKED/)
 })

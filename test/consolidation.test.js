@@ -21,7 +21,7 @@ test("the busiest realistic report card stays on the board, every row inside the
     const rows = D.reportRows(w, pal), { y, extra } = D.reportTop(w, rows)
     assert.ok(y >= 4 && y + 62 + extra <= w.k.ROWS * w.k.CELL - 2, `level ${level}: ${y}+${62 + extra}`)
     for (const r of rows) if (r.text) assert.ok(r.text.length <= D.REPORT_CHARS, r.text)
-    assert.ok(!rows.some(r => /AGI ACHIEVED/.test(r.text || "") && /^[0-9A-F]{7} /.test(r.text)), "the AGI is said once")
+    assert.equal(rows.filter(r => /AGI/.test(r.text || "")).length, w.agiHome || w.agiLost ? 1 : 0, "the AGI is said once")
   }
 })
 

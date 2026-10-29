@@ -31,7 +31,7 @@ const READ=`(()=>{
  document.getElementById('c-pause').click();const w=AgentWorld();
  for(let i=0;i<400&&w.ticks<400&&!w.done;i++)step(w);
  document.getElementById('who').click();document.getElementById('who').click();
- document.getElementById('overlay').style.visibility='hidden';document.getElementById('tip').hidden=true;document.getElementById('levelTitle').hidden=true;scrollTo(0,0);
+ document.getElementById('overlay').style.visibility='hidden';document.getElementById('levelTitle').hidden=true;scrollTo(0,0);
  // The resting layout: a count that just dropped starts the card's squash (LOG 427), a transform mid-flight.
  for(const cell of document.querySelectorAll('#toolbar .skill'))cell.classList.remove('squash');
  const rect=e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}},toolbar=document.getElementById('toolbar');

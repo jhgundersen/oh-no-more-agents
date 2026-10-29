@@ -32,7 +32,7 @@ test("the strip on the report card: N/7, the new one in gold with its pun; every
   D.drawLevelResults(img.ctx, w, pal)
   assert.equal(JSON.stringify(w.sightings), before)
   assert.ok(inks.includes(D.AGI_GOLD), "the ring")
-  assert.equal(D.reportRows({ ...w, sightings: { seen: ["agi"], fresh: [] } }, pal).at(-1).sightings, true, "nothing new: no pun line")
+  assert.ok(D.reportRows({ ...w, sightings: { seen: ["agi"], fresh: [] } }, pal).every(r => !r.sightings && !/^NEW/.test(r.text || "")), "nothing new: no strip, no pun line")
 })
 
 const chromium = (() => { try { execSync("command -v chromium", { stdio: "ignore" }); return true } catch { return false } })()

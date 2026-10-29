@@ -45,7 +45,7 @@ async function prepare(b,ev,base,v){
   await waitFor(ev,i<4?'AgentWorld().level==='+String(i+2):'!!window.standupArt')
   if(i<4){await settleCommute(ev,{skip:true});await ev("document.getElementById('c-pause').click()")}
  }
- await ev("document.getElementById('tip').hidden=true;scrollTo(0,0)")
+ await ev("scrollTo(0,0)")
 }
 async function at(ev,t){await ev('window.standupArtTime=100000+'+t+'*30');await waitFor(ev,'window.standupArt?.t==='+t)}
 async function record(ev){return ev(`(()=>{

@@ -2,16 +2,10 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import { loadCore } from "../tools/load-core.js"
 
-// The report card's umbrella line: landings under an umbrella, and how many
-// Cloud Provider handed out.
+// Umbrella landings: Sim counts them (the report card no longer prints them,
+// but the count is the world's record of the umbrella doing its job).
 
-const S = loadCore("Sim.js"), D = loadCore("Draw.js")
-
-test("the umbrella line counts landings and hand-outs, and is empty when nobody floated", () => {
-  assert.equal(D.brollyLine({}), "")
-  assert.equal(D.brollyLine({ brollyLandings: 1 }), "1 UMBRELLA LANDING")
-  assert.equal(D.brollyLine({ brollyLandings: 8, provisioned: 4 }), "8 UMBRELLA LANDINGS · 4 HANDED OUT")
-})
+const S = loadCore("Sim.js")
 
 test("Sim counts each umbrella landing once, as it lands", () => {
   const w = S.generate(126, 0, 126 * 7919 + 13)

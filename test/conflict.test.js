@@ -67,7 +67,7 @@ test("played levels end with nobody still in a conflict", () => {
   assert.ok(seen >= 2, `conflicts happen (${seen})`)
 })
 
-test("the bubbles, the commit line and the outcome", () => {
+test("the bubbles and the outcome", () => {
   const w = { ...S.generate(1, 0, 3), ticks: 100 }
   assert.equal(D.quipFor(w, { conflictAt: 95, conflictSide: 1 }).text, "<<<<<<<")
   assert.equal(D.quipFor(w, { conflictAt: 95, conflictSide: -1 }).text, ">>>>>>>")
@@ -75,6 +75,5 @@ test("the bubbles, the commit line and the outcome", () => {
   assert.ok(!D.quipFor(w, { conflictAt: 95, conflictSide: -1 }).lift)
   assert.equal(D.quipFor(w, { conflictAt: 70, rebasedAt: 99 }).text, "REBASED")
   for (const ch of "<>=") assert.ok(D.TRANSITION_GLYPHS[ch])
-  assert.match(D.commitLine({ ...w, saved: 5, toRelease: 10, lost: 0, conflicts: 2, hallucinations: 0, hazardKills: 0, brollyLandings: 0, eventLog: [] }), /2 MERGE CONFLICTS/)
   assert.ok(O.EVENT_LINES.conflict.length >= 3)
 })

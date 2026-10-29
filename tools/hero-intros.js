@@ -27,7 +27,7 @@ export async function setupHero(ev,v){
  if(w.season)AgentSeason.dress(w)
  w.feed=[];if(w.season)w.season.note=null
  document.querySelector('#themes .theme.on').click();document.getElementById('who').click();document.getElementById('who').click()
- document.getElementById('overlay').style.visibility='hidden';document.getElementById('tip').hidden=true;document.getElementById('levelTitle').hidden=true;scrollTo(0,0)
+ document.getElementById('overlay').style.visibility='hidden';document.getElementById('levelTitle').hidden=true;scrollTo(0,0)
  const rect=e=>{const b=e.getBoundingClientRect();return{x:b.x,y:b.y,width:b.width,height:b.height}},caption=document.getElementById('eventCaption'),text=document.getElementById('eventText'),facts=SPECIAL_FACTS[w.special]||[''],fact=facts[(w.factPick||0)%facts.length]
  return{level:w.level,biome:w.biome,ticks:w.ticks,hero:w.special,heroName:w.specialSpec.name,fact,expected:w.specialSpec.name+(fact?' · '+fact:''),
   caption:{...rect(caption),text:text.textContent,font:getComputedStyle(text).fontSize,textBox:rect(text),hidden:caption.getAttribute('aria-hidden'),live:caption.getAttribute('aria-live'),label:caption.getAttribute('aria-label')},

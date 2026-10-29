@@ -39,7 +39,7 @@ function recorded(w,p){
  return{img,calls}
 }
 test('native report pixels stay identical for zero, all-home and every busy report row',()=>{
- const refs={zero:'07c04df6e4bf562ad2caee5583e0ecdb05376af6033ddc1e399b22773d1d4191',all:'779ee3f65688f2894f040e5aaac08aa15b86e6eb5dc04699c485f63d8659352b',busy:'03831fb62e1160d72190e92f1817bff957a7880b4458e4c53292eda8d3d1cbf1'}
+ const refs={zero:'d16194d88a355181989a950aabdd5201b5996272ad27b248718516b04760249f',all:'8a7f28713cc58f33dce3555faa5c52bced42e73c10f91649624a224dc2464080',busy:'fe10915f424b8746f4b428863456c431086c385fa5cd5cfa468e55f07b3239a7'}
  for(const [kind,ref]of Object.entries(refs))for(const res of[undefined,1]){const w=make(kind);w.res=res;const a=canvas(400,248);D.drawLevelResults(a.ctx,w,pal);assert.equal(hash(a.buf),ref)}
 })
 test('wrapping keeps every word, breaks long tokens, and uses the biggest font that fits the complete report',()=>{

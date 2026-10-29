@@ -31,7 +31,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms))
 async function preparePage(b,ev,base,v,name){
  await b.cmd('Emulation.setDeviceMetricsOverride',{...v,deviceScaleFactor:1});await b.cmd('Page.navigate',{url:base+'/?level='+(name==='water'?2:name==='green-liquid'?25:name==='lightning'?20:18)+'&seed=3&season=none'})
  let ready=false;for(let i=0;i<100;i++){if(await ev('!!window.AgentWorld?.()')){ready=true;break}await wait(25)}if(!ready)throw Error('Hazard page did not start')
- await ev(`(async()=>{await document.fonts.ready;document.getElementById('c-pause').click();document.getElementById('overlay').style.visibility='hidden';document.getElementById('levelTitle').hidden=true;document.getElementById('tip').hidden=true;scrollTo(0,0)})()`)
+ await ev(`(async()=>{await document.fonts.ready;document.getElementById('c-pause').click();document.getElementById('overlay').style.visibility='hidden';document.getElementById('levelTitle').hidden=true;scrollTo(0,0)})()`)
  return ev(`(()=>{const r=document.getElementById('board').getBoundingClientRect();return{x:Math.max(0,r.x),y:Math.max(0,r.y),width:Math.min(r.right,innerWidth)-Math.max(0,r.x),height:Math.min(r.bottom,innerHeight)-Math.max(0,r.y),scale:1}})()`)
 }
 async function captureScene(b,ev,out,base,v,name,reduced,frames){

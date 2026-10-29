@@ -19,7 +19,7 @@ export async function whoView(b,base,{level,season='none',mobile=false,tick=400}
  document.getElementById('c-pause').click();const gen=generate;generate=(l,a,s)=>gen(l,a,s===undefined?3:s);document.getElementById('c-restart').click();generate=gen;
  const w=AgentWorld(),random=Math.random;try{Math.random=()=>.25;for(let i=0;i<${tick}&&!w.done;i++)step(w)}finally{Math.random=random}
  document.querySelector('#themes .theme.on').click();if(document.getElementById('who').getAttribute('aria-pressed')!=='true')document.getElementById('who').click();
- document.getElementById('levelTitle').hidden=true;document.getElementById('overlay').style.visibility='hidden';document.getElementById('tip').hidden=true;scrollTo(0,0);
+ document.getElementById('levelTitle').hidden=true;document.getElementById('overlay').style.visibility='hidden';scrollTo(0,0);
  const r=document.getElementById('board').getBoundingClientRect();
  return {level:w.level,biome:w.biome,tick:w.ticks,season:w.season||null,mobile:${mobile},who:document.getElementById('who').getAttribute('aria-pressed'),fontReady:document.fonts.status,width:innerWidth,pageWidth:document.documentElement.scrollWidth,pageHeight:document.documentElement.scrollHeight,
  board:{x:Math.max(0,r.x),y:Math.max(0,r.y),width:Math.min(innerWidth,r.right)-Math.max(0,r.x),height:r.height},digest:JSON.stringify(w)}

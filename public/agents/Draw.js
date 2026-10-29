@@ -4166,62 +4166,6 @@ function levelTitleLayout(w) {
   return best
 }
 
-// The host supplies Outcome's fresh-world copy. Geometry and pixels stay in
-// Draw, without a cross-core call or display fields added to the simulation.
-function levelForecastCopy(lines) {
-  var rows=[]
-  for(var i=0;i<lines.length;i++) {
-    var text=lines[i].toUpperCase()
-    while(text.length>56) {
-      var cut=text.lastIndexOf(" ",56)
-      if(cut<1)cut=56
-      rows.push(text.slice(0,cut));text=text.slice(cut).replace(/^ +/,"")
-    }
-    rows.push(text)
-  }
-  var longest=0
-  for(var j=0;j<rows.length;j++)longest=Math.max(longest,rows[j].length)
-  return {rows:rows,width:Math.ceil((longest*4-1)*1.5)+16,height:rows.length*13+10}
-}
-function levelForecastLayout(w,copy,title) {
-  var spots=levelTitleCandidates(w,copy),keep=levelTitleKeepClear(w)
-  keep.push({x:title.x-4,y:title.y-4,width:title.width+8,height:title.height+8})
-  // Prefer a neighbouring plate when the route permits it; retain the twelve
-  // board pockets for layouts with a hatch, floor or exit directly below.
-  spots.push({x:Math.max(14,Math.min(386-copy.width,title.x)),y:title.y+title.height+5,width:copy.width,height:copy.height})
-  spots.push({x:Math.max(14,Math.min(386-copy.width,title.x)),y:title.y-copy.height-5,width:copy.width,height:copy.height})
-  // Portal edges provide pockets between the coarse rows, notably a tower
-  // with the hatch halfway up. Fixed bound: 18 extra candidates, no live scan.
-  var xs=[14,Math.round((400-copy.width)/2),386-copy.width]
-  for(var anchor=0;anchor<keep.length;anchor++)for(var side=0;side<2;side++)for(var col=0;col<xs.length;col++)
-    spots.push({x:xs[col],y:side?keep[anchor].y+keep[anchor].height+3:keep[anchor].y-copy.height-3,width:copy.width,height:copy.height})
-  var best=null,low=Infinity
-  for(var i=0;i<spots.length;i++) {
-    var r=spots[(i+w.level)%spots.length]
-    if(r.y<48 || r.y+r.height>236)continue
-    var near=Math.abs(r.x-title.x)+Math.abs(r.y-title.y)
-    var score=levelTitleScore(w,r,keep)+near*0.08
-    if(score<low){best=r;low=score}
-  }
-  return best
-}
-function drawLevelForecastCard(ctx,w,pal,copy,r) {
-  if(!r || w.done || w.replaying)return
-  ctx.save()
-  drawLevelTitlePlate(ctx,pal,r)
-  ctx.fillStyle=pal.label
-  for(var i=0;i<copy.rows.length;i++) drawLevelForecastLine(ctx,copy.rows[i],r.x+8,r.y+5+i*13)
-  ctx.restore()
-}
-function drawLevelForecastLine(ctx,text,x,y) {
-  for(var i=0;i<text.length;i++) {
-    // The title ROM predates percentages. Keep this glyph local so adding a
-    // forecast cannot change another host's old result/flavour text pixels.
-    var glyph=text[i]==="%"?[5,1,2,4,5]:TRANSITION_GLYPHS[text[i]]||TRANSITION_GLYPHS["?"]
-    for(var row=0;row<5;row++)for(var col=0;col<3;col++)
-      if(glyph[row]&(4>>col))ctx.fillRect(x+i*6+col*1.5,y+row*2,1.5,2)
-  }
-}
 function drawLevelTitlePlate(ctx,pal,r) {
   ctx.save()
   var alpha=ctx.globalAlpha
@@ -4309,13 +4253,7 @@ function battleLine(w) {
   return parts.join(" · ")
 }
 
-// The level as a commit, in the game's voice: a short hash, a conventional-
-// commit type from how it went, the count home, and up to two things that
-// happened, most interesting first. Deterministic: everything in it is read
-// off the finished world, the hash included, so a host that redraws the card
-// every frame shows the same line every frame.
 var REPORT_CHARS = 64   // the widest row the plate holds (256px of 272)
-var COMMIT_MAX = 64      // characters, hash included: 255px of a 272px plate
 // The agent who put in the most hours (Sim's tallyWork), and what for. A
 // level where nobody had to lift a finger has no employee: it was a meeting.
 var EMPLOYEE_CITATIONS = {
@@ -4344,44 +4282,6 @@ function employeeLine(w) {
   var who = ag.special && w.specialSpec ? w.specialSpec.name.toUpperCase() : "AGENT " + ("00" + ag.id).slice(-3)
   var said = EMPLOYEE_CITATIONS[kind], line = "EMPLOYEE OF THE LEVEL: " + who + ". " + said[ag.id % said.length]
   return ag.state === "saved" ? line + "." : line + " (POSTHUMOUS)."
-}
-
-// The safety sign the page keeps (web.js noteIncidents): levels in a row with
-// nobody lost. Only when it is news: a run of two or more, or the end of a run
-// of three or more.
-function incidentLine(w) {
-  var n = w.incidents
-  if (!n) return ""
-  if (n.broke) return "INCIDENT COUNTER RESET. IT WAS " + n.broke + "."
-  if (n.streak < 2) return ""
-  return n.streak + " LEVELS WITHOUT AN INCIDENT" + (n.streak === n.best && n.streak >= 3 ? " · RECORD" : "")
-}
-
-function commitLine(w) {
-  var type = w.saved >= w.toRelease ? "FEAT" : w.saved === 0 ? "REVERT" : w.nuking ? "HOTFIX" : "FIX"
-  var subject = w.saved >= w.toRelease ? "SHIP ALL " + w.toRelease + " AGENTS HOME"
-    : w.saved + "/" + w.toRelease + " AGENTS WENT HOME"
-  var notes = []
-  // The AGI has a row of its own on the card; the commit line says something else.
-  if (w.agiLost) notes.push("AGI POSTPONED")
-  if (w.hallucinations > 0) notes.push(w.hallucinations + " HALLUCINATED AN EXIT")
-  if (w.hazardKills > 0) notes.push(w.hazardKills + " LOST IN PROD")
-  if (w.brollyLandings > 0) notes.push(w.brollyLandings + (w.brollyLandings === 1 ? " UMBRELLA" : " UMBRELLAS"))
-  if (w.ducked > 0) notes.push("RUBBER-DUCKED")
-  if (w.conflicts > 0) notes.push(w.conflicts === 1 ? "1 MERGE CONFLICT" : w.conflicts + " MERGE CONFLICTS")
-  if (w.eventLog && w.eventLog.length) notes.push("SCOPE CHANGED MID-SPRINT")
-  var line = type + ": " + subject
-  for (var i = 0; i < notes.length && i < 2; i++) {
-    var next = line + (i ? ", " : "; ") + notes[i]
-    if (next.length > COMMIT_MAX - 8) break        // 8: the hash and its space
-    line = next
-  }
-  if (w.rateLimited > 0 && line.length + 7 <= COMMIT_MAX - 8) line += " (#429)"
-  return commitHash(w) + " " + line
-}
-function commitHash(w) {
-  var h = (w.level * 2654435761 ^ w.saved * 40503 ^ w.toRelease * 69069 ^ (w.lost || 0) * 1013904223) >>> 0
-  return ("0000000" + h.toString(16).toUpperCase()).slice(-7)
 }
 
 // ---------------------------------------------------------------------------
@@ -4467,46 +4367,28 @@ function mvpLine(w) {
   return parts.join(" · ")
 }
 
-// The umbrellas: how many times one carried somebody down, and how many
-// Cloud Provider handed out. Every report has one when anybody floated.
-function brollyLine(w) {
-  var n = w.brollyLandings || 0
-  if (!n) return ""
-  var line = n + (n === 1 ? " UMBRELLA LANDING" : " UMBRELLA LANDINGS")
-  if (w.provisioned > 0) line += " · " + w.provisioned + " HANDED OUT"
-  return line
-}
-
 // The lines under the verdict, in order: rescued escorts (a row of badges),
-// the fight, its MVP, the umbrellas. Each that has something to say.
+// the fight and its MVP, the AGI, the watcher's pick, a new sighting. Only
+// what the board could not show, and only when it happened: the card had
+// grown to nine rows (an employee of the level, an umbrella count, the
+// incident streak, the level as a git commit, a strip of seven icons) on
+// every level, and Jon asked for less text (2026-10-29).
 function reportRows(w, pal) {
   var rows = []
   if (w.escortsHome > 0) rows.push({ escort: true, step: 16 })
   var battle = battleLine(w)
   if (battle) rows.push({ text: battle, colour: pal.warn, step: 12 })
   var mvp = battle ? mvpLine(w) : ""
-  // No fight, no MVP: the page names its Employee of the Level instead, so a
-  // card never carries both. The panel's small card keeps its rows.
-  if (!mvp && (w.res || 1) >= 2) mvp = employeeLine(w)
   if (mvp) rows.push({ text: mvp, colour: pal.decorLit, step: 12 })
-  var brolly = brollyLine(w)
-  // On the fight line when both fit: one row fewer on a busy card.
-  var last = rows[rows.length - 1]
-  if (brolly && battle && last && last.text === battle && battle.length + brolly.length + 3 <= REPORT_CHARS) last.text = battle + " · " + brolly
-  else if (brolly) rows.push({ text: brolly, colour: pal.umbrellaRim, step: 12 })
   // The AGI, either way: a bonus line in gold, or its obituary.
   if (w.agiHome) rows.push({ text: "AGI ACHIEVED · +1 BONUS", colour: AGI_GOLD, step: 12 })
   else if (w.agiLost) rows.push({ text: "AGI LOST. STILL FIVE YEARS AWAY.", colour: pal.urgent, step: 12 })
   if (w.bet !== undefined && w.bet !== null) rows.push({ text: betLine(w), colour: betCalled(w) ? AGI_GOLD : pal.label, step: 12 })
-  var incident = (w.res || 1) >= 2 ? incidentLine(w) : ""
-  if (incident) rows.push({ text: incident, colour: w.incidents.broke ? pal.urgent : pal.label, step: 12 })
-  rows.push({ text: commitLine(w), colour: pal.decor, step: 12 })
-  // The watcher's sightings (the page sets w.sightings at the end of a level).
-  // Not until there is one: a row of seven grey icons and "0/7" means nothing
-  // on a first visit's first card (first-look review).
-  if (w.sightings && w.sightings.seen.length) {
+  // The watcher's sightings (the page sets w.sightings at the end of a level),
+  // only on the level that adds one: the strip with the new one ringed.
+  if (w.sightings && w.sightings.fresh.length) {
     rows.push({ sightings: true, step: 14 })
-    if (w.sightings.fresh.length) rows.push({ text: "NEW: " + sightingLine(w.sightings.fresh[0]), colour: AGI_GOLD, step: 12 })
+    rows.push({ text: "NEW: " + sightingLine(w.sightings.fresh[0]), colour: AGI_GOLD, step: 12 })
   }
   return rows
 }
@@ -4585,12 +4467,15 @@ function pageReportRows(rows, width, size) {
   return { rows: out, height: height, lineStep: lineStep }
 }
 
+// The sky band's mission banner ends here; a centred card starts below it.
+var REPORT_CLEAR = 23
 function pageReportLayout(w, pal) {
   var width = Math.min(352, w.k.COLS * w.k.CELL - 48), source = reportRows(w, pal), size = 2
   var home = w.res === 2
   var body = pageReportRows(source, width, size)
-  // The full house keeps its complete facts and badges, at 1.5px font pixels.
-  if (body.height + 78 > w.k.ROWS * w.k.CELL - 8) { size = 1.5; body = pageReportRows(source, width, size) }
+  // The full house keeps its complete facts and badges, at 1.5px font pixels:
+  // whenever the roomy font would bring the card up into the mission banner.
+  if (body.height + 78 > w.k.ROWS * w.k.CELL - 2 * REPORT_CLEAR) { size = 1.5; body = pageReportRows(source, width, size) }
   var height = body.height + 78, centreY = Math.round((w.k.ROWS * w.k.CELL - height) / 2)
   var y = Math.min(w.k.ROWS * w.k.CELL - height - 4, centreY + (w.reducedMotion ? 0 : Math.max(0, 10 - w.doneTicks)) * 2)
   var titleSize = Math.min(3, Math.floor((width - 24) / (homeTitle(w).length * 4 - 1) * 2) / 2)

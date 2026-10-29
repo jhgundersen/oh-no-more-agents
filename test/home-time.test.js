@@ -49,7 +49,7 @@ test('home lights count rescues, keep lost windows dark, fill stands, and preser
 })
 
 test('the home row fits the original report plate and leaves mission header text clear',()=>{
- for(const [kind,height] of [['all',91],['zero',91],['busy',203]]){
+ for(const [kind,height] of [['all',78],['zero',78],['busy',181]]){
   const w=setupReport(S.generate(8,0,3),kind);w.res=2;w.doneTicks=40
   const l=D.pageReportLayout(w,{})
   assert.equal(l.height,height);assert.equal(l.y,Math.round((248-height)/2));assert.equal(l.width,352)

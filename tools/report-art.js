@@ -42,7 +42,7 @@ async function prepare(b,ev,base,v,paused){
  (${setupReport.toString()})(w,${JSON.stringify(v.kind)});
  if(${v.kind==='natural'}){const seen=sightingsIn(w);w.sightings={seen,fresh:seen}}
  document.getElementById('who').click();document.getElementById('who').click();
- if(!${paused})document.getElementById('overlay').style.visibility='hidden';document.getElementById('tip').hidden=true;scrollTo(0,0);
+ if(!${paused})document.getElementById('overlay').style.visibility='hidden';scrollTo(0,0);
  const r=e=>{const b=e.getBoundingClientRect();return{x:b.x,y:b.y,width:b.width,height:b.height}};
  return{level:w.level,saved:w.saved,total:w.toRelease,ticks:w.ticks,title:homeTitle(w),verdict:levelVerdict(w),sourceRows:reportRows(w,{}),
   pauseVisible:getComputedStyle(document.getElementById('overlay')).display!=='none'&&getComputedStyle(document.getElementById('overlay')).visibility!=='hidden',

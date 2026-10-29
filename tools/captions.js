@@ -38,7 +38,7 @@ const MEASURE=`(()=>{
  document.querySelector('#themes .theme.on').click();
  // Repaint and refresh the host's readouts after advancing the paused world.
  document.getElementById('who').click();document.getElementById('who').click();
- document.getElementById('overlay').style.visibility='hidden';document.getElementById('tip').hidden=true;
+ document.getElementById('overlay').style.visibility='hidden';
  document.getElementById('levelTitle').hidden=true;
  scrollTo(0,0);const rect=e=>{const b=e.getBoundingClientRect();return{x:b.x,y:b.y,width:b.width,height:b.height}};
  const caption=document.getElementById('eventCaption'),text=document.getElementById('eventText');

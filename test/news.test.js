@@ -3,8 +3,8 @@ import assert from "node:assert/strict"
 import fs from "node:fs"
 import vm from "node:vm"
 
-// news.js: the patch notes and the first-visit tip, remembered when storage
-// works and harmless when it does not.
+// news.js: the patch notes, remembered when storage works and harmless when
+// it does not.
 const sandbox = { window: {} }
 vm.runInNewContext(fs.readFileSync(new URL("../public/agents/news.js", import.meta.url), "utf8"), sandbox)
 const N = sandbox.window.AgentNews
@@ -29,21 +29,8 @@ test("the NEW dot shows until the newest line is seen, and again when a line is 
   assert.equal(N.unseen(s), true)
 })
 
-test("the tip shows once; without storage everything still works", () => {
-  const s = memory()
-  assert.equal(N.tipDue(s), true)
-  N.tipDone(s)
-  assert.equal(N.tipDue(s), false)
-  assert.doesNotThrow(() => { N.markSeen(broken); N.tipDone(broken) })
+test("without storage everything still works", () => {
+  assert.doesNotThrow(() => N.markSeen(broken))
   assert.equal(N.unseen(broken), true)
   assert.equal(N.unseen(null), true)
-})
-
-test("the tip goes when its first level is over, or the page moves to another", () => {
-  const sb = { window: {} }
-  vm.runInNewContext(fs.readFileSync(new URL("../public/agents/news.js", import.meta.url), "utf8"), sb)
-  const { tipOver } = sb.window.AgentNews
-  assert.equal(tipOver({ level: 4, done: false }), false)
-  assert.equal(tipOver({ level: 4, done: true }), true)
-  assert.equal(tipOver({ level: 5, done: false }), true)
 })

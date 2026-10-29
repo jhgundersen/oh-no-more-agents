@@ -494,12 +494,6 @@
   // Every total the counter hands back passes through here: a round number
   // crossed (Outcome's milestoneFor) dresses the colony for the rest of the
   // session, starting with the level on screen.
-  function tipShowing() {
-    var store = null
-    try { store = window.localStorage } catch (e) {}
-    return !!(window.AgentNews && AgentNews.tipDue(store))
-  }
-
   function noteTotal(total) {
     var m = milestoneFor(globalSaved, total)
     globalSaved = total
@@ -526,9 +520,8 @@
     world.res = RES
     world.doneHold = DONE_HOLD
     if (milestone) world.milestone = milestone
-    // The first few levels of a visit say how the sweepstake works — not
-    // while the first-visit tip (news.js) is saying "tap an agent" already.
-    if (++levelsThisVisit <= 3 && !fit && !tipShowing()) world.feed.push({ t: 45, text: "TAP AN AGENT: WHO GETS HOME FIRST?" })
+    // The first few levels of a visit say how the sweepstake works.
+    if (++levelsThisVisit <= 3 && !fit) world.feed.push({ t: 45, text: "TAP AN AGENT: WHO GETS HOME FIRST?" })
     world.reducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
     announce(levelAnnouncement(world) + " " + levelTitleSubtitle(world.level, world.biome) + " " + forecastLines(world).join(" "))
     completionLine = ""
@@ -834,13 +827,11 @@
   // One cached image per level/theme. CSS fades only this transparent layer;
   // the hatch, first drop and input keep running underneath. Wall-clock time
   // makes the duration independent of game speed (and of pausing the game).
-  var titleTimer = 0, titleLayout = null, titleForecast = null, forecastLayout = null
+  var titleTimer = 0, titleLayout = null
   function hideLevelTitle() {
     clearTimeout(titleTimer)
     titleTimer = 0
     titleLayout = null
-    titleForecast = null
-    forecastLayout = null
     var c = document.getElementById("levelTitle")
     if (c) c.hidden = true
   }
@@ -851,7 +842,6 @@
     var ctx = c.getContext("2d")
     clearLayer(ctx, world)
     drawLevelTitleCard(ctx, world, palette, (level - 1) % BIOMES.length, titleLayout)
-    drawLevelForecastCard(ctx, world, palette, titleForecast, forecastLayout)
   }
 
   function showLevelTitle() {
@@ -859,8 +849,6 @@
     var c = document.getElementById("levelTitle")
     if (!c || fit || world.done || world.replaying || replay || standup) return
     titleLayout = levelTitleLayout(world)
-    titleForecast = levelForecastCopy(forecastLines(world))
-    forecastLayout = levelForecastLayout(world, titleForecast, titleLayout)
     c.width = WIDTH * RES; c.height = HEIGHT * RES
     // Commit the hidden state so even rapid navigation restarts the fade.
     // This also works with the reduced-motion CSS exception.

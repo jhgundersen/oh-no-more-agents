@@ -15,7 +15,7 @@ async function prepareHomeView(b,ev,shot,base,v){
    await b.cmd('Emulation.setDeviceMetricsOverride',{...v,deviceScaleFactor:1})
    await b.cmd('Page.navigate',{url:base+'/?level=8&seed=3'})
    let ready=false;for(let i=0;i<100;i++){if(await ev('!!window.AgentWorld?.()')){ready=true;break}await sleep(30)}if(!ready)throw Error('Page did not start')
-   await ev(`(async()=>{await document.fonts.ready;document.getElementById('c-pause').click();const w=AgentWorld();(${setupReport.toString()})(w,'busy');w.ticks=1640;w.doneTicks=40;document.getElementById('who').click();document.getElementById('who').click();document.getElementById('tip').hidden=true;scrollTo(0,0)})()`)
+   await ev(`(async()=>{await document.fonts.ready;document.getElementById('c-pause').click();const w=AgentWorld();(${setupReport.toString()})(w,'busy');w.ticks=1640;w.doneTicks=40;document.getElementById('who').click();document.getElementById('who').click();scrollTo(0,0)})()`)
    const state=await ev(`(()=>{const r=document.getElementById('board').getBoundingClientRect();return{board:{x:r.x,y:r.y,width:r.width,height:r.height},layout:pageReportLayout(AgentWorld(),{}),world:JSON.stringify(AgentWorld()),rows:reportRows(AgentWorld(),{})}})()`)
    await shot(v.name+'-report.png');const r=state.board,clip={x:Math.max(0,r.x),y:Math.max(0,r.y),width:Math.min(r.x+r.width,v.width)-Math.max(0,r.x),height:Math.min(r.y+r.height,v.height)-Math.max(0,r.y),scale:1};await shot(v.name+'-report-board.png',clip);return{state,clip}
 

@@ -11487,3 +11487,40 @@ reload (straight after upload), passed on the second run.
 
 **Next:** Jon's ask for the normal page: fewer dialogs and less text. Inventory
 every popup, card and banner, and remove what does not earn its place.
+
+## 432 — 2026-10-29 · Fewer words: the report card, the forecast box, the tip
+
+Jon: "too much text and dialogs in the game now… see if some of the dialogs
+can be removed." An inventory of the normal page found the same thing said
+two or three times and a card that said everything every level.
+
+**Removed**
+- **The report card's every-level rows.** It had grown to nine rows: the
+  employee of the level, an umbrella-landing count, the incident streak, the
+  level as a git commit, a strip of seven sighting icons. Now it is the
+  heading, N / M HOME, the verdict and the houses, plus a row only when
+  something happened the board could not show: rescued escorts, a fight and
+  its MVP, the AGI, the watcher's pick, a new sighting (which brings the strip
+  with it). `commitLine`, `commitHash`, `incidentLine` and `brollyLine` went
+  with their rows; the screen reader keeps the employee and the streak
+  (web.js's spoken versions). The roomy font now steps down whenever the
+  card would reach into the mission banner (`REPORT_CLEAR`), not only when it
+  would leave the board.
+- **The FORECAST box** under the level-start title ("isolated hazards,
+  sinkholes likely, 20% chance of echoes, umbrellas: 14"): a second card on
+  top of the first. Still announced to screen readers. `levelForecastCopy`,
+  `levelForecastLayout` and `drawLevelForecastCard` are gone.
+- **The "Tip: tap an agent ×" box.** The blurb above the board says it, and
+  the ticker's "TAP AN AGENT: WHO GETS HOME FIRST?" now runs for every first
+  three levels instead of waiting for the tip to be dismissed.
+- Two patch-note lines that advertised what is gone, replaced by one saying
+  there are fewer words.
+
+**Tests:** 1637/1637 — the 13 fewer are exactly the deleted ones (commit
+line 4, incidents 2, forecast art 5, the tip's 1, the brolly line's 1). Pinned
+report hashes and plate heights updated to the shorter card.
+
+**Next:** keep going down the inventory — the caption row under the board
+(running commentary on every event), the sky-band hero card, the out-of-office
+replies, the standup every five levels. Each needs a look at whether it earns
+the words.

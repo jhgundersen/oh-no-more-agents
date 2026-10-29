@@ -30,12 +30,12 @@ test("the page names the hardest worker, with a citation for its main job, and a
   assert.equal(D.employeeLine(w), "", "nobody lifted a finger")
 })
 
-test("a fight's MVP takes the row; the panel's small card never gets one", () => {
+test("the card never names an employee of the level (the screen reader still does)", () => {
   const w = played(58, 1), pal = { decorLit: "#fff", warn: "#f00", umbrellaRim: "#0ff", label: "#ccc", decor: "#999", urgent: "#f00" }
   w.res = 1
   assert.ok(!D.reportRows(w, pal).some(r => /EMPLOYEE/.test(r.text || "")))
   w.res = 2
-  assert.ok(D.reportRows(w, pal).some(r => /EMPLOYEE/.test(r.text || "")))
+  assert.ok(!D.reportRows(w, pal).some(r => /EMPLOYEE/.test(r.text || "")))
 })
 
 test("floating counts for a quarter: an umbrella is not a shift", () => {

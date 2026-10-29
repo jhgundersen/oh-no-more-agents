@@ -36,7 +36,7 @@ export async function captureEnemies(out,{root,reduced=false,frames=ENEMY_FRAMES
    await b.cmd('Emulation.setDeviceMetricsOverride',{...v,deviceScaleFactor:1});await b.cmd('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/?level=13&seed=3&season=none'})
    let ready=false;for(let i=0;i<100;i++){if(await ev('!!window.AgentWorld?.()')){ready=true;break}await wait(25)}if(!ready)throw Error('Enemy page did not start')
    const w=enemySpecimen();w.terrain=Array.from(w.terrain)
-   await ev(`(async()=>{await document.fonts.ready;document.getElementById('c-pause').click();const w=AgentWorld(),data=${JSON.stringify(w)};data.terrain=new Uint8Array(data.terrain);Object.assign(w,data);w.reducedMotion=${reduced};document.getElementById('overlay').style.visibility='hidden';document.getElementById('levelTitle').hidden=true;document.getElementById('tip').hidden=true;scrollTo(0,0)})()`)
+   await ev(`(async()=>{await document.fonts.ready;document.getElementById('c-pause').click();const w=AgentWorld(),data=${JSON.stringify(w)};data.terrain=new Uint8Array(data.terrain);Object.assign(w,data);w.reducedMotion=${reduced};document.getElementById('overlay').style.visibility='hidden';document.getElementById('levelTitle').hidden=true;scrollTo(0,0)})()`)
    const clip=await ev(`(()=>{const r=document.getElementById('board').getBoundingClientRect();return{x:Math.max(0,r.x),y:Math.max(0,r.y),width:Math.min(r.right,innerWidth)-Math.max(0,r.x),height:Math.min(r.bottom,innerHeight)-Math.max(0,r.y),scale:1}})()`),shots=[]
    fs.mkdirSync(path.join(out,v.name+'-frames'),{recursive:true})
    for(let i=0;i<frames.length;i++){

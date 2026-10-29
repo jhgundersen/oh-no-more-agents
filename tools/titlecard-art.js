@@ -36,7 +36,7 @@ async function titleView(b,ev,out,url,mobile,dpr,phoneShots){
   if(innerWidth<600)scrollTo(0,scrollY+board.getBoundingClientRect().top-32);
   const r=board.getBoundingClientRect();
   for(const a of c.getAnimations()){a.pause();a.currentTime=300}
-  return{viewport:innerWidth,scrollY,viewportHeight:innerHeight,pageWidth:document.documentElement.scrollWidth,hidden:c.hidden,canvas:{width:c.width,height:c.height},board:{x:r.x,y:r.y,width:r.width,height:r.height},layout,hatch:{x:w.hatch.x*4,y:w.hatch.y*4},level:w.level,biome:w.biome,ticks:w.ticks,subtitle:levelTitleSubtitle(w.level,w.biome),digest:JSON.stringify(w),forecast:typeof levelForecastCopy==='function'?levelForecastCopy(forecastLines(w)):null,forecastLayout:typeof levelForecastLayout==='function'?levelForecastLayout(w,levelForecastCopy(forecastLines(w)),layout):null}
+  return{viewport:innerWidth,scrollY,viewportHeight:innerHeight,pageWidth:document.documentElement.scrollWidth,hidden:c.hidden,canvas:{width:c.width,height:c.height},board:{x:r.x,y:r.y,width:r.width,height:r.height},layout,hatch:{x:w.hatch.x*4,y:w.hatch.y*4},level:w.level,biome:w.biome,ticks:w.ticks,subtitle:levelTitleSubtitle(w.level,w.biome),digest:JSON.stringify(w)}
  })()`)
  const name=`${mobile?'phone':'desktop'}-dpr${dpr}${metrics.level===20?'':'-level'+metrics.level}`
  const shot=await b.cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})
@@ -50,10 +50,10 @@ async function titleView(b,ev,out,url,mobile,dpr,phoneShots){
  return{mobile,dpr,name,...metrics,width:metrics.viewport,height:metrics.viewportHeight,pageHeight:metrics.viewportHeight,digest:sha(metrics.digest),images}
 }
 async function timingChecks(b,ev){
- const normal=await ev(`(()=>{document.getElementById('c-restart').click();const c=document.getElementById('levelTitle'),ctx=c.getContext('2d'),fill=ctx.fillRect;window.titleLivePaints=0;window.titleSelections=0;window.forecastSelections=0;const forecastChoose=levelForecastLayout;levelForecastLayout=function(...args){window.forecastSelections++;return forecastChoose(...args)};const choose=levelTitleLayout;levelTitleLayout=function(w){window.titleSelections++;return choose(w)};ctx.fillRect=function(...r){window.titleLivePaints++;return fill.apply(this,r)};return{duration:getComputedStyle(c).animationDuration,pointerEvents:getComputedStyle(c).pointerEvents,hidden:c.hidden,ariaHidden:c.getAttribute('aria-hidden')}})()`)
+ const normal=await ev(`(()=>{document.getElementById('c-restart').click();const c=document.getElementById('levelTitle'),ctx=c.getContext('2d'),fill=ctx.fillRect;window.titleLivePaints=0;window.titleSelections=0;const choose=levelTitleLayout;levelTitleLayout=function(w){window.titleSelections++;return choose(w)};ctx.fillRect=function(...r){window.titleLivePaints++;return fill.apply(this,r)};return{duration:getComputedStyle(c).animationDuration,pointerEvents:getComputedStyle(c).pointerEvents,hidden:c.hidden,ariaHidden:c.getAttribute('aria-hidden')}})()`)
  await sleep(2700)
  const fading=await ev('Number(getComputedStyle(document.getElementById("levelTitle")).opacity)')
- const cached=await ev('window.titleLivePaints===0&&window.titleSelections===0&&window.forecastSelections===0')
+ const cached=await ev('window.titleLivePaints===0&&window.titleSelections===0')
  await sleep(650)
  const expired=await ev('document.getElementById("levelTitle").hidden')
  // A theme repaint must neither change the world nor restart the fade.
@@ -66,7 +66,9 @@ async function timingChecks(b,ev){
  await ev('document.getElementById("c-restart").click()');await sleep(2800)
  await ev('document.getElementById("c-next").click()');await settleCommute(ev)
  const reset=await ev('!document.getElementById("levelTitle").hidden')
- const snapshot=await ev(`(()=>{document.getElementById('c-restart').click();const w=AgentWorld(),before=JSON.stringify(w),expected=levelForecastCopy(forecastLines(w)).rows,stock=w.skills.floater,line=drawLevelForecastLine,calls=[];drawLevelForecastLine=function(ctx,text,...args){calls.push(text);return line(ctx,text,...args)};try{w.skills.floater=0;document.querySelector('#themes .theme.on').click()}finally{w.skills.floater=stock;drawLevelForecastLine=line}return JSON.stringify(calls)===JSON.stringify(expected)&&before===JSON.stringify(w)&&document.getElementById('announce').textContent.includes(forecastLines(w).join(' '))})()`)
+ // The forecast is spoken, not drawn: a repaint leaves the world alone and
+ // the announcement still carries it.
+ const snapshot=await ev(`(()=>{document.getElementById('c-restart').click();const w=AgentWorld(),before=JSON.stringify(w);document.querySelector('#themes .theme.on').click();return before===JSON.stringify(w)&&typeof drawLevelForecastCard==='undefined'&&document.getElementById('announce').textContent.includes(forecastLines(w).join(' '))})()`)
  return{normal,fading,cached,expired,pure,reduced,reducedExpired,reset,snapshot}
 }
 async function inputChecks(b,ev){

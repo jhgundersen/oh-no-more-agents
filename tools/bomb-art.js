@@ -25,7 +25,7 @@ async function prepareBombPage(b,ev,base,v){
  await b.cmd('Emulation.setDeviceMetricsOverride',{...v,deviceScaleFactor:1})
  await b.cmd('Page.navigate',{url:base+'/?level=8&seed=3&season=none'})
  let ready=false;for(let i=0;i<100;i++){if(await ev('!!window.AgentWorld?.()')){ready=true;break}await sleep(25)}if(!ready)throw Error('Bomb page did not start')
- await ev(`(async()=>{await document.fonts.ready;document.getElementById('c-pause').click();const w=AgentWorld(),site=(${bombSite.toString()})(w);window.bombArtId=(${setupBomb.toString()})(w,spawn,site);window.bombArtAge=-1;window.bombArtFired=false;document.getElementById('overlay').style.visibility='hidden';document.getElementById('levelTitle').hidden=true;document.getElementById('tip').hidden=true;scrollTo(0,0)})()`)
+ await ev(`(async()=>{await document.fonts.ready;document.getElementById('c-pause').click();const w=AgentWorld(),site=(${bombSite.toString()})(w);window.bombArtId=(${setupBomb.toString()})(w,spawn,site);window.bombArtAge=-1;window.bombArtFired=false;document.getElementById('overlay').style.visibility='hidden';document.getElementById('levelTitle').hidden=true;scrollTo(0,0)})()`)
  return ev(`(()=>{const r=document.getElementById('board').getBoundingClientRect(),w=AgentWorld();return{site:{x:w.agents[0].x,y:w.agents[0].y},clip:{x:Math.max(0,r.x),y:Math.max(0,r.y),width:Math.min(r.x+r.width,innerWidth)-Math.max(0,r.x),height:Math.min(r.y+r.height,innerHeight)-Math.max(0,r.y),scale:1}}})()`)
 }
 async function bombPageFrame(b,ev,out,v,frame,index,clip){
