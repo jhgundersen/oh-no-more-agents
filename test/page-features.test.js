@@ -33,12 +33,15 @@ test("a shared link opens that level with that colony, once, and copying makes a
   } finally { await b.close(); server.close() }
 })
 
-test("every fifth level ends in a standup, which a tap skips", { skip: !chromium && "no chromium", timeout: 60000 }, async () => {
+test("a standup comes round every ten levels, and a tap skips it", { skip: !chromium && "no chromium", timeout: 60000 }, async () => {
   const server = await serve(), b = await browser(), base = `http://127.0.0.1:${server.address().port}/`
   try {
     const ev = await page(b, base + "?level=3&seed=42")
-    // Finish five levels by hand, each with someone home to speak.
+    assert.equal(await ev(`AgentStandup.every`), 10)
+    // Finish five levels by hand, each with someone home to speak; the hook
+    // brings the fifth's standup forward.
     for (let i = 0; i < 5; i++) {
+      if (i === 4) await ev(`AgentStandup.next()`)
       const before = await ev(`AgentWorld().level`)
       // Somebody has to be out of the hatch to come home and speak.
       for (let k = 0; k < 40 && !(await ev(`AgentWorld().agents.length`)); k++) await sleep(100)

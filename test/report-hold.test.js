@@ -100,6 +100,7 @@ test('report pause holds its clock, resumes by Space/tap, and excludes gameplay,
   // Five short explicit completion fixtures reach the real standup host path.
   await open('level=1')
   for(let i=0;i<5;i++){
+   if(i===4)await ev('AgentStandup.next()')
    await ev(`(()=>{const w=AgentWorld();for(let j=0;j<400&&!w.done;j++)step(w);w.agents.forEach(a=>{a.state='saved';a.gone=false});Object.assign(w,{done:true,doneTicks:111,moments:[],saved:w.agents.length,released:w.toRelease});document.getElementById('c-pause').click()})()`)
    await waitFor(i<4?'AgentWorld().level==='+String(i+2)+'&&document.getElementById("commute").hidden':'AgentWorld().level===5&&AgentWorld().doneTicks>111')
    await ev("document.getElementById('c-pause').click()")

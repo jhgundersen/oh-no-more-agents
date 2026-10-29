@@ -613,7 +613,7 @@
     // Every STANDUP_EVERY levels the survivors hold a standup on the way.
     if (world.done && world.doneTicks > DONE_HOLD) {
       recent.push(standupFacts(world))
-      if (recent.length > STANDUP_EVERY) recent.shift()
+      if (recent.length > STANDUP_RECAP) recent.shift()
       if (++transitions % STANDUP_EVERY === 0 && !fit && startStandup()) return
       advance(1); applyUpdate()
     }
@@ -718,15 +718,21 @@
   // -------------------------------------------------------------------------
   // Daily standup (Draw's drawStandup, Outcome's standupLines)
   // -------------------------------------------------------------------------
-  // Up to five of the colony that just got home, the last few levels as their
+  // Up to three of the colony that just got home, the last few levels as their
   // status. The page allows 2.4 seconds per three-line update, independent
   // of game speed; a tap anywhere on the board still skips the meeting.
-  var STANDUP_EVERY = 5, STANDUP_MS = 30   // ms per standup tick
+  // Every ten levels, three speakers: at five and five it was a twelve-second
+  // wall of text every few minutes (Jon, 2026-10-29: fewer dialogs). The
+  // recap still covers the last five levels.
+  var STANDUP_EVERY = 10, STANDUP_RECAP = 5, STANDUP_SPEAKERS = 3, STANDUP_MS = 30   // ms per standup tick
   var recent = [], transitions = 0, standup = null
+  // For tools and tests: the next finished level holds the standup, rather
+  // than driving ten levels through the page to reach one.
+  window.AgentStandup = { every: STANDUP_EVERY, next: function () { transitions = Math.ceil((transitions + 1) / STANDUP_EVERY) * STANDUP_EVERY - 1 } }
 
   function startStandup() {
     hideLevelTitle()
-    var home = world.agents.filter(function (a) { return a.state === "saved" }).slice(0, 5)
+    var home = world.agents.filter(function (a) { return a.state === "saved" }).slice(0, STANDUP_SPEAKERS)
     if (!home.length) return false
     var lines = standupLines(standupRecap(recent), home.length)
     standup = { started: performance.now(), t: 0, said: -1, speakers: home.map(function (a, i) {

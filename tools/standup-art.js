@@ -8,7 +8,7 @@ import {serve,browser,settleCommute} from './phone.js'
 export const STANDUP_VIEWS=[
  {name:'desktop',width:1280,height:900,mobile:false,index:0},
  {name:'phone',width:390,height:844,mobile:true,index:2},
- {name:'small-phone',width:360,height:800,mobile:true,index:4},
+ {name:'small-phone',width:360,height:800,mobile:true,index:2},
  {name:'landscape',width:844,height:390,mobile:true,index:1},
  {name:'nord-reduced',width:390,height:844,mobile:true,index:0,theme:'nord',reduced:true},
  {name:'one-speaker',width:390,height:844,mobile:true,index:0,count:1}
@@ -41,6 +41,7 @@ async function prepare(b,ev,base,v){
  const lines=standupLines({agiLost:1,hallucinations:1,ducked:1,rateLimited:1,hazardKills:99},5);standupLines=()=>lines;
  })()`)
  for(let i=0;i<5;i++){
+  if(i===4)await ev('AgentStandup.next()')
   await ev(`(()=>{const w=AgentWorld();for(let j=0;j<400&&!w.done;j++)step(w);w.agents.forEach(a=>{a.state='saved';a.gone=false});if(${i===4&&v.count===1})w.agents=w.agents.slice(0,1);Object.assign(w,{done:true,doneTicks:111,moments:[],saved:w.agents.length,released:w.toRelease});document.getElementById('c-pause').click()})()`)
   await waitFor(ev,i<4?'AgentWorld().level==='+String(i+2):'!!window.standupArt')
   if(i<4){await settleCommute(ev,{skip:true});await ev("document.getElementById('c-pause').click()")}

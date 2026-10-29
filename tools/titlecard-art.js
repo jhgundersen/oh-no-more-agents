@@ -88,6 +88,7 @@ async function exclusionChecks(ev){
  const report=await ev('document.getElementById("levelTitle").hidden&&AgentWorld().done')
  // Five completed levels lead to the normal standup, not another overlay.
  for(let i=0;i<5;i++){
+  if(i===4)await ev('AgentStandup.next()')
   await ev(`(()=>{document.getElementById('c-restart').click();const w=AgentWorld();w.done=true;w.doneTicks=111;w.moments=[];w.agents=[spawn(w)];w.agents[0].state='saved';w.saved=1})()`)
   await sleep(65);await settleCommute(ev,{skip:true})
  }

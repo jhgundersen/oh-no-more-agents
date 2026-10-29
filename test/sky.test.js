@@ -147,7 +147,10 @@ test("stand-down and mission completion have bounded lifetimes; absent and tight
   assert.equal(r.texts.length, 0)
   w.specialSpec = { id: "unknown", name: "???", robe: pal.warn, hair: pal.warn }
   D.drawSpecialCard(r.ctx, w, pal)
-  assert.equal(r.texts.at(-1).text, "")
+  assert.equal(r.texts.at(-1).text, "???", "past its introduction the card is the name alone")
+  w.ticks = 20; D.drawSpecialCard(r.ctx, w, pal)
+  assert.equal(r.texts.at(-1).text, "", "an unknown hero has an empty fact")
+  w.ticks = 240
   w.k = { ...w.k, COLS: 20 }; w.hatch.x = 10; w.mission = mission()
   const tight = recording()
   D.drawSpecialCard(tight.ctx, w, pal); D.drawSkyMission(tight.ctx, w, pal)

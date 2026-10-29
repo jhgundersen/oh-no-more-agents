@@ -6443,11 +6443,15 @@ function drawSkyCardText(ctx, w, pal, box) {
   ctx.font = "bold 8px monospace"
   ctx.fillStyle = pal.label
   ctx.fillText(skyFitText(ctx, sp.name, skyNameWidth(w, textBox.width)), textBox.x, 11)
+  // The fact is the hero's introduction, not a caption for the whole level:
+  // the portrait and name stay, the sentence goes (fewer words, 2026-10-29).
+  if (w.ticks >= HERO_FACT_TICKS) return
   ctx.font = "7px monospace"
   ctx.fillStyle = pal.label
   var facts = SPECIAL_FACTS[sp.id] || [""]
   ctx.fillText(skyFitText(ctx, facts[(w.factPick || 0) % facts.length], textBox.width), textBox.x, 22)
 }
+var HERO_FACT_TICKS = 210   // seven seconds at Steady
 
 function drawSkyMission(ctx, w, pal) {
   var alpha = skyMissionAlpha(w)

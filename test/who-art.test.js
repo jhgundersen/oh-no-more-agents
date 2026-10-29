@@ -13,7 +13,9 @@ test('native, default, share and WHO-off rendering retain pixels and native text
  // The page walk itself changed after a09ddc0 (LOG 412), so at res 2 WHO-off is
  // held to what the colony draws with no options at all; native/share still
  // match the pre-WHO renderer byte for byte.
- for(const level of[1,10,12,20]){const w=scene(level);for(const res of[undefined,1,2,3])for(const labels of[false,true]){if(res===2&&labels)continue;w.res=res;assert.equal(pixels(D,w,labels),res===2?pagePlain(w):pixels(OLD,w,labels))}}
+ // Tick 200: inside a hero's introduction (HERO_FACT_TICKS), as the old
+ // renderer drew its fact all level.
+ for(const level of[1,10,12,20]){const w=scene(level,200);for(const res of[undefined,1,2,3])for(const labels of[false,true]){if(res===2&&labels)continue;w.res=res;assert.equal(pixels(D,w,labels),res===2?pagePlain(w):pixels(OLD,w,labels))}}
 })
 test('all twenty biomes and five themes use finite crisp glyphs without changing world or caller options',()=>{
  let visible=0

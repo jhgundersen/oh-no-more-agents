@@ -19,9 +19,11 @@ async function open(b, url) {
 const key = (b, k, code, vk) => b.cmd("Input.dispatchKeyEvent", { type: "keyDown", key: k, code, windowsVirtualKeyCode: vk })
   .then(() => b.cmd("Input.dispatchKeyEvent", { type: "keyUp", key: k, code, windowsVirtualKeyCode: vk }))
 
-// Five levels finished by hand: the fifth transition holds a standup.
+// Five levels finished by hand; AgentStandup.next() makes the fifth transition
+// hold the standup (they come every ten).
 async function toStandup(ev) {
   for (let i = 0; i < 5; i++) {
+    if (i === 4) await ev(`AgentStandup.next()`)
     // Reach two real releases in bounded simulation time, not seconds of
     // wall-clock waiting per level; navigation still uses the actual host.
     await ev(`(() => { const w = AgentWorld(); for (let k = 0; k < 400 && w.agents.length < 2 && !w.done; k++) step(w); if (w.agents.length < 2) throw Error("navigation fixture could not release two agents") })()`)

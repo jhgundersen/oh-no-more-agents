@@ -11524,3 +11524,24 @@ report hashes and plate heights updated to the shorter card.
 (running commentary on every event), the sky-band hero card, the out-of-office
 replies, the standup every five levels. Each needs a look at whether it earns
 the words.
+
+## 433 — 2026-10-29 · Rarer standups; the hero's line is an introduction
+
+Continuing Jon's "fewer dialogs" down the inventory.
+
+- **Standup every ten levels, three speakers** (was five and five): a
+  twelve-second wall of YESTERDAY / TODAY / BLOCKERS every few minutes is now
+  about seven seconds, half as often. The recap still covers the last five
+  levels (`STANDUP_RECAP`). Tools and tests reach one through
+  `AgentStandup.next()` (the next finished level holds it) instead of driving
+  ten levels through the page; `verify-prod` uses it when present, so it still
+  passes against a build without it.
+- **The hero card's fact line shows for seven seconds** (`HERO_FACT_TICKS`),
+  then the sky band keeps the portrait, the name and the mission alone. "99.9%
+  uptime. The other 0.1% is a cliff." was a caption for the whole level.
+
+Tests 1637/1637. `who-art` compares with the pre-WHO renderer at tick 200
+now, inside the introduction, since the old renderer drew the fact all level.
+
+**Next:** the caption row under the board and the out-of-office replies —
+look at how often they speak in a typical level before cutting.

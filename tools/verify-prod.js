@@ -222,7 +222,12 @@ async function finishLevel(b, last) {
 
 async function standupNext(b, base) {
   await b.open(base + "?level=3&seed=42")
-  for (let i = 0; i < 5; i++) await finishLevel(b, i === 4)
+  // Standups come every ten levels; AgentStandup.next() brings the fifth's
+  // forward. A build without the hook still holds one every five.
+  for (let i = 0; i < 5; i++) {
+    if (i === 4) await b.ev(`window.AgentStandup && AgentStandup.next()`)
+    await finishLevel(b, i === 4)
+  }
   await sleep(400)
   const during = await b.ev(`AgentWorld().level`)
   await press(b, "n", "KeyN", 78)
