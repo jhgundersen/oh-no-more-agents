@@ -1636,7 +1636,8 @@
       if (standup) { endStandup(); return }
       if (replay) { endReplay(); return }
       var ag = running && world ? agentUnder(ev) : null
-      if (!ag) { togglePause(); return }
+      // ?fit has no buttons, so no pause either: nothing would say how to resume.
+      if (!ag) { if (!fit) togglePause(); return }
       // The first tap of a level, before anybody is home, is the watcher's
       // pick in the sweepstake — a bet, not a pep talk, so it nudges nobody.
       if (world.bet === undefined && world.saved === 0 && !world.done && !ag.special) {

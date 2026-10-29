@@ -44,6 +44,10 @@ test("?fit fills a 32:9 strip with a wider level and hides the page around it", 
     assert.equal(s.hud, "none"); assert.equal(s.controls, "none")
     assert.equal(await ev(`getComputedStyle(document.body).overflow`), "hidden", "no scrollbar behind the board")
     assert.equal(await ev(`location.search`), "?full&fit")
+    // A tap on empty board does not pause: there is no button to resume with.
+    await ev(`document.getElementById("board").dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 2, clientY: 2 }))`)
+    assert.equal(await ev(`getComputedStyle(document.getElementById("overlay")).display`), "none")
+    assert.equal(await ev(`[...document.querySelectorAll("#stage button")].filter(b => b.offsetParent).length`), 0, "no visible buttons")
 
     // A new shape gets a level at the new width.
     await b.cmd("Emulation.setDeviceMetricsOverride", { width: 1600, height: 520, deviceScaleFactor: 1.25, mobile: false })
