@@ -1535,7 +1535,7 @@
 
     var terrain = el.terrain = document.getElementById("terrain")
     var actors = el.actors = document.getElementById("actors")
-    if (fit) el.stage.classList.add("fit")
+    if (fit) { el.stage.classList.add("fit"); document.documentElement.classList.add("fit") }
     applyFitCols()
     terrain.width = actors.width = WIDTH * RES
     terrain.height = actors.height = HEIGHT * RES

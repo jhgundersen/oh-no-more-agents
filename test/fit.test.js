@@ -42,6 +42,7 @@ test("?fit fills a 32:9 strip with a wider level and hides the page around it", 
     assert.ok(Math.abs(s.h - 520) < 1, "fills the height: " + s.h)
     assert.ok(s.w <= 2048 && s.w > 2048 - 10, "and the width to within a column: " + s.w)
     assert.equal(s.hud, "none"); assert.equal(s.controls, "none")
+    assert.equal(await ev(`getComputedStyle(document.body).overflow`), "hidden", "no scrollbar behind the board")
     assert.equal(await ev(`location.search`), "?full&fit")
 
     // A new shape gets a level at the new width.
