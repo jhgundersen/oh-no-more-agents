@@ -15,6 +15,10 @@ Production is `https://oh-no-more-agents.com`.
   because it refuses any request that did not come from a user gesture. For
   kiosks, second monitors and screenshots. `?full=0` is an explicit no, so the
   parameter can be templated in as a variable.
+  `?fit` (implies `?full`) is for a strip of a monitor (the XENEON EDGE
+  dashboard): the level is generated as many columns wide as the viewport's
+  shape asks for (Sim's `setBoardCols`, rows fixed, clock scaled) and only the
+  board is drawn — no HUD, controls or text over it.
 - `public/agents/Sim.js` — simulation, agents, levels, skills, enemies, hazards.
 - `public/agents/Draw.js` — Canvas rendering and animation.
 - `public/agents/Palette.js` — biome and visual palettes.

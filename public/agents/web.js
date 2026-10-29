@@ -380,6 +380,10 @@
 
   // Test integer scales because board-width controls can reflow at each size.
   function fitBoard() {
+    if (fit) {
+      applyScale(Math.min(window.innerWidth / WIDTH, window.innerHeight / HEIGHT))
+      return
+    }
     var full = isFullscreen()
     var avail = el.boardWrap.parentElement.clientWidth
     var top = Math.max(1, Math.min(Math.floor(avail / WIDTH), full ? 6 : 4))
@@ -394,11 +398,42 @@
   // Accepts ?full, ?full=1 and ?fullscreen; ?full=0 and ?full=false are an
   // explicit no, so the parameter can be templated in as a variable without
   // the caller having to add and remove it.
-  function fullParam() {
+  function fullParam() { return flagParam("full") || flagParam("fullscreen") || fit }
+
+  function flagParam(name) {
     var q = new URLSearchParams(window.location.search)
-    var v = q.has("full") ? q.get("full") : (q.has("fullscreen") ? q.get("fullscreen") : null)
-    if (v === null) return false
+    if (!q.has(name)) return false
+    var v = q.get(name)
     return v !== "0" && v !== "false" && v !== "off"
+  }
+
+  // ?fit — the board and nothing else, as wide as the screen is. For a strip
+  // of a monitor (a 2560x720 XENEON EDGE), where a 100-column board at an
+  // integer scale filled a third of it: the level is generated with as many
+  // columns as the screen's shape asks for (Sim's setBoardCols) and drawn at
+  // the scale that fills its height, so nothing is letterboxed or stretched.
+  // No HUD, skills, controls or tip. It implies ?full.
+  var fit = flagParam("fit")
+
+  function fitCols() {
+    return Math.floor(window.innerWidth / (window.innerHeight / HEIGHT * CELL))
+  }
+
+  // Before each level, so a resized strip gets its next level at its new shape.
+  function applyFitCols() {
+    if (!fit || !window.innerWidth || !window.innerHeight) return
+    setBoardCols(fitCols())
+    if (el.terrain && el.terrain.width !== WIDTH * RES) el.terrain.width = el.actors.width = WIDTH * RES
+  }
+
+  // A resize that changes the shape restarts the level at the new width; a
+  // board drawn for another shape would sit in it letterboxed after all.
+  var refitTimer = 0
+  function refitSoon() {
+    clearTimeout(refitTimer)
+    refitTimer = setTimeout(function () {
+      if (Math.max(100, Math.min(MAX_COLS, fitCols())) !== COLS) { newLevel(level); fitBoard() }
+    }, 400)
   }
 
   // Fullscreening #stage lets the browser hide its siblings.
@@ -486,13 +521,14 @@
     standup = null
     replay = null
     level = Math.max(1, n)
+    applyFitCols()
     world = generate(level, 0, seed)
     world.res = RES
     world.doneHold = DONE_HOLD
     if (milestone) world.milestone = milestone
     // The first few levels of a visit say how the sweepstake works — not
     // while the first-visit tip (news.js) is saying "tap an agent" already.
-    if (++levelsThisVisit <= 3 && !tipShowing()) world.feed.push({ t: 45, text: "TAP AN AGENT: WHO GETS HOME FIRST?" })
+    if (++levelsThisVisit <= 3 && !fit && !tipShowing()) world.feed.push({ t: 45, text: "TAP AN AGENT: WHO GETS HOME FIRST?" })
     world.reducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
     announce(levelAnnouncement(world) + " " + levelTitleSubtitle(world.level, world.biome) + " " + forecastLines(world).join(" "))
     completionLine = ""
@@ -585,7 +621,7 @@
     if (world.done && world.doneTicks > DONE_HOLD) {
       recent.push(standupFacts(world))
       if (recent.length > STANDUP_EVERY) recent.shift()
-      if (++transitions % STANDUP_EVERY === 0 && startStandup()) return
+      if (++transitions % STANDUP_EVERY === 0 && !fit && startStandup()) return
       advance(1); applyUpdate()
     }
   }
@@ -673,7 +709,7 @@
     if (sim.ticks === replay.best.t && !sim.moments.some(function (m) { return m.t === replay.best.t && m.kind === replay.best.kind })) { endReplay(); return }
     if (window.AgentSeason) window.AgentSeason.dress(sim)
     if (sim.terrainVersion !== replay.terrain) { replay.terrain = sim.terrainVersion; drawTerrain(terrainCtx, sim, palette) }
-    drawActors(actorCtx, sim, palette, { labels: showLabels, intro: false, feed: isFullscreen() })
+    drawActors(actorCtx, sim, palette, { labels: showLabels, intro: false, feed: isFullscreen() && !fit, notices: !fit })
     if (window.AgentSeason) window.AgentSeason.paint(actorCtx, sim)
     if (sim.ticks >= replay.to || sim.done) endReplay()
   }
@@ -735,7 +771,7 @@
     if (!world) return
     if (world.done || world.replaying) hideLevelTitle()
     if (window.AgentSeason) window.AgentSeason.dress(world)
-    drawActors(actorCtx, world, palette, { labels: showLabels, intro: false, feed: isFullscreen(), heldReport: reportHeld(), closing: false })
+    drawActors(actorCtx, world, palette, { labels: showLabels, intro: false, feed: isFullscreen() && !fit, notices: !fit, results: !fit, heldReport: reportHeld(), closing: false })
     if (window.AgentSeason) window.AgentSeason.paint(actorCtx, world)
   }
 
@@ -821,7 +857,7 @@
   function showLevelTitle() {
     hideLevelTitle()
     var c = document.getElementById("levelTitle")
-    if (!c || world.done || world.replaying || replay || standup) return
+    if (!c || fit || world.done || world.replaying || replay || standup) return
     titleLayout = levelTitleLayout(world)
     titleForecast = levelForecastCopy(forecastLines(world))
     forecastLayout = levelForecastLayout(world, titleForecast, titleLayout)
@@ -1497,8 +1533,10 @@
     el.tracks = document.getElementById("tracks")
     el.playpause = document.getElementById("playpause")
 
-    var terrain = document.getElementById("terrain")
-    var actors = document.getElementById("actors")
+    var terrain = el.terrain = document.getElementById("terrain")
+    var actors = el.actors = document.getElementById("actors")
+    if (fit) el.stage.classList.add("fit")
+    applyFitCols()
     terrain.width = actors.width = WIDTH * RES
     terrain.height = actors.height = HEIGHT * RES
     terrainCtx = terrain.getContext("2d")
@@ -1555,7 +1593,7 @@
       newLevel(shared.level, shared.seed)
       if (shared.daily) { world.daily = shared.daily; render() }
       saveState()
-      try { history.replaceState(null, "", window.location.pathname + (wantFull ? "?full" : "")) } catch (e) {}
+      try { history.replaceState(null, "", window.location.pathname + (fit ? "?full&fit" : wantFull ? "?full" : "")) } catch (e) {}
     } else newLevel(level)
 
     // ?full — the visual half of fullscreen, without asking the browser for
@@ -1579,7 +1617,7 @@
     restartClock()
     loadGlobalStats()
 
-    window.addEventListener("resize", function () { fitBoard(); renderPausePanel() })
+    window.addEventListener("resize", function () { fitBoard(); renderPausePanel(); if (fit) refitSoon() })
     // visualViewport catches toolbar and pinch-zoom changes missed by resize.
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", fitBoard)

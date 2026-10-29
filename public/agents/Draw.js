@@ -3019,7 +3019,7 @@ function drawActors(ctx, w, pal, opts) {
   drawPits(ctx, w, pal)
   drawPortWater(ctx, w)
   if (w.biome === "Harbour") drawHarbourFerries(ctx, w, pal)
-  drawSpecialCard(ctx, w, pal)
+  if (!(opts && opts.notices === false)) drawSpecialCard(ctx, w, pal)
   drawHatch(ctx, w, pal)
   drawEnemyHatch(ctx, w, pal, opts)
   drawUmbrellaOffice(ctx, w, pal)
@@ -3043,7 +3043,9 @@ function drawActors(ctx, w, pal, opts) {
   if (w.replaying) drawReplayTag(ctx, w, pal)
   else if (w.fastForward && !w.done) drawFastForwardTag(ctx, w, pal)
   // Above the outage, so an event's or a boss's warning is never in the dark.
-  drawEventBanner(ctx, w, pal)
+  // opts.notices === false: the board alone, with no writing over it (the
+  // page's ?fit kiosk strip).
+  if (!(opts && opts.notices === false)) drawEventBanner(ctx, w, pal)
   drawLevelTransition(ctx, w, pal, opts)
 }
 
@@ -4783,7 +4785,7 @@ function drawLevelTransition(ctx, w, pal, opts) {
   if (!w.done && !(opts && opts.feed === false)) drawFeed(ctx, w, pal)
   if (w.done) {
     ctx.save()
-    drawLevelResults(ctx, w, pal)
+    if (!(opts && opts.results === false)) drawLevelResults(ctx, w, pal)
     if (!(opts && opts.closing === false) && !((w.res || 1) >= 2 && opts && opts.heldReport)) drawLevelClosing(ctx, w, pal)
     ctx.restore()
   } else if (!(opts && opts.intro === false) && w.ticks >= 0 && w.ticks < LEVEL_INTRO_TICKS + (w.bossPost ? 20 : 0)) {

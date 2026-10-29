@@ -11439,3 +11439,35 @@ worktree `../oh-no-codex` sits at `codex/hazard-beats` (merged).
    in rain (a foot-splash attempt was dropped mid-round), and a stronger
    build tamp.
 3. Older items from 390: level 225's straggler; level 295's red-team losses.
+
+## 430 — 2026-10-29 · ?fit: the level as wide as a strip monitor
+
+Jon has a Corsair XENEON EDGE (2560x720, 32:9) and wants the game on it with
+the level adapting to the screen rather than stretching. `?full` put a
+100-column board at 1x in the middle of it with the HUD, skill bar and both
+control rows stacked under it — a third of the strip, mostly chrome.
+
+**`?fit`** (implies `?full`): Sim's new `setBoardCols(n)` sets the board's
+width in columns (100 to `MAX_COLS` 320; rows never change) before a level is
+generated, and the page picks `n` from the viewport's shape, then draws the
+board at the (fractional) scale that fills the height. At 2048x520 that is
+243–244 columns. A resize that changes the shape restarts the level at the new
+width. Only the board is shown: no HUD, skills, controls, tip, title card,
+standup, report card, sky notices, hero card or ticker (Draw's new
+`notices: false` and `results: false` options). Jon also said the game has
+grown too much text and too many dialogs; this mode is the first place that
+shows none.
+
+**The clock grows with the walk.** At 244 columns the unchanged clock ran out
+on 27 of 120 colonies (levels 1–60 × 2); scaled by `COLS / 100` it ran out on
+none. Home, 100 vs 244 columns: 96.6% vs 95.0% (levels 1–60), 94.0% vs 93.5%
+(61–120); no throws. The two "hung" runs at 244 are playtest's 6000-tick cap,
+below the wider clock. 100 columns is byte-for-byte the old game (same
+numbers before and after).
+
+The XENEON portal (xeneon-edge-agents, a Quickshell app) gets a "game"
+dashboard embedding `https://oh-no-more-agents.com/?full&fit`, built by the
+xeneon-edge agent from a brief sent through herdr.
+
+**Next:** deploy so the dashboard's production URL has `?fit`; then look at
+the toned-down text Jon asked for on the normal page.

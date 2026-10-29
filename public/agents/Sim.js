@@ -9,6 +9,21 @@ var CELL = 4
 var WIDTH = COLS * CELL
 var HEIGHT = ROWS * CELL
 
+// A board wider than 100 columns, for a screen shaped like a strip (the page's
+// ?fit: a 32:9 desk monitor) — the level is generated as wide as the screen
+// rather than a 100-column board letterboxed into a third of it. Rows never
+// change, so nothing vertical is retuned. Set it before generating; a world
+// made at one width must not be stepped at another. The clock grows with the
+// walk (see the end of the clock's setup in generate).
+var MAX_COLS = 320
+function setBoardCols(n) {
+  COLS = Math.max(100, Math.min(MAX_COLS, Math.floor(n) || 100))
+  WIDTH = COLS * CELL
+  TOWER_X1 = COLS - 11
+  K.COLS = COLS
+  return COLS
+}
+
 var EMPTY = 0
 var DIRT = 1   // soft: bashable, minable, diggable
 var ROCK = 2   // hard-looking but still workable; purely a visual tier
@@ -904,6 +919,11 @@ function generate(level, attempt, colonySeed) {
   // timeouts from 15 to 6; past this it buys nothing, which is the check that
   // it is a tax and not a crutch.
   if (w.submerged) w.timeLimit = Math.round(w.timeLimit / SWIM_PACE)
+
+  // A wider board (setBoardCols) is a longer walk on every floor, and the
+  // clock was set for 100 columns: at 244 a fifth of the levels ran out of it
+  // with the colony doing everything right. The same pace tax as the Trench's.
+  w.timeLimit = Math.round(w.timeLimit * COLS / 100)
 
   if (guardPlan) buildGuardBooth(w, guardPlan, corridors, last)
 
