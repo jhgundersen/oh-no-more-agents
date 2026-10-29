@@ -11545,3 +11545,41 @@ now, inside the introduction, since the old renderer drew the fact all level.
 
 **Next:** the caption row under the board and the out-of-office replies —
 look at how often they speak in a typical level before cutting.
+
+## 434 — 2026-10-29 · Wide storeys are walked, not bombed
+
+The XENEON EDGE board is 253 columns. Played there (levels 1–160 × 2
+colonies), 23 runs ended badly against the same levels at 100 columns —
+level 56 (Clock Tower) 1/16 home against 16/16, Skyscrapers stalling on
+every other level.
+
+**Cause:** off the door's floor, goalDist counts getting lower and closing on
+the door's column. Walking a storey *away* from that column — the zig-zag
+every level is built from — is no progress for the whole storey. At 100
+columns that is ~360 ticks, well inside PATIENCE (900); at 253 it is ~1100.
+So healthy walkers were handed forceEscape's tools, then condemned and bombed
+(15 "boom" deaths on level 56, none of them the nuke).
+
+**Fix:** `setBoardCols` now scales every "nobody got anywhere for this long"
+by `WALK = COLS / 100`, as the clock already was: PATIENCE (and STUCK_LIMIT
+from it), HERO_LAST_PATIENCE, MISSION_PATIENCE and the three level stall
+cutoffs. At 100 columns WALK is exactly 1 and the playtest numbers are
+byte-identical before and after.
+
+| 253 columns | before | after |
+|---|---|---|
+| levels 1–40 | 96.4% | 97.3% |
+| 41–80 | 92.4% | 95.5% |
+| 81–120 | 95.1% | 96.0% |
+| 121–160 | 94.0% | 95.1% |
+| runs flagged | 23 | 5 |
+
+Of the five left, three "hung" are playtest's 6000-tick cap under a 8349-tick
+clock; level 124 (Foundry, 4/15) and 63 (Frost) are still wide-only losses.
+New test: wide level 56 gets everyone (bar one) home and condemns nobody.
+
+Also: the sweepstake's "TAP AN AGENT: WHO GETS HOME FIRST?" ticker line runs
+on a visit's first level only (it was three, under a blurb saying the same).
+
+**Next:** wide level 124 — the whole colony paces the bottom floor short of
+the raised block at x≈130.

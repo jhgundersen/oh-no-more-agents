@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { execSync } from "node:child_process"
-import { loadSim } from "../tools/simcheck.js"
+import { loadSim, colonySeed } from "../tools/simcheck.js"
 import { serve, browser } from "../tools/phone.js"
 
 // ?fit: a level generated as wide as a strip of a monitor (a 2560x720 XENEON
@@ -19,6 +19,20 @@ test("setBoardCols widens the board and its clock, and clamps", () => {
     assert.equal(S.setBoardCols(40), 100, "never narrower than the normal board")
     assert.equal(S.setBoardCols(9999), S.MAX_COLS)
     assert.equal(S.setBoardCols(NaN), 100)
+  } finally { S.setBoardCols(100) }
+})
+
+// Off the door's floor, walking a storey away from the door's column is not
+// progress, and a 253-column storey takes longer than the 100-column patience:
+// level 56 bombed 15 of 16 for walking until the stall rules scaled with WALK.
+test("a wide storey's walk is not mistaken for getting nowhere", () => {
+  const S = loadSim()
+  try {
+    S.setBoardCols(253)
+    const w = S.generate(56, 0, colonySeed(56, 0, 0))
+    while (!w.done && w.ticks < 9000) S.step(w)
+    assert.ok(w.saved >= w.toRelease - 1, `${w.saved}/${w.toRelease} home`)
+    assert.ok(!w.agents.some(a => a.condemned), "nobody condemned")
   } finally { S.setBoardCols(100) }
 })
 

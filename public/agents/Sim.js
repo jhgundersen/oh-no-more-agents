@@ -14,13 +14,23 @@ var HEIGHT = ROWS * CELL
 // rather than a 100-column board letterboxed into a third of it. Rows never
 // change, so nothing vertical is retuned. Set it before generating; a world
 // made at one width must not be stepped at another. The clock grows with the
-// walk (see the end of the clock's setup in generate).
+// walk (see the end of the clock's setup in generate), and so does every
+// "nobody has got anywhere for this long" — off the door's floor, walking a
+// storey away from the door's column is no progress, and at 253 columns a
+// storey is 1100 ticks of it: past PATIENCE, so the colony was handed tools
+// and bombed for walking (level 56, 1/16 home against 16/16 at 100).
 var MAX_COLS = 320
+var WALK = 1               // COLS / 100: how much longer every storey's walk is
 function setBoardCols(n) {
   COLS = Math.max(100, Math.min(MAX_COLS, Math.floor(n) || 100))
   WIDTH = COLS * CELL
   TOWER_X1 = COLS - 11
   K.COLS = COLS
+  WALK = COLS / 100
+  PATIENCE = Math.round(PATIENCE_BASE * WALK)
+  STUCK_LIMIT = PATIENCE + 240
+  HERO_LAST_PATIENCE = Math.round(HERO_LAST_BASE * WALK)
+  MISSION_PATIENCE = Math.round(MISSION_PATIENCE_BASE * WALK)
   return COLS
 }
 
@@ -11006,13 +11016,15 @@ function grant(w, skill) {
 // bombing colleagues who would have found one. Measured over 420 levels:
 // 93.18 → 94.25% home, bombs 147 → 94, timeouts 9 → 4, no longer levels;
 // on 420 fresh ones 94.01 → 94.77%. 1200 and 1800 were no better.
-var PATIENCE = 900
+var PATIENCE_BASE = 900
+var PATIENCE = PATIENCE_BASE   // scaled by setBoardCols
 
 var LOOP_BUCKET = 5
 var LOOP_PASSES = 8
 
 var STUCK_LIMIT = PATIENCE + 240
-var HERO_LAST_PATIENCE = 200   // see watchProgress
+var HERO_LAST_BASE = 200       // see watchProgress
+var HERO_LAST_PATIENCE = HERO_LAST_BASE
 
 // Stuck in one cell for this long: dig instead.
 var STILL_ESCAPE = 130
@@ -11637,7 +11649,8 @@ function stepMission(w) {
 // MISSION_PATIENCE ticks with the mission untouched, it is descoped: the door
 // opens, the cages stay shut, and the ticker owns up to it. Counted from the
 // first time anybody reached the door, and only while nobody has made a start.
-var MISSION_PATIENCE = 450
+var MISSION_PATIENCE_BASE = 450
+var MISSION_PATIENCE = MISSION_PATIENCE_BASE
 function missionWaitedOut(w, m) {
   var e = w.exit, at = false
   for (var i = 0; i < w.agents.length && !at; i++) {
@@ -11840,9 +11853,9 @@ function finishWorldStep(w, active, blockers, moving) {
     // and the cutoff ended the level 30 ticks into its 48-tick talk (LOG 363).
     w.stillTicks = w.movingCount === 0 && !explainingAnyone(w) ? (w.stillTicks || 0) + 1 : 0
     var allStuck = w.stillTicks > STILL_FOR
-    if (w.stallTicks > 900
-        || (nearlyDone && allStuck && w.stallTicks > 210)
-        || (nearlyDone && w.stallTicks > 600)) {
+    if (w.stallTicks > 900 * WALK
+        || (nearlyDone && allStuck && w.stallTicks > 210 * WALK)
+        || (nearlyDone && w.stallTicks > 600 * WALK)) {
       w.done = true
       w.doneTicks = 0
     }

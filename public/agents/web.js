@@ -520,8 +520,9 @@
     world.res = RES
     world.doneHold = DONE_HOLD
     if (milestone) world.milestone = milestone
-    // The first few levels of a visit say how the sweepstake works.
-    if (++levelsThisVisit <= 3 && !fit) world.feed.push({ t: 45, text: "TAP AN AGENT: WHO GETS HOME FIRST?" })
+    // The first level of a visit says how the sweepstake works, once: the
+    // blurb above the board says it too.
+    if (++levelsThisVisit <= 1 && !fit) world.feed.push({ t: 45, text: "TAP AN AGENT: WHO GETS HOME FIRST?" })
     world.reducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
     announce(levelAnnouncement(world) + " " + levelTitleSubtitle(world.level, world.biome) + " " + forecastLines(world).join(" "))
     completionLine = ""
