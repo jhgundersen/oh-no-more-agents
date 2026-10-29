@@ -11471,3 +11471,19 @@ xeneon-edge agent from a brief sent through herdr.
 
 **Next:** deploy so the dashboard's production URL has `?fit`; then look at
 the toned-down text Jon asked for on the normal page.
+
+## 431 — 2026-10-29 · Deploy (15:2x): ?fit for the XENEON EDGE
+
+**Deployed** build b3694629 (Worker version 92054f69), replacing 75d29b23. It
+covers 430 plus two follow-ups from Jon: `?fit` locks the page scroll (the
+EDGE window showed a scrollbar) and has no buttons at all — a tap on empty
+board no longer pauses, since nothing would say how to resume.
+
+**Before:** `npm run smoke` passed (3 min, levels 1–7); gate 1650/1650 (one
+earlier gate lost `captions.test.js` to its 3.2 s ready timeout under load;
+3/3 alone, green on the re-gate).
+**After:** `npm run verify -- --previous 75d29b23` failed once on the open-tab
+reload (straight after upload), passed on the second run.
+
+**Next:** Jon's ask for the normal page: fewer dialogs and less text. Inventory
+every popup, card and banner, and remove what does not earn its place.
