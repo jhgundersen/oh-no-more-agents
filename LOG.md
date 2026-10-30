@@ -11668,3 +11668,15 @@ auto-mode permission check after a green smoke (levels 1–7); production is
 still feb8fcca.
 
 **Test:** door-stretch (arrival kinds, spin, glint). Gate 1647/1647.
+
+## 440 — 2026-10-30 · Deploy: the home stretch, flailing falls, walking gags
+
+**Deployed** build 4815428f (Worker version e298c330), replacing feb8fcca. It
+covers 436–439. Jon added a `Bash(npm run deploy:*)` allow rule after the
+auto-mode check refused the earlier attempt.
+
+**Before:** `npm run smoke` passed on 1abdb2e (levels 1–7). Two gates under
+load average ~8.7 lost a browser test each to a fixed pause (`daily.test`
+1.2 s, `milestone.test` 3 s, both 3/3 alone); both now wait for the page.
+Gate 1647/1647.
+**After:** `npm run verify -- --previous feb8fcca` passed first time.
