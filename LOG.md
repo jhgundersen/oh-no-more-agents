@@ -11591,3 +11591,22 @@ covers 432–434.
 
 **Before:** `npm run smoke` passed on 162c83c; gate 1638/1638.
 **After:** `npm run verify -- --previous b3694629` passed first time.
+
+## 436 — 2026-10-30 · The home stretch: every agent goes home its own way
+
+Jon: "all the characters should be more detailed and have better / funnier /
+varied animations". Before, every walk ended the same: the same eight-pose
+gait to the door, then the wave inside it.
+
+**Changed (Draw only, page resolution):** in the last 9 cells to the door,
+on its floor and walking at it, `doorStretch` picks an arrival per agent from
+id and level: a skip (2.5 px hop), a sprint (elbows pumping, a puff off the
+heel), a fist punched at the sky, a moonwalk (facing away, still arriving), both
+arms waving over the hat, or a twirl (facing flips every half step). An agent
+carrying its umbrella only skips; the panel, heroes, divers and reduced motion
+keep the plain walk. Sim's `homeStretch` already owned that name, so this one
+is `doorStretch` (check-core-refs caught it).
+
+**Test:** `door-stretch.test.js` — the window (floor, facing, distance, res,
+reduced motion, heroes) and the mix (all six kinds across twelve ids). Gate
+1640/1640; CRAP green, drawAgent 28.

@@ -10890,7 +10890,7 @@ function drawTraitDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, idle) {
   var head = traitHeadOffset(w, ag)
   var lift = w.submerged && !idle && ag.state === "walk" ? Math.round(Math.sin(ag.anim * 0.22) * 1.2) : 0
   var p = { ctx: ctx, pal: pal, ag: ag, x: ox, y: oy + drop + lift, dir: dir,
-    drop: drop, lead: idle ? 0 : lead, hands: !idle || !idle.pose,
+    drop: drop, lead: idle ? 0 : lead, hands: (!idle || !idle.pose) && !(doorStretch(w, ag) || {}).arms,
     hx: head.x, hy: head.y - (idle && idle.pose === "glance" ? 1 : 0), wet: w.submerged }
   look.draw(p)
 }
@@ -13818,6 +13818,8 @@ function drawAgent(ctx, w, pal, ag, opts) {
   var thrown = throwArc(w, ag, C)
   ox += thrown.dx + pageHomeStep(w, ag)
   oy -= thrown.lift
+  var stretch = doorStretch(w, ag)
+  if (stretch) { oy -= stretch.hop; if (stretch.flip) dir = -dir }
 
   if (st === "saved") {
     // A short rise and fade into the portal, so getting home reads as an
@@ -13910,6 +13912,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
 
   drawAgentDetail(ctx, w, pal, ag, ox, oy, dir, bodyDrop, walkLead, squash, robe, idle)
   drawIdleGesture(ctx, w, pal, ag, ox, oy, dir, robe, bodyDrop, idle)
+  drawDoorStretch(ctx, w, pal, ag, ox, oy, dir, robe, stretch)
 
   if (libraryShelfPose(w, ag)) drawShelfGrip(ctx, w, pal, ag, ox, oy, dir, robe)
 
@@ -22012,6 +22015,8 @@ function drawPageWalk(ctx, w, pal, ag, x, y, d, robe, skin, lead, drop) {
   blitFine(ctx,x,y,d,2+stride,13,2,3-gait[2])
   blitFine(ctx,x,y,d,4-stride,13,2,3-gait[3])
   if (look && look.arms) return
+  var stretch = doorStretch(w, ag)
+  if (stretch && stretch.arms) return
   var mine = pageMineAge(ag)
   if (mine >= 0 && mine < 3) {
     blitFine(ctx,x,y,d,-0.5,9+drop,1.5,3)
@@ -22189,6 +22194,62 @@ function pageHomeStep(w,ag) {
   var dx=(w.exit.x+w.exit.w/2-ag.x)*w.k.CELL
   return Math.round(Math.max(-3,Math.min(3,dx))*Math.min(1,ag.fade/10)*2)/2
 }
+// The last few cells to the door, on its floor and walking at it: each agent
+// goes home its own way. A skip, a sprint, a fist in the air, a moonwalk,
+// both arms waving, or a twirl. Picked by id and level, so a colony mixes
+// them; an umbrella in hand only leaves room for the skip. Drawn only.
+var DOOR_STRETCH = ["skip", "dash", "fist", "moon", "wave", "twirl"]
+var DOOR_STRETCH_CELLS = 9
+var DOOR_STRETCH_ARMS = { dash: true, fist: true, wave: true }
+var HOME_SKIP_HOP = [0,1,2,2.5,2.5,2,1,0]
+var HOME_DASH_HOP = [0,0,0.5,0,0,0,0.5,0]
+function doorStretch(w,ag) {
+  var e=w&&w.exit
+  if (!e||!pageMotionAgent(w,ag)||ag.state!=="walk"||w.reducedMotion||agentIdleKind(ag)) return null
+  if (!(ag.y>e.y&&ag.y<e.y+e.h+1)) return null
+  var gap=(e.x+e.w/2-ag.x)*ag.dir
+  if (gap<=0||gap>DOOR_STRETCH_CELLS) return null
+  var kind=ag.ownBrolly?"skip":DOOR_STRETCH[((ag.id||0)*5+(w.level||0))%DOOR_STRETCH.length]
+  var beat=((ag.anim||0)>>1)%8
+  return { kind:kind, beat:beat, arms:!!DOOR_STRETCH_ARMS[kind],
+    hop:kind==="skip"?HOME_SKIP_HOP[beat]:kind==="dash"?HOME_DASH_HOP[beat]:0,
+    flip:kind==="moon"||(kind==="twirl"&&beat>=4) }
+}
+var DOOR_STRETCH_DRAW = { dash: drawHomeDash, fist: drawHomeFist, wave: drawHomeWave }
+function drawDoorStretch(ctx,w,pal,ag,x,y,d,robe,s) {
+  if (s&&s.arms) DOOR_STRETCH_DRAW[s.kind](ctx,pal,x,y,d,robe,s.beat)
+}
+// Elbows bent, the arms pumping in turn, and a puff off the back heel.
+function drawHomeDash(ctx,pal,x,y,d,robe,beat) {
+  var fore=beat<4
+  ctx.fillStyle=robe
+  blitFine(ctx,x,y,d,fore?6:5.5,8,fore?2.5:1.5,fore?1.5:3)
+  blitFine(ctx,x,y,d,fore?0:-1,fore?9:8,fore?1.5:2,fore?2.5:1.5)
+  ctx.fillStyle=pal.skin
+  blitFine(ctx,x,y,d,fore?8.5:5.5,fore?7.5:11,1,1)
+  blitFine(ctx,x,y,d,fore?0:-1.5,fore?11.5:7.5,1,1)
+  if (beat%4!==0) return
+  ctx.fillStyle=pal.dirtEdge
+  blitFine(ctx,x,y,d,-1.5,15,1,0.5);blitFine(ctx,x,y,d,-2.5,14.5,0.5,0.5)
+}
+// The forward fist punched at the sky, twice a step.
+function drawHomeFist(ctx,pal,x,y,d,robe,beat) {
+  var pump=beat%4<2?0:1
+  ctx.fillStyle=robe
+  blitFine(ctx,x,y,d,6,3+pump,1.5,5.5-pump)
+  ctx.fillStyle=pal.skin
+  blitFine(ctx,x,y,d,6,1.5+pump,1.5,1.5)
+  blitFine(ctx,x,y,d,0,11,1,1)
+}
+// Both arms up over the hat, hands waving out and in.
+function drawHomeWave(ctx,pal,x,y,d,robe,beat) {
+  var sway=AGENT_HOME_WAVE[beat%4]
+  ctx.fillStyle=robe
+  blitFine(ctx,x,y,d,-0.5,3,1.5,5);blitFine(ctx,x,y,d,7,3,1.5,5)
+  ctx.fillStyle=pal.skin
+  blitFine(ctx,x,y,d,-0.5-sway,1.5,1,1.5);blitFine(ctx,x,y,d,7.5+sway,1.5,1,1.5)
+}
+
 function agentHomeLift(w,ag) {
   if (pageMotionAgent(w,ag)) return AGENT_HOME_LIFT[ag.fade%8]
   return ag.fade+(ag.fade<7?Math.round(Math.sin(ag.fade/7*Math.PI)*2):0)
