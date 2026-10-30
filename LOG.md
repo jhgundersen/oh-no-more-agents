@@ -11610,3 +11610,21 @@ is `doorStretch` (check-core-refs caught it).
 **Test:** `door-stretch.test.js` — the window (floor, facing, distance, res,
 reduced motion, heroes) and the mix (all six kinds across twelve ids). Gate
 1640/1640; CRAP green, drawAgent 28.
+
+## 437 — 2026-10-30 · A drop with nothing to hold: windmill, pedal, hat off
+
+**Before:** an agent falling without an umbrella held both arms up and
+alternated its feet every four beats, the same for a stair step as for a
+fifteen-cell plunge.
+
+**Changed (Draw only, page resolution):** past three cells, both arms windmill
+on their own sides, a quarter turn every two ticks, the back arm two beats
+behind (`AGENT_FALL_ARM`, `fallWindmill`), and the legs pedal at nothing
+(`AGENT_FALL_PEDAL`). Past six cells the hat comes up off a bald crown, a pixel
+or two and wobbling (`fallHatLift`); an umbrella keeps it on. Short drops keep
+the arms-up pose; the panel, heroes and divers are unchanged.
+
+**Also:** `whoBubbleRect` had crept to CRAP 30.0 (its 429-sign branch was
+never run); who-art now pushes a bubble off a sign both ways.
+
+**Test:** `fall-flail.test.js`. Gate 1642/1642; CRAP green.

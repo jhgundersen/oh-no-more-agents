@@ -10842,7 +10842,7 @@ function drawAgentFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w) {
   }
   var pose = FINE_POSES[ag.state]
   if (!pose) return
-  if (pose !== drawAgentUprightFine) drawFineHead(ctx, pal, ag, ox, oy, dir, drop)
+  if (pose !== drawAgentUprightFine) drawFineHead(ctx, pal, ag, ox, oy, dir, drop, fallHatLift(w, ag))
   pose(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w)
 }
 
@@ -11035,9 +11035,9 @@ function drawAgentUprightFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, rob
 
 // These marks are opaque half pixels. Raised climbing hands cover the front
 // of the face, so leave its glasses and mouth behind that arm.
-function drawFineHead(ctx, pal, ag, ox, oy, dir, drop) {
+function drawFineHead(ctx, pal, ag, ox, oy, dir, drop, hatUp) {
   ctx.fillStyle = pal.lapel
-  blitFine(ctx, ox, oy, dir, 2.5, 0.5 + drop, 2.5, 0.5)
+  blitFine(ctx, ox, oy, dir, 2.5, 0.5 + drop - (hatUp || 0), 2.5, 0.5)
   ctx.fillStyle = pal.skin
   blitFine(ctx, ox, oy, dir, 1.5, 3 + drop, 0.5, 0.5)
   ctx.fillStyle = pal.eye
@@ -14195,11 +14195,14 @@ function drawAgentDryHead(ctx, w, pal, ag, ox, oy, dir, hair, skin, bodyDrop) {
   var pixel = pageMotionAgent(w, ag) || agentTraitLook(w, ag) ? blitFine : blit
   ox += dir * look.x
   bodyDrop += look.y
+  var hatUp = fallHatLift(w, ag)
   ctx.fillStyle = hair
-  pixel(ctx, ox, oy, dir, 2, 0 + bodyDrop, 4, 3)
+  pixel(ctx, ox, oy, dir, 2, 0 + bodyDrop - hatUp, 4, hatUp ? 2 : 3)
+  if (hatUp) pixel(ctx, ox, oy, dir, 1.5, 2 + bodyDrop - hatUp, 5, 0.5)   // the brim, off the head
   pixel(ctx, ox, oy, dir, 0, 1 + bodyDrop, 2, 3)        // the back of the head
 
   ctx.fillStyle = skin
+  if (hatUp) pixel(ctx, ox, oy, dir, 2, 2.5 + bodyDrop, 4, 0.5)            // and the crown under it
   pixel(ctx, ox, oy, dir, 2, 3 + bodyDrop, 4, 4)
   pixel(ctx, ox, oy, dir, 6, 5 + bodyDrop, 1, 1)        // the nose
 
@@ -22057,7 +22060,27 @@ function drawPageAgentBody(ctx,w,pal,ag,x,y,d,robe,st,drop,idle) {
 }
 function pageFallFeet(ag) {
   var beat=((ag.anim||0)>>1)%8
+  if (!ag.floater && ag.fall>FALL_FLAIL) return AGENT_FALL_PEDAL[beat%4]
   return AGENT_FALL_FEET[beat<4?0:1]
+}
+// A real drop with nothing to hold: both arms windmill on their own sides,
+// opposite each other, the legs pedal at nothing, and past a few cells the
+// hat comes up off the head. [sleeve x, y, w, h, hand x, y] for the front
+// arm, round from overhead; the back arm is its mirror two beats behind.
+var FALL_FLAIL = 3
+var AGENT_FALL_PEDAL = [[1,0],[0.5,0.5],[0,1],[0.5,0.5]]
+var AGENT_FALL_ARM = [[6,3.5,1.5,4,6.5,2.5],[6.5,6.5,2.5,1.5,9,6],[6,8,1.5,3,6.5,11],[6.5,5,2.5,1.5,9,4.5]]
+function fallArm(row,mirror) {
+  if (!mirror) return row
+  return [SPRITE_W-row[0]-row[2],row[1],row[2],row[3],SPRITE_W-row[4]-1,row[5]]
+}
+function fallWindmill(ag) {
+  var beat=((ag.anim||0)>>1)%4
+  return { front:AGENT_FALL_ARM[beat], back:fallArm(AGENT_FALL_ARM[(beat+2)%4],true) }
+}
+function fallHatLift(w,ag) {
+  if (ag.state!=="fall"||ag.floater||!pageMotionAgent(w,ag)||!(ag.fall>FALL_FLAIL+3)) return 0
+  return Math.min(2,Math.floor((ag.fall-FALL_FLAIL)/3))+(((ag.anim||0)>>2)%2?0.5:0)
 }
 function drawPageFall(ctx,w,pal,ag,x,y,d,robe) {
   var feet=pageFallFeet(ag),lift=pageGait(ag)[0]
@@ -22067,6 +22090,10 @@ function drawPageFall(ctx,w,pal,ag,x,y,d,robe) {
     blitFine(ctx,x,y,d,0,8+lift,1.5,3)
     blitFine(ctx,x,y,d,6,7,2,3)
     blitFine(ctx,x,y,d,7,7,2,1.5)
+  } else if (ag.fall>FALL_FLAIL) {
+    var arms=fallWindmill(ag)
+    blitFine(ctx,x,y,d,arms.front[0],arms.front[1],arms.front[2],arms.front[3])
+    blitFine(ctx,x,y,d,arms.back[0],arms.back[1],arms.back[2],arms.back[3])
   } else {
     blitFine(ctx,x,y,d,0,4+lift,2,4-lift)
     blitFine(ctx,x,y,d,6,4-lift,2,4+lift)
@@ -22081,6 +22108,10 @@ function drawPageFallDetail(ctx,w,pal,ag,x,y,d) {
   if (ag.floater && ag.fall>2) {
     blitFine(ctx,x,y,d,7.5,7.5,1.5,1)
     blitFine(ctx,x,y,d,0.5,10.5+lift,1,1)
+  } else if (ag.fall>FALL_FLAIL) {
+    var arms=fallWindmill(ag)
+    blitFine(ctx,x,y,d,arms.front[4],arms.front[5],1,1)
+    blitFine(ctx,x,y,d,arms.back[4],arms.back[5],1,1)
   } else {
     blitFine(ctx,x,y,d,0.5,4.5+lift,0.5,1)
     blitFine(ctx,x,y,d,7,4.5-lift,0.5,1)

@@ -80,6 +80,13 @@ test('untagged homeward/brawl poses and enemy speech cannot be painted over',()=
  assert.ok(keep.some(r=>JSON.stringify(r)===JSON.stringify(q)))
  for(const item of D.whoLabelLayout(w,tags))assert.equal(D.levelTitleOverlap(item.rect,q),0)
  const conflict=D.whoBubbleRect(w,{text:'<<<<<<<',at:w.ticks},200,100);assert.ok(Number.isFinite(conflict.x)&&conflict.width===37)
+ // A 429 sign under the bubble pushes it to the side: right where there is room, left at the wall.
+ const rl=w.rateLimit;w.rateLimit={x:50,y:30,at:w.ticks-10,clearAt:-1}
+ const sign=D.gagRateLimitRect(w),right=D.whoBubbleRect(w,{text:'LGTM',at:w.ticks},200,sign[1]+10)
+ assert.ok(right.x+2>=sign[2])
+ w.rateLimit={x:w.k.COLS-2,y:30,at:w.ticks-10,clearAt:-1}
+ const wall=D.gagRateLimitRect(w),left=D.whoBubbleRect(w,{text:'LGTM',at:w.ticks},w.k.COLS*w.k.CELL-8,wall[1]+10)
+ assert.ok(left.x+left.width-2<=wall[0]);w.rateLimit=rl
 })
 
 test('clearance contains every real falling, folding and parrying canopy pixel in all seasons and directions',()=>{
