@@ -53,7 +53,9 @@ test("on the page: the button plays today's colony, copy link carries ?daily, an
   const ev = async e => (await b.cmd("Runtime.evaluate", { expression: e, returnByValue: true, awaitPromise: true })).result.value
   try {
     const base = `http://127.0.0.1:${server.address().port}/`
-    await b.cmd("Page.navigate", { url: base }); await sleep(1200)
+    await b.cmd("Page.navigate", { url: base })
+    // Under a full gate the page can take longer than a fixed pause to fill the date in.
+    for (let i = 0; i < 80 && !(await ev(`!!(window.AgentWorld && AgentWorld() && document.getElementById("dailyDate").textContent)`)); i++) await sleep(100)
     const today = await ev(`AgentShare.today()`)
     assert.equal(await ev(`document.getElementById("dailyDate").textContent`), today)
     await ev(`document.getElementById("daily").click()`); await sleep(200)

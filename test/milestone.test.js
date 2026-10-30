@@ -75,6 +75,8 @@ test("on the page: a fresh milestone in the stats puts hats and a ticker line on
         await b.cmd("Page.navigate", { url: base })
         await sleep(3000)
       }
+      // A loaded gate can still be booting the page after the pause.
+      for (let i = 0; i < 80 && !(await b.cmd("Runtime.evaluate", { returnByValue: true, expression: `!!(window.AgentWorld && AgentWorld())` })).result.value; i++) await sleep(100)
       const r = (await b.cmd("Runtime.evaluate", { returnByValue: true, expression: `(() => { const w = AgentWorld(); return { m: w.milestone || null, feed: w.feed.map(f => f.text) } })()` })).result.value
       if (total === null) { assert.equal(r.m, null); assert.ok(!r.feed.some(t => /MILESTONE/.test(t))) }
       else { assert.equal(r.m && r.m.n, 490000); assert.ok(r.feed.some(t => /COMMUNITY MILESTONE: 490,000/.test(t))) }
