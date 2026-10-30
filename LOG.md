@@ -11583,3 +11583,11 @@ on a visit's first level only (it was three, under a blurb saying the same).
 
 **Next:** wide level 124 — the whole colony paces the bottom floor short of
 the raised block at x≈130.
+
+## 435 — 2026-10-30 · Deploy: fewer words, rarer standups, wide storeys
+
+**Deployed** build feb8fcca (Worker version 2db4240f), replacing b3694629. It
+covers 432–434.
+
+**Before:** `npm run smoke` passed on 162c83c; gate 1638/1638.
+**After:** `npm run verify -- --previous b3694629` passed first time.
