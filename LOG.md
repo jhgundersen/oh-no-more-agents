@@ -11628,3 +11628,23 @@ the arms-up pose; the panel, heroes and divers are unchanged.
 never run); who-art now pushes a bubble off a sign both ways.
 
 **Test:** `fall-flail.test.js`. Gate 1642/1642; CRAP green.
+
+## 438 — 2026-10-30 · Walking gags: trip, hat tip, sneeze, texting
+
+**Before:** between the start and the door a walking agent only ever walked;
+personality was a half-pixel tilt nobody sees at full frame.
+
+**Changed (Draw only, page resolution):** now and then (one turn in roughly
+every 16–20 s per agent, staggered by id) a walker does something daft for a
+second: trips on nothing (legs splayed, head pitched, arms flung out then a
+windmill back to balance), lifts its hat to nobody (the bald crown from 437
+shows), sneezes (head back, snap forward, a spray drifting down), or walks
+along texting, head down over a lit screen. Pure functions of tick and id
+(`walkGag`), never while idle, landing, planting a mine or in the door
+stretch; an umbrella in hand only sneezes; reduced motion, the panel, heroes
+and divers keep the plain walk. The head offsets go through `traitHeadOffset`,
+so the hat, weather and Santa marks follow; `pageArmsBusy` stops the swing arm
+being drawn under a gag's arms.
+
+**Test:** `walk-gag.test.js` (rarity under 8%, every kind, the exclusions, the
+head and hat). Gate 1645/1645; CRAP green.

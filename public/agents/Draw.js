@@ -10842,7 +10842,7 @@ function drawAgentFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w) {
   }
   var pose = FINE_POSES[ag.state]
   if (!pose) return
-  if (pose !== drawAgentUprightFine) drawFineHead(ctx, pal, ag, ox, oy, dir, drop, fallHatLift(w, ag))
+  if (pose !== drawAgentUprightFine) drawFineHead(ctx, pal, ag, ox, oy, dir, drop, agentHatLift(w, ag))
   pose(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w)
 }
 
@@ -10872,6 +10872,8 @@ function agentTraitLook(w, ag) {
 function traitHeadOffset(w, ag) {
   var shake = blockerShake(w, ag)
   if (shake) return { x: shake, y: 0 }
+  var gag = walkGag(w, ag), gagHead = gag && walkGagHead(gag)
+  if (gagHead) return gagHead
   var look = agentTraitLook(w, ag)
   if (!look || w.submerged) return { x: 0, y: 0 }
   // Peeks are brief and staggered by id, with no random draw or pose memory.
@@ -10890,7 +10892,7 @@ function drawTraitDetail(ctx, w, pal, ag, ox, oy, dir, drop, lead, idle) {
   var head = traitHeadOffset(w, ag)
   var lift = w.submerged && !idle && ag.state === "walk" ? Math.round(Math.sin(ag.anim * 0.22) * 1.2) : 0
   var p = { ctx: ctx, pal: pal, ag: ag, x: ox, y: oy + drop + lift, dir: dir,
-    drop: drop, lead: idle ? 0 : lead, hands: (!idle || !idle.pose) && !(doorStretch(w, ag) || {}).arms,
+    drop: drop, lead: idle ? 0 : lead, hands: (!idle || !idle.pose) && !pageArmsBusy(w, ag),
     hx: head.x, hy: head.y - (idle && idle.pose === "glance" ? 1 : 0), wet: w.submerged }
   look.draw(p)
 }
@@ -10991,9 +10993,9 @@ function drawTraitSkittish(p) {
 }
 
 // The head rides the walking bob and the res-2 personality tilt.
-function drawUprightHeadFine(ctx, pal, ag, ox, oy, dir, hy) {
+function drawUprightHeadFine(ctx, pal, ag, ox, oy, dir, hy, hatUp) {
   ctx.fillStyle = pal.lapel
-  blitFine(ctx, ox, oy, dir, 2.5, 0.5 + hy, 2.5, 0.5)       // light on the hair
+  blitFine(ctx, ox, oy, dir, 2.5, 0.5 + hy - (hatUp || 0), 2.5, 0.5)       // light on the hair
   ctx.fillStyle = pal.skin
   blitFine(ctx, ox, oy, dir, 1.5, 3.5 + hy, 0.5, 1)         // an ear in the hair
   ctx.fillStyle = pal.eye
@@ -11006,7 +11008,7 @@ function drawUprightHeadFine(ctx, pal, ag, ox, oy, dir, hy) {
 }
 function drawAgentUprightFine(ctx, pal, ag, ox, oy, dir, drop, lead, squash, robe, w) {
   var look = traitHeadOffset(w, ag)
-  drawUprightHeadFine(ctx, pal, ag, ox + dir * look.x, oy, dir, drop + look.y)
+  drawUprightHeadFine(ctx, pal, ag, ox + dir * look.x, oy, dir, drop + look.y, agentHatLift(w, ag))
   if (ag.state === "saved") return
   var ty = 7 + Math.max(drop, -1)
   ctx.fillStyle = pal.shirt
@@ -13913,6 +13915,7 @@ function drawAgent(ctx, w, pal, ag, opts) {
   drawAgentDetail(ctx, w, pal, ag, ox, oy, dir, bodyDrop, walkLead, squash, robe, idle)
   drawIdleGesture(ctx, w, pal, ag, ox, oy, dir, robe, bodyDrop, idle)
   drawDoorStretch(ctx, w, pal, ag, ox, oy, dir, robe, stretch)
+  drawWalkGag(ctx, w, pal, ag, ox, oy, dir, robe, bodyDrop)
 
   if (libraryShelfPose(w, ag)) drawShelfGrip(ctx, w, pal, ag, ox, oy, dir, robe)
 
@@ -14195,7 +14198,7 @@ function drawAgentDryHead(ctx, w, pal, ag, ox, oy, dir, hair, skin, bodyDrop) {
   var pixel = pageMotionAgent(w, ag) || agentTraitLook(w, ag) ? blitFine : blit
   ox += dir * look.x
   bodyDrop += look.y
-  var hatUp = fallHatLift(w, ag)
+  var hatUp = agentHatLift(w, ag)
   ctx.fillStyle = hair
   pixel(ctx, ox, oy, dir, 2, 0 + bodyDrop - hatUp, 4, hatUp ? 2 : 3)
   if (hatUp) pixel(ctx, ox, oy, dir, 1.5, 2 + bodyDrop - hatUp, 5, 0.5)   // the brim, off the head
@@ -22005,6 +22008,8 @@ function pageAgentMotion(w, ag, st, idle, m) {
   if (st === "walk" && !m.squash) {
     var gait = pageGait(ag), mine = pageMineAge(ag)
     m.lead = gait[0]; m.drop = gait[1]
+    var gag = walkGag(w, ag)
+    if (gag && gag.kind === "trip" && gag.t < 10) { m.lead = -1; m.drop = 1 }
     if (mine >= 0) { m.lead = 0; m.drop = AGENT_MINE_DROP[mine] }
   } else if (st === "bash") m.drop = AGENT_BASH_DROP[(ag.timer || 0) % 6]
   else if (st === "dig") m.drop = AGENT_DIG_DROP[(ag.timer || 0) % 7]
@@ -22018,8 +22023,7 @@ function drawPageWalk(ctx, w, pal, ag, x, y, d, robe, skin, lead, drop) {
   blitFine(ctx,x,y,d,2+stride,13,2,3-gait[2])
   blitFine(ctx,x,y,d,4-stride,13,2,3-gait[3])
   if (look && look.arms) return
-  var stretch = doorStretch(w, ag)
-  if (stretch && stretch.arms) return
+  if (pageArmsBusy(w, ag)) return
   var mine = pageMineAge(ag)
   if (mine >= 0 && mine < 3) {
     blitFine(ctx,x,y,d,-0.5,9+drop,1.5,3)
@@ -22077,6 +22081,10 @@ function fallArm(row,mirror) {
 function fallWindmill(ag) {
   var beat=((ag.anim||0)>>1)%4
   return { front:AGENT_FALL_ARM[beat], back:fallArm(AGENT_FALL_ARM[(beat+2)%4],true) }
+}
+function agentHatLift(w,ag) {
+  var g=walkGag(w,ag)
+  return g?walkGagHat(g):fallHatLift(w,ag)
 }
 function fallHatLift(w,ag) {
   if (ag.state!=="fall"||ag.floater||!pageMotionAgent(w,ag)||!(ag.fall>FALL_FLAIL+3)) return 0
@@ -22279,6 +22287,83 @@ function drawHomeWave(ctx,pal,x,y,d,robe,beat) {
   blitFine(ctx,x,y,d,-0.5,3,1.5,5);blitFine(ctx,x,y,d,7,3,1.5,5)
   ctx.fillStyle=pal.skin
   blitFine(ctx,x,y,d,-0.5-sway,1.5,1,1.5);blitFine(ctx,x,y,d,7.5+sway,1.5,1,1.5)
+}
+
+// Now and then, mid-walk, one agent does something daft for a second: trips
+// on nothing and windmills, lifts its hat to nobody, sneezes, or walks along
+// texting. Scheduled off the tick and id (no state, no RNG), never two in a
+// row for the same agent, and only with nothing better to do: not at the door,
+// not idle, not landing, not planting a mine. An umbrella in hand leaves only
+// the sneeze.
+var WALK_GAGS = ["trip", "hat", "sneeze", "phone"]
+var WALK_GAG_TICKS = { trip: 16, hat: 22, sneeze: 18, phone: 48 }
+var WALK_GAG_ARMS = { trip: true, hat: true, phone: true }
+function walkGag(w,ag) {
+  if (!pageMotionAgent(w,ag)||ag.state!=="walk"||w.reducedMotion||ag.id===undefined) return null
+  if (agentIdleKind(ag)||landSquash(w,ag)||pageMineAge(ag)>=0||doorStretch(w,ag)) return null
+  var period=480+(ag.id%5)*53, clock=(w.ticks||0)+ag.id*131
+  var turn=Math.floor(clock/period), kind=ag.ownBrolly?"sneeze":WALK_GAGS[(turn+ag.id)%WALK_GAGS.length]
+  var t=clock%period
+  if (t>=WALK_GAG_TICKS[kind]) return null
+  return { kind:kind, t:t, arms:!!WALK_GAG_ARMS[kind] }
+}
+// Where the head goes during a gag: pitched forward in the trip, back and
+// then forward in the sneeze, down at the phone.
+function walkGagHead(g) {
+  if (g.kind==="trip") return g.t<10?{x:1,y:1}:{x:0.5,y:0.5}
+  if (g.kind==="sneeze") return g.t<9?{x:-0.5,y:-0.5}:g.t<13?{x:1,y:0.5}:null
+  if (g.kind==="phone") return {x:0.5,y:0.5}
+  return null
+}
+function walkGagHat(g) {
+  if (g.kind!=="hat") return 0
+  return g.t<4||g.t>=18?0.5:1.5
+}
+// Arms busy with something other than the swing: the door stretch or a gag.
+function pageArmsBusy(w,ag) {
+  return !!((doorStretch(w,ag)||{}).arms||(walkGag(w,ag)||{}).arms)
+}
+var WALK_GAG_DRAW = { trip: drawGagTrip, hat: drawGagHatTip, sneeze: drawGagSneeze, phone: drawGagPhone }
+function drawWalkGag(ctx,w,pal,ag,x,y,d,robe,drop) {
+  var g=walkGag(w,ag)
+  if (g) WALK_GAG_DRAW[g.kind](ctx,w,pal,x,y+drop,d,robe,g.t)
+}
+// Arms flung out ahead, then a windmill back to balance.
+function drawGagTrip(ctx,w,pal,x,y,d,robe,t) {
+  var arms=t<6?[[6.5,6.5,3,1.5,9.5,6],[-1,6.5,2.5,1.5,-1.5,6]]:t<12?[AGENT_FALL_ARM[(t>>1)%4],fallArm(AGENT_FALL_ARM[((t>>1)+2)%4],true)]:[[6,8,1.5,3,6,11],[0.5,8,1.5,3,0.5,11]]
+  ctx.fillStyle=robe
+  for (var i=0;i<2;i++) blitFine(ctx,x,y,d,arms[i][0],arms[i][1],arms[i][2],arms[i][3])
+  ctx.fillStyle=pal.skin
+  for (var j=0;j<2;j++) blitFine(ctx,x,y,d,arms[j][4],arms[j][5],1,1)
+}
+// The forward hand up to the brim, the hat lifted off and set back.
+function drawGagHatTip(ctx,w,pal,x,y,d,robe,t) {
+  var up=walkGagHat({kind:"hat",t:t})
+  ctx.fillStyle=robe
+  blitFine(ctx,x,y,d,6,1.5-up+1,1.5,6.5+up-1)
+  ctx.fillStyle=pal.skin
+  blitFine(ctx,x,y,d,5.5,1.5-up,1.5,1)
+}
+// A spray in front of the face on the snap forward, drifting down.
+function drawGagSneeze(ctx,w,pal,x,y,d,robe,t) {
+  if (t<9) return
+  var drift=Math.min(2,(t-9)>>1)
+  ctx.fillStyle=pal.shirt
+  blitFine(ctx,x,y,d,8+drift,5+drift*0.5,0.5,0.5)
+  blitFine(ctx,x,y,d,9+drift,6+drift*0.5,0.5,0.5)
+  blitFine(ctx,x,y,d,8.5+drift*1.5,7+drift*0.5,0.5,0.5)
+}
+// Head down over a lit screen held at the chest, thumb going.
+function drawGagPhone(ctx,w,pal,x,y,d,robe,t) {
+  ctx.fillStyle=robe
+  blitFine(ctx,x,y,d,5.5,8,2,2)
+  ctx.fillStyle=pal.eye
+  blitFine(ctx,x,y,d,7,7,1.5,2.5)
+  ctx.fillStyle=pal.exitLight
+  blitFine(ctx,x,y,d,7.5,7.5,0.5,1.5)
+  ctx.fillStyle=pal.skin
+  blitFine(ctx,x,y,d,6.5,9,1,1)
+  blitFine(ctx,x,y,d,7,8+((t>>2)%2)*0.5,0.5,0.5)
 }
 
 function agentHomeLift(w,ag) {
