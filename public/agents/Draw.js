@@ -13821,7 +13821,8 @@ function drawAgent(ctx, w, pal, ag, opts) {
   ox += thrown.dx + pageHomeStep(w, ag)
   oy -= thrown.lift
   var stretch = doorStretch(w, ag)
-  if (stretch) { oy -= stretch.hop; if (stretch.flip) dir = -dir }
+  oy -= stretch ? stretch.hop : 0
+  dir = arrivalFacing(w, ag, stretch, dir)
 
   if (st === "saved") {
     // A short rise and fade into the portal, so getting home reads as an
@@ -14216,6 +14217,19 @@ function drawAgentDryHead(ctx, w, pal, ag, ox, oy, dir, hair, skin, bodyDrop) {
   pixel(ctx, ox, oy, dir, 2, 4 + bodyDrop, 5, 1)
   ctx.fillStyle = pal.lens
   pixel(ctx, ox, oy, dir, 5, 4 + bodyDrop, 1, 1)        // the lit lens, in front
+  var glint = shadesGlint(w, ag)
+  if (glint < 0) return
+  ctx.fillStyle = pal.shirt
+  pixel(ctx, ox, oy, dir, 2 + glint, 4 + bodyDrop, 0.5, 0.5)
+}
+// Every few seconds a glint runs across the shades, back to front, the way a
+// light catches them as the head turns.
+var GLINT_TICKS = 10
+function shadesGlint(w, ag) {
+  // Idle agents have fidgets of their own.
+  if (!pageMotionAgent(w, ag) || w.reducedMotion || ag.id === undefined || agentIdleKind(ag)) return -1
+  var t = ((w.ticks || 0) + ag.id * 61) % (200 + (ag.id % 7) * 17)
+  return t < GLINT_TICKS ? t * 0.5 : -1
 }
 
 function drawAgentMarks(ctx, w, pal, ag, ox, oy, dir, st, bodyDrop) {
@@ -22248,11 +22262,28 @@ function doorStretch(w,ag) {
   if (!(ag.y>e.y&&ag.y<e.y+e.h+1)) return null
   var gap=(e.x+e.w/2-ag.x)*ag.dir
   if (gap<=0||gap>DOOR_STRETCH_CELLS) return null
-  var kind=ag.ownBrolly?"skip":DOOR_STRETCH[((ag.id||0)*5+(w.level||0))%DOOR_STRETCH.length]
+  var kind=doorKind(w,ag)
   var beat=((ag.anim||0)>>1)%8
   return { kind:kind, beat:beat, arms:!!DOOR_STRETCH_ARMS[kind],
     hop:kind==="skip"?HOME_SKIP_HOP[beat]:kind==="dash"?HOME_DASH_HOP[beat]:0,
     flip:kind==="moon"||(kind==="twirl"&&beat>=4) }
+}
+function doorKind(w,ag) {
+  return ag.ownBrolly?"skip":DOOR_STRETCH[((ag.id||0)*5+(w.level||0))%DOOR_STRETCH.length]
+}
+// And through the door the same way: the skipper bounds in, the fist keeps
+// pumping, the wavers wave both arms, the moonwalker and the twirler spin.
+// An umbrella in hand keeps the one-handed wave.
+function homeArrivalKind(w,ag) {
+  return pageMotionAgent(w,ag)&&ag.state==="saved"&&!ag.ownBrolly?doorKind(w,ag):""
+}
+// Facing away for a moonwalk or half a twirl, on the way in or in the door.
+function arrivalFacing(w,ag,stretch,dir) {
+  return (stretch&&stretch.flip)||homeSpin(w,ag)?-dir:dir
+}
+function homeSpin(w,ag) {
+  var kind=homeArrivalKind(w,ag)
+  return (kind==="moon"||kind==="twirl")&&((ag.fade||0)>>1)%2===1
 }
 var DOOR_STRETCH_DRAW = { dash: drawHomeDash, fist: drawHomeFist, wave: drawHomeWave }
 function drawDoorStretch(ctx,w,pal,ag,x,y,d,robe,s) {
@@ -22367,6 +22398,7 @@ function drawGagPhone(ctx,w,pal,x,y,d,robe,t) {
 }
 
 function agentHomeLift(w,ag) {
+  if (homeArrivalKind(w,ag)==="skip") return HOME_SKIP_HOP[ag.fade%8]
   if (pageMotionAgent(w,ag)) return AGENT_HOME_LIFT[ag.fade%8]
   return ag.fade+(ag.fade<7?Math.round(Math.sin(ag.fade/7*Math.PI)*2):0)
 }
@@ -22375,14 +22407,25 @@ function drawPageHome(ctx,w,pal,ag,x,y,d,robe) {
   ctx.fillStyle=robe
   blitFine(ctx,x,y,d,1,7,6,6)
   blitFine(ctx,x,y,d,2+stride,13,2,3);blitFine(ctx,x,y,d,4-stride,13,2,3)
-  // Wave with the free hand; the other keeps the umbrella's hooked handle.
-  var carrying=!!ag.ownBrolly
-  blitFine(ctx,x,y,d,carrying?6:0,9,1.5,3)
-  var wave=AGENT_HOME_WAVE[Math.floor(ag.fade/2)%4]
-  blitFine(ctx,x,y,d,carrying?0:6,4,1.5,5)
-  ctx.fillStyle=pal.skin
-  blitFine(ctx,x,y,d,carrying?-wave:7+wave,2.5,1,1.5)
-  if(carrying)blitFine(ctx,x,y,d,7,9,1,1)
+  var kind=homeArrivalKind(w,ag),wave=AGENT_HOME_WAVE[Math.floor(ag.fade/2)%4]
+  if (kind==="wave"||kind==="dash") {
+    blitFine(ctx,x,y,d,0,4,1.5,5);blitFine(ctx,x,y,d,6.5,4,1.5,5)
+    ctx.fillStyle=pal.skin
+    blitFine(ctx,x,y,d,-wave,2.5,1,1.5);blitFine(ctx,x,y,d,7+wave,2.5,1,1.5)
+  } else if (kind==="fist") {
+    var pump=(ag.fade>>1)%2
+    blitFine(ctx,x,y,d,0,9,1.5,3);blitFine(ctx,x,y,d,6,3+pump,1.5,6-pump)
+    ctx.fillStyle=pal.skin
+    blitFine(ctx,x,y,d,6,1.5+pump,1.5,1.5)
+  } else {
+    // Wave with the free hand; the other keeps the umbrella's hooked handle.
+    var carrying=!!ag.ownBrolly
+    blitFine(ctx,x,y,d,carrying?6:0,9,1.5,3)
+    blitFine(ctx,x,y,d,carrying?0:6,4,1.5,5)
+    ctx.fillStyle=pal.skin
+    blitFine(ctx,x,y,d,carrying?-wave:7+wave,2.5,1,1.5)
+    if(carrying)blitFine(ctx,x,y,d,7,9,1,1)
+  }
   ctx.fillStyle=pal.shirt;blitFine(ctx,x,y,d,3,7,2,1.5)
   ctx.fillStyle=pal.eye;blitFine(ctx,x,y,d,3.5,8,0.5,2)
   ctx.fillStyle=pal.lapel;blitFine(ctx,x,y,d,1,7,1,0.5);blitFine(ctx,x,y,d,6,7,1,0.5)

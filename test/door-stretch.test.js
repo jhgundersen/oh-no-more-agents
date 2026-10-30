@@ -31,3 +31,25 @@ test("a colony mixes its arrivals, and an umbrella in hand only skips", () => {
     assert.ok(s.hop >= 0 && s.hop <= 2.5 && Number.isInteger(s.hop * 2), "a half-pixel hop")
   }
 })
+
+test("through the door the same way: the skipper bounds, the twirler spins", () => {
+  const kinds = {}
+  for (let id = 0; id < 12; id++) {
+    const ag = agent({ id, state: "saved", fade: 2 })
+    kinds[D.homeArrivalKind(world(), ag)] = ag
+  }
+  assert.ok(D.agentHomeLift(world(), kinds.skip) >= 2, "a bound, not a step")
+  assert.ok(D.homeSpin(world(), kinds.twirl) && D.homeSpin(world(), kinds.moon))
+  assert.ok(!D.homeSpin(world(), Object.assign({}, kinds.twirl, { fade: 0 })), "a half turn at a time")
+  assert.equal(D.homeArrivalKind(world(), agent({ state: "saved", ownBrolly: true })), "", "the umbrella keeps its one-handed wave")
+  assert.equal(D.homeArrivalKind(world({ res: 1 }), agent({ state: "saved" })), "")
+})
+
+test("a glint crosses the shades now and then, back to front", () => {
+  const seen = []
+  for (let t = 0; t < 217; t++) { const g = D.shadesGlint(world({ ticks: t }), agent()); if (g >= 0) seen.push(g) }
+  assert.equal(seen.length, D.GLINT_TICKS)
+  assert.deepEqual(seen, [...seen].sort((a, b) => a - b))
+  assert.ok(Math.max(...seen) <= 4.5)
+  assert.equal(D.shadesGlint(world({ reducedMotion: true }), agent()), -1)
+})

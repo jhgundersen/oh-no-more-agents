@@ -11648,3 +11648,23 @@ being drawn under a gag's arms.
 
 **Test:** `walk-gag.test.js` (rarity under 8%, every kind, the exclusions, the
 head and hat). Gate 1645/1645; CRAP green.
+
+## 439 — 2026-10-30 · Through the door in style; a glint on the shades
+
+**Changed (Draw only, page resolution):** the doorway arrival now follows the
+agent's home-stretch style (436, `doorKind`): the skipper bounds in (a 2.5 px
+hop instead of 1), the fist keeps pumping, the wavers and sprinters throw both
+arms up, the moonwalker and the twirler spin a half turn every two ticks
+(`homeArrivalKind`, `homeSpin`). An umbrella in hand keeps the one-handed
+wave. And every seven seconds or so a glint runs across each walker's shades,
+back to front over ten ticks (`shadesGlint`); idle agents keep to their own
+fidgets (idle.test counts their quiet frames), reduced motion has none.
+
+**Also:** the facing flip for the moonwalk/twirl moved into `arrivalFacing`,
+taking drawAgent's CRAP from 29 back to 27.
+
+**Not deployed:** the hourly deploy of 436–438 was refused by the session's
+auto-mode permission check after a green smoke (levels 1–7); production is
+still feb8fcca.
+
+**Test:** door-stretch (arrival kinds, spin, glint). Gate 1647/1647.
