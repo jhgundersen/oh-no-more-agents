@@ -11454,7 +11454,8 @@ function drawModerator(ctx, w, pal, en, ox, oy, dir, m) {
   drawModeratorHammer(ctx, w, bx, by, dir)
   drawModeratorPlate(ctx, w, bx, by, dir)
   drawModeratorHead(ctx, w, bx, by, dir)
-  drawModeratorCrown(ctx, w, bx, by - 1, dir, reel ? 1 : 0)
+  if (m.fine) drawModeratorMarch(ctx, w, en, bx, by, dir, m)
+  drawModeratorCrown(ctx, w, bx, by - 1 + (m.fine ? m.bob : 0), dir, reel ? 1 : 0)
   if ((w.res || 1) >= 2) drawCastModerator(ctx, en, bx, by, dir)
   var gunY = en.state === "aim" || en.shotFor > 0 ? 6 : 8
   // Keep the gun at the ordinary muzzle, even while the armour reels away.
@@ -11567,10 +11568,28 @@ function drawModeratorFine(ctx, ox, oy, dir) {
 }
 
 function drawModeratorFeet(ctx, w, en, ox, oy, dir, m) {
+  var pixel = m.fine ? blitFine : blit
   drawEnemyFeet(ctx, w, en, ox, oy, dir, m, 13, BOSS_PLATE)
   ctx.fillStyle = BOSS_PLATE_LIT
-  blit(ctx, ox, oy, dir, 1 + m.stride, 13, 2, 1)
-  blit(ctx, ox, oy, dir, 5 - m.stride, 13, 2, 1)
+  pixel(ctx, ox, oy, dir, 1 + m.stride, 13, 2, 1)
+  pixel(ctx, ox, oy, dir, 5 - m.stride, 13, 2, 1)
+}
+// The Moderator's march at page resolution: the crown sits down a pixel as the
+// body rises under it, the eye sweeps the visor slit, and each landing boot
+// kicks up grit.
+var MODERATOR_SCAN = [0, 1, 2, 3, 3, 2, 1, 0]
+function drawModeratorMarch(ctx, w, en, ox, oy, dir, m) {
+  ctx.fillStyle = "#16161b"
+  blit(ctx, ox, oy, dir, 3, 1, 5, 1)
+  ctx.fillStyle = "#ff5268"
+  var scan = MODERATOR_SCAN[Math.floor(w.ticks / 4) % 8]
+  blit(ctx, ox, oy, dir, 3 + scan, 1, 2, 1)
+  ctx.fillStyle = "#ffe68a"
+  blitFine(ctx, ox, oy, dir, 4 + scan, 1, 0.5, 0.5)
+  if (m.stride !== -1) return
+  ctx.fillStyle = "#6b6874"
+  blitFine(ctx, ox, oy + m.bob, dir, -1, 15.5, 1, 0.5); blitFine(ctx, ox, oy + m.bob, dir, -2, 15, 0.5, 0.5)
+  blitFine(ctx, ox, oy + m.bob, dir, 8, 15.5, 1, 0.5); blitFine(ctx, ox, oy + m.bob, dir, 9.5, 15, 0.5, 0.5)
 }
 
 function drawModeratorJet(ctx, en, ox, oy, dir) {
@@ -12347,19 +12366,40 @@ function drawEnemyDischarge(ctx, en, x, y, dir, wet) {
 
 function drawDrone(ctx, w, pal, en, ox, oy, dir, m) {
   var pale = "#d9d7cf", redLit = "#ff5268"
-  var rotor = (en.anim >> 1) % 2
+  var rotor = (en.anim >> 1) % 2, spin = (w.res || 1) >= 2 && !w.reducedMotion
   ctx.fillStyle = "#20232b"
   ctx.fillRect(ox + 2, oy + 7, 8, 3)
-  ctx.fillRect(ox, oy + 5 + rotor, 4, 1)
-  ctx.fillRect(ox + 8, oy + 6 - rotor, 4, 1)
+  if (spin) drawDroneRotors(ctx, en, ox, oy)
+  else {
+    ctx.fillRect(ox, oy + 5 + rotor, 4, 1)
+    ctx.fillRect(ox + 8, oy + 6 - rotor, 4, 1)
+  }
   ctx.fillStyle = pale
   ctx.fillRect(ox + 4, oy + 6, 4, 4)
   ctx.fillStyle = redLit
   ctx.fillRect(dir > 0 ? ox + 8 : ox + 3, oy + 7, 2, 2)
   ctx.fillStyle = "#ff9a35"
   ctx.fillRect(ox + 5, oy + 10, 2, 2 + rotor)
-  if ((w.res || 1) >= 2) drawDroneFine(ctx, w, ox, oy, dir, rotor)
+  if ((w.res || 1) >= 2) drawDroneFine(ctx, w, ox, oy, dir, rotor, spin)
   drawDroneLock(ctx, w, en, ox, oy, dir)
+}
+// At page resolution the props spin: a mast on each arm, a faint disc where
+// the blade has been, and the blade itself sweeping from full span through
+// edge-on and back, the two a half turn apart. Nav lights, red and green.
+var DRONE_BLADE = [6, 4, 1, 4]
+function drawDroneRotors(ctx, en, ox, oy) {
+  ctx.fillRect(ox + 1.5, oy + 6, 1, 1.5); ctx.fillRect(ox + 9.5, oy + 6, 1, 1.5)
+  ctx.save(); ctx.globalAlpha = 0.3; ctx.fillStyle = "#8a8f9c"
+  ctx.fillRect(ox - 1, oy + 5.5, 6, 0.5); ctx.fillRect(ox + 7, oy + 5.5, 6, 0.5)
+  ctx.restore()
+  ctx.fillStyle = "#c4c8d4"
+  for (var i = 0; i < 2; i++) {
+    var len = DRONE_BLADE[((en.anim || 0) + i * 2) % 4], hub = i ? ox + 10 : ox + 2
+    ctx.fillRect(hub - len / 2, oy + 5, len, 0.5)
+  }
+  var blink = ((en.anim || 0) >> 3) % 2
+  ctx.fillStyle = blink ? "#ff5268" : "#5c1424"; ctx.fillRect(ox - 1, oy + 5, 0.5, 0.5)
+  ctx.fillStyle = blink ? "#1f5c2c" : "#7dff9a"; ctx.fillRect(ox + 12.5, oy + 5, 0.5, 0.5)
 }
 
 function drawDroneLock(ctx, w, en, ox, oy, dir) {
@@ -12543,12 +12583,14 @@ function drawHarpoon(ctx, w, pal, en, ox, oy, dir, m) {
 
 // The drone at res 2: rotors as blurred discs rather than bars, a seam on the
 // body, a camera with a glint, and a tail light that blinks.
-function drawDroneFine(ctx, w, ox, oy, dir, rotor) {
-  ctx.fillStyle = "#8a8f9c"
-  ctx.globalAlpha = 0.55
-  ctx.fillRect(ox - 1, oy + 5.5 + rotor, 6, 0.5)
-  ctx.fillRect(ox + 7, oy + 6.5 - rotor, 6, 0.5)
-  ctx.globalAlpha = 1
+function drawDroneFine(ctx, w, ox, oy, dir, rotor, spin) {
+  if (!spin) {
+    ctx.fillStyle = "#8a8f9c"
+    ctx.globalAlpha = 0.55
+    ctx.fillRect(ox - 1, oy + 5.5 + rotor, 6, 0.5)
+    ctx.fillRect(ox + 7, oy + 6.5 - rotor, 6, 0.5)
+    ctx.globalAlpha = 1
+  }
   ctx.fillStyle = "#3a3e49"
   ctx.fillRect(ox + 4, oy + 8, 4, 0.5)                          // seam
   ctx.fillStyle = "#ffffff"
@@ -24009,11 +24051,13 @@ function drawPageEnemyFidget(ctx,w,en,ox,oy) {
 // boot lands; the swinging boot clears the floor. [stride, rise, back lift,
 // front lift]; drawEnemyFeet places the legs at 1 + stride and 5 - stride.
 var GUARD_GAIT = [[-1,0,0,0],[-0.5,0,0,0],[0.5,1,1,0],[1,1,0.5,0],[-1,0,0,0],[-0.5,0,0,0],[0.5,1,0,1],[1,1,0,0.5]]
-function guardOnPatrol(w,en) {
-  return w.res===2 && !w.reducedMotion && !w.submerged && en.kind==="gun" && !en.boss && en.state==="walk" && !(en.throttled>0)
+function guardMarching(w,en) {
+  return w.res===2 && !w.reducedMotion && !w.submerged && en.kind==="gun" && en.state==="walk" && !(en.throttled>0)
 }
+// The Moderator marches too; only the rank and file fool about.
+function guardOnPatrol(w,en) { return guardMarching(w,en) && !en.boss }
 function guardGait(w,en) {
-  return guardOnPatrol(w,en) ? GUARD_GAIT[((en.anim||0)>>1)%8] : null
+  return guardMarching(w,en) ? GUARD_GAIT[((en.anim||0)>>1)%8] : null
 }
 // And now and then, a second of somebody at work: a glance back over the
 // shoulder, a yawn, a scratch under the crest. Off the tick and id, so every

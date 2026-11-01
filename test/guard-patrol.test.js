@@ -24,7 +24,7 @@ test("the march rises as the legs pass, settles as a boot lands, and lifts one b
 test("only a walking guard at page resolution marches and fools about", () => {
   assert.ok(D.guardGait(world(), guard()))
   for (const [w, en] of [[world({ res: 1 }), guard()], [world({ reducedMotion: true }), guard()], [world({ submerged: true }), guard()],
-    [world(), guard({ boss: true })], [world(), guard({ kind: "sniper" })], [world(), guard({ state: "aim" })], [world(), guard({ throttled: 5 })]]) {
+    [world(), guard({ kind: "sniper" })], [world(), guard({ state: "aim" })], [world(), guard({ throttled: 5 })]]) {
     assert.equal(D.guardGait(w, en), null)
     for (let t = 0; t < 600; t++) assert.equal(D.guardGag(Object.assign(w, { ticks: t }), en), null)
   }
@@ -43,4 +43,29 @@ test("gags are brief, rare, every kind turns up, and drawing them writes nothing
   assert.equal(kinds.size, D.GUARD_GAGS.length)
   assert.ok(on / T < 0.1, `busy ${(on / T * 100).toFixed(1)}% of the time`)
   assert.equal(JSON.stringify(en), frozen)
+})
+
+test("the Moderator marches without fooling about; its eye sweeps the slit and its boots kick grit", () => {
+  const boss = guard({ boss: true })
+  assert.ok(D.guardGait(world(), boss), "the boss marches")
+  for (let t = 0; t < 2000; t++) assert.equal(D.guardGag(world({ ticks: t }), boss), null, "but keeps a straight face")
+  assert.deepEqual([...new Set(D.MODERATOR_SCAN)].sort(), [0, 1, 2, 3])
+  const calls = [], ctx = { set fillStyle(v) { this.s = v }, get fillStyle() { return this.s }, fillRect: (...a) => calls.push([...a, ctx.s]) }
+  D.drawModeratorMarch(ctx, world({ ticks: 0 }), boss, 40, 40, 1, { stride: -1, bob: 0, fine: true })
+  assert.ok(calls.some(c => c[4] === "#6b6874"), "grit on a landing")
+  calls.length = 0
+  D.drawModeratorMarch(ctx, world({ ticks: 0 }), boss, 40, 40, 1, { stride: 0.5, bob: 1, fine: true })
+  assert.ok(!calls.some(c => c[4] === "#6b6874"), "none mid-stride")
+})
+
+test("drone props sweep from full span through edge-on, a half turn apart", () => {
+  const spans = new Set()
+  for (let anim = 0; anim < 8; anim++) {
+    const calls = [], ctx = { save() {}, restore() {}, globalAlpha: 1, fillRect: (...a) => calls.push([...a, ctx.fillStyle]) }
+    D.drawDroneRotors(ctx, { anim }, 40, 40)
+    const blades = calls.filter(c => c[4] === "#c4c8d4").map(c => c[2])
+    assert.deepEqual(blades, [D.DRONE_BLADE[anim % 4], D.DRONE_BLADE[(anim + 2) % 4]])
+    blades.forEach(b => spans.add(b))
+  }
+  assert.deepEqual([...spans].sort((a, b) => a - b), [1, 4, 6])
 })

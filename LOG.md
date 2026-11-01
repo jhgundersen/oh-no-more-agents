@@ -11726,3 +11726,22 @@ jaw dropping), or scratches under its crest. Not for bosses, snipers, the aim,
 a throttled guard, divers, the panel or reduced motion.
 
 **Test:** `guard-patrol.test.js`. Gate 1643/1643; CRAP green.
+
+## 444 — 2026-11-01 · The Moderator stomps; the drone's props spin
+
+**Changed (Draw only, page resolution):**
+- **Moderator:** marches on the guard's eight beats (`guardMarching`; only the
+  rank and file get the gags). Its crown sits down a pixel as the body rises
+  under it, its red eye sweeps the visor slit back and forth
+  (`MODERATOR_SCAN`), and each landing boot kicks grit out both sides
+  (`drawModeratorMarch`).
+- **Drone:** the two coarse rotor bars that flicked up and down are replaced
+  by props on masts: a faint disc where the blade has been, and a light blade
+  sweeping from full span through edge-on and back, the two a half turn apart
+  (`DRONE_BLADE`, `drawDroneRotors`), with red and green nav lights blinking
+  in turn. The first try drew the blades dark and they vanished against the
+  dark backdrops; they are now light. Panel and reduced motion keep the old
+  bars.
+
+**Test:** guard-patrol (boss march without gags, scan and grit, blade phases).
+Gate 1645/1645; CRAP green.
