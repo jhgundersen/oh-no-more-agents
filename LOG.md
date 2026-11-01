@@ -11701,3 +11701,10 @@ Jon: "remove the halloween stuff, also the instant replay does not make sense".
 cases dropped from season, gag-art, report-art, thaw-art, umbrella-office,
 captions, hero-intros, report-hold, titlecard-art; the gag-art bat fixture
 lives on as `floater` for christmas-art. Gate 1640/1640; CRAP green.
+
+## 442 — 2026-11-01 · Deploy: no Halloween, no instant replay
+
+**Deployed** build 2048cd64 (Worker version 125de41d), replacing 4815428f; it
+covers 441, shipped at once because Halloween was still live on its last day.
+**Before:** smoke passed (levels 1–7); gate 1640/1640.
+**After:** `npm run verify -- --previous 4815428f` passed first time.
