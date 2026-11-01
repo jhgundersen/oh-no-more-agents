@@ -11404,6 +11404,8 @@ function blit(ctx, ox, oy, dir, x, y, bw, bh) {
 function enemyMotion(w, en) {
   var moving = ["walk", "recover", "deploy", "seekpost"].indexOf(en.state) >= 0
   if (en.throttled > 0) return { stride: 0, bob: 0 }
+  var march = guardGait(w, en)
+  if (march) return { stride: march[0], bob: march[1], lift: [march[2], march[3]], fine: true }
   var stride = moving ? [0, 1, 0, -1][(en.anim >> 2) % 4] : 0
   var bob = Math.abs(stride)
   if (en.kind === "drone" || en.state === "jet") bob = [0, 1, 0, -1][Math.floor(en.anim / 6) % 4]
@@ -12278,16 +12280,17 @@ function drawEnemyLabel(ctx, w, en, ox, oy) {
 // lifts one pixel, then the other takes its turn. Falls and jets tuck both.
 function drawEnemyFeet(ctx, w, en, ox, oy, dir, m, hip, colour) {
   var airborne = en.state === "fall" || en.state === "jet"
-  var lifts = [Math.max(0, m.stride), Math.max(0, -m.stride)]
+  var lifts = m.lift || [Math.max(0, m.stride), Math.max(0, -m.stride)]
   var xs = [1 + m.stride, 5 - m.stride]
   var fin = w.submerged || en.kind === "harpoon"
   var toe = en.kind === "xeno" ? "#24472b" : (fin ? "#4a1520" : "#16161b")
+  var pixel = m.fine ? blitFine : blit
   ctx.fillStyle = colour
   for (var i = 0; i < 2; i++) {
     var height = airborne ? 2 : 3 + m.bob - lifts[i]
-    blit(ctx, ox, oy, dir, xs[i], hip, 2, height)
+    pixel(ctx, ox, oy, dir, xs[i], hip, 2, height)
     ctx.fillStyle = toe
-    blit(ctx, ox, oy, dir, xs[i], hip + height - 1, fin ? 4 : 3, 1)
+    pixel(ctx, ox, oy, dir, xs[i], hip + height - 1, fin ? 4 : 3, 1)
     if ((w.res || 1) >= 2) {
       ctx.fillStyle = en.kind === "xeno" ? "#7de37a" : "#6b6874"
       blitFine(ctx, ox, oy, dir, xs[i] + 1, hip + height - 1, 1.5, 0.5)
@@ -23997,6 +24000,53 @@ function drawPageEnemyFidget(ctx,w,en,ox,oy) {
   if (w.res!==2 || w.reducedMotion || en.throttled>0) return
   if (en.kind==="bouncer") drawGuardKnuckles(ctx,w,en,ox,oy)
   if (en.state==="aim") drawEnemyBrace(ctx,en,ox,oy)
+  var gag=guardGag(w,en)
+  if (gag) GUARD_GAG_DRAW[gag.kind](ctx,ox,oy,en.dir,gag.t)
+}
+
+// The red team on patrol, at page resolution: an eight-beat march instead of
+// four held steps. The body rises a pixel as the legs pass and settles as a
+// boot lands; the swinging boot clears the floor. [stride, rise, back lift,
+// front lift]; drawEnemyFeet places the legs at 1 + stride and 5 - stride.
+var GUARD_GAIT = [[-1,0,0,0],[-0.5,0,0,0],[0.5,1,1,0],[1,1,0.5,0],[-1,0,0,0],[-0.5,0,0,0],[0.5,1,0,1],[1,1,0,0.5]]
+function guardOnPatrol(w,en) {
+  return w.res===2 && !w.reducedMotion && !w.submerged && en.kind==="gun" && !en.boss && en.state==="walk" && !(en.throttled>0)
+}
+function guardGait(w,en) {
+  return guardOnPatrol(w,en) ? GUARD_GAIT[((en.anim||0)>>1)%8] : null
+}
+// And now and then, a second of somebody at work: a glance back over the
+// shoulder, a yawn, a scratch under the crest. Off the tick and id, so every
+// host agrees; one guard in a squad at a time, more or less.
+var GUARD_GAGS = ["look", "yawn", "scratch"]
+var GUARD_GAG_TICKS = { look: 30, yawn: 24, scratch: 24 }
+function guardGag(w,en) {
+  if (!guardOnPatrol(w,en)) return null
+  var id=en.id||0, period=300+(id%5)*41, clock=(w.ticks||0)+id*97
+  var kind=GUARD_GAGS[(Math.floor(clock/period)+id)%GUARD_GAGS.length], t=clock%period
+  return t<GUARD_GAG_TICKS[kind] ? { kind:kind, t:t } : null
+}
+var GUARD_GAG_DRAW = { look: drawGuardLookBack, yawn: drawGuardYawn, scratch: drawGuardScratch }
+// The face turned the other way: the red eye and the brow on the back side.
+function drawGuardLookBack(ctx,x,y,d,t) {
+  ctx.fillStyle="#b9a59a"; blitFine(ctx,x,y,d,2,3,4,4)
+  ctx.fillStyle="#6e5a52"; blitFine(ctx,x,y,d,2,3.5,2,0.5)
+  ctx.fillStyle="#ff5268"; blitFine(ctx,x,y,d,2,4,1,1)
+  ctx.fillStyle="#ffd0d6"; blitFine(ctx,x,y,d,2,4,0.5,0.5)
+  ctx.fillStyle="#d9d7cf"; blitFine(ctx,x,y,d,1,1.5,1,0.5)
+}
+// Eye screwed shut, the jaw dropping and closing again.
+function drawGuardYawn(ctx,x,y,d,t) {
+  var open=t>=4&&t<18?(t>=8&&t<14?2:1):0.5
+  ctx.fillStyle="#b9a59a"; blitFine(ctx,x,y,d,5,4,1,1)
+  ctx.fillStyle="#6e5a52"; blitFine(ctx,x,y,d,4.5,4.5,1.5,0.5)
+  ctx.fillStyle="#3a1221"; blitFine(ctx,x,y,d,4,5.5,1.5,open)
+}
+// The free hand up under the crest, going back and forth.
+function drawGuardScratch(ctx,x,y,d,t) {
+  var rub=(t>>1)%2*0.5
+  ctx.fillStyle="#8f1f35"; blitFine(ctx,x,y,d,1.5,3.5,1.5,4)
+  ctx.fillStyle="#b9a59a"; blitFine(ctx,x,y,d,1.5+rub,2,1.5,1.5)
 }
 function drawGuardKnuckles(ctx,w,en,ox,oy) {
   if (en.state!=="walk" || !bouncerPalm(w,en)) return

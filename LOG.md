@@ -11708,3 +11708,21 @@ lives on as `floater` for christmas-art. Gate 1640/1640; CRAP green.
 covers 441, shipped at once because Halloween was still live on its last day.
 **Before:** smoke passed (levels 1–7); gate 1640/1640.
 **After:** `npm run verify -- --previous 4815428f` passed first time.
+
+## 443 — 2026-11-01 · The red team on patrol: a march, and a guard at work
+
+Jon: "start improving the graphics of the enemies, and their animations".
+Close-ups of every enemy at page resolution showed the guard (the commonest)
+walking on four held steps with its legs barely moving; the drone, operator,
+moderator and harpooner mostly stand still between their tells.
+
+**Changed (Draw only, page resolution):** a walking guard marches on eight
+beats (`GUARD_GAIT`): the body rises a pixel as the legs pass and settles as a
+boot lands, and the swinging boot clears the floor, on the half-pixel grid
+(`drawEnemyFeet` takes the march's lifts and draws fine). And now and then
+(roughly one guard-second in twelve, off tick and id) a guard glances back
+over its shoulder (the red eye on the back of the face), yawns (eye shut,
+jaw dropping), or scratches under its crest. Not for bosses, snipers, the aim,
+a throttled guard, divers, the panel or reduced motion.
+
+**Test:** `guard-patrol.test.js`. Gate 1643/1643; CRAP green.
