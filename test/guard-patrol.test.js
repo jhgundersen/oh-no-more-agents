@@ -87,3 +87,24 @@ test("the xeno's head rides its stride, snaps on the hunt and sniffs the floor o
   assert.ok(sniffs.includes(2), "nose to the floor")
   assert.equal(D.xenoHead(world({ ticks: 0 }), xeno({ targetId: 9, touchCool: 20 })).snap, false, "sated")
 })
+
+test("the bouncer fools about only between customers", () => {
+  const bouncer = over => Object.assign({ id: 4, kind: "bouncer", state: "walk", anim: 0 }, over)
+  const kinds = new Set()
+  let on = 0
+  for (let t = 0; t < 6000; t++) {
+    const g = D.bouncerGag(world({ ticks: t }), bouncer())
+    if (!g) continue
+    on++; kinds.add(g.kind)
+    assert.ok(g.t < D.BOUNCER_GAG_TICKS[g.kind] && Math.abs(g.hx) <= 1 && g.hy >= 0 && g.hy <= 1)
+    const calls = [], ctx = { fillRect: (...a) => calls.push(a) }
+    D.BOUNCER_GAG_DRAW[g.kind](ctx, 40, 40, 1, g.t)
+  }
+  assert.equal(kinds.size, D.BOUNCER_GAGS.length)
+  assert.ok(on / 6000 < 0.12)
+  for (let t = 0; t < 2000; t++) {
+    assert.equal(D.bouncerGag(world({ ticks: t }), bouncer({ boss: true })), null, "the crown stays put")
+    assert.equal(D.bouncerGag(world({ ticks: t, res: 1 }), bouncer()), null)
+    assert.equal(D.bouncerGag(world({ ticks: t }), bouncer({ state: "recover" })), null)
+  }
+})

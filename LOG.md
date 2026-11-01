@@ -11764,3 +11764,15 @@ Gate 1646/1646; CRAP green.
 covers 443–445.
 **Before:** smoke passed on 5b95c63 (levels 1–7); gate 1646/1646.
 **After:** `npm run verify -- --previous 2048cd64` passed first time.
+
+## 447 — 2026-11-01 · The bouncer between customers
+
+**Changed (Draw only, page resolution):** with nobody at the rope, now and
+then (about one second in ten, off tick and id) a bouncer puts a hand to its
+earpiece and nods along to whatever it is being told, pushes its shades back
+up with a finger (and a glint runs across them), or cracks its neck one way
+and the other with a tick of white at each side (`bouncerGag`). Never with
+somebody in front of it, while reeling, or for the Head Bouncer, whose crown
+would not follow the head. The res-2 cheek and chin follow the head.
+
+**Test:** guard-patrol (kinds, rarity, exclusions). Gate 1647/1647; CRAP green.

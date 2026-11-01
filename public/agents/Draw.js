@@ -11745,15 +11745,49 @@ function drawBouncer(ctx, w, pal, en, ox, oy, dir, m) {
   var bx = ox + dir * stride - dir * reel, by = oy + Math.min(2, reel)
   drawEnemyFeet(ctx, w, en, ox, oy, dir, heavy, 13, BOUNCER_BLACK)
   drawBouncerBody(ctx, w, bx, by, dir)
-  drawBouncerHead(ctx, w, bx, by, dir)
-  var palm = bouncerPalm(w, en)
+  var palm = bouncerPalm(w, en), gag = palm || reel ? null : bouncerGag(w, en)
+  drawBouncerHead(ctx, w, bx + (gag ? gag.hx : 0), by + (gag ? gag.hy : 0), dir)
   drawBouncerArms(ctx, w, bx, by, dir, reel, palm)
+  if (gag) BOUNCER_GAG_DRAW[gag.kind](ctx, bx, by, dir, gag.t)
   if ((w.res || 1) >= 2) {
-    drawCastBouncer(ctx, w, en, bx, by, dir, reel, palm)
+    drawCastBouncer(ctx, w, en, bx, by, dir, reel, palm, gag)
     if (en.boss) drawCastCrown(ctx, bx, by)
   }
   if (hurt >= 0 && hurt < 6) drawBouncerFlash(ctx, bx, by, dir, hurt)
   drawBouncerPips(ctx, en, ox, oy)
+}
+
+// Between customers, at page resolution: a hand to the earpiece and a nod
+// along to whatever it is being told, a finger pushing the shades back up, or
+// the neck cracked one way and the other. Not with somebody at the rope, not
+// reeling, not the Head Bouncer (the crown stays put).
+var BOUNCER_GAGS = ["ear", "shades", "neck"]
+var BOUNCER_GAG_TICKS = { ear: 36, shades: 20, neck: 24 }
+function bouncerGag(w, en) {
+  if (w.res !== 2 || w.reducedMotion || en.boss || en.state !== "walk" || en.throttled > 0) return null
+  var id = en.id || 0, period = 260 + (id % 4) * 37, clock = (w.ticks || 0) + id * 71
+  var kind = BOUNCER_GAGS[(Math.floor(clock / period) + id) % BOUNCER_GAGS.length], t = clock % period
+  if (t >= BOUNCER_GAG_TICKS[kind]) return null
+  var hy = kind === "ear" && t >= 8 ? (t >> 2) % 2 : 0
+  var hx = kind === "neck" ? (t < 8 ? 0 : (t < 16 ? -1 : 1)) : 0
+  return { kind: kind, t: t, hx: hx, hy: hy }
+}
+var BOUNCER_GAG_DRAW = { ear: drawBouncerEar, shades: drawBouncerShades, neck: drawBouncerNeck }
+function drawBouncerEar(ctx, x, y, d, t) {
+  ctx.fillStyle = BOUNCER_SUIT; blitFine(ctx, x, y, d, -2, 1.5, 1.5, 3.5)
+  ctx.fillStyle = BOUNCER_SKIN; blitFine(ctx, x, y, d, -1.5, 0, 1.5, 1.5)
+}
+function drawBouncerShades(ctx, x, y, d, t) {
+  ctx.fillStyle = BOUNCER_SUIT; blitFine(ctx, x, y, d, 8, 2, 1.5, 3)
+  ctx.fillStyle = BOUNCER_SKIN; blitFine(ctx, x, y, d, 6.5, 1 - (t >= 6 && t < 12 ? 0.5 : 0), 2, 1)
+  if (t < 12) return
+  ctx.fillStyle = "#ffffff"; blitFine(ctx, x, y, d, 1 + (t - 12) * 0.75, 0, 0.5, 0.5)   // and a glint across them
+}
+function drawBouncerNeck(ctx, x, y, d, t) {
+  if (t !== 9 && t !== 10 && t !== 17 && t !== 18) return
+  ctx.fillStyle = "#d9d7cf"                                                         // crack
+  var side = t < 16 ? -1 : 9
+  blitFine(ctx, x, y, d, side, 1, 0.5, 0.5); blitFine(ctx, x, y, d, side + (t < 16 ? -1 : 1), 0, 0.5, 0.5)
 }
 
 function bouncerPalm(w, en) {
@@ -21765,10 +21799,11 @@ function drawCastModerator(ctx, en, x, y, d) {
   blitFine(ctx, x, y, d, 5, 1, 2.5, 0.5)      // visor powers up with the pistol
 }
 
-function drawCastBouncer(ctx, w, en, x, y, d, reel, palm) {
+function drawCastBouncer(ctx, w, en, x, y, d, reel, palm, gag) {
+  var hx = gag ? gag.hx : 0, hy = gag ? gag.hy : 0
   ctx.fillStyle = "#e1bd9f"
-  blitFine(ctx, x, y, d, 2, 2.5, 1, 0.5)      // cheek / square chin
-  blitFine(ctx, x, y, d, 5.5, 2, 1.5, 0.5)
+  blitFine(ctx, x + hx, y + hy, d, 2, 2.5, 1, 0.5)      // cheek / square chin
+  blitFine(ctx, x + hx, y + hy, d, 5.5, 2, 1.5, 0.5)
   ctx.fillStyle = "#ba4b58"
   blitFine(ctx, x, y, d, -1, 5, 2, 2)
   blitFine(ctx, x, y, d, 8, 5, 2, 2)
