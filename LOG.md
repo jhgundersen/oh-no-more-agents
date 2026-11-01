@@ -11757,3 +11757,10 @@ neither. The res-2 kit's gloss and bared teeth follow the head.
 
 **Test:** guard-patrol (head range, snap only on the hunt, sniff cadence).
 Gate 1646/1646; CRAP green.
+
+## 446 — 2026-11-01 · Deploy: the red team on patrol, the Moderator, drone and xeno
+
+**Deployed** build f0b3ac28 (Worker version 49ff7068), replacing 2048cd64. It
+covers 443–445.
+**Before:** smoke passed on 5b95c63 (levels 1–7); gate 1646/1646.
+**After:** `npm run verify -- --previous 2048cd64` passed first time.
