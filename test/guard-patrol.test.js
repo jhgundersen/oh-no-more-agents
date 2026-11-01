@@ -69,3 +69,21 @@ test("drone props sweep from full span through edge-on, a half turn apart", () =
   }
   assert.deepEqual([...spans].sort((a, b) => a - b), [1, 4, 6])
 })
+
+test("the xeno's head rides its stride, snaps on the hunt and sniffs the floor off it", () => {
+  const xeno = over => Object.assign({ id: 3, kind: "xeno", state: "walk", anim: 0 }, over)
+  assert.deepEqual(D.xenoHead(world({ res: 1 }), xeno({ targetId: 9 })), { dy: 0, snap: false, sniff: -1 })
+  assert.deepEqual(D.xenoHead(world({ reducedMotion: true }), xeno()), { dy: 0, snap: false, sniff: -1 })
+  const snaps = new Set(), sniffs = []
+  for (let t = 0; t < 300; t++) {
+    snaps.add(D.xenoHead(world({ ticks: t }), xeno({ targetId: 9 })).snap)
+    assert.equal(D.xenoHead(world({ ticks: t }), xeno({ targetId: 9 })).sniff, -1, "no sniffing on the hunt")
+    const h = D.xenoHead(world({ ticks: t }), xeno())
+    if (h.sniff >= 0) sniffs.push(h.dy)
+    assert.ok(h.dy >= 0 && h.dy <= 2)
+  }
+  assert.deepEqual([...snaps].sort(), [false, true])
+  assert.equal(sniffs.length, 2 * D.XENO_SNIFF, "a sniff every five seconds")
+  assert.ok(sniffs.includes(2), "nose to the floor")
+  assert.equal(D.xenoHead(world({ ticks: 0 }), xeno({ targetId: 9, touchCool: 20 })).snap, false, "sated")
+})

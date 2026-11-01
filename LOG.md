@@ -11745,3 +11745,15 @@ a throttled guard, divers, the panel or reduced motion.
 
 **Test:** guard-patrol (boss march without gags, scan and grit, blade phases).
 Gate 1645/1645; CRAP green.
+
+## 445 — 2026-11-01 · The xeno hunts with its jaw and sniffs the floor
+
+**Changed (Draw only, page resolution):** the xeno's head rides its stride,
+dipping a pixel as a foot lands (`XENO_HEAD`). On the hunt its jaw snaps open
+and shut, a dark gape with a tooth top and bottom (`drawXenoMouth`); off the
+hunt, every five seconds or so, the head goes down to the floor for most of a
+second and a red tongue flicks out (`xenoHead`). Sated (`touchCool`) it does
+neither. The res-2 kit's gloss and bared teeth follow the head.
+
+**Test:** guard-patrol (head range, snap only on the hunt, sniff cadence).
+Gate 1646/1646; CRAP green.

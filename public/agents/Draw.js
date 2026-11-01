@@ -12454,13 +12454,14 @@ function drawXeno(ctx, w, pal, en, ox, oy, dir, m) {
   var xg = "#3f7d4a"
   var xgLit = "#7de37a"
 
+  var head = xenoHead(w, en), hy = head.dy
   ctx.fillStyle = xg
   blit(ctx, ox, oy, dir, 1, 11, 8, 4)        // the long body
   blit(ctx, ox, oy, dir, 7, 8, 4, 4)         // shoulders, forward
   ctx.fillStyle = xgLit
-  blit(ctx, ox, oy, dir, 9, 7, 5, 3)         // the head, out in front
+  blit(ctx, ox, oy, dir, 9, 7 + hy, 5, 3)    // the head, out in front
   ctx.fillStyle = "#0f1a12"
-  blit(ctx, ox, oy, dir, 11, 8, 2, 1)        // no eyes, just the socket
+  blit(ctx, ox, oy, dir, 11, 8 + hy, 2, 1)   // no eyes, just the socket
 
   // The tail: a counterweight that swings against the legs, which is most
   // of what makes it read as moving rather than sliding.
@@ -12472,7 +12473,8 @@ function drawXeno(ctx, w, pal, en, ox, oy, dir, m) {
   // Legs, out of phase with each other.
   ctx.fillStyle = "#2c5a35"
   drawEnemyFeet(ctx, w, en, ox, oy, dir, m, 15, "#2c5a35")
-  if ((w.res || 1) >= 2) drawXenoFine(ctx, ox, oy, dir, 0, sway)
+  if ((w.res || 1) >= 2) drawXenoFine(ctx, ox, oy, dir, 0, sway, hy)
+  drawXenoMouth(ctx, ox, oy, dir, head)
 
   if (en.touchCool > 0) {
     // Sated, briefly. The one moment it is not a threat, and it says so.
@@ -12483,7 +12485,34 @@ function drawXeno(ctx, w, pal, en, ox, oy, dir, m) {
   }
   if (en.targetId && !en.touchCool) {
     ctx.fillStyle = "#f2f2e6"
-    blit(ctx, ox, oy, dir, 12, 10, 2, 1) // bared jaw on pursuit; it has no gun
+    blit(ctx, ox, oy, dir, 12, 10 + hy + (head.snap ? 1 : 0), 2, 1) // bared jaw on pursuit; it has no gun
+  }
+}
+
+// At page resolution the head rides the stride, dipping as a foot lands. On
+// the hunt the jaw snaps open and shut; off it, now and then, the head goes
+// down to the floor to sniff, and a tongue flicks out.
+var XENO_HEAD = [0, 0, 1, 1, 0, 0, 1, 1]
+var XENO_SNIFF = 24
+function xenoHead(w, en) {
+  if (w.res !== 2 || w.reducedMotion || en.throttled > 0) return { dy: 0, snap: false, sniff: -1 }
+  var dy = en.state === "walk" ? XENO_HEAD[((en.anim || 0) >> 1) % 8] : 0
+  if (en.targetId && !(en.touchCool > 0)) return { dy: dy, snap: ((w.ticks || 0) >> 2) % 2 === 0, sniff: -1 }
+  var t = ((w.ticks || 0) + (en.id || 0) * 53) % 150
+  if (t < XENO_SNIFF) return { dy: t < 4 || t >= 20 ? 1 : 2, snap: false, sniff: t }
+  return { dy: dy, snap: false, sniff: -1 }
+}
+function drawXenoMouth(ctx, ox, oy, dir, head) {
+  if (head.snap) {
+    ctx.fillStyle = "#0f1a12"
+    blitFine(ctx, ox, oy, dir, 11.5, 10 + head.dy, 2.5, 1)       // the gape
+    ctx.fillStyle = "#f2f2e6"
+    blitFine(ctx, ox, oy, dir, 12, 10 + head.dy, 0.5, 0.5); blitFine(ctx, ox, oy, dir, 13, 10 + head.dy, 0.5, 0.5)
+  }
+  if (head.sniff >= 8 && head.sniff < 16 && (head.sniff >> 1) % 2 === 0) {
+    ctx.fillStyle = "#ff5268"
+    blitFine(ctx, ox, oy, dir, 14, 9 + head.dy, 1.5, 0.5)        // tongue
+    blitFine(ctx, ox, oy, dir, 15.5, 8.5 + head.dy, 0.5, 0.5)
   }
 }
 
@@ -12637,14 +12666,15 @@ function drawSniperFine(ctx, ox, oy, dir, rifleX, posted) {
 // The xenomorph at res 2: ribs across the body, spines along the back, a
 // gloss along the length of the head, teeth at the front of it and a barb on
 // the end of the tail. Still nothing square about it.
-function drawXenoFine(ctx, ox, oy, dir, bob, sway) {
+function drawXenoFine(ctx, ox, oy, dir, bob, sway, hy) {
+  hy = hy || 0
   ctx.fillStyle = "#24472b"
   for (var r = 2; r < 9; r += 1.5) blitFine(ctx, ox, oy, dir, r, 11.5 + bob, 0.5, 3)    // ribs
   ctx.fillStyle = "#9df59a"
   for (var sp = 1.5; sp < 9; sp += 2) blitFine(ctx, ox, oy, dir, sp, 10.5 + bob, 0.5, 0.5)  // spines
-  blitFine(ctx, ox, oy, dir, 9.5, 7 + bob, 3.5, 0.5)                                    // gloss
+  blitFine(ctx, ox, oy, dir, 9.5, 7 + bob + hy, 3.5, 0.5)                               // gloss
   ctx.fillStyle = "#f2f2e6"
-  blitFine(ctx, ox, oy, dir, 13, 9 + bob, 0.5, 0.5); blitFine(ctx, ox, oy, dir, 12.5, 9.5 + bob, 0.5, 0.5)  // teeth
+  blitFine(ctx, ox, oy, dir, 13, 9 + bob + hy, 0.5, 0.5); blitFine(ctx, ox, oy, dir, 12.5, 9.5 + bob + hy, 0.5, 0.5)  // teeth
   ctx.fillStyle = "#7de37a"
   blitFine(ctx, ox, oy, dir, -6.5, 8.5 + sway * 2, 1, 0.5)                              // the barb
 }
@@ -21624,7 +21654,7 @@ function drawCastEnemyKit(ctx, w, en, x, y, d) {
   else if (en.kind === "sniper") drawCastMarksman(ctx, en, x, y, d)
   else if (en.kind === "operator") drawCastRadio(ctx, en, x, y, d)
   else if (en.kind === "drone") drawCastDrone(ctx, en, x, y, d)
-  else if (en.kind === "xeno") drawCastXeno(ctx, en, x, y, d)
+  else if (en.kind === "xeno") drawCastXeno(ctx, en, x, y, d, xenoHead(w, en).dy)
   else if (w.submerged || en.kind === "harpoon") drawCastDiver(ctx, x, y, d)
 }
 
@@ -21814,15 +21844,16 @@ function drawCastDrone(ctx, en, x, y, d) {
   ctx.fillRect(d > 0 ? x + 9 : x + 3, y + 7, 0.5, 0.5)
 }
 
-function drawCastXeno(ctx, en, x, y, d) {
+function drawCastXeno(ctx, en, x, y, d, hy) {
+  hy = hy || 0
   ctx.fillStyle = "#9df59a"
-  blitFine(ctx, x, y, d, 10, 7, 3, 0.5)
+  blitFine(ctx, x, y, d, 10, 7 + hy, 3, 0.5)
   ctx.fillStyle = "#24472b"
   blitFine(ctx, x, y, d, 8, 10.5, 2, 2)
   if (!en.targetId || en.touchCool > 0) return
   ctx.fillStyle = "#f2f2e6"
-  blitFine(ctx, x, y, d, 12, 9.5, 2, 0.5)
-  blitFine(ctx, x, y, d, 12.5, 10, 0.5, 1)
+  blitFine(ctx, x, y, d, 12, 9.5 + hy, 2, 0.5)
+  blitFine(ctx, x, y, d, 12.5, 10 + hy, 0.5, 1)
 }
 
 function drawCastDiver(ctx, x, y, d) {
