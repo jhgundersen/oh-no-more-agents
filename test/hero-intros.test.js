@@ -43,7 +43,7 @@ test('introduction selection consumes no RNG, changes no world, and leaves both 
  }finally{Math.random=random}
 })
 
-test('actual-size hero captions fit all biographies and preserve event, pause, report, replay and navigation priority',{timeout:45000},async()=>{
+test('actual-size hero captions fit all biographies and preserve event, pause, report and navigation priority',{timeout:45000},async()=>{
  const out=fs.mkdtempSync(path.join(os.tmpdir(),'hero-intros-'))
  try{
   const report=await captureHeroIntros(out,{checks:true});assert.deepEqual(report.errors,[]);assert.equal(report.records.length,6)
@@ -59,7 +59,7 @@ test('actual-size hero captions fit all biographies and preserve event, pause, r
   assert.equal(c.cache.calls,1);assert.equal(c.cache.rewrites,0);assert.equal(c.cache.readOnly,true);assert.equal(c.cache.noHero,'');assert.equal(c.cache.stageHeight,c.cache.noHeroHeight);assert.equal(c.resizeReadOnly,true);assert.deepEqual(c.resize,[{scale:2,text:''},{scale:1,text:c.cache.text}])
   assert.equal(c.first,'AGENT 006 · UMBRELLA SAVE');assert.equal(c.at4900,c.first);assert.equal(c.fastForward,c.first)
   assert.equal(c.profile,c.cache.text);assert.equal(c.expired,c.profile);assert.equal(c.paused,'AGENT 006 · RICOCHET')
-  assert.equal(c.season,'AGENT 001 IS HOME FOR THE HOLIDAYS');assert.equal(c.replay,'');assert.equal(c.report,'Report held · Space or tap to resume')
+  assert.equal(c.season,'AGENT 001 IS HOME FOR THE HOLIDAYS');assert.equal(c.report,'Report held · Space or tap to resume')
   assert.equal(c.navigation,c.nextProfile);assert.equal(c.rewrites,0);assert.equal(c.readOnly,true);assert.equal(c.longFits,true)
   assert.equal(c.live,'off');assert.equal(c.role,'note')
  }finally{fs.rmSync(out,{recursive:true,force:true})}

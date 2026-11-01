@@ -3040,8 +3040,7 @@ function drawActors(ctx, w, pal, opts) {
   // Last, over everybody: whoever is standing in a fireball is behind it.
   if (w.blasts) for (var bl = 0; bl < w.blasts.length; bl++) drawBlast(ctx, w, pal, w.blasts[bl])
   drawOutage(ctx, w, pal)
-  if (w.replaying) drawReplayTag(ctx, w, pal)
-  else if (w.fastForward && !w.done) drawFastForwardTag(ctx, w, pal)
+  if (w.fastForward && !w.done) drawFastForwardTag(ctx, w, pal)
   // Above the outage, so an event's or a boss's warning is never in the dark.
   // opts.notices === false: the board alone, with no writing over it (the
   // page's ?fit kiosk strip).
@@ -3712,29 +3711,15 @@ function drawCommutePip(ctx, x, step, colours) {
   else ctx.fillRect(x + 1, 6, 2, 2)
 }
 
-// The instant replay (the page re-simulates the level's best moment; see
-// web.js): letterbox bars, and a tag with a recording dot in the corner below
-// the sky band, so the hero's card and event warnings stay readable.
-// The page fast-forwarding through dead time (web.js fastForward): the same
-// panel as the replay tag, two arrows and the reason.
+// The page fast-forwarding through dead time (web.js fastForward): a tag in
+// the corner below the sky band, so the hero's card and event warnings stay
+// readable, with two arrows and the reason.
 function drawFastForwardTag(ctx, w, pal) {
   var top = w.k.SKY * w.k.CELL + 2
   ctx.save()
   drawGagPanel(ctx, 4, top, 104, 13, pal.label, pal.rigDark)
   ctx.fillStyle = GAG_PAPER
   drawTransitionText(ctx, ">> NOTHING TO SEE", 56, top + 4, 1)
-  ctx.restore()
-}
-
-function drawReplayTag(ctx, w, pal) {
-  var C = w.k.CELL, W = w.k.COLS * C, H = w.k.ROWS * C, top = w.k.SKY * C + 2
-  ctx.save(); ctx.globalAlpha = 0.55; ctx.fillStyle = "#000000"; ctx.fillRect(0, H - 6, W, 6)
-  ctx.globalAlpha = 1
-  drawGagPanel(ctx, 4, top, 76, 13, pal.label, pal.rigDark)
-  ctx.fillStyle = !w.reducedMotion && (w.ticks >> 3) % 2 ? "#ff4d57" : "#b73542"
-  ctx.fillRect(8, top + 4, 3, 4); ctx.fillRect(7, top + 5, 5, 2)
-  ctx.fillStyle = GAG_PAPER; ctx.fillRect(8, top + 4, 1, 1)
-  drawTransitionText(ctx, "INSTANT REPLAY", 46, top + 4, 1)
   ctx.restore()
 }
 
@@ -4178,7 +4163,7 @@ function drawLevelTitlePlate(ctx,pal,r) {
 }
 
 function drawLevelTitleCard(ctx, w, pal, icon, layout) {
-  if (w.done || w.replaying) return
+  if (w.done) return
   var r = layout || levelTitleLayout(w), size = levelTitleSize(w)
   var cx = r.x + 38 + (r.width - 46) / 2
   ctx.save()
@@ -6849,8 +6834,8 @@ function drawUmbrellaOffice(ctx,w,pal) {
 }
 function drawOfficeBrolly(ctx,w,pal,index,x,y,flat) {
   var id=w.homeOrder&&w.homeOrder[index]!==undefined?w.homeOrder[index]:index
-  var ag={id:id},candy=candyBrolly(w,ag),bat=batBrolly(w,ag)
-  var ink=candy||bat||brollyColour(w,pal,ag)
+  var ag={id:id},candy=candyBrolly(w,ag)
+  var ink=candy||brollyColour(w,pal,ag)
   // Rotate by swapping coordinates, keeping the half-pixel grid exact.
   function mark(a,b,width,height){if(flat)ctx.fillRect(x+b,y-a-width,height,width);else ctx.fillRect(x+a,y+b,width,height)}
   ctx.fillStyle=pal.umbrellaStem
@@ -6858,7 +6843,6 @@ function drawOfficeBrolly(ctx,w,pal,index,x,y,flat) {
   ctx.fillStyle=ink
   mark(1,3,1.5,4);mark(1.5,2,0.5,1);mark(1.5,7,0.5,1.5)
   if (candy) {ctx.fillStyle=GAG_PAPER;mark(1,3.5,1.5,0.5);mark(1,5.5,1.5,0.5)}
-  if (bat) {ctx.fillStyle="#a393bc";mark(1,3,0.5,3);mark(0.5,3,0.5,1);mark(2.5,3,0.5,1)}
 }
 function drawOfficeBowl(ctx,w,pal,b,spec) {
   var x=b.stand,y=b.foot-6,trim=pal[spec[2]]||GAG_PAPER
@@ -8955,8 +8939,7 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   // to hand mid-descent, and offset by the colony seed so the same id is not
   // handed the same umbrella every playthrough — the same trick the colony
   // itself uses, and it costs no draw from the trait stream to do it here.
-  var brolly = brollyColour(w, pal, ag), bat = batBrolly(w, ag), candy = candyBrolly(w, ag)
-  if (bat) { drawBatUmbrella(ctx, w, pal, ox, oy, w.reducedMotion ? 0 : flex, bat); return }
+  var brolly = brollyColour(w, pal, ag), candy = candyBrolly(w, ag)
   if (candy) { drawCandyUmbrella(ctx, w, pal, ag, ox, oy, w.reducedMotion ? 0 : flex, candy); return }
 
   if ((w.res || 1) >= 2) drawFloatingUmbrella(ctx, w, pal, ag, ox, oy, flex, brolly)
@@ -8980,15 +8963,8 @@ function drawUmbrella(ctx, w, pal, ag, ox, oy, st) {
   }
 }
 
-// A season (web-only season.js) may hand some floaters a bat-wing umbrella:
-// the canopy in the season's colour, two ears on top and a hooked tip at each
-// side. Plain data on the world; with no season this is never drawn.
-function batBrolly(w, ag) {
-  var s = w.season
-  return s && s.bat && (ag.id + (w.colonySeed || 0)) % s.batEvery === 0 ? s.bat : null
-}
-
-// Or candy-striped: the canopy white with the season's stripes across it.
+// A season (web-only season.js) may hand some floaters a candy-striped
+// umbrella: the canopy white with the season's stripes across it.
 function candyBrolly(w, ag) {
   var s = w.season
   return s && s.candy && (ag.id + (w.colonySeed || 0)) % s.candyEvery === 0 ? s.candy : null
@@ -8999,14 +8975,6 @@ function drawCandyStripes(ctx, ox, oy, flex, colour) {
   for (var x = -1; x < 10; x += 3) blit(ctx, ox, oy, 1, x, -9 - flex, 1, 2)
   blit(ctx, ox, oy, 1, -2, -7, 1, 2)
   blit(ctx, ox, oy, 1, 10, -7, 1, 2)
-}
-
-function drawBatEars(ctx, ox, oy, flex, colour) {
-  ctx.fillStyle = colour
-  blit(ctx, ox, oy, 1, 1, -11 - flex, 1, 1)
-  blit(ctx, ox, oy, 1, 7, -11 - flex, 1, 1)
-  blit(ctx, ox, oy, 1, -3, -8, 1, 2)
-  blit(ctx, ox, oy, 1, 11, -8, 1, 2)
 }
 
 // Down: the umbrella folds over the first few ticks on the ground instead of
@@ -21465,21 +21433,6 @@ function drawOutageEyes(ctx, w, pal, ag) {
   ctx.fillStyle = !w.reducedMotion && (w.ticks + ag.id * 19) % 97 < 4 ? "#8592a6" : "#ffffff"
   ctx.fillRect(x + (ag.dir > 0 ? 0 : -2), y + 4, 1, 1); ctx.fillRect(x + (ag.dir > 0 ? 2 : 0), y + 4, 1, 1)
   ctx.fillStyle = pal.shirt; ctx.globalAlpha *= 0.3; ctx.fillRect(x - 1, y + 7, 2, 1); ctx.restore()
-}
-function drawBatUmbrella(ctx, w, pal, ox, oy, flex, colour) {
-  ctx.fillStyle = pal.umbrellaStem
-  blit(ctx, ox, oy, 1, 4, -6, 1, 7)
-  ctx.fillStyle = "#a393bc"
-  blit(ctx, ox, oy, 1, 2, -12 - flex, 5, 1); blit(ctx, ox, oy, 1, 0, -11 - flex, 9, 1)
-  blit(ctx, ox, oy, 1, -2, -10 - flex, 13, 2)
-  blit(ctx, ox, oy, 1, -4, -9, 2, 3); blit(ctx, ox, oy, 1, 11, -9, 2, 3)
-  ctx.fillStyle = colour
-  blit(ctx, ox, oy, 1, 1, -10 - flex, 7, 2); blit(ctx, ox, oy, 1, -2, -9, 13, 2)
-  blit(ctx, ox, oy, 1, -3, -8, 2, 3); blit(ctx, ox, oy, 1, 10, -8, 2, 3)
-  blit(ctx, ox, oy, 1, 0, -7, 3, 1); blit(ctx, ox, oy, 1, 6, -7, 3, 1); blit(ctx, ox, oy, 1, 3, -7, 3, 2)
-  drawBatEars(ctx, ox, oy - 1, flex, colour)
-  ctx.fillStyle = "#e1c47b"; blit(ctx, ox, oy, 1, 3, -10 - flex, 1, 1); blit(ctx, ox, oy, 1, 5, -10 - flex, 1, 1)
-  if ((w.res || 1) >= 2) { ctx.fillStyle = "#d4c6df"; blit(ctx, ox, oy, 1, -1, -10.5 - flex, 2, 0.5); blit(ctx, ox, oy, 1, 8, -10.5 - flex, 2, 0.5) }
 }
 function drawStandupRoom(ctx, pal, floor) {
   ctx.fillStyle = pal.rigDark; ctx.fillRect(28, 54, 68, 4); ctx.fillRect(28, 58, 2, floor - 58)

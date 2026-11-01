@@ -18,7 +18,7 @@ test('natural rescue scenes start before real releases, add a live colleague, an
 test('native/default/share frozen colleagues and thaw retain exact old pixels in every theme and season',()=>{
  const before=createHash('sha256'),after=createHash('sha256')
  for(const level of THAW_CASES){const{w,f}=thawScene(level),cx=(f.x+.5)*4,base=(f.y+1)*4
-  for(const res of[undefined,1,3])for(const season of[undefined,'halloween','christmas'])for(const theme of Object.keys(THEMES))for(const age of[-1,0,4,12,29,30]){
+  for(const res of[undefined,1,3])for(const season of[undefined,'christmas'])for(const theme of Object.keys(THEMES))for(const age of[-1,0,4,12,29,30]){
    w.res=res;w.season=season;f.thawedAt=age<0?-1:w.ticks-age
    for(const[draw,sum]of[[OLD,before],[D,after]]){const img=canvas(64*(res||1),64*(res||1));img.ctx.setTransform(res||1,0,0,res||1,(32-cx)*(res||1),(40-base)*(res||1));draw.drawFrozen(img.ctx,w,P.build(themeOf(theme).theme,level),f);sum.update(img.buf)}
   }
@@ -28,7 +28,7 @@ test('native/default/share frozen colleagues and thaw retain exact old pixels in
 test('the page portrait is centred, half-pixel aligned, deterministic, read-only and keeps its context',()=>{
  const random=Math.random
  try{for(const level of THAW_CASES){const{w,f}=thawScene(level),cx=(f.x+.5)*4,base=(f.y+1)*4
- for(const theme of Object.keys(THEMES))for(const season of[undefined,'halloween','christmas'])for(const dir of[-1,1]){
+ for(const theme of Object.keys(THEMES))for(const season of[undefined,'christmas'])for(const dir of[-1,1]){
   w.season=season;f.dir=dir;const pal=P.build(themeOf(theme).theme,level),before=hash(JSON.stringify(w));Math.random=()=>{throw Error('render entropy')};const a=marks(c=>D.drawFrozen(c,w,pal,f)),b=marks(c=>D.drawFrozen(c,w,pal,f));assert.deepEqual(a,b);assert.ok(a.length>30)
   for(const[x,y,width,height]of a){assert.ok(x>=cx-6&&x+width<=cx+6);assert.ok(y>=base-22&&y+height<=base)}
   assert.ok(a.filter(c=>c[4]===pal.skin).length>=3,'face and palms remain warm');assert.ok(!a.some(c=>c[4]==='#b8860b'),'a stand-in never owns the sweepstake coin');assert.equal(hash(JSON.stringify(w)),before);const view=new Proxy(w,{set(){throw Error('world write')},defineProperty(){throw Error('world define')}});marks(c=>D.drawFrozen(c,view,pal,f));Math.random=random

@@ -8,7 +8,6 @@ import {serve,browser} from './phone.js'
 export const CAPTION_VIEWS = [
   {name:'desktop',level:17,width:1280,height:900,mobile:false},
   {name:'phone',level:20,width:390,height:844,mobile:true},
-  {name:'halloween',level:17,width:390,height:844,mobile:true,season:'halloween'},
   {name:'christmas',level:8,width:390,height:844,mobile:true,season:'christmas'},
   {name:'landscape',level:19,width:844,height:390,mobile:true}
 ]
@@ -19,7 +18,7 @@ function evaluator(b){return async expression=>{
  return r.result.value
 }}
 // A view without a season pins ?season=none: otherwise the viewer's calendar
-// picks one, and in late October every view grew Halloween captions.
+// picks one, and in December every view grows Christmas captions.
 async function openView(b,ev,base,v){
  await b.cmd('Emulation.setDeviceMetricsOverride',{width:v.width,height:v.height,deviceScaleFactor:1,mobile:v.mobile})
  await b.cmd('Emulation.setTouchEmulationEnabled',{enabled:v.mobile})
@@ -66,7 +65,6 @@ export async function captionLifecycle(ev){
    document.getElementById('c-pause').click();
    w.feed=[{t:w.ticks,text:'AGENT 006 · RICOCHET'}];refresh();now+=10000;refresh();results.paused=text.textContent;
    w.feed=[{t:w.ticks,text:'AGENT 001 IS FIRST HOME'}];w.season={note:{t:w.ticks,text:'AGENT 001 IS HOME FOR THE HOLIDAYS'}};refresh();results.season=text.textContent;
-   w.replaying=true;refresh();results.replay=text.textContent;w.replaying=false;
    w.done=true;refresh();results.report=text.textContent;w.done=false;
    w.season=null;w.ticks=originalTicks;
    w.feed=[{t:w.ticks,text:radioLine(w,'pacer','SPECULATIVE DECODER')}];refresh();
@@ -101,7 +99,7 @@ async function comparisonSheet(b,ev,out,before,views,heading,actualSize){
   const load=src=>new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=src});
   for(const row of rows)row.images=await Promise.all(row.images.map(load));
   const column=${actualSize}?Math.max(...rows.flatMap(r=>r.images.map(i=>i.width)))+20:660;c.width=column*2+20;
-  c.height=70+rows.reduce((n,r)=>n+Math.max(...r.images.map(i=>(r.name==='halloween'||r.name==='christmas'?315:i.height)*(${actualSize}?1:Math.min(1,640/i.width))))+44,0);
+  c.height=70+rows.reduce((n,r)=>n+Math.max(...r.images.map(i=>(r.name==='christmas'?315:i.height)*(${actualSize}?1:Math.min(1,640/i.width))))+44,0);
   const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.fillStyle='#1a1b26';x.fillRect(0,0,c.width,c.height);
   x.font='14px monospace';x.fillStyle='#f3ead9';x.fillText(${JSON.stringify(heading||'COLONY EVENT CAPTIONS · BEFORE / AFTER · seed 3, tick 400')},20,24);
   let y=50;
@@ -110,7 +108,7 @@ async function comparisonSheet(b,ev,out,before,views,heading,actualSize){
    const images=row.images;
    let height=0;
    for(let j=0;j<2;j++){
-    const i=images[j],crop=row.name==='halloween'||row.name==='christmas',sy=crop?240:0,sh=crop?315:i.height,scale=${actualSize}?1:Math.min(1,640/i.width);
+    const i=images[j],crop=row.name==='christmas',sy=crop?240:0,sh=crop?315:i.height,scale=${actualSize}?1:Math.min(1,640/i.width);
     x.drawImage(i,0,sy,i.width,sh,20+j*column,y,i.width*scale,sh*scale);height=Math.max(height,sh*scale)
    }y+=height+32;
   }

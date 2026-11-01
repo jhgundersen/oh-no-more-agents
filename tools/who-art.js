@@ -27,7 +27,7 @@ export async function whoView(b,base,{level,season='none',mobile=false,tick=400}
 }
 export async function whoScreens(out,{root=path.join(ROOT,'public'),cases}={}){
  const started=performance.now(),server=await serve({root}),b=await browser(),records=[]
- cases ||= [...Array.from({length:20},(_,i)=>({level:i+1})),...['halloween','christmas'].flatMap(season=>[7,12,13,20].map(level=>({level,season}))),{level:20,tick:330,season:'christmas'},{level:17,tick:252,season:'halloween'}]
+ cases ||= [...Array.from({length:20},(_,i)=>({level:i+1})),...['christmas'].flatMap(season=>[7,12,13,20].map(level=>({level,season}))),{level:20,tick:330,season:'christmas'},{level:17,tick:252,season:'halloween'}]
  fs.mkdirSync(out,{recursive:true})
  try{for(const mobile of[false,true])for(const info of cases){
   const row=await whoView(b,'http://127.0.0.1:'+server.address().port+'/',{...info,mobile}),name=(info.season||'normal')+'-'+(mobile?'phone':'desktop')+'-'+String(info.level).padStart(2,'0')+(info.tick?'-t'+info.tick:'')

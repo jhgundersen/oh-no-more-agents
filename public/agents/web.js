@@ -509,11 +509,10 @@
   function newLevel(n, seed) {
     var trip = commuteSnapshot(n)
     // Any navigation ends the last level's intermission without its own
-    // ending: a standup or replay left running drew over the new colony, and
-    // the standup's finish then advanced again — Next during a standup
-    // skipped a level (review 2026-10-15, finding 1).
+    // ending: a standup left running drew over the new colony, and its finish
+    // then advanced again — Next during a standup skipped a level (review
+    // 2026-10-15, finding 1).
     standup = null
-    replay = null
     level = Math.max(1, n)
     applyFitCols()
     world = generate(level, 0, seed)
@@ -583,7 +582,6 @@
   function tick() {
     if (!world || commute) return
     if (standup) { stepStandup(); return }
-    if (replay) { stepReplay(); return }
     step(world)
     if (window.AgentSfx) AgentSfx.observe(world)
     fastForward(world)
@@ -600,7 +598,7 @@
       announce(reportAnnouncement(world))
       noteSightings(world)
       noteBet(world)
-      startReplay(world)
+      hideLevelTitle()
       lifetimeSaved += world.saved
       if (world.saved > 0) levelsCleared += 1
       enqueueGlobalSaves(world.saved)
@@ -643,78 +641,6 @@
     }
   }
   window.AgentFastForward = { quiet: FF_QUIET, steps: FF_STEPS, check: fastForward }
-
-  // -------------------------------------------------------------------------
-  // Instant replay (Sim's moments, Draw's drawReplayTag)
-  // -------------------------------------------------------------------------
-  // When a level ends with a moment worth seeing again, the best one is played
-  // back before the report card: the level is generated again from its seed
-  // and re-simulated to just before the moment — no frames are kept, and the
-  // simulation is deterministic, so this is the same run — then played at the
-  // usual speed for about three seconds under an INSTANT REPLAY tag. The
-  // re-simulation is spread over a few ticks so a phone does not stall, any pep
-  // talks the watcher gave are given again at the same ticks, and if the replay
-  // does not note the same moment on the same tick it gives up rather than show
-  // something that did not happen. A tap skips it. The finished world,
-  // its report and its rescues are untouched throughout.
-  var REPLAY_MIN = 3, REPLAY_BEFORE = 60, REPLAY_AFTER = 30, REPLAY_CATCHUP = 150
-  var replay = null
-  // Read-only, for tools and tests (like AgentWorld).
-  window.AgentReplay = function () { return replay && { kind: replay.best.kind, t: replay.sim.ticks, from: replay.from, to: replay.to } }
-
-  function bestMoment(w) {
-    var best = null
-    for (var i = 0; i < (w.moments || []).length; i++) {
-      var m = w.moments[i]
-      if (m.score >= REPLAY_MIN && (!best || m.score >= best.score)) best = m
-    }
-    return best
-  }
-
-  function startReplay(w) {
-    hideLevelTitle()
-    var best = bestMoment(w)
-    if (!best) return
-    var sim = generate(w.level, w.attempt || 0, w.colonySeed)
-    sim.res = w.res; sim.doneHold = w.doneHold; sim.milestone = w.milestone; sim.reducedMotion = w.reducedMotion
-    sim.replaying = true
-    replay = { src: w, sim: sim, best: best, from: Math.max(0, best.t - REPLAY_BEFORE), to: best.t + REPLAY_AFTER,
-      peps: (w.pepLog || []).slice(), terrain: -1 }
-  }
-
-  function replayStep() {
-    var sim = replay.sim
-    for (var i = 0; i < replay.peps.length; i++)
-      if (replay.peps[i].t === sim.ticks) pepTalk(sim, agentById(sim, replay.peps[i].id))
-    step(sim)
-  }
-
-  function stepReplay() {
-    var sim = replay.sim
-    if (sim.ticks < replay.from) {
-      // Rewinding: a chunk a tick, with the finished frame left up meanwhile.
-      for (var n = 0; n < REPLAY_CATCHUP && sim.ticks < replay.from && !sim.done; n++) replayStep()
-      if (sim.done) endReplay()
-      return
-    }
-    replayStep()
-    // The same run arrives at the same moment: the re-simulation must have
-    // noted it too, on the same tick. Otherwise this is not a replay.
-    if (sim.ticks === replay.best.t && !sim.moments.some(function (m) { return m.t === replay.best.t && m.kind === replay.best.kind })) { endReplay(); return }
-    if (window.AgentSeason) window.AgentSeason.dress(sim)
-    if (sim.terrainVersion !== replay.terrain) { replay.terrain = sim.terrainVersion; drawTerrain(terrainCtx, sim, palette) }
-    drawActors(actorCtx, sim, palette, { labels: showLabels, intro: false, feed: isFullscreen() && !fit, notices: !fit })
-    if (window.AgentSeason) window.AgentSeason.paint(actorCtx, sim)
-    if (sim.ticks >= replay.to || sim.done) endReplay()
-  }
-
-  function endReplay() {
-    replay = null
-    lastTerrainVersion = -1
-    paintTerrain()
-    paintActors()
-    render()
-  }
 
   // -------------------------------------------------------------------------
   // Daily standup (Draw's drawStandup, Outcome's standupLines)
@@ -769,7 +695,7 @@
   }
   function paintActors() {
     if (!world) return
-    if (world.done || world.replaying) hideLevelTitle()
+    if (world.done) hideLevelTitle()
     if (window.AgentSeason) window.AgentSeason.dress(world)
     drawActors(actorCtx, world, palette, { labels: showLabels, intro: false, feed: isFullscreen() && !fit, notices: !fit, results: !fit, heldReport: reportHeld(), closing: false })
     if (window.AgentSeason) window.AgentSeason.paint(actorCtx, world)
@@ -854,7 +780,7 @@
   function showLevelTitle() {
     hideLevelTitle()
     var c = document.getElementById("levelTitle")
-    if (!c || fit || world.done || world.replaying || replay || standup) return
+    if (!c || fit || world.done || standup) return
     titleLayout = levelTitleLayout(world)
     c.width = WIDTH * RES; c.height = HEIGHT * RES
     // Commit the hidden state so even rapid navigation restarts the fade.
@@ -968,7 +894,7 @@
   // DOM rewrite; pausing leaves the latest line available to read.
   var captionWorld = null, captionNote = null, captionUntil = 0, captionProfile = ""
   function reportHeld() {
-    return !running && world && world.done && !world.replaying && !replay && !standup
+    return !running && world && world.done && !standup
   }
 
   // Fullscreen hides the caption (index.html) and gives the board its
@@ -1018,7 +944,7 @@
     var reply = autoReply(world, fresh || !running ? -Infinity : now)
     if (reply) { captionNote = { text: reply }; captionUntil = now + 4000 }
     var held = reportHeld()
-    var available = !world.done && !world.replaying && !replay && !standup
+    var available = !world.done && !standup
     var event = available && captionNote && (!running || now < captionUntil)
     var profile = el.stage.dataset.boardScale === "1" ? captionProfile : ""
     var text = held ? "Report held · Space or tap to resume" : available ? (event ? captionNote.text : profile) : ""
@@ -1030,7 +956,7 @@
   }
 
   function syncSfxScene() {
-    if (window.AgentSfx && AgentSfx.scene) AgentSfx.scene(world, running && !commute && !document.hidden && !standup && !replay && !world.done)
+    if (window.AgentSfx && AgentSfx.scene) AgentSfx.scene(world, running && !commute && !document.hidden && !standup && !world.done)
   }
 
   function render() {
@@ -1289,7 +1215,7 @@
     running = !running
     // A held report also lifts an in-progress closing wipe. Repaint on resume
     // at exactly the same tick; no clock or simulation state is rewound.
-    if (world && world.done && !replay && !standup) paintActors()
+    if (world && world.done && !standup) paintActors()
     render()
   }
 
@@ -1629,7 +1555,6 @@
     el.boardWrap.addEventListener("click", function (ev) {
       hideLevelTitle()
       if (standup) { endStandup(); return }
-      if (replay) { endReplay(); return }
       var ag = running && world ? agentUnder(ev) : null
       // ?fit has no buttons, so no pause either: nothing would say how to resume.
       if (!ag) { if (!fit) togglePause(); return }
@@ -1640,7 +1565,7 @@
         paintActors()
         return
       }
-      if (pepTalk(world, ag)) (world.pepLog = world.pepLog || []).push({ t: world.ticks, id: ag.id })
+      pepTalk(world, ag)
       paintActors()
     })
 

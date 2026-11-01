@@ -8,7 +8,7 @@ export const REPORT_VIEWS=[
  {name:'desktop',level:8,width:1280,height:900,mobile:false,kind:'natural'},
  {name:'phone',level:8,width:390,height:844,mobile:true,kind:'natural'},
  {name:'full-house',level:18,width:390,height:844,mobile:true,kind:'busy'},
- {name:'small-phone',level:18,width:360,height:800,mobile:true,kind:'busy',season:'halloween'},
+ {name:'small-phone',level:18,width:360,height:800,mobile:true,kind:'busy',season:'christmas'},
  {name:'christmas',level:13,width:390,height:844,mobile:true,kind:'all',season:'christmas'},
  {name:'landscape-zero',level:20,width:844,height:390,mobile:true,kind:'zero'}
 ]

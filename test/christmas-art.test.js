@@ -74,9 +74,8 @@ test("Christmas dressing and painting preserve complete gameplay digests in all 
   for(let tick=0;tick<600;tick++){Math.random=seeded(level*997+tick);S.step(a);Math.random=seeded(level*997+tick);S.step(b);api.paint(img.ctx,a);if(tick%120===0)assert.equal(digest(a),digest(b),`${level}:${tick}`)}
  }}finally{Math.random=random}
 })
-test("the host dresses both live and replay worlds before painting cached seasonal terrain",()=>{
+test("the host dresses the world before painting cached seasonal terrain",()=>{
  const s=fs.readFileSync(new URL("../public/agents/web.js",import.meta.url),"utf8")
- assert.match(s,/AgentSeason\.dress\(sim\)[\s\S]{0,160}drawTerrain\(terrainCtx, sim/)
  assert.match(s,/function paintTerrain\(\)[\s\S]{0,150}AgentSeason\.dress\(world\)[\s\S]{0,70}drawTerrain\(terrainCtx, world/)
 })
 

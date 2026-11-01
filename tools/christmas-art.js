@@ -35,7 +35,7 @@ export function run(base,out) {
       const tree=crop(img,Math.max(0,Math.min(180,hx-100))*res,Math.max(0,Math.min(128,c.floorY*4-75))*res,220*res,120*res)
       const close=crop(img,Math.max(0,Math.min(180,e.x*4-50))*res,Math.max(0,Math.min(128,e.y*4-45))*res,220*res,120*res)
       writePNG(path.join(out,`exit-${level}-${tag}-res${res}.png`),close)
-      const f=fixture("bat",api,level),fimg=christmasFrame(D,api,f,res),box=cropBox("bat",f)
+      const f=fixture("floater",api,level),fimg=christmasFrame(D,api,f,res),box=cropBox("floater",f)
       const canopy=crop(fimg,box.x*res,box.y*res,box.width*res,box.height*res)
       writePNG(path.join(out,`umbrella-${level}-${tag}-res${res}.png`),canopy)
       shots.push(res===1?doublePixels(view):view);exits.push(res===1?doublePixels(close):close);hatches.push(res===1?doublePixels(tree):tree);canopies.push(res===1?doublePixels(canopy):canopy)

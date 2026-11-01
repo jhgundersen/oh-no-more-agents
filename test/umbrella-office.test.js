@@ -47,7 +47,6 @@ test('saved count fills five slots then a capped tidy pile, using the actual arr
  w.res=2;w.saved=-1;const empty=marks(w);w.saved=0;assert.deepEqual(marks(w),empty)
  const ctx=canvas(400,248).ctx,calls=[];ctx.fillRect=(...r)=>calls.push([...r,ctx.fillStyle]);w.season=null;D.drawOfficeBrolly(ctx,w,pal,0,40,40,false);assert.ok(calls.some(c=>c[4]===D.brollyColour(w,pal,{id:9})))
  w.colonySeed=0;w.homeOrder=[0];w.season=OFFICE_SEASONS.christmas;calls.length=0;D.drawOfficeBrolly(ctx,w,pal,0,40,40,false);assert.ok(calls.some(c=>c[4]==='#d42a3c'));assert.ok(calls.some(c=>c[4]===D.GAG_PAPER))
- w.season=OFFICE_SEASONS.halloween;calls.length=0;D.drawOfficeBrolly(ctx,w,pal,0,40,40,true);assert.ok(calls.some(c=>c[4]==='#2a2233'));assert.ok(calls.some(c=>c[4]==='#a393bc'))
  w.homeOrder=[];calls.length=0;D.drawOfficeBrolly(ctx,w,pal,1,40,40,false);assert.ok(calls.length)
  w.biome='__proto__';assert.ok(marks(w).length>0)
 })
@@ -86,5 +85,5 @@ test('live rendering across saved arrivals leaves world digests identical',()=>{
 })
 test('bounded stock sheets cover normal and seasonal colours, refresh canonical evidence and validate labels',()=>{
  const out=fs.mkdtempSync(path.join(os.tmpdir(),'umbrella-office-'))
- try{const r=officeReview(out,{levels:[13]});assert.equal(r.rows.length,3);assert.equal(r.counts.length,6);assert.equal(hash(fs.readFileSync(path.join(out,r.contactSheet))),r.contactSHA256);fs.writeFileSync(path.join(out,'contact-sheet.png'),'stale');officeReview(out,{levels:[13]});assert.equal(hash(fs.readFileSync(path.join(out,'contact-sheet.png'))),r.contactSHA256);assert.match(fs.readFileSync(path.join(out,'index.html'),'utf8'),/illustrative counts/)}finally{fs.rmSync(out,{recursive:true,force:true})}
+ try{const r=officeReview(out,{levels:[13]});assert.equal(r.rows.length,2);assert.equal(r.counts.length,6);assert.equal(hash(fs.readFileSync(path.join(out,r.contactSheet))),r.contactSHA256);fs.writeFileSync(path.join(out,'contact-sheet.png'),'stale');officeReview(out,{levels:[13]});assert.equal(hash(fs.readFileSync(path.join(out,'contact-sheet.png'))),r.contactSHA256);assert.match(fs.readFileSync(path.join(out,'index.html'),'utf8'),/illustrative counts/)}finally{fs.rmSync(out,{recursive:true,force:true})}
 })

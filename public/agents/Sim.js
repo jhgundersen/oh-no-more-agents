@@ -1062,7 +1062,6 @@ function newWorld(level, attempt, colonySeed) {
     duckRng: makeRng(colonySeed + 179424673),
     conflictRng: makeRng(colonySeed + 2038074743),
     outage: null,      // { at, len } when the lights will go out; purely visual, see rollOutage
-    moments: [],       // the level's best bits, for the page's instant replay; see noteMoment
     homeOrder: [],     // ids in the order they got home, for the page's sweepstake
     radioUsed: {},     // which of the radio's lines this level has had; see stepRadio
     radioNext: 600,
@@ -4998,7 +4997,6 @@ function umbrellaParries(w, ag, fromX) {
   w.umbrellaSaves = (w.umbrellaSaves || 0) + 1
   w.lastEvent = "umbrella up"
   feedNote(w, agentTag(w, ag) + " · UMBRELLA SAVE")
-  noteMoment(w, "parry", bossOnBoard(w) ? 4 : 2, ag)
   return true
 }
 
@@ -5017,7 +5015,6 @@ function umbrellaRicochet(w, ag, by) {
   killEnemy(w, by)
   if (by.gone) creditDowned(ag)
   feedNote(w, agentTag(w, ag) + " · RICOCHET")
-  noteMoment(w, "ricochet", 3, ag)
   w.ricochets = (w.ricochets || 0) + 1
   w.lastEvent = "ricochet"
 }
@@ -7289,7 +7286,7 @@ function stepAgi(w) {
   if (w.agiId < 0 || w.agiHome || w.agiLost) return
   var ag = agentById(w, w.agiId)
   if (!ag) return
-  if (ag.state === "saved") { w.agiHome = true; feedNote(w, "AGI ACHIEVED · IT WENT HOME"); noteMoment(w, "agi", 5, ag) }
+  if (ag.state === "saved") { w.agiHome = true; feedNote(w, "AGI ACHIEVED · IT WENT HOME") }
   else if (ag.gone || w.done) { w.agiLost = true; feedNote(w, "AGI LOST · STILL FIVE YEARS AWAY") }
 }
 
@@ -7388,37 +7385,9 @@ function radioWorth(w) {
   return null
 }
 
-// ---------------------------------------------------------------------------
-// Moments
-// ---------------------------------------------------------------------------
-// The level's best bits, for the page's instant replay: what happened, how
-// good it was, where, and the score at the time so a replay can check it is
-// watching the same run. Bookkeeping only; nothing in the simulation reads it.
-var MOMENTS_KEEP = 40
-function noteMoment(w, kind, score, ag) {
-  if (!w.moments || w.moments.length >= MOMENTS_KEEP) return
-  w.moments.push({ t: w.ticks, kind: kind, score: score, x: ag.x, y: ag.y, saved: w.saved, lost: w.lost })
-}
-function bossOnBoard(w) {
-  for (var i = 0; i < w.enemies.length; i++) if (w.enemies[i].boss && !w.enemies[i].gone) return true
-  return false
-}
-// A bridge across reaches the far side; done just as the queue arrived is a
-// moment worth seeing again.
 function landBridge(w, ag) {
   ag.state = "walk"
   ag.turns = 0
-  if (followedClose(w, ag)) noteMoment(w, "bridge", 3, ag)
-}
-
-// Somebody right behind the builder on its own floor as the bridge lands.
-function followedClose(w, ag) {
-  for (var i = 0; i < w.agents.length; i++) {
-    var o = w.agents[i]
-    if (o === ag || o.gone || o.state !== "walk") continue
-    if (Math.abs(o.y - ag.y) <= 2 && (ag.x - o.x) * ag.dir > 0 && Math.abs(ag.x - o.x) <= 5) return true
-  }
-  return false
 }
 
 // ---------------------------------------------------------------------------
@@ -7497,7 +7466,6 @@ function conflicted(w, ag) {
     ag.rebasedAt = w.ticks
     w.conflicts++
     feedNote(w, "MERGE CONFLICT · " + agentTag(w, ag) + " REBASED")
-    noteMoment(w, "conflict", 2, ag)
   }
   return true
 }
@@ -7690,10 +7658,7 @@ function stepFall(w, ag) {
   if (fallInterrupted(w, ag, cx, ny)) return
   if (!ag.floater && !ag.drafted && ag.fall > killingFall(w) - 6) {
     var remaining = dropDepth(w, cx, Math.floor(ny))
-    if (ag.fall + remaining > killingFall(w) && brollyInHand(w, ag)) {
-      ag.floater = true
-      if (remaining <= 6) noteMoment(w, "umbrella", 3, ag)   // opened with the ground coming up
-    }
+    if (ag.fall + remaining > killingFall(w) && brollyInHand(w, ag)) ag.floater = true
   }
   if (fallLands(w, ag, cx, ny)) return
   ag.fall += speed
@@ -11447,7 +11412,6 @@ function agentAtExit(w, ag, e) {
   ag.fade = 0
   w.saved++
   if (w.homeOrder) w.homeOrder.push(ag.id)
-  if (w.saved === w.toRelease && w.timeLimit - w.ticks < 300) noteMoment(w, "photo", 4, ag)
   // A carrier that beats its own incubation to the door goes home with it
   // and counts, like everybody else, as a rescue. It is the best outcome
   // this event has and the colony has no idea it happened.

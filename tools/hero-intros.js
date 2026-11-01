@@ -8,7 +8,7 @@ export const HERO_VIEWS=[
  {name:'hero-desktop',level:20,width:1280,height:900,mobile:false,hero:'cloudprovider',fact:2},
  {name:'hero-phone',level:9,width:390,height:844,mobile:true,hero:'autocomplete',fact:3},
  {name:'hero-small-phone',level:13,width:360,height:800,mobile:true,hero:'sapper',fact:1},
- {name:'hero-halloween',level:17,width:390,height:844,mobile:true,hero:'ladder',fact:1,season:'halloween'},
+ {name:'hero-christmas',level:17,width:390,height:844,mobile:true,hero:'ladder',fact:1,season:'christmas'},
  {name:'hero-christmas',level:12,width:390,height:844,mobile:true,hero:'specdecoder',fact:2,season:'christmas'},
  {name:'hero-landscape',level:10,width:844,height:390,mobile:true,hero:'submarine',fact:0}
 ]

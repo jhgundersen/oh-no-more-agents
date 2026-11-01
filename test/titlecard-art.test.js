@@ -53,7 +53,7 @@ test('placement favours an empty pocket over ground, and moves away when that po
  assert.ok(D.levelTitleCellCost(surface,20,30)>D.levelTitleCellCost(surface,20,29))
  assert.ok(D.levelTitleCellCost(surface,20,29)>D.levelTitleCellCost(surface,20,20))
 })
-test('cached page cards are crisp, theme aware, bounded and read-only; replay/results draw nothing',()=>{
+test('cached page cards are crisp, theme aware, bounded and read-only; results draw nothing',()=>{
  const random=Math.random
  try{
   Math.random=()=>{throw Error('title RNG')}
@@ -71,7 +71,7 @@ test('cached page cards are crisp, theme aware, bounded and read-only; replay/re
    const b=canvas(800,496);D.clearLayer(b.ctx,w);b.ctx.globalAlpha=.9;D.drawLevelTitleCard(b.ctx,w,pal,level-1)
    assert.equal(first,hash(b.buf))
    count=0;const boss={...w,bossPost:true,bossName:null};D.drawLevelTitleCard(c,boss,pal,level-1)
-   count=0;D.drawLevelTitleCard(c,{...w,done:true},pal,level-1);D.drawLevelTitleCard(c,{...w,replaying:true},pal,level-1);assert.equal(count,0)
+   count=0;D.drawLevelTitleCard(c,{...w,done:true},pal,level-1);assert.equal(count,0)
    assert.ok(r.height<=36)
   }
  }finally{Math.random=random}
@@ -94,7 +94,7 @@ test('page intro option removes only the old opening, preserves native intro and
   D.drawLevelTransition(x.ctx,w,pal,{intro:false});D.drawLevelTransition(y.ctx,w,pal);assert.equal(hash(x.buf),hash(y.buf))
  }}finally{Math.random=random}
 })
-test('page title card fades on wall clock, skips without consuming a tap, excludes replay/report/standup and fits desktop/phone',{timeout:45000},async()=>{
+test('page title card fades on wall clock, skips without consuming a tap, excludes report/standup and fits desktop/phone',{timeout:45000},async()=>{
  const out=fs.mkdtempSync(path.join(os.tmpdir(),'titlecard-ui-'))
  try{
   const r=await captureTitleCards(out)
@@ -106,6 +106,6 @@ test('page title card fades on wall clock, skips without consuming a tap, exclud
   const sheet=fs.readFileSync(path.join(out,'phone-sheet.png'));assert.equal(sheet.readUInt32BE(16),414);assert.equal(sheet.readUInt32BE(20),876)
   assert.equal(r.timing.normal.duration,'3.2s');assert.equal(r.timing.normal.pointerEvents,'none');assert.equal(r.timing.normal.ariaHidden,'true');assert.equal(r.timing.normal.hidden,false)
   assert.ok(r.timing.fading>0&&r.timing.fading<1);assert.equal(r.timing.cached,true);assert.equal(r.timing.expired,true);assert.equal(r.timing.pure,true);assert.equal(r.timing.snapshot,true);assert.equal(r.timing.reduced,'2.4s');assert.equal(r.timing.reducedExpired,true);assert.equal(r.timing.reset,true)
-  assert.deepEqual(r.input,{skipped:true,resumed:true});assert.deepEqual(r.exclusions.replay,{hidden:true,active:true});assert.equal(r.exclusions.report,true);assert.equal(r.exclusions.meeting.hidden,true);assert.equal(r.exclusions.meeting.done,true);assert.equal(r.exclusions.next,true)
+  assert.deepEqual(r.input,{skipped:true,resumed:true});assert.equal(r.exclusions.report,true);assert.equal(r.exclusions.meeting.hidden,true);assert.equal(r.exclusions.meeting.done,true);assert.equal(r.exclusions.next,true)
  }finally{fs.rmSync(out,{recursive:true,force:true})}
 })

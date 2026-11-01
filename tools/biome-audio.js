@@ -73,7 +73,7 @@ export async function liveAudio(out,{root}={}){
  try{
   await b.cmd('Page.addScriptToEvaluateOnNewDocument',{source:TRACE})
   await b.cmd('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:2,mobile:true})
-  await b.cmd('Page.navigate',{url:base+'/?level=17&seed=3&season=halloween'})
+  await b.cmd('Page.navigate',{url:base+'/?level=17&seed=3&season=christmas'})
   let ready=false;for(let i=0;i<80;i++){if(await ev('!!window.AgentWorld?.()')){ready=true;break}await wait(40)}if(!ready)throw Error('Audio page startup timed out')
   await state('default-off')
   await b.cmd('Runtime.evaluate',{expression:"document.getElementById('sfx').click()",userGesture:true});await wait(500);await state('enabled')
@@ -88,8 +88,8 @@ export async function liveAudio(out,{root}={}){
   await ev("document.getElementById('c-next').click()");await wait(300);await state('commuting')
   await settleCommute(ev)
   await wait(250);await state('next-biome')
-  await ev("document.getElementById('c-pause').click();const w=AgentWorld();w.done=true;w.doneTicks=0;w.moments=[];document.getElementById('c-pause').click()");await wait(300);await state('report')
-  const shot=await b.cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(path.join(out,'phone-halloween.png'),Buffer.from(shot.data,'base64'))
+  await ev("document.getElementById('c-pause').click();const w=AgentWorld();w.done=true;w.doneTicks=0;document.getElementById('c-pause').click()");await wait(300);await state('report')
+  const shot=await b.cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(path.join(out,'phone-christmas.png'),Buffer.from(shot.data,'base64'))
   const cleanup=await ev(`(()=>{const t=__beds;return{sources:t.sources.filter(s=>s.loop).length,closed:t.sources.filter(s=>s.loop&&s.__closed).length,gainsClosed:t.gains.filter(g=>g.__closed).length,scenes:t.scenes.slice(-10)}})()`)
   const r={states,cleanup,errors:b.errors};fs.writeFileSync(path.join(out,'live.json'),JSON.stringify(r,null,2));return r
  }finally{await b.close();await new Promise(r=>server.close(r))}

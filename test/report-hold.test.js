@@ -66,7 +66,7 @@ test('report pause holds its clock, resumes by Space/tap, and excludes gameplay,
  try{
   await open('level=8')
   assert.equal((await state()).overlay,true,'ordinary paused board keeps its veil')
-  await ev(`(()=>{const w=AgentWorld();w.done=true;w.doneTicks=20;w.moments=[];document.getElementById('who').click();document.getElementById('who').click()})()`)
+  await ev(`(()=>{const w=AgentWorld();w.done=true;w.doneTicks=20;document.getElementById('who').click();document.getElementById('who').click()})()`)
   assert.deepEqual(await state(),{overlay:false,hint:'Report held · Space or tap to resume',pause:'resume'})
   const before=await ev('JSON.stringify(AgentWorld())')
   await sleep(350)
@@ -87,21 +87,13 @@ test('report pause holds its clock, resumes by Space/tap, and excludes gameplay,
   assert.deepEqual(await state(),{overlay:true,hint:await ev('skyCardCaption(AgentWorld())'),pause:'resume'},'navigation clears report hold')
   // Fullscreen reserves no caption row; its existing resume control remains.
   await open('level=20&full=1')
-  const full=await ev(`(()=>{const w=AgentWorld();w.done=true;w.doneTicks=20;w.moments=[];document.getElementById('who').click();document.getElementById('who').click();return{caption:getComputedStyle(document.getElementById('eventCaption')).display,control:getComputedStyle(document.getElementById('c-pause')).display}})()`)
+  const full=await ev(`(()=>{const w=AgentWorld();w.done=true;w.doneTicks=20;document.getElementById('who').click();document.getElementById('who').click();return{caption:getComputedStyle(document.getElementById('eventCaption')).display,control:getComputedStyle(document.getElementById('c-pause')).display}})()`)
   assert.equal((await state()).overlay,false);assert.equal(full.caption,'none');assert.notEqual(full.control,'none')
-  // A real host replay owns a finished source world but is not a held report.
-  await open('level=8')
-  await ev("const w=AgentWorld();w.done=true;w.doneTicks=20;w.moments=[{kind:'agi',score:4,t:300}];document.getElementById('c-pause').click()")
-  await waitFor('!!AgentReplay()')
-  await ev("document.getElementById('c-pause').click()")
-  assert.deepEqual(await state(),{overlay:true,hint:'',pause:'resume'},'replay retains usual pause')
-  await ev("document.getElementById('board').click()")
-  assert.deepEqual(await state(),{overlay:false,hint:'Report held · Space or tap to resume',pause:'resume'},'skipping replay reveals held report')
   // Five short explicit completion fixtures reach the real standup host path.
   await open('level=1')
   for(let i=0;i<5;i++){
    if(i===4)await ev('AgentStandup.next()')
-   await ev(`(()=>{const w=AgentWorld();for(let j=0;j<400&&!w.done;j++)step(w);w.agents.forEach(a=>{a.state='saved';a.gone=false});Object.assign(w,{done:true,doneTicks:111,moments:[],saved:w.agents.length,released:w.toRelease});document.getElementById('c-pause').click()})()`)
+   await ev(`(()=>{const w=AgentWorld();for(let j=0;j<400&&!w.done;j++)step(w);w.agents.forEach(a=>{a.state='saved';a.gone=false});Object.assign(w,{done:true,doneTicks:111,saved:w.agents.length,released:w.toRelease});document.getElementById('c-pause').click()})()`)
    await waitFor(i<4?'AgentWorld().level==='+String(i+2)+'&&document.getElementById("commute").hidden':'AgentWorld().level===5&&AgentWorld().doneTicks>111')
    await ev("document.getElementById('c-pause').click()")
   }

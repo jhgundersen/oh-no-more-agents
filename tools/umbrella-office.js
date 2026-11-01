@@ -11,7 +11,7 @@ import {arrivalWorld} from './exit-welcome.js'
 import {sheetLabel} from './art-label.js'
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),P=load('Palette.js'),sha=x=>createHash('sha256').update(x).digest('hex')
 export const OFFICE_COUNTS=[0,1,3,5,10,20]
-export const OFFICE_SEASONS={none:null,halloween:{bat:'#2a2233',batEvery:3},christmas:{candy:'#d42a3c',candyEvery:3}}
+export const OFFICE_SEASONS={none:null,christmas:{candy:'#d42a3c',candyEvery:3}}
 export function officeBox(w){return{x:Math.max(0,Math.min(272,Math.round((w.exit.x+w.exit.w/2)*4)-64)),y:Math.max(0,Math.min(184,(w.exit.y+w.exit.h)*4-48)),width:128,height:64}}
 export function officeFrame(D,w,cache={},theme='tokyo-night'){
  const res=w.res||1,box=officeBox(w),pal=P.build(themeOf(theme).theme,w.level),key=[w.terrainVersion,res,theme,w.season?.bat,w.season?.candy].join(':')

@@ -10,8 +10,7 @@
     { id: "2026-10-29-quiet", text: "Added: fewer words. The report says what happened, and the board does the rest." },
     { id: "2026-10-15-ooo", text: "Added: out-of-office replies. Lost agents leave an auto-reply under the board." },
     { id: "2026-10-15-daily", text: "Added: colony of the day, the same level and colony for everyone. Copy link shares it." },
-    { id: "2026-10-15-seasons", text: "Added: Halloween (Oct 24 to Nov 1) and Christmas (Dec 1 to 26). Same agents, worse hats." },
-    { id: "2026-10-15-replay", text: "Added: instant replay. The level's best moment, again, because nobody saw it the first time." },
+    { id: "2026-10-15-seasons", text: "Added: Christmas (Dec 1 to 26). Same agents, worse hats." },
     { id: "2026-10-15-sweepstake", text: "Added: sweepstake. Tap an agent before anyone's home to back it. It will not try any harder." },
     { id: "2026-10-15-pep", text: "Added: pep talks. Tap an agent to tell it it's absolutely right. It already knew." }
   ]

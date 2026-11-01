@@ -10,12 +10,12 @@ import { load, canvas, crop, writePNG, themeOf } from "./render.js"
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const S = load("Sim.js"), P = load("Palette.js")
-export const CASES = ["mirage", "queue", "agi", "duck-floor", "duck-talk", "conflict", "pep", "outage", "standup", "standup-board", "replay", "sightings", "party", "confetti", "lanterns", "bat", "ghost"]
+export const CASES = ["mirage", "queue", "agi", "duck-floor", "duck-talk", "conflict", "pep", "outage", "standup", "standup-board", "sightings", "party", "confetti"]
 export function renderer(source) {
   const names = [...source.matchAll(/^function\s+(\w+)\s*\(/gm), ...source.matchAll(/^var\s+([A-Z][A-Z0-9_]*)\s*=/gm)].map(m => m[1])
   return new Function(source + "\nreturn {" + [...new Set(names)].join(",") + "}")()
 }
-export function season(source, search = "?season=halloween") {
+export function season(source, search = "?season=none") {
   const box = { window: { location: { search } }, Date, Math, Object, String }
   vm.runInNewContext(source, box)
   return box.window.AgentSeason
@@ -56,16 +56,14 @@ const FIXTURES = {
   pep(w, p) { Object.assign(actor(w, p, 7), { pepAt: 394, pepLine: 1 }); actor(w, p, 14) },
   outage(w, p) { for (let i = 0; i < 4; i++) actor(w, p, i * 4); w.outage = { at: 370, len: 120 } },
   standup(w) { w.gagStandup = { t: 28, speakers: ["steady", "dreamer", "brave", "wary"].map((trait, i) => ({ id: i + 1, trait, agi: i === 1, lines: ["YESTERDAY: SHIPPED.", "TODAY: MORE OF THAT.", "BLOCKERS: GRAVITY."] })) } },
-  replay(w, p) { actor(w, p); w.replaying = true },
   sightings(w) { Object.assign(w, { done: true, doneTicks: 20, saved: 9, toRelease: 12, sightings: { seen: ["agi", "dreamer", "queue", "duck", "conflict", "outage", "milestone"], fresh: ["duck"] } }) },
   party(w, p) { for (let i = 0; i < 3; i++) actor(w, p, i * 6); w.milestone = { kind: "ten", n: 490000 }; w.firstReleaseAt = 375 },
-  lanterns(w, p, a) { actor(w, p, 4); a.dress(w) },
-  bat(w, p, a) { a.dress(w); const ag = Object.assign(actor(w, airSpot(w)), { state: "fall", floater: true, ownBrolly: true, fall: 10 }); ag.id += (3 - (ag.id + w.colonySeed) % 3) % 3 },
-  ghost(w, p, a) { a.dress(w); actor(w, p); const ag = Object.assign(actor(w, p, 9), { state: "dead", gone: true }); w.seasonSeen[ag.id] = true; w.seasonGhosts = [{ x: ag.x, y: ag.y, t: 390 }] }
+  // Not a gag: a floater under a season's patterned umbrella (one in three), for christmas-art.
+  floater(w, p, a) { a.dress(w); const ag = Object.assign(actor(w, airSpot(w)), { state: "fall", floater: true, ownBrolly: true, fall: 10 }); ag.id += (3 - (ag.id + w.colonySeed) % 3) % 3 }
 }
 FIXTURES["standup-board"] = FIXTURES.standup
 FIXTURES.confetti = FIXTURES.party
-export function fixture(name, api, level = name === "bat" ? 9 : 6) {
+export function fixture(name, api, level = name === "floater" ? 9 : 6) {
   if (!FIXTURES[name]) throw Error("Unknown fixture " + name)
   const w = S.generate(level, 0, 3), p = floorSpot(w)
   Object.assign(w, { ticks: 400, agents: [], enemies: [], feed: [], mirages: [], rateLimit: null, outage: null, duck: null })
@@ -88,7 +86,7 @@ export function cropBox(name, w) {
   if (name === "standup") return { x: 90, y: 70, width: 220, height: 120 }
   if (name === "sightings") return { x: 90, y: 75, width: 220, height: 120 }
   if (name === "queue") return { x: 0, y: 0, width: 220, height: 120 }
-  if (name === "replay" || name === "party") return { x: 0, y: 25, width: 220, height: 120 }
+  if (name === "party") return { x: 0, y: 25, width: 220, height: 120 }
   const p = w.agents.find(a => a.floater) || w.agents[0] || floorSpot(w)
   return { x: Math.max(0, Math.min(180, Math.round(p.x * 4 - 50))), y: Math.max(28, Math.min(128, Math.round((p.y + 1) * 4 - 70))), width: 220, height: 120 }
 }
@@ -120,11 +118,11 @@ function gitSource(base, file) {
 export function run(base, outDir, cases = CASES) {
   const started = performance.now(), current = load("Draw.js"), old = renderer(gitSource(base, "Draw.js")), seasonNow = fs.readFileSync(path.join(ROOT, "public/agents/season.js"), "utf8"), seasonOld = gitSource(base, "season.js")
   const sheet = canvas(1760, cases.length * 278, "#121822"), manifest = []
-  const versions = [["before", old, season(seasonOld, "?season=none"), season(seasonOld)], ["after", current, season(seasonNow, "?season=none"), season(seasonNow)]]
+  const versions = [["before", old, season(seasonOld)], ["after", current, season(seasonNow)]]
   for (const [index, name] of cases.entries()) {
     const images = []
-    for (const res of [1, 2]) for (const [tag, D, normal, halloween] of versions) {
-      const api = ["lanterns", "bat", "ghost"].includes(name) ? halloween : normal, w = fixture(name, api), img = paint(D, api, name, w, res), box = cropBox(name, w)
+    for (const res of [1, 2]) for (const [tag, D, api] of versions) {
+      const w = fixture(name, api), img = paint(D, api, name, w, res), box = cropBox(name, w)
       writePNG(path.join(outDir, `${name}-${tag}-res${res}.png`), img)
       const close = crop(img, box.x * res, box.y * res, box.width * res, box.height * res)
       writePNG(path.join(outDir, `${name}-${tag}-crop-res${res}.png`), close)

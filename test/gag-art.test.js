@@ -9,7 +9,7 @@ import { canvas, themeOf, THEMES } from "../tools/render.js"
 import { CASES, fixture, season, paint, renderer, cropBox, run, sheetRow, doublePixels, copyPixels } from "../tools/gag-art.js"
 const S = loadCore("Sim.js"), D = loadCore("Draw.js"), P = loadCore("Palette.js")
 const src = fs.readFileSync(new URL("../public/agents/season.js", import.meta.url), "utf8")
-const api = season(src), off = season(src, "?season=none")
+const api = season(src, "?season=christmas"), off = season(src, "?season=none")
 const digest = value => createHash("sha256").update(value).digest("hex")
 function readonly(obj, cache = new WeakMap()) {
   if (!obj || typeof obj !== "object") return obj
@@ -36,8 +36,7 @@ function record(w, draw) {
 test("all gag contexts render at both resolutions, RNG-free, deterministically and without world writes", () => {
   const terrain = new Map()
   for (const name of CASES) for (const res of [1, 2]) for (const theme of Object.keys(THEMES)) {
-    const a = ["lanterns", "bat", "ghost"].includes(name) ? api : off
-    const w = fixture(name, a); w.res = res
+    const a = off, w = fixture(name, a); w.res = res
     const before = digest(JSON.stringify(w)), pal = P.build(themeOf(theme).theme, w.level); a.tint(pal)
     const draw = () => { const img = canvas(400 * res, 248 * res); const frozen = readonly(w); const key = [w.level, res, theme, w.season && w.season.name].join(":"); if (!terrain.has(key)) { const back = canvas(img.W, img.H); D.drawTerrain(back.ctx, frozen, pal); terrain.set(key, back) } copyPixels(img, terrain.get(key), 0, 0); D.drawActors(img.ctx, frozen, pal, {}); if (name.startsWith("standup")) D.drawStandup(img.ctx, frozen, pal, frozen.gagStandup); if (w.season) a.paint(img.ctx, frozen); return digest(img.buf) }
     const random = Math.random; Math.random = () => { throw Error("render RNG") }
@@ -49,7 +48,7 @@ test("gag silhouettes stay on their resolution grid and restore context across a
   for (const res of [1, 2]) for (const reducedMotion of [false, true]) {
     const w = fixture("agi", off); Object.assign(w, { res, reducedMotion }); const pal = P.build(themeOf("tokyo-night").theme, 6)
     const ag = w.agents[1]
-    const tasks = [ctx => D.drawReplayTag(ctx, w, pal), ctx => D.drawOutageGlows(ctx, w, pal), ctx => D.drawPartyHat(ctx, "million", ag, 160, 100), ctx => D.drawPartyHat(ctx, "hundred", ag, 160, 100), ctx => D.drawPartyHat(ctx, "ten", ag, 160, 100)]
+    const tasks = [ctx => D.drawOutageGlows(ctx, w, pal), ctx => D.drawPartyHat(ctx, "million", ag, 160, 100), ctx => D.drawPartyHat(ctx, "hundred", ag, 160, 100), ctx => D.drawPartyHat(ctx, "ten", ag, 160, 100)]
     for (const age of [0, 2, 7, 25, 40, 65]) {
       tasks.push(ctx => D.drawMirage(ctx, w, pal, { x: 45, y: 29, born: w.ticks - age, popped: -1 }))
       tasks.push(ctx => D.drawRateLimitSign(ctx, w, pal, { x: 45, y: 29, at: w.ticks - age, clearAt: -1 }))
@@ -59,8 +58,6 @@ test("gag silhouettes stay on their resolution grid and restore context across a
     for (const draw of tasks) { const r = record(w, draw); assert.equal(r.style, "#123456"); assert.equal(r.alpha, 0.75) }
     const glitter = record(w, ctx => { D.drawAgiSparkle(ctx, w, ag, 160, 100); D.drawPepSparkle(ctx, w, { ...ag, pepAt: 394 }, 180, 100) })
     assert.ok(glitter.calls.length <= 40)
-    const bat = record(w, ctx => D.drawBatUmbrella(ctx, w, pal, 160, 100, 0, "#2a2233"))
-    assert.ok(bat.calls.some(c => c[4] === "#a393bc")); assert.ok(bat.calls.length <= 30)
   }
 })
 test("mirage remains a readable false exit that ripples, fades and vanishes; reduced motion is still", () => {
@@ -105,8 +102,8 @@ test("queue speech clears the complete visible 429 plate", () => {
   assert.equal(D.bubbleClear(w, rl.x * 4 - 20, foot - 30, 42, 13), foot - 30)
 })
 test("gag paint preserves real opaque faces, collars and umbrellas", () => {
-  for (const name of ["agi", "pep", "queue", "duck-talk", "party", "bat"]) for (const res of [1, 2]) {
-    const a = name === "bat" ? api : off, w = fixture(name, a); w.res = res
+  for (const name of ["agi", "pep", "queue", "duck-talk", "party"]) for (const res of [1, 2]) {
+    const a = off, w = fixture(name, a); w.res = res
     const pal = P.build(themeOf("tokyo-night").theme, w.level); a.tint(pal)
     const img = paint(D, a, name, w, res)
     const colours = new Set([pal.skin, pal.shirt, pal.eye, pal.umbrellaStem].map(c => { const p = canvas(1, 1); p.ctx.fillStyle = c; p.ctx.fillRect(0, 0, 1, 1); return p.buf.join(",") }))
@@ -131,26 +128,6 @@ test("sighting icons are seven distinct complete seven-pixel silhouettes", () =>
     assert.ok(r.calls.every(c => c[0] >= 150 && c[0] < 157 && c[1] >= 100 && c[1] < 107))
   }
   assert.equal(hashes.size, 7)
-})
-test("season props cannot paint over living faces, umbrellas, exit frames or dangers", () => {
-  const w = fixture("lanterns", api); w.res = 1
-  const p = { x: 40, y: 29 }, ag = w.agents[0]
-  w.terrain.fill(w.k.EMPTY); w.terrain.fill(w.k.DIRT, 30 * 100 + 39, 30 * 100 + 42)
-  w.seasonLanterns = [p]; w.agents = []; w.exit = null; w.hazards = []
-  const draw = () => record(w, ctx => api.paint(ctx, w))
-  assert.ok(draw().calls.length > 15, "a clear supported pumpkin really draws")
-  Object.assign(ag, { x: p.x + 0.5, y: p.y, floater: true }); w.agents = [ag]
-  const before = digest(JSON.stringify(w)); assert.equal(draw().calls.length, 0)
-  assert.equal(digest(JSON.stringify(w)), before)
-  w.agents = []; w.exit = { x: p.x - 1, y: p.y - 1, w: 3, h: 3 }
-  assert.equal(draw().calls.length, 0)
-  w.exit = null; w.hazards = [{ zx0: p.x - 1, zx1: p.x + 1, zy0: p.y - 1, zy1: p.y, wrecked: false }]
-  assert.equal(draw().calls.length, 0)
-  w.hazards[0].wrecked = true; assert.ok(draw().calls.length > 15)
-  w.terrain[(p.y - 1) * 100 + p.x + 1] = w.k.STEEL; assert.equal(draw().calls.length, 0)
-  const g = fixture("ghost", api); g.res = 1; g.agents = []; g.seasonLanterns = []
-  assert.ok(record(g, ctx => api.paint(ctx, g)).calls.length > 10)
-  g.ticks = 430; assert.equal(record(g, ctx => api.paint(ctx, g)).calls.length, 0); assert.equal(g.seasonGhosts.length, 0)
 })
 test("reduced-motion confetti is still; bursts and glow windows stay bounded", () => {
   const w = fixture("party", off); w.res = 1; w.reducedMotion = true
@@ -195,6 +172,6 @@ test("the fast contact-sheet command covers every gag and retains native full fr
     const tiny = canvas(2, 2, "#123456"), twice = doublePixels(tiny), dst = canvas(4, 4)
     copyPixels(dst, twice, 0, 0); assert.equal(digest(dst.buf), digest(twice.buf))
     assert.equal(sheetRow(D, "sample", [canvas(440, 240), canvas(440, 240), canvas(440, 240), canvas(440, 240)]).H, 278)
-    assert.equal(cropBox("replay", fixture("replay", off)).y, 25)
+    assert.equal(cropBox("party", fixture("party", off)).y, 25)
   } finally { fs.rmSync(dir, { recursive: true, force: true }) }
 })

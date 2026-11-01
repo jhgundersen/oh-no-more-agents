@@ -72,16 +72,15 @@ test('report copy uses readable existing inks in all nine page themes',()=>{
   w.res=2;recorded(w,p)
  }
 })
-test('seasonal decorations leave page report pixels clear while native Halloween props remain',()=>{
+test('seasonal decorations leave report pixels clear',()=>{
  const source=fs.readFileSync(new URL('../public/agents/season.js',import.meta.url),'utf8')
- for(const name of['halloween','christmas'])for(const res of[1,2]){
+ for(const name of['christmas'])for(const res of[1,2]){
   const scope={window:{location:{search:'?season='+name}},Date,Math,Object,String};vm.runInNewContext(source,scope)
   const api=scope.window.AgentSeason,w=make('all',19);w.res=res;api.dress(w)
   const img=canvas(400*res,248*res);img.ctx.scale(res,res);let calls=0
   const fill=img.ctx.fillRect.bind(img.ctx);img.ctx.fillRect=(...a)=>{assert.ok(++calls<10000);fill(...a)}
   D.drawLevelResults(img.ctx,w,pal);const before=hash(img.buf);calls=0;api.paint(img.ctx,w)
-  if(res===2||name==='christmas'){assert.equal(calls,0);assert.equal(hash(img.buf),before)}
-  else assert.ok(calls>0,'native Halloween decorations retain their original path')
+  assert.equal(calls,0);assert.equal(hash(img.buf),before)
  }
 })
 test('real-size report evidence fits 390/360 phones, landscape and desktop with every full-house fact retained',{timeout:45000},async()=>{

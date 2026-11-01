@@ -80,22 +80,20 @@ async function inputChecks(b,ev){
  return ev('({skipped:document.getElementById("levelTitle").hidden,resumed:document.getElementById("overlay").style.display==="none"})')
 }
 async function exclusionChecks(ev){
- // Force a real early replay/report while the new card would still be alive.
- await ev(`(()=>{document.getElementById('c-restart').click();const w=AgentWorld();w.done=true;w.moments=[{kind:'agi',score:5,t:70}]})()`)
+ // Force a real early report while the new card would still be alive.
+ await ev(`(()=>{document.getElementById('c-restart').click();const w=AgentWorld();w.done=true})()`)
  await sleep(60)
- const replay=await ev('({hidden:document.getElementById("levelTitle").hidden,active:!!AgentReplay()})')
- await ev('if(AgentReplay())document.getElementById("board").click()')
  const report=await ev('document.getElementById("levelTitle").hidden&&AgentWorld().done')
  // Five completed levels lead to the normal standup, not another overlay.
  for(let i=0;i<5;i++){
   if(i===4)await ev('AgentStandup.next()')
-  await ev(`(()=>{document.getElementById('c-restart').click();const w=AgentWorld();w.done=true;w.doneTicks=111;w.moments=[];w.agents=[spawn(w)];w.agents[0].state='saved';w.saved=1})()`)
+  await ev(`(()=>{document.getElementById('c-restart').click();const w=AgentWorld();w.done=true;w.doneTicks=111;w.agents=[spawn(w)];w.agents[0].state='saved';w.saved=1})()`)
   await sleep(65);await settleCommute(ev,{skip:true})
  }
  const meeting=await ev('({hidden:document.getElementById("levelTitle").hidden,done:AgentWorld().done,ticks:AgentWorld().doneTicks})')
  await ev('document.getElementById("board").click()');await settleCommute(ev)
  const next=await ev('!AgentWorld().done&&!document.getElementById("levelTitle").hidden')
- return{replay,report,meeting,next}
+ return{report,meeting,next}
 }
 async function phoneSheet(ev,out,shots){
  const png=await ev(`(async()=>{

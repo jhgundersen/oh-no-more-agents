@@ -44,7 +44,7 @@ test('feed presentation reads every biome without touching the world, consuming 
   }
  }finally{Math.random=random}
 })
-test('live captions fit desktop/phone/landscape and seasons; wall time, pause, navigation and replay stay coherent',{timeout:45000},async()=>{
+test('live captions fit desktop/phone/landscape and seasons; wall time, pause and navigation stay coherent',{timeout:45000},async()=>{
  const out=fs.mkdtempSync(path.join(os.tmpdir(),'captions-test-'))
  try{
   const report=await captureCaptions(out,{checks:true})
@@ -64,7 +64,7 @@ test('live captions fit desktop/phone/landscape and seasons; wall time, pause, n
   assert.equal(c.first,'AGENT 006 · UMBRELLA SAVE');assert.equal(c.at4900,c.first);assert.equal(c.fastForward,c.first)
   assert.equal(c.expired,c.profile);assert.equal(c.paused,'AGENT 006 · RICOCHET')
   assert.equal(c.season,'AGENT 001 IS HOME FOR THE HOLIDAYS')
-  assert.equal(c.replay,'');assert.equal(c.report,'Report held · Space or tap to resume');assert.equal(c.navigation,c.nextProfile)
+  assert.equal(c.report,'Report held · Space or tap to resume');assert.equal(c.navigation,c.nextProfile)
   assert.equal(c.rewrites,0);assert.equal(c.readOnly,true);assert.equal(c.longFits,true)
   assert.equal(c.live,'off');assert.equal(c.role,'note')
  }finally{fs.rmSync(out,{recursive:true,force:true})}

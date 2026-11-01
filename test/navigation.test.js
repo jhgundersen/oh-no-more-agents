@@ -60,18 +60,3 @@ test("Next during a standup plays the next level, once; the daily during a stand
   } finally { await b.close(); server.close() }
 })
 
-test("Next during an instant replay ends the replay and moves on one level", { skip: !chromium && "no chromium", timeout: 60000 }, async () => {
-  const server = await serve(), b = await browser()
-  try {
-    const ev = await open(b, `http://127.0.0.1:${server.address().port}/?level=1&seed=2`)
-    await ev(`(() => { const w = AgentWorld(); while (!w.done) step(w) })()`)
-    let rp = null
-    for (let i = 0; i < 60 && !rp; i++) { await sleep(100); rp = await ev(`AgentReplay()`) }
-    assert.ok(rp, "a replay is running")
-    await key(b, "n", "KeyN", 78)
-    await settleCommute(ev,{live:true})
-    assert.equal(await ev(`AgentReplay()`), null)
-    assert.equal(await ev(`AgentWorld().level`), 2)
-    assert.ok((await ev(`AgentWorld().ticks`)) > 0)
-  } finally { await b.close(); server.close() }
-})

@@ -11680,3 +11680,24 @@ load average ~8.7 lost a browser test each to a fixed pause (`daily.test`
 1.2 s, `milestone.test` 3 s, both 3/3 alone); both now wait for the page.
 Gate 1647/1647.
 **After:** `npm run verify -- --previous feb8fcca` passed first time.
+
+## 441 — 2026-11-01 · Halloween and the instant replay are gone
+
+Jon: "remove the halloween stuff, also the instant replay does not make sense".
+
+**Removed:**
+- **Halloween** (season.js): the entry (Oct 24 to Nov 1), pumpkin lanterns,
+  death ghosts, the orange accent, TRICK OR TREAT, its death puns, and the
+  bat-wing umbrellas (Draw's `batBrolly`, `drawBatUmbrella`, `drawBatEars`,
+  the office stand's bat mark). `?season=halloween` is now ignored. Christmas
+  stays; its paint now sits out every finished level, not only at page res.
+- **Instant replay**: web.js's re-simulation of the best moment, the INSTANT
+  REPLAY tag (`drawReplayTag`), `w.replaying`, the pep-talk log it replayed,
+  and Sim's `moments`/`noteMoment`/`followedClose`/`bossOnBoard`, which only
+  fed it. Nothing in the simulation read them, so play is unchanged.
+- Patch notes: the replay line, and Halloween from the seasons line.
+
+**Tests/tools:** replay.test and the replay navigation test deleted; Halloween
+cases dropped from season, gag-art, report-art, thaw-art, umbrella-office,
+captions, hero-intros, report-hold, titlecard-art; the gag-art bat fixture
+lives on as `floater` for christmas-art. Gate 1640/1640; CRAP green.
